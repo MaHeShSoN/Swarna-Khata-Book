@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/launcherFragment">
+
+    <fragment
+        android:id="@+id/launcherFragment"
+        android:name="com.jewelrypos.swarnakhatabook.launcherFragment"
+        android:label="fragment_launcher"
+        tools:layout="@layout/fragment_launcher" >
+        <action
+            android:id="@+id/action_launcherFragment_to_getDetailsFragment"
+            app:destination="@id/getDetailsFragment" />
+        <action
+            android:id="@+id/action_launcherFragment_to_mainScreenFragment"
+            app:destination="@id/mainScreenFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/getDetailsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.GetDetailsFragment"
+        android:label="fragment_get_details"
+        tools:layout="@layout/fragment_get_details" >
+        <action
+            android:id="@+id/action_getDetailsFragment_to_otpVarificationFragment"
+            app:destination="@id/otpVarificationFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/otpVarificationFragment"
+        android:name="com.jewelrypos.swarnakhatabook.OtpVarificationFragment"
+        android:label="fragment_otp_varification"
+        tools:layout="@layout/fragment_otp_varification" >
+        <argument
+            android:name="phoneNumber"
+            app:argType="string" />
+        <argument
+            android:name="verificationId"
+            app:argType="string" />
+        <argument
+            android:name="name"
+            app:argType="string" />
+        <argument
+            android:name="shopName"
+            app:argType="string" />
+        <argument
+            android:name="address"
+            app:argType="string" />
+        <argument
+            android:name="gstNumber"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_otpVarificationFragment_to_mainScreenFragment"
+            app:destination="@id/mainScreenFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/mainScreenFragment"
+        android:name="com.jewelrypos.swarnakhatabook.MainScreenFragment"
+        android:label="fragment_main_screen"
+        tools:layout="@layout/fragment_main_screen" />
+</navigation>

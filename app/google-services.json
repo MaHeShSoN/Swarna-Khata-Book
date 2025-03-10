@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "493464761672",
+    "project_id": "swarna-khata-book",
+    "storage_bucket": "swarna-khata-book.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:493464761672:android:32a413559c172f83a66f7d",
+        "android_client_info": {
+          "package_name": "com.jewelrypos.swarnakhatabook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoL_Rb44G5vb-a0qFtccikv1R0xzTk6sg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

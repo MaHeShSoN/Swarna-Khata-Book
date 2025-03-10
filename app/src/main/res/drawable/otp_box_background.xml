@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <!-- Set background color with slight transparency for softer appearance -->
+    <solid android:color="#FFFFFF" />
+
+    <!-- Use a consistent corner radius (about 40% of width for 48dp box) -->
+    <corners android:radius="19dp" />
+
+    <!-- Add a more subtle gradient to enhance smoothness -->
+    <gradient
+        android:type="radial"
+        android:gradientRadius="85dp"
+        android:startColor="#FFFFFF"
+        android:endColor="#F8F8F8"
+        android:centerX="0.5"
+        android:centerY="0.5" />
+
+    <!-- Refined border with slightly transparent color for softness -->
+    <stroke
+        android:width="0.5dp"
+        android:color="#802980B9" />
+
+    <!-- Reduced padding to maximize usable space -->
+    <padding
+        android:left="8dp"
+        android:top="8dp"
+        android:right="8dp"
+        android:bottom="8dp" />
+</shape>

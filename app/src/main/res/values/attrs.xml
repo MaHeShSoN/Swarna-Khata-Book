@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SquircleView">
+        <attr name="squircleColor" format="color" />
+        <attr name="squircleFactor" format="float" />
+    </declare-styleable>
+
+
+
+
+
+
+
+</resources>

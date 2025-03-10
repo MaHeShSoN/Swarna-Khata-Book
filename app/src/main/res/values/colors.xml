@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Your existing colors -->
+    <color name="my_light_primary">#D4AF37</color>         <!-- Gold primary -->
+    <color name="my_light_secondary">#8B7109</color>       <!-- Dark gold secondary -->
+    <color name="cream_background">#FEF9E7</color>         <!-- Cream background -->
+
+    <!-- Suggested complementary colors -->
+    <color name="my_light_tertiary">#6B5B95</color>        <!-- Muted purple - good contrast with gold -->
+    <color name="my_light_error">#C43E00</color>           <!-- Warm orange-red -->
+    <color name="my_light_surface">#FFFBF0</color>         <!-- Extremely light cream for cards -->
+
+    <!-- Additional variations for components -->
+    <color name="my_light_on_primary">#2C2200</color>      <!-- Dark text on gold components -->
+    <color name="my_light_on_secondary">#FFFFFF</color>    <!-- White text on dark gold -->
+    <color name="my_light_on_tertiary">#FFFFFF</color>     <!-- White text on purple -->
+    <color name="my_light_primary_container">#F3E8B6</color> <!-- Light gold for containers -->
+    <color name="my_light_secondary_container">#E3D18C</color> <!-- Mid gold for containers -->
+    <color name="my_light_tertiary_container">#D9D2E9</color> <!-- Light purple for containers -->
+
+    <!-- Neutral tones for text -->
+    <color name="my_light_on_background">#2D2A1F</color>   <!-- Off-black for text -->
+    <color name="my_light_on_surface">#3C3522</color>      <!-- Dark brown-gold for text -->
+    <color name="my_light_outline">#AA9948</color>         <!-- Gold outline for components -->
+
+    <!-- Specifically for chips in M3 -->
+    <color name="chip_background">#F0E6BD</color>          <!-- Light gold for chip background -->
+    <color name="chip_selected">#C9AB38</color>            <!-- Slightly darker gold for selected chip -->
+    <color name="chip_text">#453A0F</color>                <!-- Dark text for chips -->
+</resources>

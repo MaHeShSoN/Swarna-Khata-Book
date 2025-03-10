@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/jewelryCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
+    app:strokeColor="@color/my_light_outline"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/my_light_surface">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Jewelry Type Circle Indicator -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/jewelryTypeIndicator"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/circle_gold_background"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <TextView
+            android:id="@+id/jewelryTypeInitial"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="G"
+            android:textColor="@color/my_light_on_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="@id/jewelryTypeIndicator"
+            app:layout_constraintEnd_toEndOf="@id/jewelryTypeIndicator"
+            app:layout_constraintStart_toStartOf="@id/jewelryTypeIndicator"
+            app:layout_constraintTop_toTopOf="@id/jewelryTypeIndicator" />
+
+        <!-- Title with Purity -->
+        <TextView
+            android:id="@+id/jewelryTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:textColor="@color/my_light_on_surface"
+            app:layout_constraintEnd_toStartOf="@id/menuButton"
+            app:layout_constraintStart_toEndOf="@id/jewelryTypeIndicator"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="22K Gold Bangle" />
+
+        <!-- Jewelry Code -->
+        <TextView
+            android:id="@+id/jewelryCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="@color/my_light_secondary"
+            app:layout_constraintStart_toEndOf="@id/jewelryTypeIndicator"
+            app:layout_constraintTop_toBottomOf="@id/jewelryTitle"
+            tools:text="Code: GB-001" />
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:background="@color/my_light_outline"
+            android:alpha="0.5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/jewelryCode" />
+
+        <!-- Bottom Metrics Container -->
+        <LinearLayout
+            android:id="@+id/metricsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/divider">
+
+            <!-- Gross Weight -->
+            <LinearLayout
+                android:id="@+id/grossWeightContainer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_metric_background"
+                android:backgroundTint="@color/my_light_primary_container"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:elevation="1dp">
+
+                <TextView
+                    android:id="@+id/grossWeightLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GROSS WT"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/my_light_secondary" />
+
+                <TextView
+                    android:id="@+id/grossWeightValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textStyle="bold"
+                    tools:text="25.75 g" />
+            </LinearLayout>
+
+            <!-- Spacing -->
+            <View
+                android:layout_width="10dp"
+                android:layout_height="match_parent" />
+
+            <!-- Location -->
+            <LinearLayout
+                android:id="@+id/locationContainer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_metric_background"
+                android:backgroundTint="@color/my_light_secondary_container"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:elevation="1dp">
+
+                <TextView
+                    android:id="@+id/locationLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LOCATION"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/my_light_secondary" />
+
+                <TextView
+                    android:id="@+id/locationValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textStyle="bold"
+                    tools:text="Main Store" />
+            </LinearLayout>
+
+            <!-- Spacing -->
+            <View
+                android:layout_width="10dp"
+                android:layout_height="match_parent" />
+
+            <!-- Stock -->
+            <LinearLayout
+                android:id="@+id/stockContainer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/rounded_metric_background"
+                android:backgroundTint="@color/my_light_tertiary_container"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:elevation="1dp">
+
+                <TextView
+                    android:id="@+id/stockLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="STOCK"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="@color/my_light_tertiary" />
+
+                <TextView
+                    android:id="@+id/stockValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textStyle="bold"
+                    tools:text="5 pcs" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Three-Dot Menu Button -->
+        <ImageButton
+            android:id="@+id/menuButton"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="More options"
+            android:src="@drawable/bi__three_dots_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/my_light_secondary" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

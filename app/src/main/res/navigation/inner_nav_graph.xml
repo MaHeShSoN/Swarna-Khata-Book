@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/inner_nav_graph"
+    app:startDestination="@id/dashBoardFragment">
+
+    <fragment
+        android:id="@+id/dashBoardFragment"
+        android:name="com.jewelrypos.swarnakhatabook.DashBoardFragment"
+        android:label="fragment_dash_board"
+        tools:layout="@layout/fragment_dash_board" />
+    <fragment
+        android:id="@+id/salesFragment"
+        android:name="com.jewelrypos.swarnakhatabook.SalesFragment"
+        android:label="fragment_sales"
+        tools:layout="@layout/fragment_sales" />
+    <fragment
+        android:id="@+id/inventoryFragment"
+        android:name="com.jewelrypos.swarnakhatabook.InventoryFragment"
+        android:label="fragment_inventory"
+        tools:layout="@layout/fragment_inventory" />
+    <fragment
+        android:id="@+id/customerFragment"
+        android:name="com.jewelrypos.swarnakhatabook.CustomerFragment"
+        android:label="fragment_customer"
+        tools:layout="@layout/fragment_customer" />
+    <fragment
+        android:id="@+id/moreSettingFragment"
+        android:name="com.jewelrypos.swarnakhatabook.MoreSettingFragment"
+        android:label="fragment_more_setting"
+        tools:layout="@layout/fragment_more_setting" />
+</navigation>
