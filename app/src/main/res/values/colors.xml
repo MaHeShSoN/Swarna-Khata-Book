@@ -30,4 +30,7 @@
     <color name="chip_background">#F0E6BD</color>          <!-- Light gold for chip background -->
     <color name="chip_selected">#C9AB38</color>            <!-- Slightly darker gold for selected chip -->
     <color name="chip_text">#453A0F</color>                <!-- Dark text for chips -->
+
+    <!-- For Silver & other image -->
+    <color name="shape_image_silver">#C0C0C0</color>
 </resources>

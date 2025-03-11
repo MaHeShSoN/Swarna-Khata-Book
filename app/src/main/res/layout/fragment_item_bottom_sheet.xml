@@ -6,6 +6,7 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
+        android:background="@color/cream_background"
         android:layout_height="wrap_content"
         android:padding="24dp">
 
@@ -179,7 +180,7 @@
                     android:id="@+id/displayNameEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:inputType="text|textCapWords"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -191,7 +192,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
-                android:layout_weight=".2"
+                android:layout_weight=".5"
                 android:hint="Code"
                 android:maxWidth="5dp"
                 app:boxBackgroundColor="@color/my_light_surface"
@@ -210,7 +211,8 @@
                     android:id="@+id/jewelryCodeEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
+                    android:inputType="textCapCharacters"
+                    android:maxWidth="5dp"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -320,7 +322,7 @@
                     android:id="@+id/purityEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
+                    android:inputType="none"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp"
                     />
@@ -377,7 +379,7 @@
                     android:id="@+id/mackingChargesTypeEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
+                    android:inputType="none"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -431,7 +433,7 @@
                     android:id="@+id/stockChargesTypeEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal"
+                    android:inputType="none"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -455,7 +457,7 @@
                 android:id="@+id/locationEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text" />
+                android:inputType="text|textCapWords" />
         </com.google.android.material.textfield.TextInputLayout>
 
 

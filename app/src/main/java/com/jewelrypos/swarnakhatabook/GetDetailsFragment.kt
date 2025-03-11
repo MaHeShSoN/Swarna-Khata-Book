@@ -166,6 +166,7 @@ class GetDetailsFragment : Fragment() {
         }
 
         binding.gstNumber.error = null
+
         return true
     }
 

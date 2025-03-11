@@ -17,13 +17,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Item Name">
+            android:hint="Item Type">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text" />
+                android:inputType="text|textCapWords" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <Space
@@ -36,7 +36,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Item Type"
+            android:hint="Metal Type"
             app:boxBackgroundColor="@color/my_light_surface"
             app:boxStrokeColor="@color/my_light_primary"
             app:hintTextColor="@color/my_light_secondary">

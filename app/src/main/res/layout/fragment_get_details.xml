@@ -13,8 +13,8 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/playfairsemibold"
         android:paddingStart="16dp"
-        android:paddingEnd="16dp"
         android:paddingTop="16dp"
+        android:paddingEnd="16dp"
         android:paddingBottom="8dp"
         android:text="Welcome"
         android:textSize="24dp"
@@ -37,98 +37,95 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/nameOfOwner"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:fontFamily="@font/playfairregular"
         android:hint="Name *"
         android:paddingHorizontal="16dp"
-        android:fontFamily="@font/playfairregular"
-        android:layout_marginTop="12dp"
         app:endIconMode="clear_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/text">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:fontFamily="@font/ralewaymedium"
             android:id="@+id/nameOfOwnerText"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:fontFamily="@font/ralewaymedium"
+            android:inputType="textCapWords" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/numberOfOwner"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
         android:fontFamily="@font/ralewaymedium"
         android:hint="Number *"
         android:paddingHorizontal="16dp"
-        android:layout_marginTop="4dp"
         app:endIconMode="clear_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/nameOfOwner">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:inputType="phone"
             android:id="@+id/numberOfOwnerText"
-            android:fontFamily="@font/ralewaymedium"
-            android:maxLength="10"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:fontFamily="@font/ralewaymedium"
+            android:inputType="phone"
+            android:maxLength="10" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/shopName"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Shop Name *"
-        android:fontFamily="@font/ralewaymedium"
-        android:paddingHorizontal="16dp"
         android:layout_marginTop="4dp"
+        android:fontFamily="@font/ralewaymedium"
+        android:hint="Shop Name *"
+        android:paddingHorizontal="16dp"
         app:endIconMode="clear_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/numberOfOwner">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:fontFamily="@font/ralewaymedium"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
+            android:fontFamily="@font/ralewaymedium"
+            android:inputType="textCapWords" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
 
-
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/shopAddress"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="@font/ralewaymedium"
         android:hint="Shop Address *"
         android:paddingHorizontal="16dp"
-        android:layout_marginTop="4dp"
         app:endIconMode="clear_text"
-        android:fontFamily="@font/ralewaymedium"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/shopName">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
             android:id="@+id/shopAddressText"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/ralewaymedium"
-            android:inputType="textMultiLine"
-            android:minLines="2"
-            />
+            android:inputType="textMultiLine|textCapWords"
+            android:minLines="2" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -138,37 +135,35 @@
         android:id="@+id/hasGstCheckBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginHorizontal="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        android:fontFamily="@font/ralewaymedium"
-        app:layout_constraintTop_toBottomOf="@+id/shopAddress"
         android:layout_marginBottom="16dp"
-        android:text="Have GST Number?"/>
+        android:fontFamily="@font/ralewaymedium"
+        android:text="Have GST Number?"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/shopAddress" />
 
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/gstNumber"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="GST Number"
         android:paddingHorizontal="16dp"
+        android:visibility="gone"
         app:endIconMode="clear_text"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/hasGstCheckBox"
-        android:visibility="gone"
-        >
+        app:layout_constraintTop_toBottomOf="@+id/hasGstCheckBox">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:fontFamily="@font/ralewaymedium"
-            android:layout_height="wrap_content"
-            android:inputType="textCapCharacters"
             android:id="@+id/gstNumberText"
-            android:maxLength="15"
-            />
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/ralewaymedium"
+            android:inputType="textCapCharacters"
+            android:maxLength="15" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -177,12 +172,12 @@
         android:id="@+id/submitButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/ralewaybold"
         android:layout_marginHorizontal="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gstNumber"
         android:layout_marginTop="8dp"
-        android:text="Submit"/>
+        android:fontFamily="@font/ralewaybold"
+        android:text="Submit"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/gstNumber" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

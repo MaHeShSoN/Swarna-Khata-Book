@@ -310,7 +310,7 @@ class OtpVarificationFragment : Fragment() {
     private fun navigateToMainScreen() {
         Toast.makeText(requireContext(), "Registration successful!", Toast.LENGTH_SHORT).show()
         // Navigate to your main activity or dashboard fragment
-        // findNavController().navigate(R.id.action_otpVarificationFragment_to_dashboardFragment)
+         findNavController().navigate(R.id.action_otpVarificationFragment_to_mainScreenFragment)
 
         // For now, let's just navigate back to the start
         // findNavController().navigate(R.id.action_global_startFragment)

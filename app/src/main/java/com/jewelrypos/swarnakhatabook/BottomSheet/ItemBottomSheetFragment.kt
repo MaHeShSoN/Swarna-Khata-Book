@@ -9,15 +9,21 @@ import android.widget.Toast
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.ChipGroup
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.MetalItem
 import com.jewelrypos.swarnakhatabook.Enums.MetalItemType
+import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.MetalItemViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
+import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
+import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.MetalItemViewModel
 import com.jewelrypos.swarnakhatabook.databinding.DialogInputMetalItemBinding
 import com.jewelrypos.swarnakhatabook.databinding.FragmentItemBottomSheetBinding
+
 
 class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -26,6 +32,8 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     // UI Components
     private var _binding: FragmentItemBottomSheetBinding? = null
     private val binding get() = _binding!!
+
+
 
 
     private val viewModel: MetalItemViewModel by viewModels {
@@ -51,23 +59,19 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        viewModel.retrieveItems { retrievedItems ->
+        viewModel.items.observe(viewLifecycleOwner) { retrievedItems ->
             populateDropdown(retrievedItems)
         }
 
         binding.itemTypeChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
-            viewModel.retrieveItems { retrievedItems ->
-                populateDropdown(retrievedItems)
-            }
+            // No need to call retrieveItems again, just filter the current items
+            populateDropdown(viewModel.items.value ?: emptyList())
         }
 
         setUpDropDownMenus()
-
+        setupListeners()
         // Set the dialog style
 //        setStyle(DialogFragment.STYLE_NORMAL, R.style.BottomSheetDialogStyle)
-
-
-        setupListeners()
 
     }
 
@@ -188,6 +192,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 val dialogView = layoutInflater.inflate(R.layout.dialog_input_metal_item, null)
                 val dialogBinding = DialogInputMetalItemBinding.bind(dialogView)
 
+
                 // Populate AutoCompleteTextView with enum values
                 val metalTypes = MetalItemType.values().map { it.name }
                 val adapter = ArrayAdapter(
@@ -206,6 +211,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     private fun processInputValues(value1: String, value2: MetalItemType) {
         val metalItem = MetalItem(value1, value2)
         viewModel.addItem(metalItem)
+        binding.categoryDropdown.setText(value1)
     }
 
     fun validateJewelryItemForm(): Pair<Boolean, String> {
@@ -277,7 +283,6 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
                 if (netWeightValue <= 0) {
                     binding.netWeightInputLayout.error = "Net weight must be greater than zero"
-                    binding.netWeightEditText.requestFocus()
                     return Pair(false, "Net weight must be greater than zero")
                 } else if (netWeightValue > grossWeightValue) {
                     binding.netWeightInputLayout.error = "Net weight cannot exceed gross weight"
@@ -400,7 +405,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         }
 
         // Create a jewelry item object with all the form data
-        val jewelryItem = JewelleryItem(
+        val jewellryItem = JewelleryItem(
             displayName = binding.displayNameEditText.text.toString().trim(),
             jewelryCode = binding.jewelryCodeEditText.text.toString().trim(),
             itemType = itemType,
@@ -416,9 +421,8 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             location = binding.locationEditText.text.toString()
         )
 
-        // TODO: Save the jewelry item to your data source (database, API, etc.)
-        // viewModel.saveJewelryItem(jewelryItem)
-//        listener?.onItemAdded(jewelleryItem)
+
+        listener?.onItemAdded(jewellryItem)
 
         if (closeAfterSave) {
             dismiss()
@@ -428,7 +432,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         }
 
         // Show success message
-        Toast.makeText(context, "Jewelry item saved successfully", Toast.LENGTH_SHORT).show()
+//        Toast.makeText(context, "Jewelry item saved successfully", Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -488,8 +492,6 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
     }
-
-
 
 
     fun setOnItemAddedListener(listener: OnItemAddedListener) {

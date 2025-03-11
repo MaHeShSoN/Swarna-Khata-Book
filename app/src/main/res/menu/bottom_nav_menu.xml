@@ -1,24 +1,23 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/dashboardFragmentMenu"
+        android:id="@+id/dashBoardFragment"
         android:icon="@drawable/uim__graph_bar"
         android:title="Dashboard"
-
         />
     <item
-        android:id="@+id/billesFragmentMenu"
+        android:id="@+id/salesFragment"
         android:icon="@drawable/ri__hand_coin_fill"
         android:title="Sales" />
     <item
-        android:id="@+id/itemsFragmentMenu"
+        android:id="@+id/inventoryFragment"
         android:icon="@drawable/box"
         android:title="Inventory" />
     <item
-        android:id="@+id/customerFragmentMenu"
+        android:id="@+id/customerFragment"
         android:icon="@drawable/line_md__person_twotone"
         android:title="Customers" />
     <item
-        android:id="@+id/settingFragmentMenu"
+        android:id="@+id/moreSettingFragment"
         android:icon="@drawable/ph__dots_three_outline_duotone"
         android:title="More" />
 </menu>

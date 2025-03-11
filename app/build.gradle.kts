@@ -4,7 +4,7 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.10-1.0.13"
     id("kotlin-kapt")
     id("com.google.gms.google-services")
-    id ("androidx.navigation.safeargs.kotlin")
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -54,7 +54,6 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 
 
-
     // Firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:32.7.3"))
     implementation("com.google.firebase:firebase-analytics-ktx")
@@ -64,6 +63,11 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1") // Room
     kapt("androidx.room:room-compiler:2.6.1") // Room annotation processor
     implementation("androidx.room:room-ktx:2.6.1")//kotlin extentions for room
+
+
+    // Kotlin Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4") // Or latest version
+
 
     //Signature
     implementation("com.github.gcacace:signature-pad:1.3.1")
@@ -88,7 +92,7 @@ dependencies {
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
     implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 
-    implementation ("com.github.mukeshsolanki.android-otpview-pinview:otpview:3.2.0")
+    implementation("com.github.mukeshsolanki.android-otpview-pinview:otpview:3.2.0")
 
-    implementation ("com.github.MicroRJ:android_superellipse:v3.0.1-alpha")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 }

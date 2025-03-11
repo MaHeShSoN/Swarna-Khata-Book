@@ -2,8 +2,10 @@ package com.jewelrypos.swarnakhatabook.Utilitys
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import com.google.android.material.button.MaterialButton
@@ -185,9 +187,9 @@ class ThemedM3Dialog(private val context: Context) {
 
         // Set the button colors when the dialog is shown
         dialog.setOnShowListener { dialogInterface ->
-            val positiveButton = (dialogInterface as android.app.AlertDialog).getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-            val negativeButton = (dialogInterface as android.app.AlertDialog).getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
-            val neutralButton = (dialogInterface as android.app.AlertDialog).getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+            val positiveButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+            val negativeButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+            val neutralButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
 
             // Apply custom styling to positive button
             positiveButton?.let {
@@ -204,10 +206,26 @@ class ThemedM3Dialog(private val context: Context) {
             // Apply custom styling to negative button
             negativeButton?.let {
                 if (it is MaterialButton) {
-                    it.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_secondary))
+                    it.setTextColor(ContextCompat.getColor(context, R.color.my_light_primary))
                     it.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(context, R.color.my_light_secondary)
+                        Color.TRANSPARENT
                     )
+                    it.strokeColor = ColorStateList.valueOf(
+                        ContextCompat.getColor(context, R.color.my_light_primary)
+                    )
+                    it.strokeWidth = 1
+
+
+
+                    // This will create space between the buttons
+                    (it.layoutParams as? LinearLayout.LayoutParams)?.apply {
+                        leftMargin = 16.dpToPx(context)
+
+                        // Apply the updated layout params
+                        it.layoutParams = this
+                    }
+
+
                 } else {
                     it.setTextColor(ContextCompat.getColor(context, R.color.my_light_secondary))
                 }
@@ -239,5 +257,9 @@ class ThemedM3Dialog(private val context: Context) {
             dialogBuilder.setView(it)
         }
         return dialogBuilder.create()
+    }
+    // Extension function to convert dp to pixels
+    fun Int.dpToPx(context: Context): Int {
+        return (this * context.resources.displayMetrics.density).toInt()
     }
 }
