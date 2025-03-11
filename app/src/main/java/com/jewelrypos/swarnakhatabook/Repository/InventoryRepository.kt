@@ -7,6 +7,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import kotlinx.coroutines.tasks.await
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 class InventoryRepository(
     private val firestore: FirebaseFirestore,
@@ -22,17 +25,22 @@ class InventoryRepository(
 
     suspend fun addJewelleryItem(jewelleryItem: JewelleryItem): Result<Unit> = try {
         val currentUser = auth.currentUser
-        if (currentUser == null) {
-            throw UserNotAuthenticatedException("User not authenticated.")
-        }
+            ?: throw UserNotAuthenticatedException("User not authenticated.")
         val phoneNumber = currentUser.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
 
-        firestore.collection("users")
+        // Create a reference with auto-generated ID
+        val docRef = firestore.collection("users")
             .document(phoneNumber)
             .collection("inventory")
-            .add(jewelleryItem)
-            .await()
+            .document()
+
+        // Update the jewelleryItem with the document ID
+        val itemWithId = jewelleryItem.copy(id = docRef.id)
+
+        // Save to Firestore with the ID included
+        docRef.set(itemWithId).await()
+
         Result.success(Unit)
     } catch (e: Exception) {
         Result.failure(e)
@@ -45,9 +53,7 @@ class InventoryRepository(
     ): Result<List<JewelleryItem>> {
         return try {
             val currentUser = auth.currentUser
-            if (currentUser == null) {
-                throw UserNotAuthenticatedException("User not authenticated.")
-            }
+                ?: throw UserNotAuthenticatedException("User not authenticated.")
             val phoneNumber = currentUser.phoneNumber?.replace("+", "")
                 ?: throw PhoneNumberInvalidException("User phone number not available.")
 
@@ -95,6 +101,25 @@ class InventoryRepository(
             }
             Result.failure(e)
         }
+    }
+
+    suspend fun updateJewelleryItem(item: JewelleryItem) = suspendCoroutine<Unit> { continuation ->
+        val currentUser = auth.currentUser ?: throw UserNotAuthenticatedException("User not authenticated.")
+        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
+            ?: throw PhoneNumberInvalidException("User phone number not available.")
+
+        // Use the same collection path as in addJewelleryItem
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("inventory")  // Use "inventory" instead of "jewelryItems"
+            .document(item.id)
+            .set(item)
+            .addOnSuccessListener {
+                continuation.resume(Unit)
+            }
+            .addOnFailureListener { e ->
+                continuation.resumeWithException(e)
+            }
     }
 }
 

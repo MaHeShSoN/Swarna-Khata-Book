@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook.DataClasses
 
 data class JewelleryItem(
+    val id: String = "",
     val displayName: String = "",
     val jewelryCode: String = "",
     val itemType: String = "",

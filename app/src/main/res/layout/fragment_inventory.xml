@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".InventoryFragment">
 
+
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/addItemFab"
         android:layout_width="wrap_content"
@@ -47,10 +48,10 @@
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            app:menu="@menu/inventory_menu"
             android:background="@color/my_light_primary"
-            android:theme="@style/TextAppearance.Material3.ActionBar.Title"
-            android.minHeight="?attr/actionBarSize"
-            app:title="Inventory" />
+            app:titleTextAppearance="@style/ToolbarTitle"
+            app:title="Stock's" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -65,5 +66,85 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_height="wrap_content"/>
+
+
+    <!-- Add this to your fragment_inventory.xml -->
+    <LinearLayout
+        android:id="@+id/emptySearchLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="16dp"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="(·.·)"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="36sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="No matching jewelry found"
+            android:fontFamily="@font/librebaskervilleregular"
+            android:textSize="20sp"
+            android:textColor="@color/my_light_on_surface" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="We couldn't find any jewelry items that match your search"
+            android:fontFamily="@font/montserratregular"
+            android:textSize="14sp"
+            android:textColor="@color/my_light_on_background" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearFilterButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="CLEAR SEARCH"
+                android:fontFamily="@font/montserratmedium"
+                android:textSize="14sp"
+                android:textColor="@color/my_light_primary"
+                app:rippleColor="@color/my_light_primary_container"
+                app:strokeColor="@color/my_light_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/addNewItemButton"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:backgroundTint="@color/my_light_primary"
+                android:text="ADD NEW ITEM"
+                android:fontFamily="@font/montserratmedium"
+                android:textSize="14sp"
+                android:textColor="@color/my_light_on_primary" />
+        </LinearLayout>
+    </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -21,10 +21,22 @@
         <item name="android:textSize">12sp</item>
         <item name="background">@color/my_light_primary</item>
     </style>
+    <style name="ItemActiveIndicator">
+        <!-- Change this color to match your app's gold theme -->
+        <item name="android:color">@color/my_light_primary_container</item>
+        <!-- You can also adjust the shape if needed -->
+        <!-- <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item> -->
+    </style>
 
     <style name="TextAppearance.Material3.ActionBar.Title" parent="Theme.AppCompat.NoActionBar">
         <item name="android:textColor">@color/white</item>
         <item name="android:fontFamily">@font/playfairregular</item>
+    </style>
+
+    <style name="ToolbarTitle" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/white</item>
     </style>
 
     <style name="Widget.App.TextInputLayout.GoldForm" parent="Widget.Material3.TextInputLayout.FilledBox">

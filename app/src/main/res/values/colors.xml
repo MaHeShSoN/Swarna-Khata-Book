@@ -32,5 +32,7 @@
     <color name="chip_text">#453A0F</color>                <!-- Dark text for chips -->
 
     <!-- For Silver & other image -->
-    <color name="shape_image_silver">#C0C0C0</color>
+    <color name="shape_image_silver">#E6E6E6</color>
+    <color name="shape_image_silver_outline">#C0C0C0</color>
+    <color name="shape_image_other">#A99ED0</color>
 </resources>

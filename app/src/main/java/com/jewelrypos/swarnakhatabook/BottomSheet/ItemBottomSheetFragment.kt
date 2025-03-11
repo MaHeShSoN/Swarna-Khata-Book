@@ -28,7 +28,8 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentItemBottomSheetBinding
 class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
     private var listener: OnItemAddedListener? = null
-
+    private var editMode = false
+    private var itemToEdit: JewelleryItem? = null
     // UI Components
     private var _binding: FragmentItemBottomSheetBinding? = null
     private val binding get() = _binding!!
@@ -52,6 +53,14 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         itemTypeChipGroup = binding.itemTypeChipGroup
 
+        // Update title if in edit mode
+        if (editMode) {
+            binding.titleTextView.text = "Edit Jewellery Item"
+            binding.saveAddButton.text = "Update"
+            binding.saveAddButton.isEnabled = false
+            binding.saveCloseButton.text = "Update & Close"
+        }
+
 
         return binding.root
     }
@@ -68,12 +77,45 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             populateDropdown(viewModel.items.value ?: emptyList())
         }
 
+        // If we're in edit mode, populate the form with the item data
+        if (editMode && itemToEdit != null) {
+            populateFormWithItemData(itemToEdit!!)
+        }
+
+
         setUpDropDownMenus()
         setupListeners()
         // Set the dialog style
 //        setStyle(DialogFragment.STYLE_NORMAL, R.style.BottomSheetDialogStyle)
 
     }
+
+    private fun populateFormWithItemData(item: JewelleryItem) {
+        // Set item type chip
+        when (item.itemType.lowercase()) {
+            "gold" -> binding.goldChip.isChecked = true
+            "silver" -> binding.silverChip.isChecked = true
+            "other" -> binding.otherChip.isChecked = true
+        }
+
+        // Fill in the fields
+        binding.displayNameEditText.setText(item.displayName)
+        binding.jewelryCodeEditText.setText(item.jewelryCode)
+        binding.categoryDropdown.setText(item.category)
+        binding.grossWeightEditText.setText(item.grossWeight.toString())
+        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.wastageEditText.setText(item.wastage.toString())
+        binding.purityEditText.setText(item.purity)
+        binding.mackingChargesEditText.setText(item.makingCharges.toString())
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
+        binding.stockEditText.setText(item.stock.toString())
+        binding.stockChargesTypeEditText.setText(item.stockUnit)
+        binding.locationEditText.setText(item.location)
+
+        // Disable the jewelry code field to prevent editing the document ID reference
+        binding.jewelryCodeEditText.isEnabled = false
+    }
+
 
     private fun setUpDropDownMenus() {
 
@@ -404,8 +446,11 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             else -> "GOLD" // Default
         }
 
+
+
         // Create a jewelry item object with all the form data
         val jewellryItem = JewelleryItem(
+            id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
             displayName = binding.displayNameEditText.text.toString().trim(),
             jewelryCode = binding.jewelryCodeEditText.text.toString().trim(),
             itemType = itemType,
@@ -422,17 +467,30 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         )
 
 
-        listener?.onItemAdded(jewellryItem)
+        // Notify listener based on mode
+        if (editMode) {
+            listener?.onItemUpdated(jewellryItem)
+        } else {
+            listener?.onItemAdded(jewellryItem)
+        }
 
         if (closeAfterSave) {
             dismiss()
         } else {
-            // Clear the form for adding another item
-            clearForm()
+            // Only clear the form if we're not in edit mode
+            if (!editMode) {
+                clearForm()
+            }
         }
 
         // Show success message
 //        Toast.makeText(context, "Jewelry item saved successfully", Toast.LENGTH_SHORT).show()
+    }
+
+    // Method to set the item for editing
+    fun setItemForEdit(item: JewelleryItem) {
+        editMode = true
+        itemToEdit = item
     }
 
     /**
@@ -500,6 +558,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
     interface OnItemAddedListener {
         fun onItemAdded(item: JewelleryItem)
+        fun onItemUpdated(item: JewelleryItem)
     }
 
     companion object {

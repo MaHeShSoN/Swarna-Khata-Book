@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/jewelryCard"
@@ -8,11 +7,11 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/my_light_surface"
     app:cardCornerRadius="16dp"
     app:cardElevation="3dp"
     app:strokeColor="@color/my_light_outline"
-    app:strokeWidth="1dp"
-    app:cardBackgroundColor="@color/my_light_surface">
+    app:strokeWidth="1dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -26,16 +25,16 @@
             android:layout_height="40dp"
             android:background="@drawable/circle_gold_background"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/jewelryTypeInitial"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/montserratbold"
             android:text="G"
             android:textColor="@color/my_light_on_primary"
             android:textSize="18sp"
-            android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="@id/jewelryTypeIndicator"
             app:layout_constraintEnd_toEndOf="@id/jewelryTypeIndicator"
             app:layout_constraintStart_toStartOf="@id/jewelryTypeIndicator"
@@ -47,12 +46,12 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_marginEnd="8dp"
             android:ellipsize="end"
+            android:fontFamily="@font/librebaskervilleregular"
             android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="@color/my_light_on_surface"
-            app:layout_constraintEnd_toStartOf="@id/menuButton"
+            android:textSize="18sp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/jewelryTypeIndicator"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="22K Gold Bangle" />
@@ -64,8 +63,9 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:fontFamily="@font/montserratlight"
             android:textColor="@color/my_light_secondary"
+            android:textSize="12sp"
             app:layout_constraintStart_toEndOf="@id/jewelryTypeIndicator"
             app:layout_constraintTop_toBottomOf="@id/jewelryTitle"
             tools:text="Code: GB-001" />
@@ -76,140 +76,151 @@
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
-            android:background="@color/my_light_outline"
             android:alpha="0.5"
+            android:background="@color/my_light_outline"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/jewelryCode" />
 
-        <!-- Bottom Metrics Container -->
-        <LinearLayout
+        <!-- Metrics Container with smaller CardViews -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/metricsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:padding="4dp"
-            android:layout_marginBottom="4dp"
-            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/divider">
 
-            <!-- Gross Weight -->
-            <LinearLayout
-                android:id="@+id/grossWeightContainer"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/grossWeightCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="@drawable/rounded_metric_background"
-                android:backgroundTint="@color/my_light_primary_container"
-                android:orientation="vertical"
-                android:padding="8dp"
-                android:elevation="1dp">
+                android:layout_marginEnd="4dp"
+                app:cardBackgroundColor="@color/my_light_primary_container"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="@color/my_light_primary"
+                app:strokeWidth="1dp"
+                app:layout_constraintEnd_toStartOf="@id/locationCard"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
-                <TextView
-                    android:id="@+id/grossWeightLabel"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="GROSS WT"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                    android:textColor="@color/my_light_secondary" />
+                    android:orientation="vertical"
+                    android:padding="8dp">
 
-                <TextView
-                    android:id="@+id/grossWeightValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textStyle="bold"
-                    tools:text="25.75 g" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/grossWeightLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="GROSS WT"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="10sp" />
 
-            <!-- Spacing -->
-            <View
-                android:layout_width="10dp"
-                android:layout_height="match_parent" />
+                    <TextView
+                        android:id="@+id/grossWeightValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="25.75 g" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Location -->
-            <LinearLayout
-                android:id="@+id/locationContainer"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/locationCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="@drawable/rounded_metric_background"
-                android:backgroundTint="@color/my_light_secondary_container"
-                android:orientation="vertical"
-                android:padding="8dp"
-                android:elevation="1dp">
+                android:layout_marginHorizontal="4dp"
+                app:cardBackgroundColor="@color/my_light_secondary_container"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="1.5dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="@color/my_light_secondary"
+                app:strokeWidth="1dp"
+                app:layout_constraintEnd_toStartOf="@id/stockCard"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/grossWeightCard"
+                app:layout_constraintTop_toTopOf="parent">
 
-                <TextView
-                    android:id="@+id/locationLabel"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="LOCATION"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                    android:textColor="@color/my_light_secondary" />
+                    android:orientation="vertical"
+                    android:padding="8dp">
 
-                <TextView
-                    android:id="@+id/locationValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textStyle="bold"
-                    tools:text="Main Store" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/locationLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="LOCATION"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="10sp" />
 
-            <!-- Spacing -->
-            <View
-                android:layout_width="10dp"
-                android:layout_height="match_parent" />
+                    <TextView
+                        android:id="@+id/locationValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="Main Store" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <!-- Stock -->
-            <LinearLayout
-                android:id="@+id/stockContainer"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/stockCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="@drawable/rounded_metric_background"
-                android:backgroundTint="@color/my_light_tertiary_container"
-                android:orientation="vertical"
-                android:padding="8dp"
-                android:elevation="1dp">
+                android:layout_marginStart="4dp"
+                app:cardBackgroundColor="@color/my_light_tertiary_container"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="1.5dp"
+                app:cardUseCompatPadding="true"
+                app:strokeColor="@color/my_light_tertiary"
+                app:strokeWidth="1dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/locationCard"
+                app:layout_constraintTop_toTopOf="parent">
 
-                <TextView
-                    android:id="@+id/stockLabel"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="STOCK"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                    android:textColor="@color/my_light_tertiary" />
+                    android:orientation="vertical"
+                    android:padding="8dp">
 
-                <TextView
-                    android:id="@+id/stockValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textStyle="bold"
-                    tools:text="5 pcs" />
-            </LinearLayout>
-        </LinearLayout>
+                    <TextView
+                        android:id="@+id/stockLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="STOCK"
+                        android:textColor="@color/my_light_tertiary"
+                        android:textSize="10sp" />
 
-        <!-- Three-Dot Menu Button -->
-        <ImageButton
-            android:id="@+id/menuButton"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="More options"
-            android:src="@drawable/bi__three_dots_vertical"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/my_light_secondary" />
+                    <TextView
+                        android:id="@+id/stockValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="5 pcs" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

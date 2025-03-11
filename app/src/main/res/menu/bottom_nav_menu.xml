@@ -2,7 +2,7 @@
     <item
         android:id="@+id/dashBoardFragment"
         android:icon="@drawable/uim__graph_bar"
-        android:title="Dashboard"
+        android:title="Panel"
         />
     <item
         android:id="@+id/salesFragment"
@@ -11,11 +11,11 @@
     <item
         android:id="@+id/inventoryFragment"
         android:icon="@drawable/box"
-        android:title="Inventory" />
+        android:title="Stock" />
     <item
         android:id="@+id/customerFragment"
         android:icon="@drawable/line_md__person_twotone"
-        android:title="Customers" />
+        android:title="Client" />
     <item
         android:id="@+id/moreSettingFragment"
         android:icon="@drawable/ph__dots_three_outline_duotone"

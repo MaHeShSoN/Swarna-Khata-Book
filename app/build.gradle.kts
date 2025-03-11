@@ -95,4 +95,7 @@ dependencies {
     implementation("com.github.mukeshsolanki.android-otpview-pinview:otpview:3.2.0")
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    implementation ("com.github.ibrahimsn98:SmoothBottomBar:1.7.9")
+
 }

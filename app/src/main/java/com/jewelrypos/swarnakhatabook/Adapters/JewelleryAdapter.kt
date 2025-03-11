@@ -12,7 +12,7 @@ import com.google.android.material.imageview.ShapeableImageView
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.R
 
-class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>) :
+class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>,   private val itemClickListener: OnItemClickListener? = null  ) :
     RecyclerView.Adapter<JewelleryAdapter.JewelleryViewHolder>() {
 
     class JewelleryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -24,6 +24,11 @@ class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>) :
         val locationValue: TextView = itemView.findViewById(R.id.locationValue)
         val stockValue: TextView = itemView.findViewById(R.id.stockValue)
         // Add other views here
+    }
+
+    // Define an interface for click events
+    interface OnItemClickListener {
+        fun onItemClick(item: JewelleryItem)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): JewelleryViewHolder {
@@ -48,6 +53,11 @@ class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>) :
             "other" -> holder.jewelryTypeIndicator.setBackgroundResource(R.drawable.circle_other_background)
             else -> holder.jewelryTypeIndicator.setBackgroundResource(R.drawable.circle_gold_background)
         }
+
+        holder.itemView.setOnClickListener {
+            itemClickListener?.onItemClick(currentItem)
+        }
+
         // Apply animation
         setAnimation(holder.itemView, position)
         // Apply FallDown animation

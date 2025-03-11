@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/filter_gold"
+        android:title="GOLD" />
+    <item
+        android:id="@+id/filter_silver"
+        android:title="SILVER" />
+    <item
+        android:id="@+id/filter_other"
+        android:title="OTHER" />
+    <item
+        android:id="@+id/filter_all"
+        android:title="CLEAR" />
+</menu>

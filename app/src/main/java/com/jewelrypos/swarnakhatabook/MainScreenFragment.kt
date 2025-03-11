@@ -26,7 +26,28 @@ class MainScreenFragment : Fragment() {
             ?.findNavController()
 
         if (innerNavController != null) {
-            binding.bottomNavigation.setupWithNavController(innerNavController)
+            // Set up the bottom bar with the nav controller
+            binding.bottomNavigation.onItemSelected = { position ->
+                when (position) {
+                    0 -> innerNavController.navigate(R.id.dashBoardFragment)
+                    1 -> innerNavController.navigate(R.id.salesFragment)
+                    2 -> innerNavController.navigate(R.id.inventoryFragment)
+                    3 -> innerNavController.navigate(R.id.customerFragment)
+                    4 -> innerNavController.navigate(R.id.moreSettingFragment)
+                }
+            }
+
+            innerNavController.addOnDestinationChangedListener { _, destination, _ ->
+                when (destination.id) {
+                    R.id.dashBoardFragment -> binding.bottomNavigation.itemActiveIndex = 0
+                    R.id.salesFragment -> binding.bottomNavigation.itemActiveIndex = 1
+                    R.id.inventoryFragment -> binding.bottomNavigation.itemActiveIndex = 2
+                    R.id.customerFragment -> binding.bottomNavigation.itemActiveIndex = 3
+                    R.id.moreSettingFragment -> binding.bottomNavigation.itemActiveIndex = 4
+                }
+            }
+
+
         }
         // Inflate the layout for this fragment
         return binding.root
