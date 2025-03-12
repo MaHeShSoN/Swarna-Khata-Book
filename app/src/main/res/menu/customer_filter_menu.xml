@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/filter_consumer"
+        android:title="CONSUMER" />
+    <item
+        android:id="@+id/filter_wholesaler"
+        android:title="WHOLESALER" />
+    <item
+        android:id="@+id/filter_all"
+        android:title="CLEAR" />
+</menu>

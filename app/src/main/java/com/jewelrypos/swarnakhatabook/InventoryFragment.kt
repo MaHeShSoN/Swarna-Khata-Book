@@ -99,29 +99,17 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         }
     }
 
-// Add this to your onCreateView or after setupSearchView()
     private fun setupFilterMenu() {
         binding.topAppBar.menu.findItem(R.id.action_filter).setOnMenuItemClickListener { menuItem ->
-            showFilterPopup(menuItem.actionView ?: binding.topAppBar)
+            showFilterPopup(binding.topAppBar) // Use the toolbar itself as the anchor
             true
         }
     }
 
     private fun showFilterPopup(view: View) {
-        val leftAnchorView = binding.topAppBar.menu.findItem(R.id.action_filter) ?: binding.topAppBar
-
-        val popup = PopupMenu(requireContext(), leftAnchorView)
+        val popup = PopupMenu(requireContext(), view) // Use the actionView as the anchor
         popup.menuInflater.inflate(R.menu.filter_menu, popup.menu)
-
-
-
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            popup.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-        }
-
-
-
+        //popup.gravity = android.view.Gravity.TOP or android.view.Gravity.START //remove or double check that it is correct.
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.filter_gold -> {
@@ -143,7 +131,6 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                 else -> false
             }
         }
-
         popup.show()
     }
 

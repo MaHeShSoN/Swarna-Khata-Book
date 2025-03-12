@@ -35,4 +35,5 @@
     <color name="shape_image_silver">#E6E6E6</color>
     <color name="shape_image_silver_outline">#C0C0C0</color>
     <color name="shape_image_other">#A99ED0</color>
+    <color name="star_color">#FFFFC508</color>
 </resources>
