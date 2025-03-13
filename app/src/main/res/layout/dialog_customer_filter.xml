@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    >
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Customer Filter"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Customer Type Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Customer Type"
+        android:textStyle="bold"
+        android:textColor="#555555"
+        android:layout_marginTop="8dp"/>
+
+    <RadioGroup
+        android:id="@+id/customerTypeGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rbWholeseller"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Wholeseller"
+            android:checked="true"
+            android:paddingVertical="8dp"/>
+
+        <RadioButton
+            android:id="@+id/rbConsumer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Consumer"
+            android:paddingVertical="8dp"/>
+    </RadioGroup>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE"
+        android:layout_marginVertical="12dp"/>
+
+    <!-- Sort Order Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sort By"
+        android:textStyle="bold"
+        android:textColor="#555555"
+        android:layout_marginTop="8dp"/>
+
+    <RadioGroup
+        android:id="@+id/sortOrderGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rbAscending"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ascending by name"
+            android:checked="true"
+            android:paddingVertical="8dp"/>
+
+        <RadioButton
+            android:id="@+id/rbDescending"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Descending by name"
+            android:paddingVertical="8dp"/>
+    </RadioGroup>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#EEEEEE"
+        android:layout_marginVertical="12dp"/>
+
+    <!-- Payment Status Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Payment Status"
+        android:textStyle="bold"
+        android:textColor="#555555"
+        android:layout_marginTop="8dp"/>
+
+    <RadioGroup
+        android:id="@+id/paymentStatusGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rbToPay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="To Pay"
+            android:checked="true"
+            android:paddingVertical="8dp"/>
+
+        <RadioButton
+            android:id="@+id/rbToReceive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="To Receive"
+            android:paddingVertical="8dp"/>
+    </RadioGroup>
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="24dp">
+
+        <!-- Clear Filters Button - Added to the left side -->
+        <Button
+            android:id="@+id/btnClearFilters"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear Filters"
+            android:textColor="#FF5252"
+            android:drawablePadding="4dp"
+            style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+        <!-- Spacer to push Cancel and Apply buttons to the right -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancel"
+            android:textColor="#555555"
+            style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+        <Button
+            android:id="@+id/btnApply"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Apply"
+            android:backgroundTint="#4285F4"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="16dp"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Apply Making Charges On:"
+        android:textColor="@color/my_light_secondary"
+        android:fontFamily="@font/montserratmedium"
+        android:textSize="14sp" />
+
+    <RadioGroup
+        android:id="@+id/makingChargesRadioGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <RadioButton
+            android:id="@+id/grossWeightRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Gross Weight"
+            android:buttonTint="@color/my_light_primary" />
+
+        <RadioButton
+            android:id="@+id/netWeightRadioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Net Weight"
+            android:buttonTint="@color/my_light_primary" />
+    </RadioGroup>
+</LinearLayout>

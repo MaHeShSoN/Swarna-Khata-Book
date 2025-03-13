@@ -25,14 +25,14 @@ import com.jewelrypos.swarnakhatabook.databinding.DialogInputMetalItemBinding
 import com.jewelrypos.swarnakhatabook.databinding.FragmentItemBottomSheetBinding
 
 
-class ItemBottomSheetFragment : BottomSheetDialogFragment() {
+open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
-    private var listener: OnItemAddedListener? = null
-    private var editMode = false
-    private var itemToEdit: JewelleryItem? = null
+    var listener: OnItemAddedListener? = null
+    var editMode = false
+    var itemToEdit: JewelleryItem? = null
     // UI Components
     private var _binding: FragmentItemBottomSheetBinding? = null
-    private val binding get() = _binding!!
+    val binding get() = _binding!!
 
 
 
@@ -183,7 +183,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.categoryDropdown.setAdapter(adapter)
     }
 
-    private fun showThemedDialog() {
+    fun showThemedDialog() {
         // Create and customize the themed dialog
         ThemedM3Dialog(requireContext())
             .setTitle("Add Category")
@@ -496,7 +496,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     /**
      * Clears all form fields for adding a new item
      */
-    private fun clearForm() {
+    fun clearForm() {
         binding.displayNameEditText.text?.clear()
         binding.jewelryCodeEditText.text?.clear()
         binding.grossWeightEditText.text?.clear()
@@ -526,7 +526,7 @@ class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
 
-    private fun setupListeners() {
+    open fun setupListeners() {
 
         binding.goldImageButton1.setOnClickListener {
             showThemedDialog()

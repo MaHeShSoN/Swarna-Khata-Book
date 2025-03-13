@@ -39,24 +39,55 @@ class CustomerViewModel(
     // Current filter
     private var currentFilter: String? = null
 
+
+    // Add these properties to CustomerViewModel
+    private val _activeCustomerType = MutableLiveData<String?>()
+    val activeCustomerType: LiveData<String?> = _activeCustomerType
+
+    private val _activeSortOrder = MutableLiveData<String?>("ASC")
+    val activeSortOrder: LiveData<String?> = _activeSortOrder
+
+    private val _activePaymentStatus = MutableLiveData<String?>()
+    val activePaymentStatus: LiveData<String?> = _activePaymentStatus
+
+
     init {
         loadFirstPage()
     }
 
-    // Filter customers by type (Consumer, Wholesaler)
-    fun filterByType(type: String?) {
-        currentFilter = type
-        _activeFilter.value = type
+
+    // Method to apply all filters at once
+    fun applyFilters(customerType: String?, sortOrder: String?, paymentStatus: String?) {
+        _activeCustomerType.value = customerType
+        if (sortOrder != null) _activeSortOrder.value = sortOrder
+        _activePaymentStatus.value = paymentStatus
+
+        // Update the _activeFilter value for the UI indicator
+        _activeFilter.value = if (customerType != null || paymentStatus != null) {
+            "Active" // Just a marker that some filter is active
+        } else {
+            null
+        }
+
+        // Apply the filters
         applyFiltersAndSearch()
     }
 
+    // Modify the applyFiltersAndSearch method to include sorting and payment status
     private fun applyFiltersAndSearch() {
         var filteredList = _allCustomers.toList()
 
         // Apply type filter if set
-        if (!currentFilter.isNullOrEmpty()) {
+        if (!_activeCustomerType.value.isNullOrEmpty()) {
             filteredList = filteredList.filter {
-                it.customerType.equals(currentFilter, ignoreCase = true)
+                it.customerType.equals(_activeCustomerType.value, ignoreCase = true)
+            }
+        }
+
+        // Apply payment status filter if set
+        if (!_activePaymentStatus.value.isNullOrEmpty()) {
+            filteredList = filteredList.filter {
+                it.balanceType.equals(_activePaymentStatus.value, ignoreCase = true)
             }
         }
 
@@ -72,9 +103,52 @@ class CustomerViewModel(
             }
         }
 
+        // Apply sorting
+        filteredList = if (_activeSortOrder.value == "ASC") {
+            filteredList.sortedBy { "${it.firstName} ${it.lastName}" }
+        } else {
+            filteredList.sortedByDescending { "${it.firstName} ${it.lastName}" }
+        }
+
         _customers.value = filteredList
         Log.d("CustomerViewModel", "Filtered to ${filteredList.size} customers")
     }
+
+
+
+
+    // Filter customers by type (Consumer, Wholesaler)
+    fun filterByType(type: String?) {
+        currentFilter = type
+        _activeFilter.value = type
+        applyFiltersAndSearch()
+    }
+
+//    private fun applyFiltersAndSearch() {
+//        var filteredList = _allCustomers.toList()
+//
+//        // Apply type filter if set
+//        if (!currentFilter.isNullOrEmpty()) {
+//            filteredList = filteredList.filter {
+//                it.customerType.equals(currentFilter, ignoreCase = true)
+//            }
+//        }
+//
+//        // Apply search query if set
+//        if (currentSearchQuery.isNotEmpty()) {
+//            filteredList = filteredList.filter { customer ->
+//                customer.firstName.contains(currentSearchQuery, ignoreCase = true) ||
+//                        customer.lastName.contains(currentSearchQuery, ignoreCase = true) ||
+//                        customer.phoneNumber.contains(currentSearchQuery, ignoreCase = true) ||
+//                        customer.email.contains(currentSearchQuery, ignoreCase = true) ||
+//                        customer.businessName.contains(currentSearchQuery, ignoreCase = true) ||
+//                        "${customer.firstName} ${customer.lastName}".contains(currentSearchQuery, ignoreCase = true)
+//            }
+//        }
+//
+//        _customers.value = filteredList
+//        Log.d("CustomerViewModel", "Filtered to ${filteredList.size} customers")
+//    }
 
     fun searchCustomers(query: String) {
         currentSearchQuery = query.trim().lowercase()

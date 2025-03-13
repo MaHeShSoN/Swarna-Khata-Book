@@ -14,5 +14,8 @@ data class JewelleryItem(
     val makingChargesType: String = "",
     val stock: Double = 0.0,
     val stockUnit: String = "",
-    val location: String = ""
+    val location: String = "",
+    // Add these new fields
+    val diamondPrice: Double = 0.0,
+    val makingChargesOn: String = "GrossWeight" // Default to gross weight
 )

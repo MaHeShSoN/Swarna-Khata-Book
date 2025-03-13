@@ -7,6 +7,8 @@ import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
+import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -19,6 +21,7 @@ import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerBinding
 
@@ -92,41 +95,109 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     private fun setupFilterMenu() {
         binding.topAppBar.menu.findItem(R.id.action_filter).setOnMenuItemClickListener { menuItem ->
 //            showFilterPopup(menuItem.actionView ?: binding.topAppBar)
+            showFilterDialog()
             true
         }
     }
 
-//    private fun showFilterPopup(view: View) {
-//        val filterItem = binding.topAppBar.menu.findItem(R.id.action_filter) ?: binding.topAppBar
-//
-//        val popup = PopupMenu(requireContext(), filterItem)
-//        popup.menuInflater.inflate(R.menu.customer_filter_menu, popup.menu)
-//
-//        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-//            popup.gravity = android.view.Gravity.TOP or android.view.Gravity.START
-//        }
-//
-//        popup.setOnMenuItemClickListener { item ->
-//            when (item.itemId) {
-//                R.id.filter_consumer -> {
-//                    customerViewModel.filterByType("Consumer")
-//                    true
-//                }
-//                R.id.filter_wholesaler -> {
-//                    customerViewModel.filterByType("Wholesaler")
-//                    true
-//                }
-//                R.id.filter_all -> {
-//                    customerViewModel.filterByType(null)
-//                    true
-//                }
-//                else -> false
-//            }
-//        }
-//
-//        popup.show()
-//    }
+    private fun showFilterDialog() {
+        // Create the dialog using ThemedM3Dialog (your custom dialog class)
+        val filterDialog = ThemedM3Dialog(requireContext())
+            .setTitle("Filter Customers")
+            .setLayout(R.layout.dialog_customer_filter)
+            .setPositiveButton("Apply") { dialog, dialogView ->
+                // Handle Apply button click
+                applyFilters(dialogView)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel") { dialog ->
+                dialog.dismiss()
+            }
 
+        // Get the dialog view before showing
+        val dialogView = filterDialog.getDialogView()
+
+        // Set up the Clear Filters button
+        dialogView?.findViewById<Button>(R.id.btnClearFilters)?.setOnClickListener {
+            clearFilters(dialogView)
+        }
+
+        // Pre-select the current filter options (if any)
+        setupCurrentFilters(dialogView)
+
+        // Show the dialog
+        filterDialog.show()
+    }
+
+    private fun setupCurrentFilters(dialogView: View?) {
+        dialogView?.let { view ->
+            // Get reference to radio groups
+            val customerTypeGroup = view.findViewById<RadioGroup>(R.id.customerTypeGroup)
+            val sortOrderGroup = view.findViewById<RadioGroup>(R.id.sortOrderGroup)
+            val paymentStatusGroup = view.findViewById<RadioGroup>(R.id.paymentStatusGroup)
+
+            // Set selected options based on current filters in ViewModel
+            when (customerViewModel.activeCustomerType.value) {
+                "Wholesaler" -> customerTypeGroup.check(R.id.rbWholeseller)
+                "Consumer" -> customerTypeGroup.check(R.id.rbConsumer)
+                else -> customerTypeGroup.clearCheck()
+            }
+
+            // Set sort order selection
+            when (customerViewModel.activeSortOrder.value) {
+                "ASC" -> sortOrderGroup.check(R.id.rbAscending)
+                "DESC" -> sortOrderGroup.check(R.id.rbDescending)
+                else -> sortOrderGroup.check(R.id.rbAscending) // Default to ascending
+            }
+
+            // Set payment status selection
+            when (customerViewModel.activePaymentStatus.value) {
+                "Debit" -> paymentStatusGroup.check(R.id.rbToPay)
+                "Credit" -> paymentStatusGroup.check(R.id.rbToReceive)
+                else -> paymentStatusGroup.clearCheck()
+            }
+        }
+    }
+
+    private fun applyFilters(dialogView: View?) {
+        dialogView?.let { view ->
+            // Get selected customer type
+            val customerTypeGroup = view.findViewById<RadioGroup>(R.id.customerTypeGroup)
+            val customerType = when (customerTypeGroup.checkedRadioButtonId) {
+                R.id.rbWholeseller -> "Wholesaler"
+                R.id.rbConsumer -> "Consumer"
+                else -> null
+            }
+
+            // Get selected sort order
+            val sortOrderGroup = view.findViewById<RadioGroup>(R.id.sortOrderGroup)
+            val sortOrder = when (sortOrderGroup.checkedRadioButtonId) {
+                R.id.rbAscending -> "ASC"
+                R.id.rbDescending -> "DESC"
+                else -> "ASC" // Default
+            }
+
+            // Get selected payment status
+            val paymentStatusGroup = view.findViewById<RadioGroup>(R.id.paymentStatusGroup)
+            val paymentStatus = when (paymentStatusGroup.checkedRadioButtonId) {
+                R.id.rbToPay -> "Debit"
+                R.id.rbToReceive -> "Credit"
+                else -> null
+            }
+
+            // Apply filters through ViewModel
+            customerViewModel.applyFilters(customerType, sortOrder, paymentStatus)
+        }
+    }
+
+    private fun clearFilters(dialogView: View?) {
+        dialogView?.let { view ->
+            // Clear all selections
+            view.findViewById<RadioGroup>(R.id.customerTypeGroup).clearCheck()
+            view.findViewById<RadioGroup>(R.id.sortOrderGroup).check(R.id.rbAscending) // Default
+            view.findViewById<RadioGroup>(R.id.paymentStatusGroup).clearCheck()
+        }
+    }
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             customerViewModel.refreshData()

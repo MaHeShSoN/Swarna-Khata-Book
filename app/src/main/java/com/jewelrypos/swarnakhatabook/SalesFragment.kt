@@ -5,55 +5,102 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import com.google.android.material.tabs.TabLayoutMediator
+import com.jewelrypos.swarnakhatabook.Adapters.SalesViewPagerAdapter
+import com.jewelrypos.swarnakhatabook.databinding.FragmentSalesBinding
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
 
-/**
- * A simple [Fragment] subclass.
- * Use the [SalesFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class SalesFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+    private var _binding: FragmentSalesBinding? = null
+    private val binding get() = _binding!!
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentSalesBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupTabLayout()
+        setupFab()
+    }
+
+    private fun setupTabLayout() {
+        val viewPager = binding.viewPager
+        val tabLayout = binding.tabLayout
+
+        val adapter = SalesViewPagerAdapter(childFragmentManager, lifecycle)
+        viewPager.adapter = adapter
+
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = when(position) {
+                0 -> "Orders"
+                1 -> "Invoices"
+                else -> null
+            }
+        }.attach()
+    }
+
+    private fun setupFab() {
+        binding.mainFab.setOnClickListener {
+            // Show/hide the expanded FAB options
+            toggleFabMenu()
+        }
+
+        binding.newOrderFab.setOnClickListener {
+            // Launch new order creation flow
+            showNewOrderSheet()
+            toggleFabMenu(false)
+        }
+
+        binding.newInvoiceFab.setOnClickListener {
+            // Launch new invoice creation flow
+            showNewInvoiceSheet()
+            toggleFabMenu(false)
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_sales, container, false)
+    private fun toggleFabMenu(show: Boolean? = null) {
+        val isVisible = show ?: (binding.fabMenu.visibility != View.VISIBLE)
+
+        if (isVisible) {
+            binding.fabMenu.visibility = View.VISIBLE
+            binding.fabBackdrop.visibility = View.VISIBLE
+            binding.mainFab.setImageResource(R.drawable.material_symbols__close_rounded)
+
+            // Animate the FABs
+            binding.newOrderFab.show()
+            binding.newInvoiceFab.show()
+        } else {
+            binding.fabMenu.visibility = View.GONE
+            binding.fabBackdrop.visibility = View.GONE
+            binding.mainFab.setImageResource(R.drawable.material_symbols__add_rounded)
+
+            // Animate the FABs
+            binding.newOrderFab.hide()
+            binding.newInvoiceFab.hide()
+        }
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment SalesFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            SalesFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+    private fun showNewOrderSheet() {
+        // To be implemented
+        Toast.makeText(context, "Create New Order", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showNewInvoiceSheet() {
+        // To be implemented
+        Toast.makeText(context, "Create New Invoice", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

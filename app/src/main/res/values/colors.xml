@@ -36,4 +36,15 @@
     <color name="shape_image_silver_outline">#C0C0C0</color>
     <color name="shape_image_other">#A99ED0</color>
     <color name="star_color">#FFFFC508</color>
+
+    <!-- Colors for order status indicators -->
+    <color name="status_pending">#FFA000</color>          <!-- Amber/Orange for Pending -->
+    <color name="status_in_progress">#1976D2</color>      <!-- Blue for In Progress -->
+    <color name="status_completed">#43A047</color>        <!-- Green for Completed -->
+    <color name="status_cancelled">#E53935</color>        <!-- Red for Cancelled -->
+
+    <!-- Colors for payment status indicators -->
+    <color name="status_paid">#43A047</color>             <!-- Green for Paid -->
+    <color name="status_partial">#FFA000</color>          <!-- Amber/Orange for Partial payment -->
+    <color name="status_unpaid">#E53935</color>           <!-- Red for Unpaid -->
 </resources>

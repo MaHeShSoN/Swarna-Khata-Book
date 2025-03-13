@@ -63,6 +63,11 @@ class ThemedM3Dialog(private val context: Context) {
         return this
     }
 
+    fun getDialogView(): View? {
+        return dialogView
+    }
+
+
     /**
      * Apply the theme colors to all TextInputLayout elements in the dialog
      */
