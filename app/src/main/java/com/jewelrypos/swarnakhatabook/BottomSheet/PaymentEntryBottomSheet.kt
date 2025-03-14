@@ -23,6 +23,12 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
     private var amountPaid: Double = 0.0
     private var listener: OnPaymentAddedListener? = null
 
+    // Add these properties to store pending values
+    private var pendingTitle: String? = null
+    private var pendingDescription: String? = null
+
+    private var pendingAmount: Double? = null
+
     interface OnPaymentAddedListener {
         fun onPaymentAdded(payment: Payment)
     }
@@ -40,8 +46,58 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         return binding.root
     }
 
+    fun setTitle(title: String) {
+        // Check if binding is initialized and view is attached
+        if (_binding != null) {
+            binding.titleTextView.text = title
+        } else {
+            // Store the title to set when view is created
+            pendingTitle = title
+        }
+    }
+
+    fun setDescription(description: String) {
+        // Check if binding is initialized and view is attached
+        if (_binding != null) {
+            binding.descriptionTextView.text = description
+            binding.descriptionTextView.visibility = View.VISIBLE
+        } else {
+            // Store the description to set when view is created
+            pendingDescription = description
+        }
+    }
+
+    fun setAmount(amount: Double) {
+        if (_binding != null) {
+            binding.amountEditText.setText(String.format("%.2f", amount))
+        } else {
+            pendingAmount = amount
+        }
+    }
+
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Apply any pending values
+        pendingAmount?.let {
+            binding.amountEditText.setText(String.format("%.2f", it))
+            pendingAmount = null
+        }
+
+
+        // Apply any pending title/description
+        pendingTitle?.let {
+            binding.titleTextView.text = it
+            pendingTitle = null
+        }
+
+        pendingDescription?.let {
+            binding.descriptionTextView.text = it
+            binding.descriptionTextView.visibility = View.VISIBLE
+            pendingDescription = null
+        }
+
 
         setupPaymentAmountSuggestions()
         setupPaymentMethodSelection()

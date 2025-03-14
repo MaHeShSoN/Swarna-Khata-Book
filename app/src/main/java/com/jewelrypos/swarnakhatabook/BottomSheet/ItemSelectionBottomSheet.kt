@@ -1,17 +1,25 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.content.Context
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SearchView
+import android.widget.Toast
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.ItemSelectionAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
+import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetitemselectionBinding
 
-// ItemSelectionBottomSheet.kt
 class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
     private var _binding: BottomsheetitemselectionBinding? = null
@@ -21,6 +29,16 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private val selectedItems = mutableListOf<SelectedItem>()
 
     private var listener: OnItemsSelectedListener? = null
+
+    // ViewModel for accessing inventory data
+    private val inventoryViewModel: InventoryViewModel by viewModels {
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val repository = InventoryRepository(firestore, auth)
+        val connectivityManager =
+            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        InventoryViewModelFactory(repository, connectivityManager)
+    }
 
     interface OnItemsSelectedListener {
         fun onItemsSelected(items: List<SelectedItem>)
@@ -45,6 +63,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         setupSearchView()
         setupRecyclerView()
         setupButtons()
+        setupObservers()
+
+        // Load inventory items
+        inventoryViewModel.refreshData()
     }
 
     private fun setupSearchView() {
@@ -62,7 +84,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun searchItems(query: String?) {
-        // Implement search functionality here
+        inventoryViewModel.searchItems(query ?: "")
     }
 
     private fun setupRecyclerView() {
@@ -84,6 +106,26 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.recyclerViewItems.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@ItemSelectionBottomSheet.adapter
+
+            // Add scroll listener for pagination
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+
+                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                    val visibleItemCount = layoutManager.childCount
+                    val totalItemCount = layoutManager.itemCount
+                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                    // Load more items when user approaches the end of the list
+                    if (!inventoryViewModel.isLoading.value!! &&
+                        (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 &&
+                        firstVisibleItemPosition >= 0
+                    ) {
+                        inventoryViewModel.loadNextPage()
+                    }
+                }
+            })
         }
     }
 
@@ -108,28 +150,60 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    private fun setupObservers() {
+        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
+            adapter.updateItems(items)
+            updateEmptyState(items.isEmpty())
+        }
+
+        inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+
+        inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
+            if (!errorMessage.isNullOrEmpty()) {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean) {
+        if (isEmpty) {
+            binding.emptyStateLayout.visibility = View.VISIBLE
+            binding.recyclerViewItems.visibility = View.GONE
+        } else {
+            binding.emptyStateLayout.visibility = View.GONE
+            binding.recyclerViewItems.visibility = View.VISIBLE
+        }
+    }
+
     private fun showNewItemBottomSheet() {
         val newItemSheet = ModifiedItemBottomSheetFragment.newInstance()
         newItemSheet.setOnItemAddedListener(object : ItemBottomSheetFragment.OnItemAddedListener {
             override fun onItemAdded(item: JewelleryItem) {
+                // Add the newly created item to inventory
+                inventoryViewModel.addJewelleryItem(item)
+
                 // Add the newly created item to selected items
                 selectedItems.add(SelectedItem(item, 1))
                 updateSelectedCount()
-
-                // Refresh the recyclerview
-                loadInventoryItems()
             }
 
-            // Add this method if the interface requires it
             override fun onItemUpdated(item: JewelleryItem) {
-                // Not needed for this implementation
+                // Update the item in inventory
+                inventoryViewModel.updateJewelleryItem(item)
+
+                // Update in selected items if it exists
+                val selected = selectedItems.find { it.item.id == item.id }
+                if (selected != null) {
+                    // Keep the quantity but update the item details
+                    val quantity = selected.quantity
+                    selectedItems.removeIf { it.item.id == item.id }
+                    selectedItems.add(SelectedItem(item, quantity))
+                }
             }
         })
         newItemSheet.show(parentFragmentManager, "NewItemBottomSheet")
-    }
-
-    private fun loadInventoryItems() {
-        // Implement loading inventory items from repository
     }
 
     override fun onDestroyView() {
@@ -138,6 +212,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     companion object {
+        const val TAG = "ItemSelectionBottomSheet"
+
         fun newInstance(): ItemSelectionBottomSheet {
             return ItemSelectionBottomSheet()
         }

@@ -11,13 +11,20 @@ import com.jewelrypos.swarnakhatabook.TabFragment.OrdersFragment
 class SalesViewPagerAdapter(fragmentManager: FragmentManager, lifecycle: Lifecycle) :
     FragmentStateAdapter(fragmentManager, lifecycle) {
 
+    private val ordersFragment = OrdersFragment()
+    private val invoicesFragment = InvoicesFragment()
+
     override fun getItemCount(): Int = 2
 
     override fun createFragment(position: Int): Fragment {
         return when(position) {
-            0 -> OrdersFragment()
-            1 -> InvoicesFragment()
+            0 -> ordersFragment
+            1 -> invoicesFragment
             else -> throw IllegalArgumentException("Invalid position: $position")
         }
     }
+
+    fun getOrdersFragment(): OrdersFragment = ordersFragment
+
+    fun getInvoicesFragment(): InvoicesFragment = invoicesFragment
 }
