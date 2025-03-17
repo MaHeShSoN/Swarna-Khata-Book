@@ -1,7 +1,5 @@
 package com.jewelrypos.swarnakhatabook.Adapters
 
-
-
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,15 +11,14 @@ import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
 import com.jewelrypos.swarnakhatabook.R
 import java.text.DecimalFormat
 
-// SelectedItemsAdapter.kt
 class SelectedItemsAdapter(
-    private var items: List<SelectedItemWithPrice>
+    private var items: List<SelectedItemWithPrice>,
 ) : RecyclerView.Adapter<SelectedItemsAdapter.ItemViewHolder>() {
 
     interface OnItemActionListener {
         fun onRemoveItem(item: SelectedItemWithPrice)
         fun onEditItem(item: SelectedItemWithPrice)
-        fun onQuantityChanged(item: SelectedItemWithPrice, quantity: Int)
+        fun onQuantityChanged(item: SelectedItemWithPrice, newQuantity: Int)
     }
 
     private var listener: OnItemActionListener? = null
@@ -50,13 +47,15 @@ class SelectedItemsAdapter(
     override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
         val selectedItem = items[position]
         val item = selectedItem.item
+        val formatter = DecimalFormat("#,##,##0.00")
 
+        // Set basic item details
         holder.itemName.text = "${item.purity} ${item.displayName}"
         holder.itemDetails.text = "Weight: ${item.grossWeight}g | Code: ${item.jewelryCode}"
 
-        // Format price
-        val formatter = DecimalFormat("#,##,##0.00")
-        holder.price.text = "₹${formatter.format(selectedItem.price)}"
+        // Set price
+        val totalPrice = selectedItem.price * selectedItem.quantity
+        holder.price.text = "₹${formatter.format(totalPrice)}"
 
         // Set quantity
         holder.quantity.text = selectedItem.quantity.toString()
@@ -64,19 +63,17 @@ class SelectedItemsAdapter(
         // Handle quantity adjustment
         holder.decreaseButton.setOnClickListener {
             if (selectedItem.quantity > 1) {
-                val newQty = selectedItem.quantity - 1
-                listener?.onQuantityChanged(selectedItem, newQty)
+                val newQuantity = selectedItem.quantity - 1
+                listener?.onQuantityChanged(selectedItem, newQuantity)
             }
         }
 
         holder.increaseButton.setOnClickListener {
-            if (selectedItem.quantity < 99) {
-                val newQty = selectedItem.quantity + 1
-                listener?.onQuantityChanged(selectedItem, newQty)
-            }
+            val newQuantity = selectedItem.quantity + 1
+            listener?.onQuantityChanged(selectedItem, newQuantity)
         }
 
-        // Handle edit and remove
+        // Handle edit and remove actions
         holder.editButton.setOnClickListener {
             listener?.onEditItem(selectedItem)
         }
@@ -96,7 +93,10 @@ class SelectedItemsAdapter(
         diffResult.dispatchUpdatesTo(this)
     }
 
-    class SelectedItemDiffCallback(
+    // Getter for the current items list
+    fun getItems(): List<SelectedItemWithPrice> = items
+
+    private class SelectedItemDiffCallback(
         private val oldList: List<SelectedItemWithPrice>,
         private val newList: List<SelectedItemWithPrice>
     ) : DiffUtil.Callback() {
@@ -108,9 +108,11 @@ class SelectedItemsAdapter(
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition] == newList[newItemPosition]
+            val oldItem = oldList[oldItemPosition]
+            val newItem = newList[newItemPosition]
+            return oldItem.item.id == newItem.item.id &&
+                    oldItem.quantity == newItem.quantity &&
+                    oldItem.price == newItem.price
         }
     }
-
-
 }

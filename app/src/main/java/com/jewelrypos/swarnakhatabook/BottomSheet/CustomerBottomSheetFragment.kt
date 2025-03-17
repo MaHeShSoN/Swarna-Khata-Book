@@ -3,6 +3,7 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
 import android.app.DatePickerDialog
+import android.app.Dialog
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
@@ -11,9 +12,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.FrameLayout
 import android.widget.RadioButton
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
@@ -427,6 +431,36 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.stateLayout.isErrorEnabled = false
         binding.businessNameLayout.isErrorEnabled = false
     }
+
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                setupFullHeight(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                behavior.isDraggable = true
+
+            }
+        }
+
+        return dialog
+    }
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
+    }
+
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

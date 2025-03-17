@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.DataClasses
 
+
 data class JewelleryItem(
     val id: String = "",
     val displayName: String = "",
@@ -15,7 +16,11 @@ data class JewelleryItem(
     val stock: Double = 0.0,
     val stockUnit: String = "",
     val location: String = "",
-    // Add these new fields
     val diamondPrice: Double = 0.0,
-    val makingChargesOn: String = "GrossWeight" // Default to gross weight
+    val goldRate: Double = 0.0,
+    val goldRateOn: String = "",
+    val taxRate: Double = 0.0,
+    val totalTax: Double = 0.0,
+    val listOfExtraCharges: List<ExtraCharge> = emptyList()
+
 )

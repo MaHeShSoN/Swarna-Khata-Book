@@ -21,10 +21,6 @@ class InvoicesAdapter(
 
     private var onItemClickListener: ((Invoice) -> Unit)? = null
 
-    fun setOnItemClickListener(listener: (Invoice) -> Unit) {
-        onItemClickListener = listener
-    }
-
     class InvoiceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val invoiceNumber: TextView = itemView.findViewById(R.id.invoiceNumber)
         val paymentStatus: TextView = itemView.findViewById(R.id.paymentStatus)

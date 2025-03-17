@@ -1,25 +1,24 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.fragment.app.viewModels
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.ChipGroup
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.MetalItem
 import com.jewelrypos.swarnakhatabook.Enums.MetalItemType
-import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.MetalItemViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
-import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
-import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.MetalItemViewModel
 import com.jewelrypos.swarnakhatabook.databinding.DialogInputMetalItemBinding
 import com.jewelrypos.swarnakhatabook.databinding.FragmentItemBottomSheetBinding
@@ -30,11 +29,10 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     var listener: OnItemAddedListener? = null
     var editMode = false
     var itemToEdit: JewelleryItem? = null
+
     // UI Components
     private var _binding: FragmentItemBottomSheetBinding? = null
     val binding get() = _binding!!
-
-
 
 
     private val viewModel: MetalItemViewModel by viewModels {
@@ -57,7 +55,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         if (editMode) {
             binding.titleTextView.text = "Edit Jewellery Item"
             binding.saveAddButton.text = "Update"
-            binding.saveAddButton.isEnabled = false
             binding.saveCloseButton.text = "Update & Close"
         }
 
@@ -80,6 +77,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // If we're in edit mode, populate the form with the item data
         if (editMode && itemToEdit != null) {
             populateFormWithItemData(itemToEdit!!)
+        } else {
+            // If it's not edit mode, set up initial values
+            setupInitialValues()
         }
 
 
@@ -106,8 +106,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.purityEditText.setText(item.purity)
-        binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
         binding.stockEditText.setText(item.stock.toString())
         binding.stockChargesTypeEditText.setText(item.stockUnit)
         binding.locationEditText.setText(item.location)
@@ -118,30 +116,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
 
     private fun setUpDropDownMenus() {
-
-        //Purity list
-        val listOfPurity = listOf<String>("24k", "22k", "20k", "18k", "14k", "10k")
-
-        val adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
-            listOfPurity
-        )
-
-        binding.purityEditText.setAdapter(adapter)
-
-
-        //MackingChargeType list
-        val listOfMakingChargeType = listOf<String>("PER GRAM", "FIX")
-
-        val adapter2 = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
-            listOfMakingChargeType
-        )
-
-        binding.mackingChargesTypeEditText.setAdapter(adapter2)
-
 
         //Purity list
         val listOfUnits = listOf<String>("PIECE", "SET", "PAIR")
@@ -264,14 +238,12 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         val netWeight = binding.netWeightEditText.text.toString().trim()
         val wastage = binding.wastageEditText.text.toString().trim()
         val purity = binding.purityEditText.text.toString().trim()
-        val makingCharges = binding.mackingChargesEditText.text.toString().trim()
-        val makingChargesType = binding.mackingChargesTypeEditText.text.toString().trim()
         val stock = binding.stockEditText.text.toString().trim()
         val stockType = binding.stockChargesTypeEditText.text.toString().trim()
         val location = binding.locationEditText.text.toString().trim()
         val category = binding.categoryDropdown.text.toString().trim()
 
-        // Check if required fields are empty
+        // Basic validation for required fields
         if (displayName.isEmpty()) {
             binding.displayNameInputLayout.error = "Display name is required"
             binding.displayNameEditText.requestFocus()
@@ -296,7 +268,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             binding.categoryInputLayout.error = null
         }
 
-        // Validate numeric fields
+        // Numeric field validations
+        // Gross Weight - required
         if (grossWeight.isEmpty()) {
             binding.grossWeightInputLayout.error = "Gross weight is required"
             binding.grossWeightEditText.requestFocus()
@@ -318,6 +291,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
+        // Net Weight - should be less than gross weight if provided
         if (netWeight.isNotEmpty()) {
             try {
                 val netWeightValue = netWeight.toDouble()
@@ -340,6 +314,16 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
+        // Purity validation
+        if (purity.isEmpty()) {
+            binding.purityInputLayout.error = "Purity is required"
+            binding.purityEditText.requestFocus()
+            return Pair(false, "Purity is required")
+        } else {
+            binding.purityInputLayout.error = null
+        }
+
+        // Validate wastage if provided
         if (wastage.isNotEmpty()) {
             try {
                 val wastageValue = wastage.toDouble()
@@ -357,40 +341,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
-        if (purity.isEmpty()) {
-            binding.purityInputLayout.error = "Purity is required"
-            binding.purityEditText.requestFocus()
-            return Pair(false, "Purity is required")
-        } else {
-            binding.purityInputLayout.error = null
-        }
 
-        if (makingCharges.isNotEmpty()) {
-            try {
-                val makingChargesValue = makingCharges.toDouble()
-                if (makingChargesValue < 0) {
-                    binding.mackingChargesInputLayout.error = "Making charges cannot be negative"
-                    binding.mackingChargesEditText.requestFocus()
-                    return Pair(false, "Making charges cannot be negative")
-                } else {
-                    binding.mackingChargesInputLayout.error = null
-                }
-
-                // If making charges are provided, type must also be provided
-                if (makingChargesType.isEmpty()) {
-                    binding.mackingChargesTypeInputLayout.error = "Making charges type is required"
-                    binding.mackingChargesTypeEditText.requestFocus()
-                    return Pair(false, "Making charges type is required")
-                } else {
-                    binding.mackingChargesTypeInputLayout.error = null
-                }
-            } catch (e: NumberFormatException) {
-                binding.mackingChargesInputLayout.error = "Invalid making charges"
-                binding.mackingChargesEditText.requestFocus()
-                return Pair(false, "Invalid making charges")
-            }
-        }
-
+        // Stock validation
         if (stock.isNotEmpty()) {
             try {
                 val stockValue = stock.toDouble()
@@ -420,11 +372,25 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // All validations passed
         return Pair(true, "")
     }
-
     /**
      * Extension function to easily call validation from the activity or fragment
      * @return Boolean - Returns true if all validations pass
      */
+
+
+    /**
+     * Sets up initial values for all fields
+     */
+    private fun setupInitialValues() {
+        // Set default values
+        binding.wastageEditText.setText("0.0")
+        binding.purityEditText.setText("0.0")
+        binding.netWeightEditText.setText("0.0")
+        binding.grossWeightEditText.setText("0.0")
+        binding.stockEditText.setText("0.0")
+    }
+
+
     fun validateAndShowErrors(): Boolean {
         val (isValid, errorMessage) = validateJewelryItemForm()
 
@@ -447,7 +413,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         }
 
 
-
         // Create a jewelry item object with all the form data
         val jewellryItem = JewelleryItem(
             id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
@@ -459,11 +424,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
             purity = binding.purityEditText.text.toString(),
-            makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            makingChargesType = binding.mackingChargesTypeEditText.text.toString(),
             stock = binding.stockEditText.text.toString().toDoubleOrNull() ?: 0.0,
             stockUnit = binding.stockChargesTypeEditText.text.toString(),
-            location = binding.locationEditText.text.toString()
+            location = binding.locationEditText.text.toString(),
         )
 
 
@@ -503,8 +466,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
         binding.purityEditText.setText("")
-        binding.mackingChargesEditText.text?.clear()
-        binding.mackingChargesTypeEditText.setText("")
         binding.stockEditText.text?.clear()
         binding.stockChargesTypeEditText.setText("")
         binding.locationEditText.text?.clear()
@@ -516,8 +477,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.netWeightInputLayout.error = null
         binding.wastageInputLayout.error = null
         binding.purityInputLayout.error = null
-        binding.mackingChargesInputLayout.error = null
-        binding.mackingChargesTypeInputLayout.error = null
         binding.stockInputLayout.error = null
         binding.stockTypeInputLayout.error = null
 
@@ -551,6 +510,31 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                setupFullHeight(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                behavior.isDraggable = true
+
+            }
+        }
+
+        return dialog
+    }
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
+    }
 
     fun setOnItemAddedListener(listener: OnItemAddedListener) {
         this.listener = listener

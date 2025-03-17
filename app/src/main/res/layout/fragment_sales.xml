@@ -1,130 +1,191 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".SalesFragment">
 
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/addSaleFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="24dp"
+        android:background="@drawable/otp_box_background"
+        android:backgroundTint="@color/my_light_primary"
+        android:src="@drawable/material_symbols__add_rounded"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:tint="@color/white" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayout">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewSales"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/my_light_primary"
-            app:title="Sales"
-            app:titleTextAppearance="@style/ToolbarTitle"
-            app:menu="@menu/sales_menu" />
-
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/my_light_primary"
-            app:tabTextColor="@color/my_light_primary_container"
-            app:tabSelectedTextColor="@color/white"
-            app:tabIndicatorColor="@color/white" />
+            app:menu="@menu/inventory_menu"
+            app:title="Sales"
+            app:titleTextAppearance="@style/ToolbarTitle" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPager"
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progressBar"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
-
-    <!-- Semi-transparent backdrop for FAB menu -->
-    <View
-        android:id="@+id/fabBackdrop"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#80000000"
-        android:visibility="gone"
-        android:clickable="true"
-        android:focusable="true" />
-
-    <!-- FAB Menu Container -->
-    <LinearLayout
-        android:id="@+id/fabMenu"
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="90dp"
+        android:indeterminate="true"
+        android:paddingLeft="2dp"
+        android:paddingTop="0dp"
+        android:paddingRight="2dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
+
+
+    <!--Empty State For Seach View-->
+    <LinearLayout
+        android:id="@+id/emptySearchLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="16dp"
         android:orientation="vertical"
-        android:visibility="gone">
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
 
-        <!-- New Invoice FAB -->
-        <LinearLayout
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="16dp">
+            android:layout_gravity="center"
+            android:text="(·.·)"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="36sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="New Invoice"
-                android:background="@drawable/fab_label_background"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:textColor="@color/white"
-                android:layout_marginEnd="8dp" />
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/newInvoiceFab"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_invoice"
-                app:fabSize="mini"
-                app:backgroundTint="@color/my_light_tertiary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- New Order FAB -->
-        <LinearLayout
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/librebaskervilleregular"
+            android:text="No matching Invoice found"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="20sp" />
 
-            <TextView
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/montserratregular"
+            android:gravity="center"
+            android:text="We couldn't find any Invoice that match your search"
+            android:textColor="@color/my_light_on_background"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clearFilterButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="New Order"
-                android:background="@drawable/fab_label_background"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"
-                android:textColor="@color/white"
-                android:layout_marginEnd="8dp" />
+                android:layout_marginEnd="8dp"
+                android:fontFamily="@font/montserratmedium"
+                android:text="CLEAR SEARCH"
+                android:textColor="@color/my_light_primary"
+                android:textSize="14sp"
+                app:rippleColor="@color/my_light_primary_container"
+                app:strokeColor="@color/my_light_primary" />
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/newOrderFab"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/addNewItemButton"
+                style="@style/Widget.Material3.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_order"
-                app:fabSize="mini"
-                app:backgroundTint="@color/my_light_secondary"
-                android:visibility="gone" />
+                android:layout_marginStart="8dp"
+                android:backgroundTint="@color/my_light_primary"
+                android:fontFamily="@font/montserratmedium"
+                android:text="ADD NEW ITEM"
+                android:textColor="@color/my_light_on_primary"
+                android:textSize="14sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Main FAB -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/mainFab"
-        android:layout_width="wrap_content"
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:src="@drawable/material_symbols__add_rounded"
-        app:backgroundTint="@color/my_light_primary" />
+        android:layout_marginHorizontal="16dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        <ImageView
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:alpha="0.5"
+            android:src="@drawable/ic_invoice"
+            app:tint="@color/my_light_on_surface" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/librebaskervilleregular"
+            android:text="No Invoices Yet"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="20sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/montserratregular"
+            android:gravity="center"
+            android:text="Create your first invoice by tapping the + button"
+            android:textColor="@color/my_light_on_background"
+            android:textSize="14sp" />
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

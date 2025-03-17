@@ -57,5 +57,13 @@
         android:id="@+id/mainScreenFragment"
         android:name="com.jewelrypos.swarnakhatabook.MainScreenFragment"
         android:label="fragment_main_screen"
-        tools:layout="@layout/fragment_main_screen" />
+        tools:layout="@layout/fragment_main_screen" >
+        <action
+            android:id="@+id/action_mainScreenFragment_to_invoiceCreationFragment"
+            app:destination="@id/invoiceCreationFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/invoiceCreationFragment"
+        android:name="com.jewelrypos.swarnakhatabook.InvoiceCreationFragment"
+        android:label="InvoiceCreationFragment" />
 </navigation>

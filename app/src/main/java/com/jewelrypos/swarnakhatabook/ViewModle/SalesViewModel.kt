@@ -1,13 +1,15 @@
+
 package com.jewelrypos.swarnakhatabook.ViewModle
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
-import com.jewelrypos.swarnakhatabook.DataClasses.Order
-import com.jewelrypos.swarnakhatabook.DataClasses.Payment
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
 import kotlinx.coroutines.launch
 
@@ -21,109 +23,170 @@ class SalesViewModel : ViewModel() {
     private val _selectedItems = MutableLiveData<List<SelectedItemWithPrice>>()
     val selectedItems: LiveData<List<SelectedItemWithPrice>> = _selectedItems
 
-    // Temporary storage for callback
-    private var itemSelectionCallback: ((List<SelectedItemWithPrice>) -> Unit)? = null
+    // Add a method to add a selected item
+    fun addSelectedItem(item: JewelleryItem, price: Double) {
+        val currentItems = _selectedItems.value?.toMutableList() ?: mutableListOf()
 
+        // Check if item already exists in the list
+        val existingItemIndex = currentItems.indexOfFirst { it.item.id == item.id }
 
-    // Add these properties to SalesViewModel
-    private val _pendingOrders = MutableLiveData<List<Order>>()
-    val pendingOrders: LiveData<List<Order>> = _pendingOrders
+        if (existingItemIndex >= 0) {
+            // Update quantity of existing item
+            val existingItem = currentItems[existingItemIndex]
+            currentItems[existingItemIndex] = SelectedItemWithPrice(
+                item = existingItem.item,
+                quantity = existingItem.quantity + 1,
+                price = price
+            )
+        } else {
+            // Add new item with quantity 1
+            currentItems.add(
+                SelectedItemWithPrice(
+                    item = item,
+                    quantity = 1,
+                    price = price
+                )
+            )
+        }
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
-
-    // Add this property and method to SalesViewModel
-    private val _currentPayment = MutableLiveData<Payment?>()
-    val currentPayment: LiveData<Payment?> = _currentPayment
-
-
-    fun setCurrentPayment(payment: Payment) {
-        _currentPayment.value = payment
+        _selectedItems.value = currentItems
     }
 
+    // Remove a selected item
+    fun removeSelectedItem(item: SelectedItemWithPrice) {
+        val currentItems = _selectedItems.value?.toMutableList() ?: return
+        currentItems.remove(item)
+        _selectedItems.value = currentItems
+    }
 
-    // Add these methods to SalesViewModel
-    fun loadPendingOrders() {
-        _isLoading.value = true
+    // Update item quantity
+    fun updateItemQuantity(itemEdit: SelectedItemWithPrice, quantity: Int) {
+        // If quantity is 0 or negative, remove the item
+        if (quantity <= 0) {
+            removeSelectedItem(itemEdit)
+            return
+        }
 
-        viewModelScope.launch {
-            try {
-                // This would normally come from a repository
-                // For now, simulate loading pending orders
-                val orders = getOrdersFromRepository().filter { it.status == "Pending" }
-                _pendingOrders.value = orders
-            } catch (e: Exception) {
-                // Handle error
-            } finally {
-                _isLoading.value = false
-            }
+        val currentItems = _selectedItems.value?.toMutableList() ?: return
+        val itemIndex = currentItems.indexOfFirst { it.item.id == itemEdit.item.id }
+
+        if (itemIndex >= 0) {
+            val item = currentItems[itemIndex]
+            currentItems[itemIndex] = SelectedItemWithPrice(
+                item = item.item,
+                quantity = quantity,
+                price = item.price
+            )
+            _selectedItems.value = currentItems
         }
     }
 
-    fun searchOrders(query: String, onlyPending: Boolean = false) {
-        viewModelScope.launch {
-            try {
-                // This would normally come from a repository
-                // For now, simulate searching orders
-                val allOrders = getOrdersFromRepository()
-                val filteredOrders = allOrders.filter { order ->
-                    // Filter by status if needed
-                    (!onlyPending || order.status == "Pending") &&
-                            // Filter by search terms
-                            (order.orderNumber.contains(query, ignoreCase = true) ||
-                                    order.customerName.contains(query, ignoreCase = true))
-                }
 
-                if (onlyPending) {
-                    _pendingOrders.value = filteredOrders
-                } else {
-                    // You might need another LiveData for all orders
-                    //_allOrders.value = filteredOrders
-                }
-            } catch (e: Exception) {
-                // Handle error
-            }
+    // Update selected item
+    fun updateSelectedItem(updatedItem: JewelleryItem, newPrice: Double): Boolean {
+        val currentItems = _selectedItems.value?.toMutableList() ?: return false
+        val itemIndex = currentItems.indexOfFirst { it.item.id == updatedItem.id }
+
+        return if (itemIndex >= 0) {
+            // Preserve the quantity from the existing item
+            val existingQuantity = currentItems[itemIndex].quantity
+
+            // Replace with updated item but keep same quantity
+            currentItems[itemIndex] = SelectedItemWithPrice(
+                item = updatedItem,
+                quantity = existingQuantity,
+                price = newPrice
+            )
+
+            // This is a critical line - needs to update the LiveData object
+            _selectedItems.value = currentItems
+
+            // Log successful update
+            Log.d("SalesViewModel", "Successfully updated item: ${updatedItem.id}")
+            true
+        } else {
+            // Item not found in the list
+            Log.w(
+                "SalesViewModel",
+                "Attempted to update non-existent item with ID: ${updatedItem.id}"
+            )
+            false
         }
     }
 
-    // Placeholder method to simulate getting orders from a repository
-    private fun getOrdersFromRepository(): List<Order> {
-        // In a real app, this would come from a repository
-        return emptyList()
+
+    // Update selected item
+//    fun updateSelectedItem(updatedItem: JewelleryItem, newPrice: Double): Boolean {
+//        val currentItems = _selectedItems.value?.toMutableList() ?: return false
+//        val itemIndex = currentItems.indexOfFirst { it.item.id == updatedItem.id }
+//
+//        return if (itemIndex >= 0) {
+//            // Preserve the quantity from the existing item
+//            val existingQuantity = currentItems[itemIndex].quantity
+//
+//            // Replace with updated item but keep same quantity
+//            currentItems[itemIndex] = SelectedItemWithPrice(
+//                item = updatedItem,
+//                quantity = existingQuantity,
+//                price = newPrice
+//            )
+//
+//            _selectedItems.value = currentItems
+//            true
+//        } else {
+//            // Item not found in the list
+//            Log.w(
+//                "SalesViewModel",
+//                "Attempted to update non-existent item with ID: ${updatedItem.id}"
+//            )
+//            false
+//        }
+//    }
+
+    // Calculate subtotal (only items price * quantity)
+    fun calculateSubtotal(): Double {
+        return _selectedItems.value?.sumOf { it.price * it.quantity } ?: 0.0
     }
 
+    // Get all extra charges from all items
+    fun getAllExtraCharges(): List<Pair<String, Double>> {
+        val charges = mutableListOf<Pair<String, Double>>()
+
+        _selectedItems.value?.forEach { selectedItem ->
+            // Multiply each extra charge by the item quantity
+            selectedItem.item.listOfExtraCharges.forEach { extraCharge ->
+                charges.add(Pair(extraCharge.name, extraCharge.amount * selectedItem.quantity))
+            }
+        }
+
+        return charges
+    }
+
+    // Calculate total extra charges
+    fun calculateExtraCharges(): Double {
+        return getAllExtraCharges().sumOf { it.second }
+    }
+
+    // Calculate tax based on each item's tax rate
+    fun calculateTax(): Double {
+        var totalTax = 0.0
+
+        _selectedItems.value?.forEach { selectedItem ->
+            // Use the totalTax field directly from the item
+            totalTax += selectedItem.item.totalTax * selectedItem.quantity
+        }
+
+        return totalTax
+    }
+
+    // Calculate total (subtotal + extra charges + tax)
+    fun calculateTotal(): Double {
+        return calculateSubtotal() + calculateExtraCharges() + calculateTax()
+    }
 
     // Set the selected customer
     fun setSelectedCustomer(customer: Customer) {
         _selectedCustomer.value = customer
-    }
-
-    // Set the selected items
-    fun setSelectedItems(items: List<SelectedItemWithPrice>) {
-        _selectedItems.value = items
-    }
-
-    // Store callback for item selection
-    fun setItemSelectionCallback(callback: (List<SelectedItemWithPrice>) -> Unit) {
-        itemSelectionCallback = callback
-    }
-
-    // Get the item selection callback
-    fun getItemSelectionCallback(): ((List<SelectedItemWithPrice>) -> Unit)? {
-        return itemSelectionCallback
-    }
-
-    // Save a new order
-    fun saveOrder(order: Order, callback: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            try {
-                // Implementation would connect to repository
-                // For now, just simulate success
-                callback(true)
-            } catch (e: Exception) {
-                callback(false)
-            }
-        }
     }
 
     // Save a new invoice

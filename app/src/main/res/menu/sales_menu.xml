@@ -15,24 +15,4 @@
         android:title="Filter"
         app:showAsAction="ifRoom" />
 
-    <item
-        android:id="@+id/action_sort"
-        android:icon="@drawable/bi__three_dots_vertical"
-        android:title="Sort"
-        app:showAsAction="ifRoom">
-        <menu>
-            <item
-                android:id="@+id/sort_date_newest"
-                android:title="Date (Newest First)" />
-            <item
-                android:id="@+id/sort_date_oldest"
-                android:title="Date (Oldest First)" />
-            <item
-                android:id="@+id/sort_amount_high"
-                android:title="Amount (High to Low)" />
-            <item
-                android:id="@+id/sort_amount_low"
-                android:title="Amount (Low to High)" />
-        </menu>
-    </item>
 </menu>

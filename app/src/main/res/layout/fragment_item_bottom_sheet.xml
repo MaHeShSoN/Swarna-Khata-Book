@@ -6,12 +6,11 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:background="@color/cream_background"
         android:layout_height="wrap_content"
-        android:padding="24dp">
+        android:background="@color/cream_background"
+        android:padding="16dp">
 
-
-        <!-- Title with M3 Typography -->
+        <!-- Title -->
         <TextView
             android:id="@+id/titleTextView"
             android:layout_width="0dp"
@@ -22,17 +21,15 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Item Type Selection Card -->
+        <!-- CARD 1: Item Type Selection -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/itemTypeCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
             android:layout_marginTop="16dp"
             app:cardBackgroundColor="@color/my_light_surface"
-
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/titleTextView"
             app:strokeColor="@color/my_light_outline"
@@ -45,10 +42,9 @@
                 android:padding="16dp">
 
                 <TextView
-                    android:id="@+id/itemTypeLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Item Type"
+                    android:text="Material Type"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
 
@@ -68,8 +64,7 @@
                         android:text="Gold"
                         app:chipBackgroundColor="@color/chip_background"
                         app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp"
-                        app:rippleColor="@color/my_light_primary_container" />
+                        app:chipStrokeWidth="1dp" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/silverChip"
@@ -79,8 +74,7 @@
                         android:text="Silver"
                         app:chipBackgroundColor="@color/chip_background"
                         app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp"
-                        app:rippleColor="@color/my_light_primary_container" />
+                        app:chipStrokeWidth="1dp" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/otherChip"
@@ -90,377 +84,367 @@
                         android:text="Other"
                         app:chipBackgroundColor="@color/chip_background"
                         app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp"
-                        app:rippleColor="@color/my_light_primary_container" />
+                        app:chipStrokeWidth="1dp" />
                 </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/categoryLinerLayout"
+        <!-- CARD 2: Basic Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/basicInfoCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/itemTypeCard">
+            app:layout_constraintTop_toBottomOf="@id/itemTypeCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
 
-            <!-- Category Selection -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/categoryInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Category"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:hintTextColor="@color/my_light_secondary"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/itemTypeCard">
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/categoryDropdown"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Basic Information"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Category with Add Button -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
 
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/goldImageButton1"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:background="@drawable/gold_button_background"
-                android:contentDescription="Gold Image Button"
-                android:padding="12dp"
-                android:src="@drawable/material_symbols__add_rounded"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
-                app:strokeColor="@color/my_light_secondary"
-                app:strokeWidth="1dp"
-                app:tint="@color/my_light_on_primary" />
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/categoryInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Category"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:hintTextColor="@color/my_light_secondary">
 
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/categoryDropdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-        </androidx.appcompat.widget.LinearLayoutCompat>
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/goldImageButton1"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/gold_button_background"
+                        android:contentDescription="Add Category"
+                        android:padding="12dp"
+                        android:src="@drawable/material_symbols__add_rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
+                        app:strokeColor="@color/my_light_secondary"
+                        app:strokeWidth="1dp"
+                        app:tint="@color/my_light_on_primary" />
+                </LinearLayout>
 
+                <!-- Display Name -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/displayNameInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Display Name"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary">
 
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/displayNameLinerLayout"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/displayNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text|textCapWords"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Jewelry Code -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/jewelryCodeInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Jewelry Code"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/jewelryCodeEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapCharacters"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CARD 3: Weight Details -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/weightCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/categoryLinerLayout">
+            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
 
-            <!-- Display Name -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/displayNameInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Display Name"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:endIconMode="clear_text"
-                app:endIconTint="@color/my_light_secondary"
-                app:errorIconTint="@color/my_light_error"
-                app:errorTextColor="@color/my_light_error"
-                app:hintTextColor="@color/my_light_secondary">
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/displayNameEditText"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Weight Details"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Gross Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/grossWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text|textCapWords"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:hint="Gross Weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
 
-            <!-- Jewellery Code -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/jewelryCodeInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_weight=".5"
-                android:hint="Code"
-                android:maxWidth="5dp"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:endIconMode="clear_text"
-                app:endIconTint="@color/my_light_secondary"
-                app:errorIconTint="@color/my_light_error"
-                app:errorTextColor="@color/my_light_error"
-                app:hintTextColor="@color/my_light_secondary"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/displayNameInputLayout">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/grossWeightEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/jewelryCodeEditText"
+                <!-- Net Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/netWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textCapCharacters"
-                    android:maxWidth="5dp"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:hint="Net Weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
 
-        </androidx.appcompat.widget.LinearLayoutCompat>
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/netWeightEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Purity -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/purityInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Purity (e.g. 91.66)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="%">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/purityEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Wastage -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/wastageInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Wastage"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="%">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/wastageEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
 
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/weightLinerLayout"
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+
+        <!-- CARD 5: Inventory Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/inventoryCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/displayNameLinerLayout">
+            app:layout_constraintTop_toBottomOf="@id/weightCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
 
-
-            <!-- Gross Weight -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/grossWeightInputLayout"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="2dp"
-                android:layout_weight="1"
-                android:hint="Gross Weight"
-                app:endIconMode="clear_text"
-                app:suffixText="g">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/grossWeightEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Net Weight -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/netWeightInputLayout"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_weight="1"
-                android:hint="Net Weight"
-                app:endIconMode="clear_text"
-                app:suffixText="g">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/netWeightEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/wpLinerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/weightLinerLayout">
-
-
-            <!-- Wastage -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/wastageInputLayout"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="2dp"
-                android:layout_weight="1"
-                android:hint="Wastage"
-                app:suffixText="%">
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/wastageEditText"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Inventory Information"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Stock Info Row -->
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
 
+                    <!-- Stock Value -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/stockInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="Stock Value"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconMode="clear_text"
+                        app:hintTextColor="@color/my_light_secondary">
 
-            <!-- Purity -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/purityInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="2dp"
-                android:layout_weight="1"
-                android:hint="Purity"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:hintTextColor="@color/my_light_secondary"
-                >
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/stockEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/purityEditText"
+                    <!-- Stock Unit -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/stockTypeInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:hint="Unit"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/stockChargesTypeEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <!-- Location -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/locationInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp"
-                    />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginTop="16dp"
+                    android:hint="Location"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary">
 
-        </androidx.appcompat.widget.LinearLayoutCompat>
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/locationEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text|textCapWords"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/mackingChargeLinerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/wpLinerLayout">
-
-
-            <!-- Macking Charges -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/mackingChargesInputLayout"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="2dp"
-                android:layout_weight="1"
-                android:hint="Making Charges"
-                app:suffixText="₹">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/mackingChargesEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-
-                    android:inputType="numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/mackingChargesTypeInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="2dp"
-                android:layout_weight="1"
-                android:hint="Type"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:hintTextColor="@color/my_light_secondary">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/mackingChargesTypeEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/stockLinerLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/mackingChargeLinerLayout">
-
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/stockInputLayout"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="2dp"
-                android:layout_weight="1"
-                android:hint="Stock Value">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/stockEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="numberDecimal" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/stockTypeInputLayout"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="2dp"
-                android:layout_weight="1"
-                android:hint="Unit"
-                app:boxBackgroundColor="@color/my_light_surface"
-                app:boxStrokeColor="@color/my_light_primary"
-                app:boxStrokeWidth="1dp"
-                app:hintTextColor="@color/my_light_secondary">
-
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/stockChargesTypeEditText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/locationInputLayout"
-            style="@style/Widget.App.TextInputLayout.GoldForm"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
-            android:layout_marginTop="16dp"
-            android:hint="Location"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/stockLinerLayout">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/locationEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text|textCapWords" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-
+        <!-- Action Buttons -->
         <androidx.appcompat.widget.LinearLayoutCompat
             android:id="@+id/buttonLinerLayout"
             android:layout_width="match_parent"
@@ -470,7 +454,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/locationInputLayout">
+            app:layout_constraintTop_toBottomOf="@+id/inventoryCard">
 
 
             <!-- Cancel/Close Button -->
@@ -507,7 +491,5 @@
 
 
         </androidx.appcompat.widget.LinearLayoutCompat>
-
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

@@ -1,22 +1,25 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SearchView
+import android.widget.FrameLayout
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.CustomerAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
-import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetCustomerSelectionBinding
@@ -49,8 +52,38 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = BottomsheetCustomerSelectionBinding.inflate(inflater, container, false)
+//        setStyle(BottomSheetDialogFragment.STYLE_NORMAL, R.style.CustomBottomSheetDialogTheme)
         return binding.root
     }
+
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                setupFullHeight(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                behavior.isDraggable = true
+
+            }
+        }
+
+        return dialog
+    }
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
+    }
+
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -62,8 +95,6 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         setupNewCustomerButton()
         setupObservers()
 
-        // Load customers initially
-        customerViewModel.refreshData()
     }
 
     private fun setupRecyclerView() {
@@ -103,6 +134,7 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
     private fun setupObservers() {
         customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
             adapter.updateList(customers)
+            Log.d("Debuging",customers.size.toString() + " is the size of cusotmers")
             updateEmptyState(customers.isEmpty())
         }
 
@@ -113,6 +145,8 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         customerViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
             if (!errorMessage.isNullOrEmpty()) {
                 // Show error message
+                Log.d("Debuging",errorMessage.toString())
+
                 binding.errorText.text = errorMessage
                 binding.errorText.visibility = View.VISIBLE
             } else {

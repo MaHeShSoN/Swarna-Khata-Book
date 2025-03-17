@@ -1,0 +1,725 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="657dp"
+        android:background="@color/cream_background"
+        android:padding="16dp"
+        tools:layout_editor_absoluteY="1dp">
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/titleTextView"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Add Jewellery Item"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- CARD 2: Basic Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/basicInfoCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/titleTextView"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Basic Information"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="@color/my_light_on_surface" />
+
+                    <Button
+                        android:id="@+id/addItemButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:contentDescription="Add Item"
+                        android:gravity="top"
+                        android:text="+ Add Item"
+                        android:textColor="@color/my_light_primary" />
+                </LinearLayout>
+
+                <!-- Item Name Dropdown (Full Width) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/itemNameInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Item Name"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="dropdown_menu"
+                    app:hintTextColor="@color/my_light_secondary">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/itemNameDropdown"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CARD 3: Weight Details -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/weightCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Weight Details"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Gross Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/grossWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Gross Weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/grossWeightEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Net Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/netWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Net Weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/netWeightEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Purity -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/purityInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Purity (e.g. 91.66)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="%">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/purityEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Wastage -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/wastageInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Wastage"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="%">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/wastageEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/diamondPrizeCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/weightCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Diamond Pricing"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Stock Info Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <!-- Stock Value -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/diamondPrizeInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="Diamond Price"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconMode="clear_text"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/diamondPrizeEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CARD 4: Pricing Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/pricingCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/diamondPrizeCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Pricing Information"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="@color/my_light_on_surface" />
+
+                <!-- Rate On -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/goldRateOnInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Rate Based On ?"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary">
+
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/goldRateOnEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Gold Rate -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/goldRateInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Gold Rate (1 Gram)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:prefixText="₹">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/goldRateEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Making Charges Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <!-- Making Charges -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/mackingChargesInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="Making Charges"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconMode="clear_text"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/mackingChargesEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Making Charges Type -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/mackingChargesTypeInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:hint="Type"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/mackingChargesTypeEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="none"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/totalMakingChargesInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Total Making Charges (Auto Calculated)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/totalMakingChargesEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/totalInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Total Gold Charges (Wt*Gold Rate)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/totalEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/totalChargesInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Total Charges"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/totalChargesEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/extraChargesCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/pricingCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Extra Charges"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="@color/my_light_on_surface" />
+
+                    <Button
+                        android:id="@+id/addExtraChargeButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:contentDescription="Add Extra Charge"
+                        android:gravity="top"
+                        android:text="+ Add Charge"
+                        android:textColor="@color/my_light_primary" />
+                </LinearLayout>
+
+                <!-- List of Extra Charges (RecyclerView) -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/chargesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone" />
+
+                <!-- Empty State Message -->
+                <TextView
+                    android:id="@+id/emptyExtraChargesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="No extra charges added"
+                    android:textAlignment="center"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    android:visibility="visible" />
+
+                <!-- Total Extra Charges -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/totalExtraChargesInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Total Extra Charges"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:prefixText="₹">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/totalExtraChargesEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/taxCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/extraChargesCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Tax Information"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                        android:textColor="@color/my_light_on_surface" />
+
+                    <com.google.android.material.checkbox.MaterialCheckBox
+                        android:id="@+id/taxApplicableCheckbox"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tax Applicable"
+                        android:textColor="@color/my_light_on_surface" />
+                </LinearLayout>
+
+                <!-- Tax Rate -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/taxRateInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Tax Rate"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="%">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/taxRateEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Tax Amount -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/taxAmountInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="Tax Amount (Auto Calculated)"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:prefixText="₹">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/taxAmountEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:enabled="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <!-- Action Buttons -->
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/buttonLinerLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/taxCard">
+
+            <!-- Cancel/Close Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/saveCloseButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:letterSpacing="0.01"
+                android:paddingVertical="12dp"
+                android:text="@string/save_close"
+                android:textColor="@color/my_light_primary"
+                app:rippleColor="@color/my_light_primary_container"
+                app:strokeColor="@color/my_light_primary" />
+
+            <!-- Save and Add Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/saveAddButton"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="24dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/my_light_primary"
+                android:letterSpacing="0.01"
+                android:paddingVertical="12dp"
+                android:text="@string/save_and_add"
+                android:textColor="@color/my_light_on_primary"
+                app:rippleColor="@color/my_light_secondary" />
+
+
+        </androidx.appcompat.widget.LinearLayoutCompat>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

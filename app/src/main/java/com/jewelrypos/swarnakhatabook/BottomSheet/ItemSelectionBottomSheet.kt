@@ -1,226 +1,898 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
-import android.content.Context
-import android.net.ConnectivityManager
+import android.app.Dialog
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Filter
+import android.widget.Filterable
+import android.widget.FrameLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.Adapters.ItemSelectionAdapter
+import com.jewelrypos.swarnakhatabook.Adapters.ExtraChargeAdapter
+import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
+import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
-import com.jewelrypos.swarnakhatabook.databinding.BottomsheetitemselectionBinding
+import com.jewelrypos.swarnakhatabook.databinding.ItemSelectionBottomSheetBinding
+import java.util.UUID
 
 class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
-    private var _binding: BottomsheetitemselectionBinding? = null
-    private val binding get() = _binding!!
 
-    private lateinit var adapter: ItemSelectionAdapter
-    private val selectedItems = mutableListOf<SelectedItem>()
+    // UI Components
+    private var _binding: ItemSelectionBottomSheetBinding? = null
+    val binding get() = _binding!!
 
-    private var listener: OnItemsSelectedListener? = null
+    private var itemSelectedListener: OnItemSelectedListener? = null
 
-    // ViewModel for accessing inventory data
+    lateinit var selectedItem: JewelleryItem
+    private lateinit var chargeAdapter: ExtraChargeAdapter
+
+    // Add InventoryViewModel to access inventory items
     private val inventoryViewModel: InventoryViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = InventoryRepository(firestore, auth)
         val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         InventoryViewModelFactory(repository, connectivityManager)
     }
 
-    interface OnItemsSelectedListener {
-        fun onItemsSelected(items: List<SelectedItem>)
-    }
+    // Store inventory items for dropdown
+    private var inventoryItems: List<JewelleryItem> = emptyList()
+    var editMode = false
+    var itemToEdit: JewelleryItem? = null
 
-    fun setOnItemsSelectedListener(listener: OnItemsSelectedListener) {
-        this.listener = listener
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = BottomsheetitemselectionBinding.inflate(inflater, container, false)
+    ): View? {
+        _binding = ItemSelectionBottomSheetBinding.inflate(inflater, container, false)
+
+        // Update title if in edit mode
+        if (editMode) {
+            binding.titleTextView.text = "Edit Jewellery Item"
+            binding.saveAddButton.text = "Update"
+            binding.saveAddButton.visibility = View.GONE
+            binding.saveCloseButton.text = "Update & Close"
+        }
+
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupSearchView()
-        setupRecyclerView()
-        setupButtons()
-        setupObservers()
+        // Set up the inventory items observer
+        setupInventoryObserver()
+
+        // If we're in edit mode, populate the form with the item data
+        if (editMode && itemToEdit != null) {
+            populateFormWithItemData(itemToEdit!!)
+        } else {
+            // If it's not edit mode, set up initial values
+            setupInitialValues()
+        }
+
+        setUpDropDownMenus()
+        setupChangeListeners()
+        setupListeners()
+        setupTaxFields()
+    }
+
+    // Setup observer for inventory items
+    private fun setupInventoryObserver() {
+        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner, Observer { items ->
+            inventoryItems = items
+            setupInventoryDropdown()
+        })
 
         // Load inventory items
-        inventoryViewModel.refreshData()
+        inventoryViewModel.searchItems("")
     }
 
-    private fun setupSearchView() {
-        binding.searchView.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                searchItems(query)
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                searchItems(newText)
-                return true
-            }
-        })
-    }
-
-    private fun searchItems(query: String?) {
-        inventoryViewModel.searchItems(query ?: "")
-    }
-
-    private fun setupRecyclerView() {
-        adapter = ItemSelectionAdapter(emptyList(), object : ItemSelectionAdapter.OnItemClickListener {
-            override fun onItemClick(item: JewelleryItem, isSelected: Boolean) {
-                if (isSelected) {
-                    selectedItems.add(SelectedItem(item, 1))
-                } else {
-                    selectedItems.removeIf { it.item.id == item.id }
+    private fun setupTaxFields() {
+        // Create tax rate input field if it doesn't exist
+        if (binding.taxRateInputLayout == null) {
+            // Add text change listener for tax rate
+            binding.taxRateEditText.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
                 }
-                updateSelectedCount()
-            }
 
-            override fun onQuantityChanged(item: JewelleryItem, quantity: Int) {
-                selectedItems.find { it.item.id == item.id }?.quantity = quantity
-            }
-        })
-
-        binding.recyclerViewItems.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = this@ItemSelectionBottomSheet.adapter
-
-            // Add scroll listener for pagination
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
-
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val visibleItemCount = layoutManager.childCount
-                    val totalItemCount = layoutManager.itemCount
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                    // Load more items when user approaches the end of the list
-                    if (!inventoryViewModel.isLoading.value!! &&
-                        (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 &&
-                        firstVisibleItemPosition >= 0
-                    ) {
-                        inventoryViewModel.loadNextPage()
-                    }
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    calculateTotalTexCharges()
                 }
             })
         }
     }
 
-    private fun updateSelectedCount() {
-        val count = selectedItems.size
-        binding.selectedItemsCount.text = "$count items selected"
-        binding.confirmButton.isEnabled = count > 0
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                setupFullHeight(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                behavior.isDraggable = true
+            }
+        }
+
+        return dialog
     }
 
-    private fun setupButtons() {
-        binding.createNewItemButton.setOnClickListener {
-            showNewItemBottomSheet()
-        }
-
-        binding.confirmButton.setOnClickListener {
-            listener?.onItemsSelected(selectedItems)
-            dismiss()
-        }
-
-        binding.cancelButton.setOnClickListener {
-            dismiss()
-        }
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
     }
 
-    private fun setupObservers() {
-        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
-            adapter.updateItems(items)
-            updateEmptyState(items.isEmpty())
+    // Custom adapter for inventory items dropdown
+    private inner class InventoryItemAdapter(
+        context: android.content.Context,
+        private val items: List<JewelleryItem>
+    ) : ArrayAdapter<JewelleryItem>(context, R.layout.dropdown_item_inventory, items), Filterable {
+
+        private var filteredItems: List<JewelleryItem> = items
+
+        override fun getCount(): Int = filteredItems.size
+
+        override fun getItem(position: Int): JewelleryItem = filteredItems[position]
+
+        // This is the method that determines what appears in the TextView when an item is selected
+        override fun getItemId(position: Int): Long = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = convertView ?: LayoutInflater.from(context)
+                .inflate(R.layout.dropdown_item_inventory, parent, false)
+
+            val item = getItem(position)
+            val primaryText = view.findViewById<TextView>(R.id.primary_text)
+            val secondaryText = view.findViewById<TextView>(R.id.secondary_text)
+
+            primaryText.text = item.displayName
+            secondaryText.text = "Category: ${item.category} | Type: ${item.itemType}"
+
+            return view
         }
 
-        inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        // This method determines what appears in the dropdown field after selection
+        override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+            return getView(position, convertView, parent)
         }
 
-        inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            if (!errorMessage.isNullOrEmpty()) {
-                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+        override fun getFilter(): Filter {
+            return object : Filter() {
+                override fun performFiltering(constraint: CharSequence?): FilterResults {
+                    val query = constraint?.toString()?.lowercase() ?: ""
+
+                    filteredItems = if (query.isEmpty()) {
+                        items
+                    } else {
+                        items.filter {
+                            it.displayName.lowercase().contains(query) ||
+                                    it.category.lowercase().contains(query) ||
+                                    it.itemType.lowercase().contains(query)
+                        }
+                    }
+
+                    return FilterResults().apply {
+                        values = filteredItems; count = filteredItems.size
+                    }
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                    filteredItems = results?.values as? List<JewelleryItem> ?: items
+                    notifyDataSetChanged()
+                }
             }
         }
     }
 
-    private fun updateEmptyState(isEmpty: Boolean) {
-        if (isEmpty) {
-            binding.emptyStateLayout.visibility = View.VISIBLE
-            binding.recyclerViewItems.visibility = View.GONE
-        } else {
-            binding.emptyStateLayout.visibility = View.GONE
-            binding.recyclerViewItems.visibility = View.VISIBLE
+    // Setup inventory dropdown
+    private fun setupInventoryDropdown() {
+        val adapter = InventoryItemAdapter(requireContext(), inventoryItems)
+        binding.itemNameDropdown.setAdapter(adapter)
+
+        // Handle item selection
+        binding.itemNameDropdown.setOnItemClickListener { _, _, position, _ ->
+            selectedItem = adapter.getItem(position)
+
+            // Set just the display name in the field
+            binding.itemNameDropdown.setText(selectedItem.displayName, false)
+            binding.itemNameInputLayout.isHelperTextEnabled = true
+            binding.itemNameInputLayout.helperText =
+                selectedItem.stock.toString() + " " + selectedItem.stockUnit + " " + "in inventory"
+
+
+            // Fill other fields
+            fillFieldsFromSelectedItem(selectedItem)
         }
     }
 
-    private fun showNewItemBottomSheet() {
-        val newItemSheet = ModifiedItemBottomSheetFragment.newInstance()
-        newItemSheet.setOnItemAddedListener(object : ItemBottomSheetFragment.OnItemAddedListener {
-            override fun onItemAdded(item: JewelleryItem) {
-                // Add the newly created item to inventory
-                inventoryViewModel.addJewelleryItem(item)
+    // Fill form fields from selected inventory item
+    private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
+        binding.grossWeightEditText.setText(item.grossWeight.toString())
+        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.wastageEditText.setText(item.wastage.toString())
+        binding.purityEditText.setText(item.purity)
 
-                // Add the newly created item to selected items
-                selectedItems.add(SelectedItem(item, 1))
-                updateSelectedCount()
+        // Update calculated fields
+        updateCalculatedFields()
+    }
+
+    private fun populateFormWithItemData(item: JewelleryItem) {
+        // Fill in the fields
+        binding.itemNameDropdown.setText(item.displayName)
+        binding.grossWeightEditText.setText(item.grossWeight.toString())
+        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.wastageEditText.setText(item.wastage.toString())
+        binding.purityEditText.setText(item.purity)
+        binding.mackingChargesEditText.setText(item.makingCharges.toString())
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
+        binding.goldRateEditText.setText(item.goldRate.toString() ?: "0.0")
+        binding.goldRateOnEditText.setText(item.goldRateOn ?: "Net Weight")
+        binding.diamondPrizeEditText.setText(item.diamondPrice.toString() ?: "0.0")
+
+
+        if (item.taxRate > 0) {
+            binding.taxApplicableCheckbox.isChecked = true
+            binding.taxRateEditText.setText(item.taxRate.toString())
+            // Make the tax rate field visible if it's controlled by the checkbox
+            binding.taxRateInputLayout.visibility = View.VISIBLE
+        } else {
+            binding.taxApplicableCheckbox.isChecked = false
+            binding.taxRateEditText.setText("0.0")
+            // Hide the tax rate field if applicable
+            binding.taxRateInputLayout.visibility = View.GONE
+        }
+
+
+
+        if (item.listOfExtraCharges.isNotEmpty()) {
+            // Make sure chargeAdapter is initialized
+            if (!::chargeAdapter.isInitialized) {
+                setUpInitalRecyclerView()
+            }
+
+            // Add all extra charges to the adapter
+            item.listOfExtraCharges.forEach { charge ->
+                chargeAdapter.addCharge(charge)
+            }
+        }
+
+        setUpInitalRecyclerView()
+        // Update calculated fields
+        updateCalculatedFields()
+
+        updateChargesVisibility()
+    }
+
+    private fun setUpDropDownMenus() {
+        // Rate on list
+        val listOfRatOn = listOf<String>("Net Weight", "Gross Weight")
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            listOfRatOn
+        )
+        binding.goldRateOnEditText.setAdapter(adapter)
+
+        // Making charge type list
+        val listOfMakingChargeType = listOf<String>("PER GRAM", "FIX")
+        val adapter2 = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            listOfMakingChargeType
+        )
+        binding.mackingChargesTypeEditText.setAdapter(adapter2)
+    }
+
+    fun validateJewelryItemForm(): Pair<Boolean, String> {
+        // Get references to all form fields
+        val grossWeight = binding.grossWeightEditText.text.toString().trim()
+        val netWeight = binding.netWeightEditText.text.toString().trim()
+        val wastage = binding.wastageEditText.text.toString().trim()
+        val purity = binding.purityEditText.text.toString().trim()
+        val makingCharges = binding.mackingChargesEditText.text.toString().trim()
+        val makingChargesType = binding.mackingChargesTypeEditText.text.toString().trim()
+        val goldRate = binding.goldRateEditText.text.toString().trim()
+        val goldRateOn = binding.goldRateOnEditText.text.toString().trim()
+        val diamondPrice = binding.diamondPrizeEditText.text.toString().trim()
+
+
+        // Numeric field validations
+        // Gross Weight - required
+        if (grossWeight.isEmpty()) {
+            binding.grossWeightInputLayout.error = "Gross weight is required"
+            binding.grossWeightEditText.requestFocus()
+            return Pair(false, "Gross weight is required")
+        } else {
+            try {
+                val grossWeightValue = grossWeight.toDouble()
+                if (grossWeightValue <= 0) {
+                    binding.grossWeightInputLayout.error = "Gross weight must be greater than zero"
+                    binding.grossWeightEditText.requestFocus()
+                    return Pair(false, "Gross weight must be greater than zero")
+                } else {
+                    binding.grossWeightInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.grossWeightInputLayout.error = "Invalid gross weight"
+                binding.grossWeightEditText.requestFocus()
+                return Pair(false, "Invalid gross weight")
+            }
+        }
+
+        // Net Weight - should be less than gross weight if provided
+        if (netWeight.isNotEmpty()) {
+            try {
+                val netWeightValue = netWeight.toDouble()
+                val grossWeightValue = grossWeight.toDouble()
+
+                if (netWeightValue <= 0) {
+                    binding.netWeightInputLayout.error = "Net weight must be greater than zero"
+                    return Pair(false, "Net weight must be greater than zero")
+                } else if (netWeightValue > grossWeightValue) {
+                    binding.netWeightInputLayout.error = "Net weight cannot exceed gross weight"
+                    binding.netWeightEditText.requestFocus()
+                    return Pair(false, "Net weight cannot exceed gross weight")
+                } else {
+                    binding.netWeightInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.netWeightInputLayout.error = "Invalid net weight"
+                binding.netWeightEditText.requestFocus()
+                return Pair(false, "Invalid net weight")
+            }
+        }
+
+        // Purity validation
+        if (purity.isEmpty()) {
+            binding.purityInputLayout.error = "Purity is required"
+            binding.purityEditText.requestFocus()
+            return Pair(false, "Purity is required")
+        } else {
+            binding.purityInputLayout.error = null
+        }
+
+        // Validate wastage if provided
+        if (wastage.isNotEmpty()) {
+            try {
+                val wastageValue = wastage.toDouble()
+                if (wastageValue < 0) {
+                    binding.wastageInputLayout.error = "Wastage cannot be negative"
+                    binding.wastageEditText.requestFocus()
+                    return Pair(false, "Wastage cannot be negative")
+                } else {
+                    binding.wastageInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.wastageInputLayout.error = "Invalid wastage value"
+                binding.wastageEditText.requestFocus()
+                return Pair(false, "Invalid wastage value")
+            }
+        }
+
+        // Making charges validation
+        if (makingCharges.isNotEmpty()) {
+            try {
+                val makingChargesValue = makingCharges.toDouble()
+                if (makingChargesValue < 0) {
+                    binding.mackingChargesInputLayout.error = "Making charges cannot be negative"
+                    binding.mackingChargesEditText.requestFocus()
+                    return Pair(false, "Making charges cannot be negative")
+                } else {
+                    binding.mackingChargesInputLayout.error = null
+                }
+
+                // If making charges are provided, type must also be provided
+                if (makingChargesType.isEmpty()) {
+                    binding.mackingChargesTypeInputLayout.error = "Making charges type is required"
+                    binding.mackingChargesTypeEditText.requestFocus()
+                    return Pair(false, "Making charges type is required")
+                } else {
+                    binding.mackingChargesTypeInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.mackingChargesInputLayout.error = "Invalid making charges"
+                binding.mackingChargesEditText.requestFocus()
+                return Pair(false, "Invalid making charges")
+            }
+        }
+
+        // Gold rate validation
+        if (goldRate.isNotEmpty()) {
+            try {
+                val goldRateValue = goldRate.toDouble()
+                if (goldRateValue < 0) {
+                    binding.goldRateInputLayout.error = "Gold rate cannot be negative"
+                    binding.goldRateEditText.requestFocus()
+                    return Pair(false, "Gold rate cannot be negative")
+                } else {
+                    binding.goldRateInputLayout.error = null
+                }
+
+                // If gold rate is provided, gold rate on must also be provided
+                if (goldRateOn.isEmpty()) {
+                    binding.goldRateOnInputLayout.error = "Gold rate purity is required"
+                    binding.goldRateOnEditText.requestFocus()
+                    return Pair(false, "Gold rate purity is required")
+                } else {
+                    binding.goldRateOnInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.goldRateInputLayout.error = "Invalid gold rate"
+                binding.goldRateEditText.requestFocus()
+                return Pair(false, "Invalid gold rate")
+            }
+        }
+
+        // Diamond price validation if provided
+        if (diamondPrice.isNotEmpty()) {
+            try {
+                val diamondPriceValue = diamondPrice.toDouble()
+                if (diamondPriceValue < 0) {
+                    binding.diamondPrizeInputLayout.error = "Diamond price cannot be negative"
+                    binding.diamondPrizeEditText.requestFocus()
+                    return Pair(false, "Diamond price cannot be negative")
+                } else {
+                    binding.diamondPrizeInputLayout.error = null
+                }
+            } catch (e: NumberFormatException) {
+                binding.diamondPrizeInputLayout.error = "Invalid diamond price"
+                binding.diamondPrizeEditText.requestFocus()
+                return Pair(false, "Invalid diamond price")
+            }
+        }
+
+
+        // All validations passed
+        return Pair(true, "")
+    }
+
+    /**
+     * Calculates the total making charges based on the type and weight
+     */
+    private fun calculateMakingCharges(): Double {
+        val makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val makingChargesType = binding.mackingChargesTypeEditText.text.toString()
+        val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+
+        return when (makingChargesType.uppercase()) {
+            "PER GRAM" -> makingCharges * netWeight
+            "FIX" -> makingCharges
+            else -> 0.0
+        }
+    }
+
+    /**
+     * Calculates the total gold value based on weight, wastage, and gold rate
+     */
+    private fun calculateGoldValue(): Double {
+        val goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val goldRateOn = binding.goldRateOnEditText.text.toString()
+        val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0
+
+        val selectedWeight =
+            if (goldRateOn.equals("Net Weight", ignoreCase = true)) netWeight else grossWeight
+
+        return (selectedWeight + wastage) * goldRate
+    }
+
+    /**
+     * Calculates the total charges by adding gold value, making charges, and diamond price
+     */
+    private fun calculateTotalCharges(): Double {
+        val goldValue = calculateGoldValue()
+        val makingCharges = calculateMakingCharges()
+        val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
+
+        return goldValue + makingCharges + diamondPrice
+    }
+
+    private fun calculateTotalTexCharges(): Double {
+        val goldValue = calculateGoldValue()
+        val makingCharges = calculateMakingCharges()
+        val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val extraChargesTotal =
+            if (!::chargeAdapter.isInitialized && chargeAdapter.getExtraChargeList()
+                    .isNotEmpty()
+            ) chargeAdapter.getTotalCharges() else 0.0
+
+        val subtotal = goldValue + makingCharges + diamondPrice + extraChargesTotal
+
+        // Calculate tax
+        val taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val taxAmount = subtotal * (taxRate / 100.0)
+
+        return taxAmount
+    }
+
+    /**
+     * Updates all calculated fields in the UI
+     */
+    private fun updateCalculatedFields() {
+        val makingCharges = calculateMakingCharges()
+        val goldValue = calculateGoldValue()
+        val totalCharges = calculateTotalCharges()
+        val totalTex = calculateTotalTexCharges()
+        val totalExtraCharge =
+            if (::chargeAdapter.isInitialized) chargeAdapter.getTotalCharges() else 0.0
+        // Update the UI with formatted values
+        binding.totalMakingChargesEditText.setText(String.format("%.2f", makingCharges))
+        binding.totalEditText.setText(String.format("%.2f", goldValue))
+        binding.totalChargesEditText.setText(String.format("%.2f", totalCharges))
+        binding.taxAmountEditText.setText(String.format("%.2f", totalTex))
+        binding.totalExtraChargesEditText.setText(String.format("%.2f", totalExtraCharge))
+
+    }
+
+    /**
+     * Sets up initial values for all fields
+     */
+    private fun setupInitialValues() {
+        // Set default values
+        binding.diamondPrizeEditText.setText("0.0")
+        binding.goldRateEditText.setText("0.0")
+        binding.wastageEditText.setText("0.0")
+        binding.purityEditText.setText("0.0")
+        binding.netWeightEditText.setText("0.0")
+        binding.grossWeightEditText.setText("0.0")
+        binding.mackingChargesEditText.setText("0.0")
+
+        // Pre-select dropdown values
+        binding.mackingChargesTypeEditText.setText("PER GRAM", false)
+        binding.goldRateOnEditText.setText("Net Weight", false)
+
+        // Set default tax values and visibility
+        binding.taxApplicableCheckbox.isChecked = false
+        binding.taxRateEditText.setText("0.0")
+        binding.taxRateInputLayout.visibility = View.GONE
+
+        setUpInitalRecyclerView()
+
+        // Update calculated fields
+        updateCalculatedFields()
+    }
+
+    private fun setUpInitalRecyclerView() {
+        chargeAdapter = ExtraChargeAdapter()
+        binding.chargesRecyclerView.apply {
+            adapter = chargeAdapter
+            layoutManager = LinearLayoutManager(requireContext())
+        }
+
+        chargeAdapter.onDeleteClickListener = { charge ->
+            deleteCharge(charge)
+        }
+
+        chargeAdapter.onChargesUpdatedListener = {
+            updateCalculatedFields()
+            updateChargesVisibility()
+        }
+
+
+    }
+
+    /**
+     * Sets up change listeners for all input fields to update calculations in real-time
+     */
+    private fun setupChangeListeners() {
+        val textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateCalculatedFields()
+            }
+        }
+
+        // Add text watchers to all fields that affect calculations
+        binding.goldRateEditText.addTextChangedListener(textWatcher)
+        binding.goldRateOnEditText.addTextChangedListener(textWatcher)
+        binding.grossWeightEditText.addTextChangedListener(textWatcher)
+        binding.netWeightEditText.addTextChangedListener(textWatcher)
+        binding.wastageEditText.addTextChangedListener(textWatcher)
+        binding.mackingChargesEditText.addTextChangedListener(textWatcher)
+        binding.mackingChargesTypeEditText.addTextChangedListener(textWatcher)
+        binding.diamondPrizeEditText.addTextChangedListener(textWatcher)
+
+        // Handle dropdown item selection
+        binding.goldRateOnEditText.setOnItemClickListener { _, _, _, _ ->
+            updateCalculatedFields()
+        }
+
+        binding.mackingChargesTypeEditText.setOnItemClickListener { _, _, _, _ ->
+            updateCalculatedFields()
+        }
+
+        binding.taxRateEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateCalculatedFields()
+            }
+        })
+
+    }
+
+    fun validateAndShowErrors(): Boolean {
+        val (isValid, errorMessage) = validateJewelryItemForm()
+
+        if (!isValid && errorMessage.isNotEmpty()) {
+            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+        }
+
+        return isValid
+    }
+
+    /**
+     * Clears all form fields for adding a new item
+     */
+    fun clearForm() {
+        binding.grossWeightEditText.text?.clear()
+        binding.netWeightEditText.text?.clear()
+        binding.wastageEditText.text?.clear()
+        binding.purityEditText.setText("")
+        binding.mackingChargesEditText.text?.clear()
+        binding.mackingChargesTypeEditText.setText("")
+        binding.goldRateEditText.text?.clear()
+        binding.goldRateOnEditText.setText("")
+        binding.diamondPrizeEditText.text?.clear()
+        binding.itemNameDropdown.setText("")
+
+        // Reset any error states
+        binding.grossWeightInputLayout.error = null
+        binding.netWeightInputLayout.error = null
+        binding.wastageInputLayout.error = null
+        binding.purityInputLayout.error = null
+        binding.mackingChargesInputLayout.error = null
+        binding.mackingChargesTypeInputLayout.error = null
+        binding.goldRateInputLayout.error = null
+        binding.goldRateOnInputLayout.error = null
+        binding.diamondPrizeInputLayout.error = null
+        binding.itemNameInputLayout.error = null
+    }
+
+    fun setupListeners() {
+        // Add Item Button Click Listener - Opens ItemBottomSheetFragment
+        binding.addItemButton.setOnClickListener {
+            openItemBottomSheet()
+        }
+
+        // Save Button Click Listener
+        binding.saveAddButton.setOnClickListener {
+            if (validateAndShowErrors()) {
+                // Proceed with saving the jewelry item
+                saveJewelryItem(closeAfterSave = false)
+            }
+        }
+
+        // Cancel Button Click Listener
+        binding.saveCloseButton.setOnClickListener {
+            if (validateAndShowErrors()) {
+                // Proceed with saving the jewelry item and close the form
+                saveJewelryItem(closeAfterSave = true)
+            }
+        }
+
+        binding.addExtraChargeButton.setOnClickListener {
+            showAddChargeDialog()
+        }
+
+        // Add this to your setupListeners() method
+        binding.taxApplicableCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                binding.taxRateInputLayout.visibility = View.VISIBLE
+                // Set default tax rate if empty
+                if (binding.taxRateEditText.text.isNullOrEmpty() ||
+                    binding.taxRateEditText.text.toString() == "0.0"
+                ) {
+                    binding.taxRateEditText.setText("3.0") // Default tax rate
+                }
+            } else {
+                binding.taxRateInputLayout.visibility = View.GONE
+                binding.taxRateEditText.setText("0.0")
+            }
+            updateCalculatedFields()
+        }
+
+
+    }
+
+    private fun updateChargesVisibility() {
+        if (::chargeAdapter.isInitialized && chargeAdapter.getExtraChargeList().isNotEmpty()) {
+            // Show RecyclerView, hide empty state text
+            binding.chargesRecyclerView.visibility = View.VISIBLE
+            binding.emptyExtraChargesText.visibility = View.GONE
+        } else {
+            // Hide RecyclerView, show empty state text
+            binding.chargesRecyclerView.visibility = View.GONE
+            binding.emptyExtraChargesText.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showAddChargeDialog() {
+        val dialog = ThemedM3Dialog(requireContext())
+            .setTitle("Add New Charge")
+            .setLayout(R.layout.dialog_add_extra_charge)
+
+        dialog.setPositiveButton("Add") { _, dialogView ->
+            val nameEditText = dialog.findViewById<TextInputEditText>(R.id.chargeNameEditText)
+            val amountEditText = dialog.findViewById<TextInputEditText>(R.id.chargeAmountEditText)
+
+            val name = nameEditText?.text.toString().trim()
+            val amountStr = amountEditText?.text.toString().trim()
+
+            if (name.isNotEmpty() && amountStr.isNotEmpty()) {
+                try {
+                    val amount = amountStr.toDouble()
+                    addCharge(name, amount)
+                } catch (e: NumberFormatException) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Please enter a valid amount",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                Toast.makeText(requireContext(), "Please fill all fields", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+
+        dialog.setNegativeButton("Cancel", null)
+        dialog.show()
+    }
+
+    private fun deleteCharge(charge: ExtraCharge) {
+        ThemedM3Dialog(requireContext())
+            .setTitle("Confirm Deletion")
+            .setPositiveButton("Delete") { _, _ ->
+                chargeAdapter.removeCharge(charge)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun addCharge(name: String, amount: Double) {
+        val newCharge = ExtraCharge(name = name, amount = amount)
+        chargeAdapter.addCharge(newCharge)
+    }
+
+    // Open ItemBottomSheetFragment to add a new item
+    private fun openItemBottomSheet() {
+        val bottomSheetFragment = ItemBottomSheetFragment.newInstance()
+
+        // Set listener to handle the case when a new item is added
+        bottomSheetFragment.setOnItemAddedListener(object :
+            ItemBottomSheetFragment.OnItemAddedListener {
+            override fun onItemAdded(item: JewelleryItem) {
+                // When a new item is added, update our list and select the new item
+                inventoryViewModel.addJewelleryItem(item)
+                fillFieldsFromSelectedItem(item)
+                binding.itemNameDropdown.setText(item.displayName)
             }
 
             override fun onItemUpdated(item: JewelleryItem) {
-                // Update the item in inventory
+                // Handle item update if needed
                 inventoryViewModel.updateJewelleryItem(item)
-
-                // Update in selected items if it exists
-                val selected = selectedItems.find { it.item.id == item.id }
-                if (selected != null) {
-                    // Keep the quantity but update the item details
-                    val quantity = selected.quantity
-                    selectedItems.removeIf { it.item.id == item.id }
-                    selectedItems.add(SelectedItem(item, quantity))
-                }
+                fillFieldsFromSelectedItem(item)
+                binding.itemNameDropdown.setText(item.displayName)
             }
         })
-        newItemSheet.show(parentFragmentManager, "NewItemBottomSheet")
+
+        bottomSheetFragment.show(parentFragmentManager, bottomSheetFragment.tag)
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
+    // Method to set the item for editing
+    fun setItemForEdit(item: JewelleryItem) {
+        editMode = true
+        itemToEdit = item
+        selectedItem = item
+    }
+
+    private fun saveJewelryItem(closeAfterSave: Boolean) {
+        // Create a jewelry item object with all the form data
+        val jewelryItem = JewelleryItem(
+            id = if (editMode && itemToEdit != null) itemToEdit!!.id else UUID.randomUUID()
+                .toString(),
+            displayName = binding.itemNameDropdown.text.toString().trim(),
+            jewelryCode = selectedItem.jewelryCode,
+            itemType = selectedItem.itemType,
+            category = selectedItem.category,
+            grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            purity = binding.purityEditText.text.toString(),
+            makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            makingChargesType = binding.mackingChargesTypeEditText.text.toString(),
+            stock = selectedItem.stock,
+            stockUnit = selectedItem.stockUnit,
+            location = selectedItem.location,
+            diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            goldRateOn = binding.goldRateOnEditText.text.toString(),
+            taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            totalTax = binding.taxAmountEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            listOfExtraCharges = chargeAdapter.getExtraChargeList()
+        )
+
+        val calculatedPrice = binding.totalChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
+
+        // Notify listener based on mode
+        if (editMode) {
+            itemSelectedListener?.onItemUpdated(
+                jewelryItem,
+                calculatedPrice // Use the calculated price here
+            )
+        } else {
+            itemSelectedListener?.onItemSelected(
+                jewelryItem,
+                calculatedPrice // Use the calculated price here as well for consistency
+            )
+        }
+
+
+        if (closeAfterSave) {
+            dismiss()
+        } else {
+            // Only clear the form if we're not in edit mode
+            if (!editMode) {
+                clearForm()
+            }
+        }
+    }
+
+
+    fun setOnItemSelectedListener(listener: OnItemSelectedListener) {
+        this.itemSelectedListener = listener
+    }
+
+    // Add an interface for item selection
+    interface OnItemSelectedListener {
+        fun onItemSelected(item: JewelleryItem, price: Double)
+
+        fun onItemUpdated(item: JewelleryItem, price: Double)
     }
 
     companion object {
-        const val TAG = "ItemSelectionBottomSheet"
-
         fun newInstance(): ItemSelectionBottomSheet {
             return ItemSelectionBottomSheet()
         }
     }
-
-    data class SelectedItem(
-        val item: JewelleryItem,
-        var quantity: Int
-    )
 }
