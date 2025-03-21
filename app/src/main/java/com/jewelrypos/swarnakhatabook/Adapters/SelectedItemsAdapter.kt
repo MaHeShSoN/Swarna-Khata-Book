@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
@@ -70,6 +71,12 @@ class SelectedItemsAdapter(
 
         holder.increaseButton.setOnClickListener {
             val newQuantity = selectedItem.quantity + 1
+            if (newQuantity > selectedItem.item.stock && selectedItem.item.stock > 0) {
+                // Show warning toast
+                Toast.makeText(holder.itemView.context,
+                    "Warning: Requested quantity exceeds available stock (${selectedItem.item.stock})",
+                    Toast.LENGTH_SHORT).show()
+            }
             listener?.onQuantityChanged(selectedItem, newQuantity)
         }
 

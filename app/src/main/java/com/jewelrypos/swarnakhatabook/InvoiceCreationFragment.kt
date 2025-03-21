@@ -32,6 +32,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
@@ -258,25 +259,37 @@ class InvoiceCreationFragment : Fragment() {
         customerListBottomSheet.show(parentFragmentManager, CustomerListBottomSheet.TAG)
     }
 
+    // In InvoiceCreationFragment.kt - modify selectItems() method
+
     private fun selectItems() {
         val itemSelectionSheet = ItemSelectionBottomSheet.newInstance()
         itemSelectionSheet.setOnItemSelectedListener(object :
             ItemSelectionBottomSheet.OnItemSelectedListener {
             override fun onItemSelected(item: JewelleryItem, price: Double) {
-                salesViewModel.addSelectedItem(item, price)
+                // Default to quantity of 1 when adding a new item
+                val requestedQuantity = 1
+
+                // Check if we have enough stock
+                if (item.stock <= 0) {
+                    // No stock available - warn user but still allow adding
+                    salesViewModel.addSelectedItem(item, price)
+                    Toast.makeText(context, "Warning: Item has no stock available", Toast.LENGTH_SHORT).show()
+                } else if (requestedQuantity > item.stock) {
+                    // Not enough stock - warn user but still allow adding
+                    salesViewModel.addSelectedItem(item, price)
+                    Toast.makeText(context, "Warning: Requested quantity exceeds available stock (${item.stock})", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Enough stock available
+                    salesViewModel.addSelectedItem(item, price)
+                }
             }
 
             override fun onItemUpdated(item: JewelleryItem, price: Double) {
                 val updated = salesViewModel.updateSelectedItem(item, price)
-
                 if (updated) {
                     Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(
-                        context,
-                        "Failed to update item. Item not found in selection.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT).show()
                 }
             }
         })
@@ -422,10 +435,20 @@ class InvoiceCreationFragment : Fragment() {
         val totalAmount = salesViewModel.calculateTotal()
         val paidAmount = salesViewModel.calculateTotalPaid()
 
+        // Get customer address components
+        val address = if (customer.streetAddress.isNotEmpty()) {
+            "${customer.streetAddress}, ${customer.city}, ${customer.state}"
+        } else {
+            "${customer.city}, ${customer.state}"
+        }
+
+
         val invoice = Invoice(
             invoiceNumber = invoiceNumber,
             customerId = customer.id,
             customerName = "${customer.firstName} ${customer.lastName}",
+            customerPhone = customer.phoneNumber,     // Include phone
+            customerAddress = address,                // Include address
             invoiceDate = System.currentTimeMillis(),
             items = invoiceItems,
             payments = payments,
@@ -445,7 +468,8 @@ class InvoiceCreationFragment : Fragment() {
 
             if (success) {
                 Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
-                findNavController().navigateUp()
+                EventBus.postInvoiceAdded()
+                 findNavController().navigateUp()
             } else {
                 Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
             }

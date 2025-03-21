@@ -11,11 +11,13 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.InvoicesAdapter
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
@@ -52,6 +54,21 @@ class SalesFragment : Fragment() {
         setupRecyclerView()
         setupObservers()
         setUpClickListner()
+
+        EventBus.invoiceAddedEvent.observe(viewLifecycleOwner) { added ->
+            if (added) {
+                // Refresh the invoices list
+                salesViewModel.refreshInvoices()
+            }
+        }
+
+        EventBus.invoiceDeletedEvent.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                // Refresh the invoices list
+                salesViewModel.refreshInvoices()
+            }
+        }
+
     }
 
     private fun setupToolbar() {
@@ -61,10 +78,12 @@ class SalesFragment : Fragment() {
                     // Handle search - you can implement search functionality later
                     true
                 }
+
                 R.id.action_filter -> {
                     // Handle filter - you can implement filter functionality later
                     true
                 }
+
                 else -> false
             }
         }
@@ -75,8 +94,22 @@ class SalesFragment : Fragment() {
 
         // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
+
+//            val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+//            parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)
+
+            val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+
+            // Using the generated NavDirections class
+            val action =
+                MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
+            parentNavController.navigate(action)
             // Handle invoice click - you can navigate to details or show actions
-            Toast.makeText(requireContext(), "Invoice: ${invoice.invoiceNumber}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                "Invoice: ${invoice.invoiceNumber}",
+                Toast.LENGTH_SHORT
+            ).show()
             // You could navigate to details using:
             // findNavController().navigate(SalesFragmentDirections.actionSalesFragmentToInvoiceDetailsFragment(invoice.invoiceNumber))
         }
@@ -107,6 +140,7 @@ class SalesFragment : Fragment() {
         }
     }
 
+
     private fun setupObservers() {
         salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
             adapter.updateInvoices(invoices)
@@ -123,7 +157,7 @@ class SalesFragment : Fragment() {
 
         salesViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
             if (!errorMessage.isNullOrEmpty()) {
-                Log.d("SalesFragment",errorMessage)
+                Log.d("SalesFragment", errorMessage)
                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
                 binding.swipeRefreshLayout.isRefreshing = false
                 binding.progressBar.visibility = View.GONE

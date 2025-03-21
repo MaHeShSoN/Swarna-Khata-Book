@@ -4,6 +4,7 @@ package com.jewelrypos.swarnakhatabook.Repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import kotlinx.coroutines.tasks.await
@@ -72,6 +73,7 @@ class InventoryRepository(
             var query = firestore.collection("users")
                 .document(phoneNumber)
                 .collection("inventory")
+                .orderBy("displayName", Query.Direction.ASCENDING)
                 .limit(pageSize.toLong())
 
             // Add start after clause if we have a previous page

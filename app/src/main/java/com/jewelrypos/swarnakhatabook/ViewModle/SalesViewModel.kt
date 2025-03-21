@@ -289,7 +289,7 @@ class SalesViewModel(
 
     // Clear current invoice data after saving
     private fun clearCurrentInvoice() {
-        _selectedCustomer.value = null
+        _selectedCustomer.value = Customer()
         _selectedItems.value = emptyList()
         _payments.value = emptyList()
     }

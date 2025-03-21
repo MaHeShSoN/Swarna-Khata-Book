@@ -5,6 +5,8 @@ data class Invoice(
     val invoiceNumber: String = "",
     val customerId: String = "",
     val customerName: String = "",
+    val customerPhone: String = "",        // Add this
+    val customerAddress: String = "",      // Add this
     val invoiceDate: Long = System.currentTimeMillis(),
     val items: List<InvoiceItem> = listOf(),
     val payments: List<Payment> = listOf(),

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_edit"
+        android:icon="@drawable/material_symbols__edit_rounded"
+        android:title="Edit Invoice"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_duplicate"
+        android:icon="@drawable/bxs__duplicate"
+        android:title="Duplicate Invoice"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_share_whatsapp"
+        android:icon="@drawable/mdi__whatsapp"
+        android:title="Share to WhatsApp"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_save_pdf"
+        android:icon="@drawable/teenyicons__pdf_solid"
+        android:title="Save as PDF"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_delete"
+        android:icon="@drawable/material_symbols__delete"
+        android:title="Delete Invoice"
+        app:showAsAction="never" />
+</menu>

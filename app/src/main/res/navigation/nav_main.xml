@@ -9,7 +9,7 @@
         android:id="@+id/launcherFragment"
         android:name="com.jewelrypos.swarnakhatabook.launcherFragment"
         android:label="fragment_launcher"
-        tools:layout="@layout/fragment_launcher" >
+        tools:layout="@layout/fragment_launcher">
         <action
             android:id="@+id/action_launcherFragment_to_getDetailsFragment"
             app:destination="@id/getDetailsFragment" />
@@ -21,7 +21,7 @@
         android:id="@+id/getDetailsFragment"
         android:name="com.jewelrypos.swarnakhatabook.GetDetailsFragment"
         android:label="fragment_get_details"
-        tools:layout="@layout/fragment_get_details" >
+        tools:layout="@layout/fragment_get_details">
         <action
             android:id="@+id/action_getDetailsFragment_to_otpVarificationFragment"
             app:destination="@id/otpVarificationFragment" />
@@ -30,7 +30,7 @@
         android:id="@+id/otpVarificationFragment"
         android:name="com.jewelrypos.swarnakhatabook.OtpVarificationFragment"
         android:label="fragment_otp_varification"
-        tools:layout="@layout/fragment_otp_varification" >
+        tools:layout="@layout/fragment_otp_varification">
         <argument
             android:name="phoneNumber"
             app:argType="string" />
@@ -57,13 +57,31 @@
         android:id="@+id/mainScreenFragment"
         android:name="com.jewelrypos.swarnakhatabook.MainScreenFragment"
         android:label="fragment_main_screen"
-        tools:layout="@layout/fragment_main_screen" >
+        tools:layout="@layout/fragment_main_screen">
         <action
             android:id="@+id/action_mainScreenFragment_to_invoiceCreationFragment"
             app:destination="@id/invoiceCreationFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_invoiceDetailFragment"
+            app:destination="@id/invoiceDetailFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
         android:name="com.jewelrypos.swarnakhatabook.InvoiceCreationFragment"
-        android:label="InvoiceCreationFragment" />
+        android:label="InvoiceCreationFragment">
+        <action
+            android:id="@+id/action_invoiceCreationFragment_to_invoiceDetailFragment"
+            app:destination="@id/invoiceDetailFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/invoiceDetailFragment"
+        android:name="com.jewelrypos.swarnakhatabook.InvoiceDetailFragment"
+        android:label="InvoiceDetailFragment">
+        <argument
+            android:name="invoiceId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_invoiceDetailFragment_to_invoiceCreationFragment"
+            app:destination="@id/invoiceCreationFragment" />
+    </fragment>
 </navigation>
