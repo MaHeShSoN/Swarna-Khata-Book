@@ -19,7 +19,8 @@ class InvoicesAdapter(
     private var invoices: List<Invoice>
 ) : RecyclerView.Adapter<InvoicesAdapter.InvoiceViewHolder>() {
 
-    private var onItemClickListener: ((Invoice) -> Unit)? = null
+    var onItemClickListener: ((Invoice) -> Unit)? = null
+
 
     class InvoiceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val invoiceNumber: TextView = itemView.findViewById(R.id.invoiceNumber)

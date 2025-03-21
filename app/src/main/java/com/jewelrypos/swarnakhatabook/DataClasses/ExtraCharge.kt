@@ -5,6 +5,6 @@ import java.util.UUID
 // ExtraCharge.java
 data class ExtraCharge(
     val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val amount: Double
+    val name: String = "",
+    val amount: Double = 0.0
 )

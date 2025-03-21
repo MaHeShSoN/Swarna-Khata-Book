@@ -6,16 +6,16 @@
     android:orientation="vertical">
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/goldWeightLayout"
+        android:id="@+id/silverWeightLayout"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Gold Weight (g)"
+        android:hint="Silver Weight (g)"
         app:boxStrokeColor="@color/my_light_primary"
         app:hintTextColor="@color/my_light_secondary">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/goldWeightEditText"
+            android:id="@+id/silverWeightEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserratregular"
@@ -23,17 +23,17 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/goldPurityLayout"
+        android:id="@+id/silverPurityLayout"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Gold Purity % (e.g., 91.6 for 22K, 75 for 18K)"
+        android:hint="Silver Purity % (e.g., 92.5 for sterling)"
         app:boxStrokeColor="@color/my_light_primary"
         app:hintTextColor="@color/my_light_secondary">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/goldPurityEditText"
+            android:id="@+id/silverPurityEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserratregular"
@@ -41,38 +41,38 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/goldRateLayout"
+        android:id="@+id/silverRateLayout"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Gold Rate (₹/g for 24K)"
+        android:hint="Silver Rate (₹/g for pure silver)"
         app:boxStrokeColor="@color/my_light_primary"
         app:hintTextColor="@color/my_light_secondary"
         app:prefixText="₹">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/goldRateEditText"
+            android:id="@+id/silverRateEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserratregular"
             android:inputType="numberDecimal"
-            android:text="6500" />
+            android:text="90" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/goldValueLayout"
+        android:id="@+id/silverValueLayout"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Total Gold Value"
+        android:hint="Total Silver Value"
         app:boxStrokeColor="@color/my_light_primary"
         app:hintTextColor="@color/my_light_secondary"
         app:prefixText="₹">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/goldValueEditText"
+            android:id="@+id/silverValueEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserratregular"

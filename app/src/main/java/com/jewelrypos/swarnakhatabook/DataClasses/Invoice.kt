@@ -10,6 +10,5 @@ data class Invoice(
     val payments: List<Payment> = listOf(),
     val totalAmount: Double = 0.0,
     val paidAmount: Double = 0.0,
-    val relatedOrderId: String = "", // If converted from an order
     val notes: String = ""
 )

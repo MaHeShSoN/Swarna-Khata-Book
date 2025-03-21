@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,8 +9,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.FrameLayout
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetpaymententryBinding
 
@@ -85,7 +91,6 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             pendingAmount = null
         }
 
-
         // Apply any pending title/description
         pendingTitle?.let {
             binding.titleTextView.text = it
@@ -98,6 +103,10 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             pendingDescription = null
         }
 
+        // Update payment summary display
+        binding.totalAmountText.text = "₹${String.format("%.2f", invoiceTotal)}"
+        binding.amountPaidText.text = "₹${String.format("%.2f", amountPaid)}"
+        binding.balanceDueText.text = "₹${String.format("%.2f", invoiceTotal - amountPaid)}"
 
         setupPaymentAmountSuggestions()
         setupPaymentMethodSelection()
@@ -119,7 +128,8 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun setupPaymentMethodSelection() {
-        val methods = listOf("Cash", "Card", "UPI", "Bank Transfer", "Old Gold", "Store Credit")
+        val methods =
+            listOf("Cash", "Card", "UPI", "Bank Transfer", "Old Gold", "Old Silver", "Store Credit")
         val adapter =
             ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, methods)
         binding.paymentMethodDropdown.setAdapter(adapter)
@@ -127,13 +137,52 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         binding.paymentMethodDropdown.setOnItemClickListener { _, _, position, _ ->
             // Show additional fields based on payment method
             when (methods[position]) {
-                "Card" -> showCardFields()
-                "UPI" -> showUpiFields()
-                "Bank Transfer" -> showBankTransferFields()
-                "Old Gold" -> showOldGoldFields()
-                else -> hideAdditionalFields()
+                "Card" -> {
+                    showCardFields()
+                    showAmountField()
+                }
+
+                "UPI" -> {
+                    showUpiFields()
+                    showAmountField()
+                }
+
+                "Bank Transfer" -> {
+                    showBankTransferFields()
+                    showAmountField()
+                }
+
+                "Old Gold" -> {
+                    showOldGoldFields()
+                    hideAmountField()
+                }
+
+                "Old Silver" -> {
+                    showOldSilverFields()
+                    hideAmountField()
+                }
+
+                else -> {
+                    hideAdditionalFields()
+                    showAmountField()
+                }
             }
         }
+    }
+
+    // Add these helper methods
+    private fun hideAmountField() {
+        // Hide the amount field and quick amount buttons
+        binding.amountInputLayout.visibility = View.GONE
+        binding.fullAmountButton.visibility = View.GONE
+        binding.halfAmountButton.visibility = View.GONE
+    }
+
+    private fun showAmountField() {
+        // Show the amount field and quick amount buttons
+        binding.amountInputLayout.visibility = View.VISIBLE
+        binding.fullAmountButton.visibility = View.VISIBLE
+        binding.halfAmountButton.visibility = View.VISIBLE
     }
 
     private fun showUpiFields() {
@@ -190,59 +239,109 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             true
         )
 
-        // Setup purity dropdown
-        val purityDropdown = goldFields.findViewById<AutoCompleteTextView>(R.id.goldPurityDropdown)
-        val purities = listOf("24K", "22K", "20K", "18K", "14K", "Other")
-        val adapter =
-            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, purities)
-        purityDropdown.setAdapter(adapter)
-
-        // Auto-calculate value based on weight and purity if possible
+        // Get references to all fields
         val weightEditText = goldFields.findViewById<TextInputEditText>(R.id.goldWeightEditText)
+        val purityEditText = goldFields.findViewById<TextInputEditText>(R.id.goldPurityEditText)
+        val rateEditText = goldFields.findViewById<TextInputEditText>(R.id.goldRateEditText)
         val valueEditText = goldFields.findViewById<TextInputEditText>(R.id.goldValueEditText)
 
-        weightEditText.addTextChangedListener(object : TextWatcher {
+        // Set default for common purities as a helper text
+        goldFields.findViewById<TextInputLayout>(R.id.goldPurityLayout).helperText =
+            "Common purities: 99.9% (24K), 91.6% (22K), 75% (18K)"
+
+        // Add text watchers to recalculate on any change
+        val textWatcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 calculateGoldValue(
-                    goldFields.findViewById<AutoCompleteTextView>(R.id.goldPurityDropdown).text.toString(),
-                    s.toString().toDoubleOrNull() ?: 0.0,
+                    weightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                    purityEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                    rateEditText.text.toString().toDoubleOrNull() ?: 0.0,
                     valueEditText
                 )
             }
-        })
-
-        purityDropdown.setOnItemClickListener { _, _, _, _ ->
-            calculateGoldValue(
-                purityDropdown.text.toString(),
-                weightEditText.text.toString().toDoubleOrNull() ?: 0.0,
-                valueEditText
-            )
         }
+
+        weightEditText.addTextChangedListener(textWatcher)
+        purityEditText.addTextChangedListener(textWatcher)
+        rateEditText.addTextChangedListener(textWatcher)
+
+        // Initialize with default values if needed
+        purityEditText.setText("91.6") // Default to 22K
     }
 
-    // Let's also create the XML for the Bank Transfer fields
     private fun calculateGoldValue(
-        purity: String,
         weight: Double,
+        purity: Double,
+        ratePerGram: Double,
         valueEditText: TextInputEditText
     ) {
-        // This is a simplified calculation. In a real app, you might want to fetch current gold rates
-        val ratePerGram = when (purity) {
-            "24K" -> 6500.0
-            "22K" -> 6000.0
-            "20K" -> 5500.0
-            "18K" -> 5000.0
-            "14K" -> 4000.0
-            else -> 0.0
-        }
-
-        if (ratePerGram > 0 && weight > 0) {
-            val value = weight * ratePerGram
+        if (weight > 0 && purity > 0 && ratePerGram > 0) {
+            // Calculate value based on weight, purity percentage, and rate
+            val purityFactor = purity / 100.0
+            val value = weight * purityFactor * ratePerGram
             valueEditText.setText(String.format("%.2f", value))
         }
     }
+
+    private fun showOldSilverFields() {
+        binding.additionalFieldsContainer.visibility = View.VISIBLE
+        binding.additionalFieldsContainer.removeAllViews()
+
+        // Inflate silver exchange fields layout
+        val silverFields = layoutInflater.inflate(
+            R.layout.payment_silver_exchange_fields,
+            binding.additionalFieldsContainer,
+            true
+        )
+
+        // Get references to all fields
+        val weightEditText = silverFields.findViewById<TextInputEditText>(R.id.silverWeightEditText)
+        val purityEditText = silverFields.findViewById<TextInputEditText>(R.id.silverPurityEditText)
+        val rateEditText = silverFields.findViewById<TextInputEditText>(R.id.silverRateEditText)
+        val valueEditText = silverFields.findViewById<TextInputEditText>(R.id.silverValueEditText)
+
+        // Set default for common purities as a helper text
+        silverFields.findViewById<TextInputLayout>(R.id.silverPurityLayout).helperText =
+            "Common purities: 99.9% (Fine), 92.5% (Sterling), 80% (Coin)"
+
+        // Add text watchers to recalculate on any change
+        val textWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                calculateSilverValue(
+                    weightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                    purityEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                    rateEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                    valueEditText
+                )
+            }
+        }
+
+        weightEditText.addTextChangedListener(textWatcher)
+        purityEditText.addTextChangedListener(textWatcher)
+        rateEditText.addTextChangedListener(textWatcher)
+
+        // Initialize with default values if needed
+        purityEditText.setText("92.5") // Default to sterling silver
+    }
+
+    private fun calculateSilverValue(
+        weight: Double,
+        purity: Double,
+        ratePerGram: Double,
+        valueEditText: TextInputEditText
+    ) {
+        if (weight > 0 && purity > 0 && ratePerGram > 0) {
+            // Calculate value based on weight, purity percentage, and rate
+            val purityFactor = purity / 100.0
+            val value = weight * purityFactor * ratePerGram
+            valueEditText.setText(String.format("%.2f", value))
+        }
+    }
+
 
     private fun showCardFields() {
         binding.additionalFieldsContainer.visibility = View.VISIBLE
@@ -254,7 +353,24 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             binding.additionalFieldsContainer,
             true
         )
-        // Setup card fields
+
+        // Setup card type dropdown
+        val cardTypeDropdown = cardFields.findViewById<AutoCompleteTextView>(R.id.cardTypeDropdown)
+        val cardTypes = listOf("Visa", "MasterCard", "RuPay", "American Express", "Other")
+        val adapter =
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, cardTypes)
+        cardTypeDropdown.setAdapter(adapter)
+
+        // Set up formatting for card number
+        val cardNumberEditText = cardFields.findViewById<TextInputEditText>(R.id.cardNumberEditText)
+        cardNumberEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                // No need to implement complex formatting here
+            }
+        })
+
     }
 
     // Similar methods for other payment types
@@ -275,6 +391,32 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         binding.cancelButton.setOnClickListener {
             dismiss()
         }
+    }
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                setupFullHeight(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                behavior.isDraggable = true
+            }
+        }
+
+        return dialog
+    }
+
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
     }
 
     private fun validatePayment(): Boolean {
@@ -300,13 +442,36 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun createPaymentFromForm(): Payment {
+        val method = binding.paymentMethodDropdown.text.toString()
+
+        // Determine amount based on payment method
+        val amount = when (method) {
+            "Old Gold" -> {
+                // Get the gold value from the value field
+                val goldValueField = binding.additionalFieldsContainer
+                    .findViewById<TextInputEditText>(R.id.goldValueEditText)
+                goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
+            }
+
+            "Old Silver" -> {
+                // Get the silver value from the value field
+                val silverValueField = binding.additionalFieldsContainer
+                    .findViewById<TextInputEditText>(R.id.silverValueEditText)
+                silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
+            }
+
+            else -> {
+                // For other payment methods, use the amount field
+                binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
+            }
+        }
+
         return Payment(
-            id = "", // Will be set by repository
-            amount = binding.amountEditText.text.toString().toDouble(),
-            method = binding.paymentMethodDropdown.text.toString(),
+            id = "", // Will be set by the Invoice fragment
+            amount = amount,
+            method = method,
             date = System.currentTimeMillis(),
             reference = binding.referenceEditText.text.toString(),
-            // Add additional fields based on payment method
             notes = binding.notesEditText.text.toString()
         )
     }
@@ -329,12 +494,4 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    data class Payment(
-        val id: String,
-        val amount: Double,
-        val method: String,
-        val date: Long,
-        val reference: String,
-        val notes: String
-    )
 }

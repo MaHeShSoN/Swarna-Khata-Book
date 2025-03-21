@@ -76,14 +76,6 @@
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageButton
-                android:id="@+id/editButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@drawable/material_symbols__edit_rounded"
-                app:tint="@color/my_light_primary" />
-
-            <ImageButton
                 android:id="@+id/removeButton"
                 android:layout_width="36dp"
                 android:layout_height="36dp"

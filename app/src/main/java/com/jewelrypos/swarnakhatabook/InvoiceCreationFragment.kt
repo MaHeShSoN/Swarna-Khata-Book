@@ -1,6 +1,8 @@
 package com.jewelrypos.swarnakhatabook
 
 
+import android.content.Context
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,10 +14,13 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.PaymentsAdapter
 import com.jewelrypos.swarnakhatabook.Adapters.SelectedItemsAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerListBottomSheet
@@ -27,6 +32,8 @@ import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
+import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
+import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
 import java.text.SimpleDateFormat
@@ -38,13 +45,19 @@ class InvoiceCreationFragment : Fragment() {
 
     private var _binding: FragmentInvoiceCreationBinding? = null
     private val binding get() = _binding!!
-    private val salesViewModel: SalesViewModel by activityViewModels()
-
+    private val salesViewModel: SalesViewModel by viewModels {
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val repository = InvoiceRepository(firestore, auth)
+        val connectivityManager =
+            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        SalesViewModelFactory(repository, connectivityManager)
+    }
 
 
     private lateinit var itemsAdapter: SelectedItemsAdapter
 
-//    private lateinit var paymentsAdapter: PaymentsAdapter
+    private lateinit var paymentsAdapter: PaymentsAdapter
 
 
     override fun onCreateView(
@@ -60,10 +73,41 @@ class InvoiceCreationFragment : Fragment() {
 
         initializeViews()
         setupListeners()
-
+        observePayments()
     }
 
+    private fun observePayments() {
+        salesViewModel.payments.observe(viewLifecycleOwner) { payments ->
+            paymentsAdapter.updatePayments(payments)
+            updateTotals() // Update totals when payments change
+
+            // Update empty state
+            if (payments.isEmpty()) {
+                binding.noPaymentsText.visibility = View.VISIBLE
+                binding.paymentsRecyclerView.visibility = View.GONE
+            } else {
+                binding.noPaymentsText.visibility = View.GONE
+                binding.paymentsRecyclerView.visibility = View.VISIBLE
+            }
+        }
+    }
+
+
     private fun initializeViews() {
+
+        paymentsAdapter = PaymentsAdapter(emptyList())
+        paymentsAdapter.setOnPaymentActionListener(object :
+            PaymentsAdapter.OnPaymentActionListener {
+            override fun onRemovePayment(payment: Payment) {
+                salesViewModel.removePayment(payment)
+            }
+
+            override fun onEditPayment(payment: Payment) {
+
+            }
+        })
+        binding.paymentsRecyclerView.adapter = paymentsAdapter
+        binding.paymentsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
 
 
         // Set up the selected items adapter
@@ -85,10 +129,14 @@ class InvoiceCreationFragment : Fragment() {
                     }
 
                     override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                        val updated = salesViewModel.updateSelectedItem(updatedItem, price) // Keep this for now, we might adjust it.
+                        val updated = salesViewModel.updateSelectedItem(
+                            updatedItem,
+                            price
+                        ) // Keep this for now, we might adjust it.
 
                         if (updated) {
-                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT)
+                                .show()
                         } else {
                             Toast.makeText(
                                 context,
@@ -107,7 +155,6 @@ class InvoiceCreationFragment : Fragment() {
         })
         binding.itemsRecyclerView.adapter = itemsAdapter
         binding.itemsRecyclerView.layoutManager = LinearLayoutManager(requireContext())
-
 
 
         // Set up observers
@@ -162,6 +209,16 @@ class InvoiceCreationFragment : Fragment() {
                 selectItems()
             }
         }
+
+        binding.addPaymentButton.setOnClickListener {
+            addPayment()
+        }
+
+        binding.saveButton.setOnClickListener {
+            saveInvoice()
+        }
+
+
     }
 
 
@@ -226,46 +283,46 @@ class InvoiceCreationFragment : Fragment() {
         itemSelectionSheet.show(parentFragmentManager, "ItemSelectionBottomSheet")
     }
 
-//    private fun addPayment() {
-//        val totalAmount = calculateTotal()
-//        val paidAmount = calculateTotalPaid()
-//        val dueAmount = totalAmount - paidAmount
-//
-//        if (dueAmount <= 0) {
-//            Toast.makeText(context, "Invoice is already fully paid", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
-//        paymentSheet.setOnPaymentAddedListener(object :
-//            PaymentEntryBottomSheet.OnPaymentAddedListener {
-//            override fun onPaymentAdded(payment: PaymentEntryBottomSheet.Payment) {
-//                // Add payment to list
-//                val newPayment = Payment(
-//                    id = generatePaymentId(),
-//                    amount = payment.amount,
-//                    method = payment.method,
-//                    date = payment.date,
-//                    reference = payment.reference,
-//                    notes = payment.notes
-//                )
-//                val currentPayments = paymentsAdapter.getPayments().toMutableList()
-//                currentPayments.add(newPayment)
-//                paymentsAdapter.updatePayments(currentPayments)
-//
-//                // Update totals
-//                updateTotals()
-//            }
-//        })
-//        paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
-//    }
+    private fun addPayment() {
+        val totalAmount = salesViewModel.calculateTotal()
+        val paidAmount = salesViewModel.calculateTotalPaid()
+        val dueAmount = totalAmount - paidAmount
+
+        if (dueAmount <= 0) {
+            Toast.makeText(context, "Invoice is already fully paid", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
+        paymentSheet.setTitle("Add Payment")
+        paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
+
+        paymentSheet.setOnPaymentAddedListener(object :
+            PaymentEntryBottomSheet.OnPaymentAddedListener {
+            override fun onPaymentAdded(payment: Payment) {
+                // Create new payment with generated ID
+                val newPayment = Payment(
+                    id = generatePaymentId(),
+                    amount = payment.amount,
+                    method = payment.method,
+                    date = payment.date,
+                    reference = payment.reference,
+                    notes = payment.notes
+                )
+
+                // Add to view model
+                salesViewModel.addPayment(newPayment)
+            }
+        })
+        paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
+    }
 
     private fun updateTotals() {
         val subtotal = salesViewModel.calculateSubtotal()
         val extraChargesTotal = salesViewModel.calculateExtraCharges()
         val tax = salesViewModel.calculateTax()
         val total = salesViewModel.calculateTotal()
-        val paid = 0.0 // Replace with actual payment calculation when implemented
+        val paid = salesViewModel.calculateTotalPaid() // Use view model method
         val due = total - paid
 
         // Update standard values
@@ -281,6 +338,7 @@ class InvoiceCreationFragment : Fragment() {
         // Update extra charges display
         updateExtraChargesDisplay()
     }
+
     private fun updateExtraChargesDisplay() {
         // Get all extra charges
         val extraCharges = salesViewModel.getAllExtraCharges()
@@ -299,7 +357,11 @@ class InvoiceCreationFragment : Fragment() {
 
         // Create a view for each extra charge
         for (charge in extraCharges) {
-            val chargeView = layoutInflater.inflate(R.layout.item_extra_charge_layout, binding.extraChargesContainer, false)
+            val chargeView = layoutInflater.inflate(
+                R.layout.item_extra_charge_layout,
+                binding.extraChargesContainer,
+                false
+            )
 
             val chargeName = chargeView.findViewById<TextView>(R.id.extraChargeNameText)
             val chargeAmount = chargeView.findViewById<TextView>(R.id.extraChargeAmountText)
@@ -335,66 +397,60 @@ class InvoiceCreationFragment : Fragment() {
         return itemsAdapter.getItems().sumOf { it.price * it.quantity }
     }
 
-    private fun calculateTax(subtotal: Double): Double {
-        // Simplified - in real app you'd have tax rates configuration
-        return subtotal * 0.03 // 3% tax
+
+    private fun saveInvoice() {
+        // Validate
+        if (!validateInvoice()) {
+            return
+        }
+
+        // Create invoice object
+        val invoiceNumber = generateInvoiceNumber()
+        val customer = salesViewModel.selectedCustomer.value
+            ?: throw IllegalStateException("Customer must be selected")
+
+        val invoiceItems = itemsAdapter.getItems().map { selected ->
+            InvoiceItem(
+                itemId = selected.item.id,
+                quantity = selected.quantity,
+                itemDetails = selected.item,
+                price = selected.price
+            )
+        }
+
+        val payments = paymentsAdapter.getPayments()
+        val totalAmount = salesViewModel.calculateTotal()
+        val paidAmount = salesViewModel.calculateTotalPaid()
+
+        val invoice = Invoice(
+            invoiceNumber = invoiceNumber,
+            customerId = customer.id,
+            customerName = "${customer.firstName} ${customer.lastName}",
+            invoiceDate = System.currentTimeMillis(),
+            items = invoiceItems,
+            payments = payments,
+            totalAmount = totalAmount,
+            paidAmount = paidAmount,
+            // You might want to add these fields as well
+            notes = binding.notesEditText.text.toString()
+        )
+
+        // Show loading state
+        binding.progressOverlay.visibility = View.VISIBLE
+
+        // Save the invoice
+        salesViewModel.saveInvoice(invoice) { success ->
+            // Hide loading state
+            binding.progressOverlay.visibility = View.GONE
+
+            if (success) {
+                Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+                findNavController().navigateUp()
+            } else {
+                Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
-
-    private fun calculateTotal(): Double {
-        val subtotal = calculateSubtotal()
-        val tax = calculateTax(subtotal)
-        return subtotal + tax
-    }
-
-//    private fun calculateTotalPaid(): Double {
-//        return paymentsAdapter.getPayments().sumOf { it.amount }
-//    }
-
-//    private fun saveInvoice() {
-//        // Validate
-//        if (!validateInvoice()) {
-//            return
-//        }
-//
-//        // Create invoice object
-//        val invoiceNumber = generateInvoiceNumber()
-//        val customer = salesViewModel.selectedCustomer.value
-//            ?: throw IllegalStateException("Customer must be selected")
-//
-//        val invoiceItems = itemsAdapter.getItems().map { selected ->
-//            InvoiceItem(
-//                itemId = selected.item.id,
-//                quantity = selected.quantity,
-//                itemDetails = selected.item,
-//                price = selected.price
-//            )
-//        }
-//
-//        val payments = paymentsAdapter.getPayments()
-//        val totalAmount = calculateTotal()
-//        val paidAmount = calculateTotalPaid()
-//
-//        val invoice = Invoice(
-//            invoiceNumber = invoiceNumber,
-//            customerId = customer.id,
-//            customerName = "${customer.firstName} ${customer.lastName}",
-//            invoiceDate = System.currentTimeMillis(),
-//            items = invoiceItems,
-//            payments = payments,
-//            totalAmount = totalAmount,
-//            paidAmount = paidAmount
-//        )
-//
-//        // Save the invoice
-//        salesViewModel.saveInvoice(invoice) { success ->
-//            if (success) {
-//                Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
-//                findNavController().navigateUp()
-//            } else {
-//                Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//    }
 
     private fun validateInvoice(): Boolean {
         if (salesViewModel.selectedCustomer.value == null) {

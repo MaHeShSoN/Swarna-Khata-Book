@@ -42,7 +42,28 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
     private var itemSelectedListener: OnItemSelectedListener? = null
 
-    lateinit var selectedItem: JewelleryItem
+    private var selectedItem: JewelleryItem = JewelleryItem(
+        id = UUID.randomUUID().toString(),
+        displayName = "",
+        jewelryCode = "",
+        itemType = "",
+        category = "",
+        grossWeight = 0.0,
+        netWeight = 0.0,
+        wastage = 0.0,
+        purity = "",
+        makingCharges = 0.0,
+        makingChargesType = "",
+        stock = 0.0,
+        stockUnit = "",
+        location = "",
+        diamondPrice = 0.0,
+        goldRate = 0.0,
+        goldRateOn = "Net Weight",
+        taxRate = 0.0,
+        totalTax = 0.0,
+        listOfExtraCharges = emptyList()
+    )
     private lateinit var chargeAdapter: ExtraChargeAdapter
 
     // Add InventoryViewModel to access inventory items
@@ -333,6 +354,16 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val diamondPrice = binding.diamondPrizeEditText.text.toString().trim()
 
 
+
+        // Add this check near the beginning of your validateJewelryItemForm method
+        val itemName = binding.itemNameDropdown.text.toString().trim()
+        if (itemName.isEmpty()) {
+            binding.itemNameInputLayout.error = "Item name is required"
+            binding.itemNameDropdown.requestFocus()
+            return Pair(false, "Item name is required")
+        } else {
+            binding.itemNameInputLayout.error = null
+        }
         // Numeric field validations
         // Gross Weight - required
         if (grossWeight.isEmpty()) {
@@ -566,7 +597,31 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
      * Sets up initial values for all fields
      */
     private fun setupInitialValues() {
-        // Set default values
+        // Reset selectedItem to a new default instance
+        selectedItem = JewelleryItem(
+            id = UUID.randomUUID().toString(),
+            displayName = "",
+            jewelryCode = "",
+            itemType = "",
+            category = "",
+            grossWeight = 0.0,
+            netWeight = 0.0,
+            wastage = 0.0,
+            purity = "",
+            makingCharges = 0.0,
+            makingChargesType = "",
+            stock = 0.0,
+            stockUnit = "",
+            location = "",
+            diamondPrice = 0.0,
+            goldRate = 0.0,
+            goldRateOn = "Net Weight",
+            taxRate = 0.0,
+            totalTax = 0.0,
+            listOfExtraCharges = emptyList()
+        )
+
+        // Set default values for UI fields
         binding.diamondPrizeEditText.setText("0.0")
         binding.goldRateEditText.setText("0.0")
         binding.wastageEditText.setText("0.0")
@@ -664,6 +719,14 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
      * Clears all form fields for adding a new item
      */
     fun clearForm() {
+        // Reset selectedItem to a new default instance
+        selectedItem = JewelleryItem(
+            id = UUID.randomUUID().toString(),
+            // Set other fields to default values
+        )
+
+        // Clear existing UI field values
+        binding.itemNameDropdown.setText("")
         binding.grossWeightEditText.text?.clear()
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
@@ -673,7 +736,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.goldRateEditText.text?.clear()
         binding.goldRateOnEditText.setText("")
         binding.diamondPrizeEditText.text?.clear()
-        binding.itemNameDropdown.setText("")
 
         // Reset any error states
         binding.grossWeightInputLayout.error = null
@@ -686,6 +748,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.goldRateOnInputLayout.error = null
         binding.diamondPrizeInputLayout.error = null
         binding.itemNameInputLayout.error = null
+        binding.itemNameInputLayout.helperText = null
     }
 
     fun setupListeners() {
@@ -827,11 +890,24 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun saveJewelryItem(closeAfterSave: Boolean) {
+        // Get the display name from the dropdown
+        val displayName = binding.itemNameDropdown.text.toString().trim()
+
+        // Update selectedItem with manually entered values if the user didn't select an item
+        // or if they've modified fields after selection
+        if (displayName != selectedItem.displayName || selectedItem.displayName.isEmpty()) {
+            // The user either entered a name manually or changed it after selection
+            selectedItem = selectedItem.copy(
+                id = UUID.randomUUID().toString(),
+                displayName = displayName,
+                // Keep other fields as they are in the original selectedItem
+            )
+        }
+
         // Create a jewelry item object with all the form data
         val jewelryItem = JewelleryItem(
-            id = if (editMode && itemToEdit != null) itemToEdit!!.id else UUID.randomUUID()
-                .toString(),
-            displayName = binding.itemNameDropdown.text.toString().trim(),
+            id = if (editMode && itemToEdit != null) itemToEdit!!.id else selectedItem.id,
+            displayName = displayName,
             jewelryCode = selectedItem.jewelryCode,
             itemType = selectedItem.itemType,
             category = selectedItem.category,
@@ -849,7 +925,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             goldRateOn = binding.goldRateOnEditText.text.toString(),
             taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
             totalTax = binding.taxAmountEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            listOfExtraCharges = chargeAdapter.getExtraChargeList()
+            listOfExtraCharges = if (::chargeAdapter.isInitialized) chargeAdapter.getExtraChargeList() else emptyList()
         )
 
         val calculatedPrice = binding.totalChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -858,15 +934,14 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         if (editMode) {
             itemSelectedListener?.onItemUpdated(
                 jewelryItem,
-                calculatedPrice // Use the calculated price here
+                calculatedPrice
             )
         } else {
             itemSelectedListener?.onItemSelected(
                 jewelryItem,
-                calculatedPrice // Use the calculated price here as well for consistency
+                calculatedPrice
             )
         }
-
 
         if (closeAfterSave) {
             dismiss()
