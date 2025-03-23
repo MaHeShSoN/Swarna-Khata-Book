@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    android:padding="16dp"
+    tools:context=".CustomerDashboardFragment">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Basic Information Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Contact Information"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Customer name and type -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Name"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/customerName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp"
+                            tools:text="John Smith" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="end">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Type"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/customerType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:textColor="@color/cream_background"
+                            android:background="@drawable/rounded_badge_background"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:textSize="14sp"
+                            tools:text="Consumer" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Contact details -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Phone"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/customerPhone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp"
+                    tools:text="+91 9876543210" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Email"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/customerEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    tools:text="john.smith@example.com" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Address Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Address"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/customerAddress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    tools:text="123 Main Street, Mumbai, Maharashtra, 400001, India" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/creditLimitDetailCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Credit Limit"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Current Balance:"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/currentBalanceValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="₹0.00"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Credit Limit:"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/creditLimitValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="₹0.00"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Available Credit:"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/availableCreditValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="₹0.00"
+                        android:textColor="@color/status_paid"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="Credit Usage"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/creditLimitDetailProgress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="100"
+                        android:progress="0"
+                        app:indicatorColor="@color/my_light_primary"
+                        app:trackColor="@color/my_light_primary_container"
+                        app:trackThickness="12dp" />
+
+                    <TextView
+                        android:id="@+id/creditLimitDetailPercentage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="0%"
+                        android:textColor="@color/white"
+                        android:textSize="12sp" />
+                </FrameLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/creditHistoryCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Credit Limit History"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/updateCreditLimitButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Update"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="14sp"
+                        app:icon="@drawable/material_symbols__edit_rounded"
+                        app:iconTint="@color/my_light_primary" />
+                </LinearLayout>
+
+                <!-- RecyclerView for credit limit history -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/creditHistoryRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="visible"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/item_credit_limit_history"
+                    tools:itemCount="2" />
+
+                <!-- Empty state for no history -->
+                <TextView
+                    android:id="@+id/noCreditHistoryText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="@font/montserratregular"
+                    android:gravity="center"
+                    android:text="No credit limit changes recorded yet"
+                    android:textColor="@color/my_light_on_background"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
+
+        <!-- Business Information Card (for Wholesalers) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/businessInfoCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Business Information"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Business Name -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Business Name"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/businessName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp"
+                    tools:text="Luxury Jewels Pvt. Ltd." />
+
+                <!-- GST Number -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GST Number"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/gstNumber"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    android:layout_marginBottom="8dp"
+                    tools:text="27AADCB2230M1ZS" />
+
+                <!-- Tax ID -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tax ID"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/taxId"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    tools:text="ABCDE1234F" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Relationship Information Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Relationship Information"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Customer Since -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Customer Since"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/customerSince"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="15 Jan 2023" />
+                </LinearLayout>
+
+                <!-- Referred By -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Referred By"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/referredBy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="Raj Malhotra" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Important Dates Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/importantDatesCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Important Dates"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Birthday -->
+                <LinearLayout
+                    android:id="@+id/birthdayContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Birthday"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/birthday"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="15 May 1985" />
+                </LinearLayout>
+
+                <!-- Anniversary -->
+                <LinearLayout
+                    android:id="@+id/anniversaryContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Anniversary"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/anniversary"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="12 Dec 2010" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Notes Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/notesCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Notes"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/customerNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    tools:text="Prefers traditional gold jewelry. Looking for wedding collection in December." />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

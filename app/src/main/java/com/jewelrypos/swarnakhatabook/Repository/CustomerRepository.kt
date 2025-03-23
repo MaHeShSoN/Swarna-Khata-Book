@@ -5,8 +5,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.DataClasses.CreditLimitChange
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class CustomerRepository(
     private val firestore: FirebaseFirestore,
@@ -141,4 +143,101 @@ class CustomerRepository(
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+
+    /**
+     * Updates a customer's credit limit and records the change in history
+     * @param customerId The ID of the customer
+     * @param currentLimit Current credit limit (to verify no concurrent changes)
+     * @param newLimit New credit limit to set
+     * @param reason Reason for the change
+     * @return Result with the updated customer
+     */
+    suspend fun updateCustomerCreditLimit(
+        customerId: String,
+        currentLimit: Double,
+        newLimit: Double,
+        reason: String
+    ): Result<Customer> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        // Get the current customer to verify limit
+        val customerDoc = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .get()
+            .await()
+
+        val customer = customerDoc.toObject(Customer::class.java)
+            ?: throw Exception("Customer not found")
+
+        // Verify current limit matches to prevent concurrent updates
+        if (customer.creditLimit != currentLimit) {
+            throw ConcurrentModificationException("Credit limit has been modified by another user. Please refresh and try again.")
+        }
+
+        // Update the customer's credit limit
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .update(
+                mapOf(
+                    "creditLimit" to newLimit,
+                    "lastUpdatedAt" to System.currentTimeMillis()
+                )
+            )
+            .await()
+
+        // Record the change in history
+        val change = CreditLimitChange(
+            id = UUID.randomUUID().toString(),
+            customerId = customerId,
+            customerName = "${customer.firstName} ${customer.lastName}",
+            previousLimit = currentLimit,
+            newLimit = newLimit,
+            reason = reason,
+            changedBy = auth.currentUser?.phoneNumber ?: "Unknown"
+        )
+
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .collection("creditLimitHistory")
+            .document(change.id)
+            .set(change)
+            .await()
+
+        // Return the updated customer
+        Result.success(customer.copy(creditLimit = newLimit))
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    /**
+     * Gets the credit limit history for a customer
+     * @param customerId The ID of the customer
+     * @return Result with list of credit limit changes
+     */
+    suspend fun getCreditLimitHistory(customerId: String): Result<List<CreditLimitChange>> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        val snapshot = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .collection("creditLimitHistory")
+            .orderBy("changeDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .await()
+
+        val history = snapshot.toObjects(CreditLimitChange::class.java)
+        Result.success(history)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+
 }

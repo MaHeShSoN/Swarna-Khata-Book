@@ -84,5 +84,52 @@
             app:layout_constraintTop_toBottomOf="@id/customerBalanceLabel"
             tools:text="To Receive: ₹5,000.00" />
 
+        <LinearLayout
+            android:id="@+id/creditLimitContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/customerBalance">
+
+            <TextView
+                android:id="@+id/creditLimitLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/montserratmedium"
+                android:text="Credit Limit Usage"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/creditLimitProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/my_light_primary"
+                    app:trackColor="@color/my_light_primary_container"
+                    app:trackThickness="8dp" />
+
+                <TextView
+                    android:id="@+id/creditLimitPercentage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="0%"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="12sp" />
+            </FrameLayout>
+        </LinearLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -64,6 +64,12 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_invoiceDetailFragment"
             app:destination="@id/invoiceDetailFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_customerDetailFragment"
+            app:destination="@id/customerDetailFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_notificationFragment"
+            app:destination="@id/notificationFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -83,5 +89,35 @@
         <action
             android:id="@+id/action_invoiceDetailFragment_to_invoiceCreationFragment"
             app:destination="@id/invoiceCreationFragment" />
+        <action
+            android:id="@+id/action_invoiceDetailFragment_to_editInvoiceItemsFragment"
+            app:destination="@id/editInvoiceItemsFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/editInvoiceItemsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.EditInvoiceItemsFragment"
+        android:label="EditInvoiceItemsFragment" />
+    <fragment
+        android:id="@+id/customerDetailFragment"
+        android:name="com.jewelrypos.swarnakhatabook.CustomerDetailFragment"
+        android:label="fragment_customer_detail"
+        tools:layout="@layout/fragment_customer_detail" >
+
+        <argument
+            android:name="customerId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_customerDetailFragment_to_mainScreenFragment"
+            app:destination="@id/mainScreenFragment" />
+
+    </fragment>
+    <fragment
+        android:id="@+id/notificationFragment"
+        android:name="com.jewelrypos.swarnakhatabook.NotificationFragment"
+        android:label="fragment_notification"
+        tools:layout="@layout/fragment_notification" >
+        <action
+            android:id="@+id/action_notificationFragment_to_mainScreenFragment"
+            app:destination="@id/mainScreenFragment" />
     </fragment>
 </navigation>

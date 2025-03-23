@@ -317,11 +317,23 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             clearForm()
         }
     }
-
     private fun createCustomerFromForm(): Customer {
         val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
         val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
         val creditLimit = binding.creditLimitField.text.toString().toDoubleOrNull() ?: 0.0
+
+        // For new customers, set currentBalance to match openingBalance
+        // For existing customers being edited, keep their current balance
+        val currentBalance = if (isEditMode && existingCustomerId != null) {
+            // For edited customers, get the existing currentBalance from the original customer object
+            arguments?.let {
+                val customer = it.getSerializable(ARG_CUSTOMER) as? Customer
+                customer?.currentBalance ?: openingBalance
+            } ?: openingBalance
+        } else {
+            // For new customers, set currentBalance equal to openingBalance
+            openingBalance
+        }
 
         return Customer(
             id = existingCustomerId ?: "",
@@ -337,6 +349,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             country = binding.countryDropdown.text.toString(),
             balanceType = balanceType,
             openingBalance = openingBalance,
+            currentBalance = currentBalance, // Set the current balance
             balanceNotes = binding.balanceNotesField.text.toString(),
             creditLimit = creditLimit,
             businessName = binding.businessNameField.text.toString(),
@@ -350,6 +363,41 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             lastUpdatedAt = System.currentTimeMillis()
         )
     }
+
+
+
+//    private fun createCustomerFromForm(): Customer {
+//        val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
+//        val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
+//        val creditLimit = binding.creditLimitField.text.toString().toDoubleOrNull() ?: 0.0
+//
+//        return Customer(
+//            id = existingCustomerId ?: "",
+//            customerType = binding.customerTypeDropdown.text.toString(),
+//            firstName = binding.firstNameField.text.toString(),
+//            lastName = binding.lastNameField.text.toString(),
+//            phoneNumber = binding.phoneNumberField.text.toString(),
+//            email = binding.emailField.text.toString(),
+//            streetAddress = binding.streetAddressField.text.toString(),
+//            city = binding.cityField.text.toString(),
+//            state = binding.stateField.text.toString(),
+//            postalCode = binding.postalCodeField.text.toString(),
+//            country = binding.countryDropdown.text.toString(),
+//            balanceType = balanceType,
+//            openingBalance = openingBalance,
+//            balanceNotes = binding.balanceNotesField.text.toString(),
+//            creditLimit = creditLimit,
+//            businessName = binding.businessNameField.text.toString(),
+//            gstNumber = binding.gstNumberField.text.toString(),
+//            taxId = binding.taxIdField.text.toString(),
+//            customerSince = binding.customerSinceDateField.text.toString(),
+//            referredBy = binding.referredByField.text.toString(),
+//            birthday = binding.birthdayField.text.toString(),
+//            anniversary = binding.anniversaryField.text.toString(),
+//            notes = binding.notesField.text.toString(),
+//            lastUpdatedAt = System.currentTimeMillis()
+//        )
+//    }
 
 
 

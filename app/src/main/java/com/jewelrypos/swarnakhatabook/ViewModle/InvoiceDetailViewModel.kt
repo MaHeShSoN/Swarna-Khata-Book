@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
+import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
@@ -110,6 +111,110 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
         return if (parts.isNotEmpty()) parts.joinToString(", ") else "Address not available"
     }
+
+    fun updateInvoiceItems(updatedItems: List<InvoiceItem>, callback: (Boolean) -> Unit) {
+        val currentInvoice = _invoice.value ?: return callback(false)
+
+        // Calculate updated total
+        val subtotal = updatedItems.sumOf { it.price * it.quantity }
+
+        // Calculate tax amount
+        val taxAmount = updatedItems.sumOf { item ->
+            val itemTotal = item.price * item.quantity
+            itemTotal * (item.itemDetails.taxRate / 100.0)
+        }
+
+        // Calculate extra charges
+        val extraChargesTotal = updatedItems.sumOf { item ->
+            item.itemDetails.listOfExtraCharges.sumOf { charge ->
+                charge.amount * item.quantity
+            }
+        }
+
+        val newTotalAmount = subtotal + taxAmount + extraChargesTotal
+
+        // Create updated invoice with new items
+        val updatedInvoice = currentInvoice.copy(
+            items = updatedItems,
+            totalAmount = newTotalAmount,
+            // Update the balance due (ensure paid amount doesn't exceed total)
+            paidAmount = currentInvoice.paidAmount.coerceAtMost(newTotalAmount)
+        )
+
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            invoiceRepository.saveInvoice(updatedInvoice).fold(
+                onSuccess = {
+                    // Update the invoice in LiveData
+                    _invoice.value = updatedInvoice
+                    _isLoading.value = false
+                    callback(true)
+                },
+                onFailure = { error ->
+                    _errorMessage.value = "Failed to update items: ${error.message}"
+                    _isLoading.value = false
+                    callback(false)
+                }
+            )
+        }
+    }
+
+    // For deleting payments
+    fun removePaymentFromInvoice(payment: Payment, callback: (Boolean) -> Unit) {
+        val currentInvoice = _invoice.value ?: return callback(false)
+
+        // Remove the payment from the list
+        val updatedPayments = currentInvoice.payments.filter { it.id != payment.id }
+
+        // Recalculate total paid amount
+        val totalPaid = updatedPayments.sumOf { it.amount }
+
+        // Create updated invoice
+        val updatedInvoice = currentInvoice.copy(
+            payments = updatedPayments,
+            paidAmount = totalPaid
+        )
+
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            invoiceRepository.saveInvoice(updatedInvoice).fold(
+                onSuccess = {
+                    _invoice.value = updatedInvoice
+                    _isLoading.value = false
+                    callback(true)
+                },
+                onFailure = { error ->
+                    _errorMessage.value = "Failed to delete payment: ${error.message}"
+                    _isLoading.value = false
+                    callback(false)
+                }
+            )
+        }
+    }
+
+
+    private fun calculateTotalAmount(items: List<InvoiceItem>): Double {
+        // Calculate subtotal (sum of item prices)
+        val subtotal = items.sumOf { it.price * it.quantity }
+
+        // Calculate tax and extra charges (you may need to adjust this logic based on your business rules)
+        val taxAmount = items.sumOf { item ->
+            val itemTotal = item.price * item.quantity
+            itemTotal * (item.itemDetails.taxRate / 100.0)
+        }
+
+        // Calculate extra charges
+        val extraChargesTotal = items.sumOf { item ->
+            item.itemDetails.listOfExtraCharges.sumOf { charge ->
+                charge.amount * item.quantity
+            }
+        }
+
+        return subtotal + taxAmount + extraChargesTotal
+    }
+
 
     fun addPaymentToInvoice(payment: Payment) {
         val currentInvoice = _invoice.value ?: return

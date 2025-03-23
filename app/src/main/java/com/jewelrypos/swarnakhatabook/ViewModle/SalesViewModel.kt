@@ -46,6 +46,10 @@ class SalesViewModel(
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
 
+    private val _customerInvoices = MutableLiveData<List<Invoice>>()
+    val customerInvoices: LiveData<List<Invoice>> = _customerInvoices
+
+
     init {
         loadFirstPage()
     }
@@ -293,4 +297,34 @@ class SalesViewModel(
         _selectedItems.value = emptyList()
         _payments.value = emptyList()
     }
+
+    // Method to load invoices for a specific customer
+    fun loadCustomerInvoices(customerId: String) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                // Fetch all invoices (you might want to optimize this by adding a repository method
+                // that fetches only invoices for a specific customer)
+                repository.fetchInvoicesPaginated(false).fold(
+                    onSuccess = { allInvoices ->
+                        // Filter invoices for the specified customer
+                        val filteredInvoices = allInvoices.filter { it.customerId == customerId }
+                        _customerInvoices.value = filteredInvoices
+                        _isLoading.value = false
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = error.message
+                        _isLoading.value = false
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = e.message
+                _isLoading.value = false
+            }
+        }
+    }
+
+
+
+
 }

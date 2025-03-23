@@ -17,8 +17,8 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:menu="@menu/invoice_detail_menu"
-            app:popupTheme="@style/CustomPopupMenu"
             app:navigationIcon="@drawable/famicons__arrow_back"
+            app:popupTheme="@style/CustomPopupMenu"
             app:title="Invoice Details"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
@@ -129,8 +129,7 @@
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    >
+                    android:padding="16dp">
 
                     <TextView
                         android:id="@+id/customerSectionTitle"
@@ -301,17 +300,16 @@
                         android:id="@+id/extraChargesLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
                         android:layout_marginTop="8dp"
-                        android:visibility="gone"
-                        >
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:text="Extra Charges:"
                             android:textAlignment="viewStart"
-                            android:fontFamily="@font/montserratregular"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -417,8 +415,8 @@
                             android:text="Payments"
                             android:textColor="@color/my_light_primary"
                             android:textSize="16sp"
-                            app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />
 
                         <com.google.android.material.button.MaterialButton
@@ -605,6 +603,45 @@
                     app:icon="@drawable/material_symbols__share"
                     app:iconTint="@color/my_light_on_primary" />
             </LinearLayout>
+            <LinearLayout
+                android:id="@+id/editModeActionsLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:visibility="gone"
+                android:background="?attr/colorSurface"
+                android:elevation="8dp"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/cancelEditButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:text="Cancel" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/saveChangesButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:enabled="false"
+                    android:text="Save Changes" />
+            </LinearLayout>
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/addItemFab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:contentDescription="Add item"
+                android:visibility="gone"
+                app:layout_constraintBottom_toTopOf="@id/editModeActionsLayout"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:srcCompat="@drawable/material_symbols__add_rounded" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

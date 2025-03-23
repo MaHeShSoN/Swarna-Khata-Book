@@ -41,6 +41,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import androidx.core.net.toUri
+import androidx.lifecycle.lifecycleScope
+import com.jewelrypos.swarnakhatabook.Adapters.EditableInvoiceItemAdapter
+import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import kotlinx.coroutines.launch
 
 class InvoiceDetailFragment : Fragment() {
 
@@ -58,6 +67,10 @@ class InvoiceDetailFragment : Fragment() {
 
     val phoneNumber: Int = 0
 
+    private var isInEditMode = false
+    private lateinit var editableItemsAdapter: EditableInvoiceItemAdapter
+    private var originalItems: List<InvoiceItem> = emptyList()
+    private var editedItems: MutableList<InvoiceItem> = mutableListOf()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -74,6 +87,21 @@ class InvoiceDetailFragment : Fragment() {
         setupRecyclerViews()
         observeViewModel()
         setupClickListeners()
+        setupAddItemFab()
+
+        // Handle back press for edit mode
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : androidx.activity.OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (isInEditMode) {
+                        handleEditModeBackPress()
+                    } else {
+                        findNavController().navigateUp()
+                    }
+                }
+            }
+        )
 
         // Load invoice data based on passed ID
         viewModel.loadInvoice(args.invoiceId)
@@ -81,7 +109,13 @@ class InvoiceDetailFragment : Fragment() {
 
     private fun setupToolbar() {
         binding.topAppBar.setNavigationOnClickListener {
-            findNavController().navigateUp()
+            if (isInEditMode) {
+                // Handle back press in edit mode with confirmation
+                handleEditModeBackPress()
+            } else {
+                // Normal back navigation
+                findNavController().navigateUp()
+            }
         }
 
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
@@ -116,6 +150,229 @@ class InvoiceDetailFragment : Fragment() {
         }
     }
 
+    private fun handleEditModeBackPress() {
+        if (haveItemsChanged()) {
+            // Show confirmation dialog if items have changed
+            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Unsaved Changes")
+                .setMessage("You have unsaved changes to items. Save changes?")
+                .setPositiveButton("Save") { _, _ ->
+                    saveItemChanges()
+                }
+                .setNegativeButton("Discard") { _, _ ->
+                    exitEditMode(false)
+                }
+                .setNeutralButton("Cancel", null)
+                .show()
+        } else {
+            // No changes, just exit edit mode
+            exitEditMode(false)
+        }
+    }
+
+    private fun haveItemsChanged(): Boolean {
+        if (originalItems.size != editedItems.size) return true
+
+        // Create a map of original items by ID for easier comparison
+        val originalItemsMap = originalItems.associateBy { it.itemId }
+
+        // Check if any item is different from the original
+        return editedItems.any { editedItem ->
+            val originalItem = originalItemsMap[editedItem.itemId]
+
+            // If original item doesn't exist, this is a new item
+            if (originalItem == null) return@any true
+
+            // Compare quantity and price
+            editedItem.quantity != originalItem.quantity ||
+                    editedItem.price != originalItem.price
+        }
+    }
+
+
+    private fun enterEditMode() {
+        isInEditMode = true
+
+        // Store original items for tracking changes
+        originalItems = viewModel.invoice.value?.items ?: emptyList()
+        editedItems = originalItems.toMutableList()
+
+        // Update toolbar menu
+        binding.topAppBar.menu.findItem(R.id.action_edit)?.apply {
+//            setIcon(R.drawable.s)
+            setTitle("Save")
+        }
+
+        // Hide regular actions and show edit mode actions
+        binding.actionButtonsContainer.visibility = View.GONE
+        binding.editModeActionsLayout.visibility = View.VISIBLE
+
+        // Switch to editable adapter
+        setupEditableItemsAdapter()
+
+        // Show add item button
+        binding.addItemFab.visibility = View.VISIBLE
+
+        // Update toolbar title to indicate edit mode
+        binding.topAppBar.title = "Edit Invoice"
+    }
+
+    private fun exitEditMode(saveChanges: Boolean) {
+        if (saveChanges) {
+            // Save changes will be handled in saveItemChanges()
+            return
+        }
+
+        isInEditMode = false
+
+        // Restore toolbar menu
+        binding.topAppBar.menu.findItem(R.id.action_edit)?.apply {
+            setIcon(R.drawable.material_symbols__edit_rounded)
+            setTitle("Edit")
+        }
+
+        // Show regular actions and hide edit mode actions
+        binding.actionButtonsContainer.visibility = View.VISIBLE
+        binding.editModeActionsLayout.visibility = View.GONE
+
+        // Switch back to regular adapter
+        binding.itemsRecyclerView.adapter = itemsAdapter
+        itemsAdapter.updateItems(originalItems)
+
+        // Hide add item button
+        binding.addItemFab.visibility = View.GONE
+
+        // Restore toolbar title
+        binding.topAppBar.title = "Invoice Details"
+    }
+
+    private fun saveItemChanges() {
+//        binding.progressBar.visibility = View.VISIBLE
+
+        viewModel.updateInvoiceItems(editedItems) { success ->
+//            binding.progressBar.visibility = View.GONE
+
+            if (success) {
+                Toast.makeText(context, "Items updated successfully", Toast.LENGTH_SHORT).show()
+                exitEditMode(false) // Changes are already saved, just exit edit mode
+            } else {
+                Toast.makeText(context, "Failed to update items", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Setup editable items adapter
+    private fun setupEditableItemsAdapter() {
+        editableItemsAdapter = EditableInvoiceItemAdapter(editedItems)
+
+        editableItemsAdapter.setOnItemActionListener(object : EditableInvoiceItemAdapter.OnItemActionListener {
+            override fun onRemoveItem(item: InvoiceItem) {
+                removeItem(item)
+            }
+
+            override fun onEditItem(item: InvoiceItem) {
+                openItemEditor(item)
+            }
+
+            override fun onQuantityChanged(item: InvoiceItem, newQuantity: Int) {
+                updateItemQuantity(item, newQuantity)
+            }
+        })
+
+        binding.itemsRecyclerView.adapter = editableItemsAdapter
+    }
+
+    // Item manipulation methods
+    private fun removeItem(item: InvoiceItem) {
+        editedItems.remove(item)
+        editableItemsAdapter.updateItems(editedItems)
+        updateEditModeUI()
+    }
+
+    private fun openItemEditor(item: InvoiceItem) {
+        val bottomSheet = ItemSelectionBottomSheet.newInstance()
+        bottomSheet.setItemForEdit(item.itemDetails)
+
+        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+                // This shouldn't happen during editing
+            }
+
+            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+                // Find and update the item
+                val index = editedItems.indexOfFirst { it.itemId == item.itemId }
+                if (index != -1) {
+                    editedItems[index] = InvoiceItem(
+                        itemId = item.itemId,
+                        quantity = item.quantity,
+                        itemDetails = updatedItem,
+                        price = price
+                    )
+                    editableItemsAdapter.updateItems(editedItems)
+                    updateEditModeUI()
+                }
+            }
+        })
+
+        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
+    }
+
+    private fun updateItemQuantity(item: InvoiceItem, newQuantity: Int) {
+        if (newQuantity <= 0) {
+            removeItem(item)
+            return
+        }
+
+        val index = editedItems.indexOfFirst { it.itemId == item.itemId }
+        if (index != -1) {
+            editedItems[index] = item.copy(quantity = newQuantity)
+            editableItemsAdapter.updateItems(editedItems)
+            updateEditModeUI()
+        }
+    }
+
+    private fun updateEditModeUI() {
+        // Update any UI elements that depend on the items list
+        // Such as subtotal, tax, etc.
+
+        // Enable/disable save button based on changes
+        binding.saveChangesButton.isEnabled = haveItemsChanged()
+
+        // Update title to show asterisk if there are unsaved changes
+        binding.topAppBar.title = if (haveItemsChanged()) "Edit Invoice*" else "Edit Invoice"
+    }
+    private fun setupAddItemFab() {
+        binding.addItemFab.setOnClickListener {
+            openItemSelector()
+        }
+    }
+
+    private fun openItemSelector() {
+        val bottomSheet = ItemSelectionBottomSheet.newInstance()
+
+        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+                // Add new item with quantity 1
+                val newInvoiceItem = InvoiceItem(
+                    itemId = newItem.id,
+                    quantity = 1,
+                    itemDetails = newItem,
+                    price = price
+                )
+
+                editedItems.add(newInvoiceItem)
+                editableItemsAdapter.updateItems(editedItems)
+                updateEditModeUI()
+            }
+
+            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+                // This shouldn't happen during adding a new item
+            }
+        })
+
+        bottomSheet.show(parentFragmentManager, "ItemSelectorBottomSheet")
+    }
+
     private fun setupRecyclerViews() {
         // Setup items recycler view
         itemsAdapter = InvoiceItemAdapter(emptyList())
@@ -129,11 +386,13 @@ class InvoiceDetailFragment : Fragment() {
         paymentsAdapter.setOnPaymentActionListener(object :
             PaymentsAdapter.OnPaymentActionListener {
             override fun onRemovePayment(payment: Payment) {
-                // In detail view, users shouldn't remove payments directly
+                // Show confirmation dialog before deleting
+                confirmDeletePayment(payment)
             }
 
             override fun onEditPayment(payment: Payment) {
-                // In detail view, users shouldn't edit payments directly
+                // Payment editing could be implemented here if needed
+                Toast.makeText(context, "Payment editing is not available", Toast.LENGTH_SHORT).show()
             }
         })
 
@@ -142,6 +401,31 @@ class InvoiceDetailFragment : Fragment() {
             adapter = paymentsAdapter
         }
     }
+
+    private fun confirmDeletePayment(payment: Payment) {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Delete Payment")
+            .setMessage("Are you sure you want to delete this payment of ₹${DecimalFormat("#,##,##0.00").format(payment.amount)}?")
+            .setPositiveButton("Delete") { _, _ ->
+                deletePayment(payment)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun deletePayment(payment: Payment) {
+        viewModel.removePaymentFromInvoice(payment) { success ->
+            if (success) {
+                Toast.makeText(context, "Payment deleted successfully", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Failed to delete payment", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+
+
+
 
     private fun observeViewModel() {
         viewModel.invoice.observe(viewLifecycleOwner) { invoice ->
@@ -232,10 +516,10 @@ class InvoiceDetailFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        // Edit items button
-//        binding.editItemsButton.setOnClickListener {
-//            navigateToEditItems()
-//        }
+//         Edit items button
+        binding.editItemsButton.setOnClickListener {
+            navigateToEditItems()
+        }
 
         // Add payment button
         binding.addPaymentButton.setOnClickListener {
@@ -259,7 +543,7 @@ class InvoiceDetailFragment : Fragment() {
 
         // Share button
         binding.shareButton.setOnClickListener {
-            shareInvoice()
+//            shareInvoice()
         }
     }
 
@@ -314,13 +598,20 @@ class InvoiceDetailFragment : Fragment() {
 //        }
 //    }
 
-//    private fun navigateToEditItems() {
-//        viewModel.invoice.value?.let { invoice ->
-//            val action = InvoiceDetailFragmentDirections
-//                .actionInvoiceDetailFragmentToEditInvoiceItemsFragment(invoice.invoiceNumber)
-//            findNavController().navigate(action)
-//        }
-//    }
+    private fun navigateToEditItems() {
+        viewModel.invoice.value?.let { invoice ->
+            // Create a bundle with the current items
+            val bundle = Bundle().apply {
+                putString("invoiceId", invoice.invoiceNumber)
+            }
+
+            // Navigate to the edit items fragment
+            findNavController().navigate(
+                R.id.action_invoiceDetailFragment_to_editInvoiceItemsFragment,
+                bundle
+            )
+        }
+    }
 
     private fun showAddPaymentBottomSheet() {
         viewModel.invoice.value?.let { invoice ->
@@ -411,120 +702,166 @@ class InvoiceDetailFragment : Fragment() {
        """.trimIndent()
     }
 
-    private fun shareInvoice() {
-        // Generate PDF view
-        val pdfFile = generatePdfFile()
-
-        if (pdfFile != null) {
-            // Get content URI via FileProvider
-            val uri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.provider",
-                pdfFile
-            )
-
-            // Create sharing intent
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Invoice ${viewModel.invoice.value?.invoiceNumber}")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-
-            startActivity(Intent.createChooser(intent, "Share Invoice"))
-        } else {
-            Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_SHORT).show()
-        }
-    }
+//    private fun shareInvoice() {
+//        // Generate PDF view
+////        val pdfFile = generatePdfFile()
+//
+//        if (pdfFile != null) {
+//            // Get content URI via FileProvider
+//            val uri = FileProvider.getUriForFile(
+//                requireContext(),
+//                "${requireContext().packageName}.provider",
+//                pdfFile
+//            )
+//
+//            // Create sharing intent
+//            val intent = Intent(Intent.ACTION_SEND).apply {
+//                type = "application/pdf"
+//                putExtra(Intent.EXTRA_STREAM, uri)
+//                putExtra(Intent.EXTRA_SUBJECT, "Invoice ${viewModel.invoice.value?.invoiceNumber}")
+//                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//            }
+//
+//            startActivity(Intent.createChooser(intent, "Share Invoice"))
+//        } else {
+//            Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_SHORT).show()
+//        }
+//    }
 
     private fun shareToWhatsApp() {
         // Generate PDF view
-        val pdfFile = generatePdfFile()
+        lifecycleScope.launch {
+            PDFBoxResourceLoader.init(requireContext());
+            val shop = ShopManager.getShopCoroutine(requireContext())
+            if (shop != null) {
+                val invoice = viewModel.invoice.value
+                val pdfFile =
+                    invoice?.let {
+                        InvoicePdfGenerator(requireContext()).generateInvoicePdf(
+                            it,
+                            shop, invoice.invoiceNumber + invoice.invoiceDate
+                        )
+                    }
 
-        if (pdfFile != null) {
-            // Get content URI via FileProvider
-            val uri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.provider",
-                pdfFile
-            )
+                // Get content URI via FileProvider
+                val uri = pdfFile?.let {
+                    FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.provider",
+                        it
+                    )
+                }
 
-            // Create WhatsApp sharing intent
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "Invoice ${viewModel.invoice.value?.invoiceNumber}")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                setPackage("com.whatsapp")
+                // Create WhatsApp sharing intent
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        "Invoice ${viewModel.invoice.value?.invoiceNumber}"
+                    )
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    setPackage("com.whatsapp")
+                }
+
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
+                    // Fall back to regular sharing
+//                    shareInvoice()
+                    if (pdfFile != null) {
+                        shareInvoiceWithOutWhatsApp(pdfFile)
+                    }
+                }
             }
-
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
-                // Fall back to regular sharing
-                shareInvoice()
-            }
-        } else {
-            Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_SHORT).show()
         }
+
     }
+
+    private fun shareInvoiceWithOutWhatsApp(pdfFile: File) {
+        // Get content URI via FileProvider
+        val uri = FileProvider.getUriForFile(
+            requireContext(),
+            "${requireContext().packageName}.provider",
+            pdfFile
+        )
+
+        // Create sharing intent
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(Intent.EXTRA_SUBJECT, "Invoice ${viewModel.invoice.value?.invoiceNumber}")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        startActivity(Intent.createChooser(intent, "Share Invoice"))
+    }
+
 
     private fun generateAndSavePdf() {
-        val pdfFile = generatePdfFile()
-
-        if (pdfFile != null) {
-            Toast.makeText(
-                context,
-                "PDF saved to ${pdfFile.absolutePath}",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun generatePdfFile(): File? {
-        try {
-            // Create a PdfDocument
-            val pdfDocument = PdfDocument()
-
-            // Create a page - A4 size
-            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-
-            // Draw content to the page using Canvas
-            val canvas = page.canvas
-            renderInvoiceContent(canvas)
-
-            // Finish the page
-            pdfDocument.finishPage(page)
-
-            // Create directory for PDF files if it doesn't exist
-            val directory = File(
-                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-                "Invoices"
-            )
-            if (!directory.exists()) {
-                directory.mkdirs()
+        lifecycleScope.launch {
+            val shop = ShopManager.getShopCoroutine(requireContext())
+            PDFBoxResourceLoader.init(requireContext());
+            if (shop != null) {
+                val invoice = viewModel.invoice.value
+                val pdfFile =
+                    invoice?.let {
+                        InvoicePdfGenerator(requireContext()).generateInvoicePdf(
+                            it,
+                            shop, invoice?.invoiceNumber + invoice?.invoiceDate
+                        )
+                    }
+                Toast.makeText(
+                    context,
+                    "PDF saved to ${pdfFile?.absolutePath}",
+                    Toast.LENGTH_LONG
+                ).show()
             }
-
-            // Create the output file
-            val invoiceNumber = viewModel.invoice.value?.invoiceNumber ?: "unknown"
-            val file = File(directory, "Invoice_${invoiceNumber}.pdf")
-
-            // Write the PDF document to the file
-            pdfDocument.writeTo(FileOutputStream(file))
-
-            // Close the document
-            pdfDocument.close()
-
-            return file
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
         }
     }
+
+//    private fun generatePdfFile(): File? {
+//        try {
+//            // Create a PdfDocument
+//            val pdfDocument = PdfDocument()
+//
+//            // Create a page - A4 size
+//            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
+//            val page = pdfDocument.startPage(pageInfo)
+//
+//            // Draw content to the page using Canvas
+//            val canvas = page.canvas
+//            renderInvoiceContent(canvas)
+//
+//            // Finish the page
+//            pdfDocument.finishPage(page)
+//
+//            // Create directory for PDF files if it doesn't exist
+//            val directory = File(
+//                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+//                "Invoices"
+//            )
+//            if (!directory.exists()) {
+//                directory.mkdirs()
+//            }
+//
+//            // Create the output file
+//            val invoiceNumber = viewModel.invoice.value?.invoiceNumber ?: "unknown"
+//            val file = File(directory, "Invoice_${invoiceNumber}.pdf")
+//
+//            // Write the PDF document to the file
+//            pdfDocument.writeTo(FileOutputStream(file))
+//
+//            // Close the document
+//            pdfDocument.close()
+//
+//            return file
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//            return null
+//        }
+//    }
 
     private fun renderInvoiceContent(canvas: Canvas) {
         // This is a simplified version - a complete implementation would draw text and graphics

@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-path name="external_files" path="."/>
+    <cache-path
+        name="cache"
+        path="." />
+    <files-path
+        name="my_files"
+        path="." /> <!-- Allow access to all files in internal storage -->
+    <external-path
+        name="external_files"
+        path="." /> <!-- Allow access to all files in external storage -->
 </paths>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/cream_background">
+
+    <ImageView
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/material_symbols_warning_rounded"
+        app:tint="@color/status_partial" />
+
+    <TextView
+        android:id="@+id/creditWarningMessage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:fontFamily="@font/montserratsemibold"
+        android:text="This invoice will exceed the customer's credit limit."
+        android:textAlignment="center"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="16sp" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="@color/my_light_surface"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="1dp"
+        app:strokeColor="@color/my_light_outline"
+        app:strokeWidth="1dp">
+
+        <TextView
+            android:id="@+id/creditWarningDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserratregular"
+            android:padding="12dp"
+            android:text="Current Balance: ₹0.00\nNew Balance: ₹0.00\nCredit Limit: ₹0.00\nAmount Over Limit: ₹0.00"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="14sp" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/montserratregular"
+        android:text="Do you want to proceed with this invoice anyway?"
+        android:textAlignment="center"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancelButton"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="Cancel"
+            android:textColor="@color/my_light_primary"
+            android:fontFamily="@font/montserratmedium" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/proceedButton"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Proceed Anyway"
+            android:textColor="@color/cream_background"
+            android:fontFamily="@font/montserratmedium"
+            app:strokeColor="@color/my_light_primary" />
+    </LinearLayout>
+
+</LinearLayout>

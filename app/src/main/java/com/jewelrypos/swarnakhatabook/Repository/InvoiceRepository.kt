@@ -6,12 +6,10 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import kotlinx.coroutines.tasks.await
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
 class InvoiceRepository(
     private val firestore: FirebaseFirestore,
@@ -74,6 +72,42 @@ class InvoiceRepository(
             }
         }
 
+        // Update customer balance
+        try {
+            // Calculate the amount to add to the customer's balance
+            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
+
+            // Get the current customer data
+            val customerDoc = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("customers")
+                .document(invoice.customerId)
+                .get()
+                .await()
+
+            val customer = customerDoc.toObject(Customer::class.java)
+
+            if (customer != null) {
+                // Calculate new balance
+                // For credit sales: positive value means customer owes money
+                // For debit sales: negative value means business owes money
+                val newBalance = customer.currentBalance + unpaidAmount
+
+                // Update the customer's current balance
+                firestore.collection("users")
+                    .document(phoneNumber)
+                    .collection("customers")
+                    .document(invoice.customerId)
+                    .update("currentBalance", newBalance)
+                    .await()
+
+                Log.d("InvoiceRepository", "Updated customer balance: $newBalance")
+            }
+        } catch (e: Exception) {
+            // Log error but continue with invoice creation
+            Log.e("InvoiceRepository", "Error updating customer balance", e)
+        }
+
         // Save the invoice
         firestore.collection("users")
             .document(phoneNumber)
@@ -94,7 +128,50 @@ class InvoiceRepository(
         val phoneNumber = currentUser.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
 
-        // Delete from Firestore
+        // Get the invoice first to retrieve customer ID and unpaid amount
+        val invoiceDoc = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("invoices")
+            .document(invoiceNumber)
+            .get()
+            .await()
+
+        val invoice = invoiceDoc.toObject(Invoice::class.java)
+
+        // If we found the invoice, update the customer balance
+        if (invoice != null) {
+            try {
+                val unpaidAmount = invoice.totalAmount - invoice.paidAmount
+
+                // Get the current customer
+                val customerDoc = firestore.collection("users")
+                    .document(phoneNumber)
+                    .collection("customers")
+                    .document(invoice.customerId)
+                    .get()
+                    .await()
+
+                val customer = customerDoc.toObject(Customer::class.java)
+
+                if (customer != null) {
+                    // When deleting an invoice, subtract the unpaid amount from the balance
+                    val newBalance = customer.currentBalance - unpaidAmount
+
+                    // Update customer balance
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("customers")
+                        .document(invoice.customerId)
+                        .update("currentBalance", newBalance)
+                        .await()
+                }
+            } catch (e: Exception) {
+                // Log error but continue with deletion
+                Log.e("InvoiceRepository", "Error updating customer balance during invoice deletion", e)
+            }
+        }
+
+        // Delete the invoice from Firestore
         firestore.collection("users")
             .document(phoneNumber)
             .collection("invoices")

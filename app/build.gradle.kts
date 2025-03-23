@@ -1,14 +1,14 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.devtools.ksp") version "1.9.10-1.0.13"
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
     id("com.google.gms.google-services")
     id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
     namespace = "com.jewelrypos.swarnakhatabook"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.jewelrypos.swarnakhatabook"
@@ -48,6 +48,8 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
+    implementation("androidx.privacysandbox.tools:tools-core:1.0.0-alpha12")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -65,7 +67,7 @@ dependencies {
 
 
     // Kotlin Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4") // Or latest version
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3") // Or latest version
 
 
     //Signature
@@ -98,5 +100,10 @@ dependencies {
     implementation ("com.github.ibrahimsn98:SmoothBottomBar:1.7.9")
 
     implementation ("com.nambimobile.widgets:expandable-fab:1.2.1")
+
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation ("com.github.AchmadHafid:toolbar-badge-menu-item:4.0.0")
+
 
 }

@@ -12,6 +12,7 @@ import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
@@ -316,7 +317,13 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     override fun onCustomerClick(customer: Customer) {
-        showCustomerBottomSheet(customer)
+        // Navigate to the customer details screen
+        val navController = requireActivity().findNavController(R.id.nav_host_fragment)
+        val action = MainScreenFragmentDirections.actionMainScreenFragmentToCustomerDetailFragment(customer.id)
+        navController.navigate(action)
+
+
+//        showCustomerBottomSheet(customer)
     }
 
     override fun onDestroyView() {

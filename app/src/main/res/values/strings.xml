@@ -5,4 +5,18 @@
     <string name="save_close">Save &amp; Close</string>
     <string name="save_and_add">Add More</string>
 
+    <string name="credit_limit_warning_title">Credit Limit Warning</string>
+    <string name="proceed_anyway">Proceed Anyway</string>
+    <string name="credit_limit_warning_question">Do you want to proceed with this invoice anyway?</string>
+    <string name="credit_limit_warning_message">This invoice will exceed %1$s\'s credit limit.</string>
+    <string name="credit_warning_current_balance">Current Balance: ₹%1$s</string>
+    <string name="credit_warning_new_balance">New Balance: ₹%1$s</string>
+    <string name="credit_warning_credit_limit">Credit Limit: ₹%1$s</string>
+    <string name="credit_warning_amount_over">Amount Over Limit: ₹%1$s</string>
+    <string name="credit_limit">Credit Limit</string>
+    <string name="current_balance">Current Balance:</string>
+    <string name="credit_limit_label">Credit Limit:</string>
+    <string name="available_credit">Available Credit:</string>
+    <string name="credit_usage">Credit Usage</string>
+    <string name="credit_limit_usage">Credit Limit Usage</string>
 </resources>

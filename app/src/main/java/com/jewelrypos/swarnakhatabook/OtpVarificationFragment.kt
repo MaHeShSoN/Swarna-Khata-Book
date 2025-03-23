@@ -20,11 +20,13 @@ import androidx.navigation.fragment.navArgs
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
-import com.google.firebase.firestore.FirebaseFirestore
+import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentOtpVarificationBinding
 import java.util.regex.Pattern
 
@@ -35,7 +37,6 @@ class OtpVarificationFragment : Fragment() {
 
     private val args: OtpVarificationFragmentArgs by navArgs()
     private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
     private val TAG = "OtpVerificationFragment"
 
     // List to store all OTP digit inputs for easier access
@@ -75,9 +76,11 @@ class OtpVarificationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize Firebase Auth and Firestore
+        // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
+
+        // Initialize ShopManager if not already initialized
+        ShopManager.initialize(requireContext())
 
         // Display the phone number
         binding.tvPhoneNumber.text = args.phoneNumber
@@ -101,6 +104,7 @@ class OtpVarificationFragment : Fragment() {
         startSmsRetriever()
     }
 
+    // In onStart() method
     override fun onStart() {
         super.onStart()
         // Register the SMS receiver
@@ -261,8 +265,8 @@ class OtpVarificationFragment : Fragment() {
                     val user = auth.currentUser
 
                     if (user != null) {
-                        // Save user data to Firestore
-                        saveUserDataToFirestore(user.uid)
+                        // Save user data using ShopManager
+                        saveUserDataWithShopManager(user.uid)
                     } else {
                         Toast.makeText(requireContext(), "Authentication failed", Toast.LENGTH_SHORT).show()
                     }
@@ -281,39 +285,35 @@ class OtpVarificationFragment : Fragment() {
             }
     }
 
-    private fun saveUserDataToFirestore(userId: String) {
-        val userData = hashMapOf(
-            "name" to args.name,
-            "phoneNumber" to args.phoneNumber,
-            "shopName" to args.shopName,
-            "address" to args.address,
-            "gstNumber" to args.gstNumber,
-            "hasGST" to args.gstNumber.isNotEmpty(),
-            "createdAt" to com.google.firebase.Timestamp.now()
+    private fun saveUserDataWithShopManager(userId: String) {
+        // Create a Shop object with user data
+        val shop = Shop(
+            shopName = args.shopName,
+            phoneNumber = args.phoneNumber,
+            name = args.name,
+            hasGst = args.gstNumber.isNotEmpty(),
+            gstNumber = args.gstNumber,
+            address = args.address,
+            createdAt = Timestamp.now()
         )
 
-        db.collection("users")
-            .document(userId)
-            .set(userData)
-            .addOnSuccessListener {
+        // Save shop data using ShopManager
+        ShopManager.saveShop(shop, requireContext()) { success, error ->
+            if (success) {
                 Log.d(TAG, "User data saved successfully")
-                // Navigate to the main screen or dashboard
                 navigateToMainScreen()
-            }
-            .addOnFailureListener { e ->
-                Log.w(TAG, "Error saving user data", e)
-                Toast.makeText(requireContext(), "Failed to save data: ${e.message}",
+            } else {
+                Log.w(TAG, "Error saving user data", error)
+                Toast.makeText(requireContext(), "Failed to save data: ${error?.message}",
                     Toast.LENGTH_SHORT).show()
             }
+        }
     }
 
     private fun navigateToMainScreen() {
         Toast.makeText(requireContext(), "Registration successful!", Toast.LENGTH_SHORT).show()
         // Navigate to your main activity or dashboard fragment
-         findNavController().navigate(R.id.action_otpVarificationFragment_to_mainScreenFragment)
-
-        // For now, let's just navigate back to the start
-        // findNavController().navigate(R.id.action_global_startFragment)
+        findNavController().navigate(R.id.action_otpVarificationFragment_to_mainScreenFragment)
     }
 
     private fun setLoading(isLoading: Boolean) {

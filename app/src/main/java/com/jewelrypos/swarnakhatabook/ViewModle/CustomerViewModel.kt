@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.DataClasses.CreditLimitChange
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import kotlinx.coroutines.launch
@@ -49,6 +50,10 @@ class CustomerViewModel(
 
     private val _activePaymentStatus = MutableLiveData<String?>()
     val activePaymentStatus: LiveData<String?> = _activePaymentStatus
+
+    private val _creditLimitHistory = MutableLiveData<List<CreditLimitChange>>()
+    val creditLimitHistory: LiveData<List<CreditLimitChange>> = _creditLimitHistory
+
 
 
     init {
@@ -253,4 +258,75 @@ class CustomerViewModel(
             )
         }
     }
+    fun getCustomerById(customerId: String): LiveData<Result<Customer>> {
+        val resultLiveData = MutableLiveData<Result<Customer>>()
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            repository.getCustomerById(customerId).fold(
+                onSuccess = { customer ->
+                    resultLiveData.value = Result.success(customer)
+                },
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = error.message
+                }
+            )
+            _isLoading.value = false
+        }
+
+        return resultLiveData
+    }
+
+
+    /**
+     * Update a customer's credit limit
+     * @param customerId Customer ID
+     * @param currentLimit Current credit limit for verification
+     * @param newLimit New credit limit to set
+     * @param reason Reason for the change
+     */
+    fun updateCustomerCreditLimit(
+        customerId: String,
+        currentLimit: Double,
+        newLimit: Double,
+        reason: String
+    ) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            repository.updateCustomerCreditLimit(customerId, currentLimit, newLimit, reason).fold(
+                onSuccess = { updatedCustomer ->
+                    // Refresh the customers list to reflect the new limit
+                    refreshData()
+                    _isLoading.value = false
+
+                    // Optionally load the history
+                    loadCreditLimitHistory(customerId)
+                },
+                onFailure = { exception ->
+                    _errorMessage.value = exception.message
+                    _isLoading.value = false
+                }
+            )
+        }
+    }
+
+    /**
+     * Load credit limit history for a customer
+     * @param customerId Customer ID
+     */
+    fun loadCreditLimitHistory(customerId: String) {
+        viewModelScope.launch {
+            repository.getCreditLimitHistory(customerId).fold(
+                onSuccess = { history ->
+                    _creditLimitHistory.value = history
+                },
+                onFailure = { exception ->
+                    _errorMessage.value = exception.message
+                }
+            )
+        }
+    }
+
+
 }

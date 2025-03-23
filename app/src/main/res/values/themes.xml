@@ -137,7 +137,92 @@
         <item name="android:textColor">@color/my_light_secondary</item>
     </style>
 
+    <!-- Display Typography -->
+    <style name="TextAppearance.App.Display" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">32sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
 
+    <!-- Headings -->
+    <style name="TextAppearance.App.H1" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.H2" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.H3" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    <!-- Subheadings -->
+    <style name="TextAppearance.App.Subheading" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="fontFamily">@font/montserratsemibold</item>
+        <item name="android:fontFamily">@font/montserratsemibold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    <!-- Body Text -->
+    <style name="TextAppearance.App.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserratregular</item>
+        <item name="android:fontFamily">@font/montserratregular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/my_light_on_background</item>
+    </style>
+
+    <!-- Small Text/Caption -->
+    <style name="TextAppearance.App.Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="fontFamily">@font/montserratlight</item>
+        <item name="android:fontFamily">@font/montserratlight</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/my_light_secondary</item>
+    </style>
+
+    <!-- Metrics/Data Labels -->
+    <style name="TextAppearance.App.MetricLabel" parent="TextAppearance.MaterialComponents.Overline">
+        <item name="fontFamily">@font/montserratmedium</item>
+        <item name="android:fontFamily">@font/montserratmedium</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/my_light_secondary</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Metrics/Data Values -->
+    <style name="TextAppearance.App.MetricValue" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserratsemibold</item>
+        <item name="android:fontFamily">@font/montserratsemibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    <!-- Buttons -->
+    <style name="TextAppearance.App.Button" parent="TextAppearance.MaterialComponents.Button">
+        <item name="fontFamily">@font/montserratmedium</item>
+        <item name="android:fontFamily">@font/montserratmedium</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Special Pricing/Value Elements -->
+    <style name="TextAppearance.App.SpecialValue" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/my_light_primary</item>
+    </style>
 
 
 

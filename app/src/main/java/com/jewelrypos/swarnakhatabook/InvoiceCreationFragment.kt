@@ -33,8 +33,13 @@ import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
 import com.jewelrypos.swarnakhatabook.Events.EventBus
+import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
+import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
+import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
+import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
 import java.text.SimpleDateFormat
@@ -55,6 +60,15 @@ class InvoiceCreationFragment : Fragment() {
         SalesViewModelFactory(repository, connectivityManager)
     }
 
+    private val customerViewModel: CustomerViewModel by viewModels {
+        // Create the repository and pass it to the factory
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val repository = CustomerRepository(firestore, auth)
+        val connectivityManager =
+            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        CustomerViewModelFactory(repository, connectivityManager)
+    }
 
     private lateinit var itemsAdapter: SelectedItemsAdapter
 
@@ -75,6 +89,25 @@ class InvoiceCreationFragment : Fragment() {
         initializeViews()
         setupListeners()
         observePayments()
+
+        CustomerSelectionManager.selectedCustomerId?.let { customerId ->
+            // Load the customer data using this ID
+            customerViewModel.getCustomerById(customerId).observe(viewLifecycleOwner) { result ->
+                if (result.isSuccess) {
+                    val customer = result.getOrNull()
+                    if (customer != null) {
+                        // Update UI with customer info
+                        updateCustomerSection(customer)
+                        salesViewModel.setSelectedCustomer(customer)
+
+                        // Clear the selection so it won't affect future invoice creations
+                        CustomerSelectionManager.selectedCustomerId = null
+                    }
+                }
+            }
+        }
+
+
     }
 
     private fun observePayments() {
@@ -222,7 +255,6 @@ class InvoiceCreationFragment : Fragment() {
 
     }
 
-
     private fun updateCustomerSection(customer: Customer) {
         binding.noCustomerSelected.visibility = View.GONE
         binding.customerDetailsLayout.visibility = View.VISIBLE
@@ -231,13 +263,26 @@ class InvoiceCreationFragment : Fragment() {
 
         binding.customerName.text = "${customer.firstName} ${customer.lastName}"
         binding.customerPhone.text = customer.phoneNumber
+
+        // Use the formatter for better display of currency values
+        val formatter = java.text.DecimalFormat("#,##,##0.00")
+
+        // First check if there's a current balance to display
         val balanceText = when {
+            customer.currentBalance != 0.0 -> {
+                when {
+                    customer.balanceType == "Credit" && customer.currentBalance > 0 ->
+                        "To Receive: ₹${formatter.format(customer.currentBalance)}"
+                    customer.balanceType == "Debit" && customer.currentBalance > 0 ->
+                        "To Pay: ₹${formatter.format(customer.currentBalance)}"
+                    else -> "Balance: ₹${formatter.format(customer.currentBalance)}"
+                }
+            }
+            // Otherwise fall back to opening balance
             customer.balanceType == "Credit" && customer.openingBalance > 0 ->
-                "To Receive: ₹${customer.openingBalance}"
-
+                "To Receive: ₹${formatter.format(customer.openingBalance)}"
             customer.balanceType == "Debit" && customer.openingBalance > 0 ->
-                "To Pay: ₹${customer.openingBalance}"
-
+                "To Pay: ₹${formatter.format(customer.openingBalance)}"
             else -> "Balance: ₹0.00"
         }
         binding.customerBalance.text = balanceText
@@ -248,6 +293,57 @@ class InvoiceCreationFragment : Fragment() {
             "${customer.city}, ${customer.state}"
         }
         binding.customerAddress.text = address
+    }
+//    private fun updateCustomerSection(customer: Customer) {
+//        binding.noCustomerSelected.visibility = View.GONE
+//        binding.customerDetailsLayout.visibility = View.VISIBLE
+//        binding.customerSectionTitle.visibility = View.VISIBLE
+//        binding.editCustomerButton.visibility = View.VISIBLE
+//
+//        binding.customerName.text = "${customer.firstName} ${customer.lastName}"
+//        binding.customerPhone.text = customer.phoneNumber
+//        val balanceText = when {
+//            customer.balanceType == "Credit" && customer.openingBalance > 0 ->
+//                "To Receive: ₹${customer.openingBalance}"
+//
+//            customer.balanceType == "Debit" && customer.openingBalance > 0 ->
+//                "To Pay: ₹${customer.openingBalance}"
+//
+//            else -> "Balance: ₹0.00"
+//        }
+//        binding.customerBalance.text = balanceText
+//
+//        val address = if (customer.streetAddress.isNotEmpty()) {
+//            "${customer.streetAddress}, ${customer.city}"
+//        } else {
+//            "${customer.city}, ${customer.state}"
+//        }
+//        binding.customerAddress.text = address
+//    }
+
+    /**
+     * Checks if the current transaction would exceed the customer's credit limit
+     * @return Triple containing (exceeds limit, current balance, new balance)
+     */
+    private fun wouldExceedCreditLimit(): Triple<Boolean, Double, Double> {
+        val customer = salesViewModel.selectedCustomer.value ?: return Triple(false, 0.0, 0.0)
+
+        // Only applicable for Credit type customers (they owe us money)
+        if (customer.balanceType != "Credit") {
+            return Triple(false, 0.0, 0.0)
+        }
+
+        // If credit limit is 0.0, it means no limit is set
+        if (customer.creditLimit <= 0.0) {
+            return Triple(false, 0.0, 0.0)
+        }
+
+        val currentBalance = customer.currentBalance
+        val unpaidAmount = salesViewModel.calculateTotal() - salesViewModel.calculateTotalPaid()
+        val newBalance = currentBalance + unpaidAmount
+
+        // Check if new balance would exceed credit limit
+        return Triple(newBalance > customer.creditLimit, currentBalance, newBalance)
     }
 
     private fun selectCustomer() {
@@ -410,13 +506,67 @@ class InvoiceCreationFragment : Fragment() {
         return itemsAdapter.getItems().sumOf { it.price * it.quantity }
     }
 
-
     private fun saveInvoice() {
         // Validate
         if (!validateInvoice()) {
             return
         }
 
+        // Check credit limit
+        val (exceedsLimit, currentBalance, newBalance) = wouldExceedCreditLimit()
+
+        if (exceedsLimit) {
+            // Show warning dialog
+            showCreditLimitWarningDialog(currentBalance, newBalance)
+        } else {
+            // Proceed with saving invoice
+            proceedWithSavingInvoice()
+        }
+    }
+
+    /**
+     * Shows a warning dialog when credit limit would be exceeded
+     */
+    private fun showCreditLimitWarningDialog(currentBalance: Double, newBalance: Double) {
+        val customer = salesViewModel.selectedCustomer.value ?: return
+        val formatter = java.text.DecimalFormat("#,##,##0.00")
+
+        val dialog = ThemedM3Dialog(requireContext())
+            .setTitle("Credit Limit Warning")
+            .setLayout(R.layout.dialog_credit_limit_warning)
+            .setPositiveButton("Proceed Anyway") { _, _ ->
+                proceedWithSavingInvoice()
+            }
+            .setNegativeButton("Cancel") { _ ->
+                // Do nothing, just close dialog
+            }
+
+        // Get dialog view
+        val dialogView = dialog.getDialogView()
+        dialogView?.let { view ->
+            // Find text views
+            val messageTextView = view.findViewById<TextView>(R.id.creditWarningMessage)
+            val detailsTextView = view.findViewById<TextView>(R.id.creditWarningDetails)
+
+            // Set message text
+            val message = "This invoice will exceed ${customer.firstName} ${customer.lastName}'s credit limit."
+            messageTextView?.text = message
+
+            // Set details text
+            val details = "Current Balance: ₹${formatter.format(currentBalance)}\n" +
+                    "New Balance: ₹${formatter.format(newBalance)}\n" +
+                    "Credit Limit: ₹${formatter.format(customer.creditLimit)}\n" +
+                    "Amount Over Limit: ₹${formatter.format(newBalance - customer.creditLimit)}"
+            detailsTextView?.text = details
+        }
+
+        dialog.show()
+    }
+
+    /**
+     * Proceeds with saving the invoice after validation and warnings
+     */
+    private fun proceedWithSavingInvoice() {
         // Create invoice object
         val invoiceNumber = generateInvoiceNumber()
         val customer = salesViewModel.selectedCustomer.value
@@ -441,7 +591,6 @@ class InvoiceCreationFragment : Fragment() {
         } else {
             "${customer.city}, ${customer.state}"
         }
-
 
         val invoice = Invoice(
             invoiceNumber = invoiceNumber,
@@ -469,12 +618,78 @@ class InvoiceCreationFragment : Fragment() {
             if (success) {
                 Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
                 EventBus.postInvoiceAdded()
-                 findNavController().navigateUp()
+                findNavController().navigateUp()
             } else {
                 Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+//
+//    private fun saveInvoice() {
+//        // Validate
+//        if (!validateInvoice()) {
+//            return
+//        }
+//
+//        // Create invoice object
+//        val invoiceNumber = generateInvoiceNumber()
+//        val customer = salesViewModel.selectedCustomer.value
+//            ?: throw IllegalStateException("Customer must be selected")
+//
+//        val invoiceItems = itemsAdapter.getItems().map { selected ->
+//            InvoiceItem(
+//                itemId = selected.item.id,
+//                quantity = selected.quantity,
+//                itemDetails = selected.item,
+//                price = selected.price
+//            )
+//        }
+//
+//        val payments = paymentsAdapter.getPayments()
+//        val totalAmount = salesViewModel.calculateTotal()
+//        val paidAmount = salesViewModel.calculateTotalPaid()
+//
+//        // Get customer address components
+//        val address = if (customer.streetAddress.isNotEmpty()) {
+//            "${customer.streetAddress}, ${customer.city}, ${customer.state}"
+//        } else {
+//            "${customer.city}, ${customer.state}"
+//        }
+//
+//
+//        val invoice = Invoice(
+//            invoiceNumber = invoiceNumber,
+//            customerId = customer.id,
+//            customerName = "${customer.firstName} ${customer.lastName}",
+//            customerPhone = customer.phoneNumber,     // Include phone
+//            customerAddress = address,                // Include address
+//            invoiceDate = System.currentTimeMillis(),
+//            items = invoiceItems,
+//            payments = payments,
+//            totalAmount = totalAmount,
+//            paidAmount = paidAmount,
+//            // You might want to add these fields as well
+//            notes = binding.notesEditText.text.toString()
+//        )
+//
+//        // Show loading state
+//        binding.progressOverlay.visibility = View.VISIBLE
+//
+//        // Save the invoice
+//        salesViewModel.saveInvoice(invoice) { success ->
+//            // Hide loading state
+//            binding.progressOverlay.visibility = View.GONE
+//
+//            if (success) {
+//                Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+//                EventBus.postInvoiceAdded()
+//                 findNavController().navigateUp()
+//            } else {
+//                Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+//            }
+//        }
+//    }
 
     private fun validateInvoice(): Boolean {
         if (salesViewModel.selectedCustomer.value == null) {

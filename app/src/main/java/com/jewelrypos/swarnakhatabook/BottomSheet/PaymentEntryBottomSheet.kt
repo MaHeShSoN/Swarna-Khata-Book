@@ -420,15 +420,46 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun validatePayment(): Boolean {
-        val amount = binding.amountEditText.text.toString().toDoubleOrNull()
-        if (amount == null || amount <= 0) {
-            binding.amountInputLayout.error = "Please enter a valid amount"
-            return false
-        }
+        // Get selected payment method
+        val method = binding.paymentMethodDropdown.text.toString()
 
-        if (amount > (invoiceTotal - amountPaid)) {
-            binding.amountInputLayout.error = "Amount exceeds remaining balance"
-            return false
+        // For Old Gold and Old Silver, we validate the metal value instead of amount
+        if (method == "Old Gold") {
+            val goldValueField = binding.additionalFieldsContainer
+                .findViewById<TextInputEditText>(R.id.goldValueEditText)
+            val goldValue = goldValueField?.text.toString().toDoubleOrNull()
+
+            if (goldValue == null || goldValue <= 0) {
+                // Show error for gold value
+                val goldValueLayout = binding.additionalFieldsContainer
+                    .findViewById<TextInputLayout>(R.id.goldValueLayout)
+                goldValueLayout?.error = "Please enter a valid gold value"
+                return false
+            }
+        } else if (method == "Old Silver") {
+            val silverValueField = binding.additionalFieldsContainer
+                .findViewById<TextInputEditText>(R.id.silverValueEditText)
+            val silverValue = silverValueField?.text.toString().toDoubleOrNull()
+
+            if (silverValue == null || silverValue <= 0) {
+                // Show error for silver value
+                val silverValueLayout = binding.additionalFieldsContainer
+                    .findViewById<TextInputLayout>(R.id.silverValueLayout)
+                silverValueLayout?.error = "Please enter a valid silver value"
+                return false
+            }
+        } else {
+            // For regular payment methods, validate the amount
+            val amount = binding.amountEditText.text.toString().toDoubleOrNull()
+            if (amount == null || amount <= 0) {
+                binding.amountInputLayout.error = "Please enter a valid amount"
+                return false
+            }
+
+            if (amount > (invoiceTotal - amountPaid)) {
+                binding.amountInputLayout.error = "Amount exceeds remaining balance"
+                return false
+            }
         }
 
         if (binding.paymentMethodDropdown.text.isNullOrEmpty()) {
@@ -436,45 +467,100 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             return false
         }
 
-        // Validate additional fields based on payment method
-
+        // Other validations can remain unchanged
         return true
     }
 
-    private fun createPaymentFromForm(): Payment {
-        val method = binding.paymentMethodDropdown.text.toString()
 
-        // Determine amount based on payment method
-        val amount = when (method) {
-            "Old Gold" -> {
-                // Get the gold value from the value field
-                val goldValueField = binding.additionalFieldsContainer
-                    .findViewById<TextInputEditText>(R.id.goldValueEditText)
-                goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
-            }
+//    private fun validatePayment(): Boolean {
+//        val amount = binding.amountEditText.text.toString().toDoubleOrNull()
+//        if (amount == null || amount <= 0) {
+//            binding.amountInputLayout.error = "Please enter a valid amount"
+//            return false
+//        }
+//
+//        if (amount > (invoiceTotal - amountPaid)) {
+//            binding.amountInputLayout.error = "Amount exceeds remaining balance"
+//            return false
+//        }
+//
+//        if (binding.paymentMethodDropdown.text.isNullOrEmpty()) {
+//            binding.paymentMethodLayout.error = "Please select a payment method"
+//            return false
+//        }
+//
+//        // Validate additional fields based on payment method
+//
+//        return true
+//    }
 
-            "Old Silver" -> {
-                // Get the silver value from the value field
-                val silverValueField = binding.additionalFieldsContainer
-                    .findViewById<TextInputEditText>(R.id.silverValueEditText)
-                silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
-            }
+//    private fun createPaymentFromForm(): Payment {
+//        val method = binding.paymentMethodDropdown.text.toString()
+//
+//        // Determine amount based on payment method
+//        val amount = when (method) {
+//            "Old Gold" -> {
+//                // Get the gold value from the value field
+//                val goldValueField = binding.additionalFieldsContainer
+//                    .findViewById<TextInputEditText>(R.id.goldValueEditText)
+//                goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
+//            }
+//
+//            "Old Silver" -> {
+//                // Get the silver value from the value field
+//                val silverValueField = binding.additionalFieldsContainer
+//                    .findViewById<TextInputEditText>(R.id.silverValueEditText)
+//                silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
+//            }
+//
+//            else -> {
+//                // For other payment methods, use the amount field
+//                binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
+//            }
+//        }
 
-            else -> {
-                // For other payment methods, use the amount field
-                binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
-            }
+//        return Payment(
+//            id = "", // Will be set by the Invoice fragment
+//            amount = amount,
+//            method = method,
+//            date = System.currentTimeMillis(),
+//            reference = binding.referenceEditText.text.toString(),
+//            notes = binding.notesEditText.text.toString()
+//        )
+//    }
+private fun createPaymentFromForm(): Payment {
+    val method = binding.paymentMethodDropdown.text.toString()
+
+    // Determine amount based on payment method
+    val amount = when (method) {
+        "Old Gold" -> {
+            // Get the gold value from the value field
+            val goldValueField = binding.additionalFieldsContainer
+                .findViewById<TextInputEditText>(R.id.goldValueEditText)
+            goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
         }
-
-        return Payment(
-            id = "", // Will be set by the Invoice fragment
-            amount = amount,
-            method = method,
-            date = System.currentTimeMillis(),
-            reference = binding.referenceEditText.text.toString(),
-            notes = binding.notesEditText.text.toString()
-        )
+        "Old Silver" -> {
+            // Get the silver value from the value field
+            val silverValueField = binding.additionalFieldsContainer
+                .findViewById<TextInputEditText>(R.id.silverValueEditText)
+            silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
+        }
+        else -> {
+            // For other payment methods, use the amount field
+            binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
+        }
     }
+
+    return Payment(
+        id = "", // Will be set by the Invoice fragment
+        amount = amount,
+        method = method,
+        date = System.currentTimeMillis(),
+        reference = binding.referenceEditText.text.toString(),
+        notes = binding.notesEditText.text.toString()
+    )
+}
+
 
     fun setInvoiceDetails(invoiceTotal: Double, amountPaid: Double) {
         this.invoiceTotal = invoiceTotal
