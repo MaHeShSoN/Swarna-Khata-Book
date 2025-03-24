@@ -1,7 +1,6 @@
 package com.jewelrypos.swarnakhatabook.ViewModle
 
 import android.app.Application
-import android.net.ConnectivityManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -9,18 +8,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
+
 
 class InvoiceDetailViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,10 +32,10 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     private val _customer = MutableLiveData<Customer?>()
     val customer: LiveData<Customer?> = _customer
 
-    private val _errorMessage = MutableLiveData<String>()
+    private val _errorMessage = MutableLiveData("")
     val errorMessage: LiveData<String> = _errorMessage
 
-    private val _isLoading = MutableLiveData<Boolean>(false)
+    private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
     private val invoiceRepository: InvoiceRepository
@@ -49,157 +51,311 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
     fun loadInvoice(invoiceId: String) {
         _isLoading.value = true
+        _errorMessage.value = null
 
         viewModelScope.launch {
-            invoiceRepository.getInvoiceByNumber(invoiceId).fold(
-                onSuccess = { invoice ->
-                    _invoice.value = invoice
-                    loadCustomerDetails(invoice.customerId)
-                    _isLoading.value = false
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to load invoice: ${error.message}"
-                    _isLoading.value = false
+            try {
+                // Perform concurrent loading of invoice and customer
+                coroutineScope {
+                    val invoiceResult = invoiceRepository.getInvoiceByNumber(invoiceId)
+
+                    invoiceResult.fold(
+                        onSuccess = { invoiceResponse ->
+                            // Ensure invoice is not null
+                            val invoice =
+                                invoiceResponse ?: throw IllegalStateException("Invoice not found")
+
+                            _invoice.value = invoice
+
+                            // Only load customer if customerId exists
+                            invoice.customerId.takeIf { it.isNotEmpty() }?.let { customerId ->
+                                val customerDeferred = async {
+                                    customerRepository.getCustomerById(customerId)
+                                }
+                                val customerResult = customerDeferred.await()
+
+                                customerResult.fold(
+                                    onSuccess = { customer ->
+                                        _customer.value = customer
+                                    },
+                                    onFailure = { customerError ->
+                                        Log.w(
+                                            "InvoiceDetailViewModel",
+                                            "Failed to load customer: ${customerError.message}"
+                                        )
+                                    }
+                                )
+                            }
+                        },
+                        onFailure = { error ->
+                            _errorMessage.value = "Failed to load invoice: ${error.message}"
+                            Log.e("InvoiceDetailViewModel", "Invoice load error", error)
+                        }
+                    )
                 }
-            )
-        }
-    }
-
-    private fun loadCustomerDetails(customerId: String) {
-        if (customerId.isEmpty()) return
-
-        viewModelScope.launch {
-            customerRepository.getCustomerById(customerId).fold(
-                onSuccess = { customer ->
-                    _customer.value = customer
-                },
-                onFailure = { error ->
-                    Log.e("InvoiceDetailViewModel", "Error loading customer: ${error.message}")
-                    // Not showing this error to the user as it's not critical
-                }
-            )
-        }
-    }
-
-    fun getCustomerPhone(): String {
-        return _customer.value?.phoneNumber ?: ""
-    }
-
-    fun getCustomerAddress(): String {
-        val customer = _customer.value
-
-        if (customer == null) {
-            // If customer is null, try to provide a fallback from the invoice
-            val invoice = _invoice.value
-            return invoice?.customerAddress ?: "Address not available"
-        }
-
-        // If we have customer data, construct the address
-        val parts = mutableListOf<String>()
-
-        if (customer.streetAddress.isNotEmpty()) {
-            parts.add(customer.streetAddress)
-        }
-
-        if (customer.city.isNotEmpty()) {
-            parts.add(customer.city)
-        }
-
-        if (customer.state.isNotEmpty()) {
-            parts.add(customer.state)
-        }
-
-        return if (parts.isNotEmpty()) parts.joinToString(", ") else "Address not available"
-    }
-
-    fun updateInvoiceItems(updatedItems: List<InvoiceItem>, callback: (Boolean) -> Unit) {
-        val currentInvoice = _invoice.value ?: return callback(false)
-
-        // Calculate updated total
-        val subtotal = updatedItems.sumOf { it.price * it.quantity }
-
-        // Calculate tax amount
-        val taxAmount = updatedItems.sumOf { item ->
-            val itemTotal = item.price * item.quantity
-            itemTotal * (item.itemDetails.taxRate / 100.0)
-        }
-
-        // Calculate extra charges
-        val extraChargesTotal = updatedItems.sumOf { item ->
-            item.itemDetails.listOfExtraCharges.sumOf { charge ->
-                charge.amount * item.quantity
+            } catch (e: Exception) {
+                _errorMessage.value = "Error loading invoice: ${e.localizedMessage}"
+                Log.e("InvoiceDetailViewModel", "Unexpected error loading invoice", e)
+            } finally {
+                _isLoading.value = false
             }
         }
+    }
 
-        val newTotalAmount = subtotal + taxAmount + extraChargesTotal
+    private fun updateInvoice(
+        updateBlock: (Invoice) -> Invoice,
+        successMessage: String? = null,
+        errorMessage: String = "Failed to update invoice"
+    ) {
+        val currentInvoice = _invoice.value ?: return
 
-        // Create updated invoice with new items
-        val updatedInvoice = currentInvoice.copy(
-            items = updatedItems,
-            totalAmount = newTotalAmount,
-            // Update the balance due (ensure paid amount doesn't exceed total)
-            paidAmount = currentInvoice.paidAmount.coerceAtMost(newTotalAmount)
-        )
+        _isLoading.value = true
+        _errorMessage.value = null
 
         viewModelScope.launch {
-            _isLoading.value = true
+            try {
+                val updatedInvoice = updateBlock(currentInvoice)
 
-            invoiceRepository.saveInvoice(updatedInvoice).fold(
-                onSuccess = {
-                    // Update the invoice in LiveData
-                    _invoice.value = updatedInvoice
-                    _isLoading.value = false
-                    callback(true)
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to update items: ${error.message}"
-                    _isLoading.value = false
-                    callback(false)
-                }
-            )
+                val result = invoiceRepository.saveInvoice(updatedInvoice)
+                result.fold(
+                    onSuccess = {
+                        _invoice.value = updatedInvoice
+                        successMessage?.let {
+                            _errorMessage.value = it
+                        }
+                    },
+                    onFailure = {
+                        _errorMessage.value = errorMessage
+                        Log.e("InvoiceDetailViewModel", errorMessage, it)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = errorMessage
+                Log.e("InvoiceDetailViewModel", errorMessage, e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
-    // For deleting payments
-    fun removePaymentFromInvoice(payment: Payment, callback: (Boolean) -> Unit) {
-        val currentInvoice = _invoice.value ?: return callback(false)
-
-        // Remove the payment from the list
-        val updatedPayments = currentInvoice.payments.filter { it.id != payment.id }
-
-        // Recalculate total paid amount
-        val totalPaid = updatedPayments.sumOf { it.amount }
-
-        // Create updated invoice
-        val updatedInvoice = currentInvoice.copy(
-            payments = updatedPayments,
-            paidAmount = totalPaid
-        )
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            invoiceRepository.saveInvoice(updatedInvoice).fold(
-                onSuccess = {
-                    _invoice.value = updatedInvoice
-                    _isLoading.value = false
-                    callback(true)
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to delete payment: ${error.message}"
-                    _isLoading.value = false
-                    callback(false)
+    fun addInvoiceItem(newItem: InvoiceItem) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                val updatedItems = invoice.items.toMutableList().apply {
+                    // Check if an identical item already exists
+                    val existingItemIndex = indexOfFirst { it.isSameItem(newItem) }
+                    if (existingItemIndex != -1) {
+                        // Update quantity of existing item
+                        val existingItem = this[existingItemIndex]
+                        this[existingItemIndex] = existingItem.copy(
+                            quantity = existingItem.quantity + newItem.quantity
+                        )
+                    } else {
+                        // Add new item
+                        add(newItem)
+                    }
                 }
-            )
-        }
+
+                val newTotalAmount = calculateTotalAmount(updatedItems)
+
+                invoice.copy(
+                    items = updatedItems,
+                    totalAmount = newTotalAmount
+                )
+            },
+            successMessage = "Item added successfully"
+        )
     }
 
 
+    fun updateItemQuantity(item: InvoiceItem, newQuantity: Int) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                val updatedItems = invoice.items.map { existingItem ->
+                    if (existingItem.id == item.id) {
+                        existingItem.copy(quantity = newQuantity)
+                    } else {
+                        existingItem
+                    }
+                }
+
+                val newTotalAmount = calculateTotalAmount(updatedItems)
+
+                invoice.copy(
+                    items = updatedItems,
+                    totalAmount = newTotalAmount,
+                    paidAmount = invoice.paidAmount.coerceAtMost(newTotalAmount)
+                )
+            },
+            successMessage = "Quantity updated successfully"
+        )
+    }
+
+    fun updateInvoiceItem(updatedItem: InvoiceItem) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                val updatedItems = invoice.items.map { existingItem ->
+                    if (existingItem.id == updatedItem.id) {
+                        updatedItem
+                    } else {
+                        existingItem
+                    }
+                }
+
+                val newTotalAmount = calculateTotalAmount(updatedItems)
+
+                invoice.copy(
+                    items = updatedItems,
+                    totalAmount = newTotalAmount,
+                    paidAmount = invoice.paidAmount.coerceAtMost(newTotalAmount)
+                )
+            },
+            successMessage = "Item updated successfully"
+        )
+    }
+
+    fun removeInvoiceItem(itemToRemove: InvoiceItem) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                val updatedItems = invoice.items.filter { it.id != itemToRemove.id }
+
+                // Prevent removing the last item
+                if (updatedItems.isEmpty()) {
+                    throw IllegalStateException("Cannot remove the last item from an invoice")
+                }
+
+                val newTotalAmount = calculateTotalAmount(updatedItems)
+
+                invoice.copy(
+                    items = updatedItems,
+                    totalAmount = newTotalAmount,
+                    paidAmount = invoice.paidAmount.coerceAtMost(newTotalAmount)
+                )
+            },
+            successMessage = "Item removed successfully"
+        )
+    }
+
+    fun updateInvoiceNotes(notes: String) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                invoice.copy(notes = notes)
+            },
+            successMessage = "Notes updated successfully"
+        )
+    }
+
+    fun addPaymentToInvoice(payment: Payment) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                // Add the new payment with its unique ID
+                val updatedPayments = invoice.payments + payment
+
+                // Recalculate total paid amount
+                val totalPaid = updatedPayments.sumOf { it.amount }
+
+                invoice.copy(
+                    payments = updatedPayments,
+                    paidAmount = totalPaid
+                )
+            },
+            successMessage = "Payment added successfully"
+        )
+    }
+
+    fun removePayment(paymentToRemove: Payment) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                // Remove only the specific payment using its unique ID
+                val updatedPayments = invoice.payments.filter { it.id != paymentToRemove.id }
+
+                // Recalculate total paid amount
+                val totalPaid = updatedPayments.sumOf { it.amount }
+
+                invoice.copy(
+                    payments = updatedPayments,
+                    paidAmount = totalPaid
+                )
+            },
+            successMessage = "Payment removed successfully"
+        )
+    }
+
+
+    fun duplicateInvoice() {
+        val currentInvoice = _invoice.value ?: return
+        _isLoading.value = true
+        _errorMessage.value = null
+
+        viewModelScope.launch {
+            try {
+                // Generate a new invoice number
+                val dateFormat = SimpleDateFormat("yyMMdd", Locale.getDefault())
+                val datePart = dateFormat.format(Date())
+                val random = (1000..9999).random()
+                val newInvoiceNumber = "INV-$datePart-$random"
+
+                // Create new invoice with same details but different ID and payments reset
+                val newInvoice = currentInvoice.copy(
+                    id = "",
+                    invoiceNumber = newInvoiceNumber,
+                    invoiceDate = System.currentTimeMillis(),
+                    payments = emptyList(),
+                    paidAmount = 0.0,
+                    notes = "${currentInvoice.notes}\n(Duplicated from ${currentInvoice.invoiceNumber})"
+                )
+
+                val result = invoiceRepository.saveInvoice(newInvoice)
+                result.fold(
+                    onSuccess = {
+                        _errorMessage.value = "Invoice duplicated successfully"
+                    },
+                    onFailure = {
+                        _errorMessage.value = "Failed to duplicate invoice"
+                        Log.e("InvoiceDetailViewModel", "Failed to duplicate invoice", it)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "Error duplicating invoice"
+                Log.e("InvoiceDetailViewModel", "Error duplicating invoice", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteInvoice() {
+        val currentInvoice = _invoice.value ?: return
+        _isLoading.value = true
+        _errorMessage.value = null
+
+        viewModelScope.launch {
+            try {
+                val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
+                result.fold(
+                    onSuccess = {
+                        _errorMessage.value = "Invoice deleted successfully"
+                    },
+                    onFailure = {
+                        _errorMessage.value = "Failed to delete invoice"
+                        Log.e("InvoiceDetailViewModel", "Failed to delete invoice", it)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "Error deleting invoice"
+                Log.e("InvoiceDetailViewModel", "Error deleting invoice", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Helper method to calculate total amount
     private fun calculateTotalAmount(items: List<InvoiceItem>): Double {
-        // Calculate subtotal (sum of item prices)
+        // Calculate subtotal
         val subtotal = items.sumOf { it.price * it.quantity }
 
-        // Calculate tax and extra charges (you may need to adjust this logic based on your business rules)
+        // Calculate tax amount
         val taxAmount = items.sumOf { item ->
             val itemTotal = item.price * item.quantity
             itemTotal * (item.itemDetails.taxRate / 100.0)
@@ -215,87 +371,21 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         return subtotal + taxAmount + extraChargesTotal
     }
 
+    // Getter methods with null checks
+    fun getCustomerPhone(): String = _customer.value?.phoneNumber ?: ""
 
-    fun addPaymentToInvoice(payment: Payment) {
-        val currentInvoice = _invoice.value ?: return
+    fun getCustomerAddress(): String {
+        val customer = _customer.value
+        return when {
+            customer != null -> {
+                val parts = mutableListOf<String>()
+                if (customer.streetAddress.isNotEmpty()) parts.add(customer.streetAddress)
+                if (customer.city.isNotEmpty()) parts.add(customer.city)
+                if (customer.state.isNotEmpty()) parts.add(customer.state)
+                parts.joinToString(", ").takeIf { it.isNotEmpty() } ?: "Address not available"
+            }
 
-        val paymentWithId = payment.copy(
-            id = UUID.randomUUID().toString()
-        )
-
-        val updatedPayments = currentInvoice.payments + paymentWithId
-        val totalPaid = updatedPayments.sumOf { it.amount }
-
-        val updatedInvoice = currentInvoice.copy(
-            payments = updatedPayments,
-            paidAmount = totalPaid
-        )
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            invoiceRepository.saveInvoice(updatedInvoice).fold(
-                onSuccess = {
-                    _invoice.value = updatedInvoice
-                    _isLoading.value = false
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to add payment: ${error.message}"
-                    _isLoading.value = false
-                }
-            )
-        }
-    }
-
-    fun duplicateInvoice(originalInvoice: Invoice, callback: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            // Generate a new invoice number
-            val dateFormat = SimpleDateFormat("yyMMdd", Locale.getDefault())
-            val datePart = dateFormat.format(Date())
-            val random = (1000..9999).random()
-            val newInvoiceNumber = "INV-$datePart-$random"
-
-            // Create new invoice with same details but different ID and payments reset
-            val newInvoice = originalInvoice.copy(
-                id = "",
-                invoiceNumber = newInvoiceNumber,
-                invoiceDate = System.currentTimeMillis(),
-                payments = emptyList(),
-                paidAmount = 0.0,
-                notes = originalInvoice.notes + "\n(Duplicated from ${originalInvoice.invoiceNumber})"
-            )
-
-            invoiceRepository.saveInvoice(newInvoice).fold(
-                onSuccess = {
-                    _isLoading.value = false
-                    callback(true)
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to duplicate invoice: ${error.message}"
-                    _isLoading.value = false
-                    callback(false)
-                }
-            )
-        }
-    }
-
-    fun deleteInvoice(invoice: Invoice, callback: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            invoiceRepository.deleteInvoice(invoice.invoiceNumber).fold(
-                onSuccess = {
-                    _isLoading.value = false
-                    callback(true)
-                },
-                onFailure = { error ->
-                    _errorMessage.value = "Failed to delete invoice: ${error.message}"
-                    _isLoading.value = false
-                    callback(false)
-                }
-            )
+            else -> _invoice.value?.customerAddress ?: "Address not available"
         }
     }
 }

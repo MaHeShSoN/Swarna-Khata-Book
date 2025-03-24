@@ -552,7 +552,6 @@ private fun createPaymentFromForm(): Payment {
     }
 
     return Payment(
-        id = "", // Will be set by the Invoice fragment
         amount = amount,
         method = method,
         date = System.currentTimeMillis(),

@@ -1,4 +1,3 @@
-
 package com.jewelrypos.swarnakhatabook.Adapters
 
 import android.view.LayoutInflater
@@ -31,12 +30,12 @@ class EditableInvoiceItemAdapter(
     class ItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val itemName: TextView = itemView.findViewById(R.id.itemName)
         val itemDetails: TextView = itemView.findViewById(R.id.itemDetails)
-        val price: TextView = itemView.findViewById(R.id.price)
         val quantity: TextView = itemView.findViewById(R.id.quantity)
-        val decreaseButton: ImageButton = itemView.findViewById(R.id.decreaseButton)
-        val increaseButton: ImageButton = itemView.findViewById(R.id.increaseButton)
+        val price: TextView = itemView.findViewById(R.id.price)
         val editButton: ImageButton = itemView.findViewById(R.id.editButton)
         val removeButton: ImageButton = itemView.findViewById(R.id.removeButton)
+        val decreaseButton: ImageButton = itemView.findViewById(R.id.decreaseButton)
+        val increaseButton: ImageButton = itemView.findViewById(R.id.increaseButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
@@ -53,17 +52,19 @@ class EditableInvoiceItemAdapter(
         holder.itemName.text = item.itemDetails.displayName
         holder.itemDetails.text = "Weight: ${item.itemDetails.grossWeight}g | Purity: ${item.itemDetails.purity}"
 
+        // Set quantity
+        holder.quantity.text = item.quantity.toString()
+
         // Set price
         val totalPrice = item.price * item.quantity
         holder.price.text = "₹${formatter.format(totalPrice)}"
-
-        // Set quantity
-        holder.quantity.text = item.quantity.toString()
 
         // Handle quantity adjustment
         holder.decreaseButton.setOnClickListener {
             if (item.quantity > 1) {
                 listener?.onQuantityChanged(item, item.quantity - 1)
+            } else {
+                listener?.onRemoveItem(item)
             }
         }
 
@@ -99,15 +100,19 @@ class EditableInvoiceItemAdapter(
         override fun getNewListSize() = newList.size
 
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].itemId == newList[newItemPosition].itemId
+            // Compare using the unique ID
+            return oldList[oldItemPosition].id == newList[newItemPosition].id
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
             val oldItem = oldList[oldItemPosition]
             val newItem = newList[newItemPosition]
+
+            // Detailed comparison of item contents
             return oldItem.itemId == newItem.itemId &&
                     oldItem.quantity == newItem.quantity &&
-                    oldItem.price == newItem.price
+                    oldItem.price == newItem.price &&
+                    oldItem.itemDetails == newItem.itemDetails
         }
     }
 }

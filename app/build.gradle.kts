@@ -103,7 +103,6 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation ("com.github.AchmadHafid:toolbar-badge-menu-item:4.0.0")
 
 
 }

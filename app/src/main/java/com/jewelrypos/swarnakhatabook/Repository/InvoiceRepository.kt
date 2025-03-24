@@ -6,212 +6,196 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.ktx.toObject
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 
 class InvoiceRepository(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) {
-    // For pagination
-    private val pageSize = 10
+    // Companion object for configuration
+    companion object {
+        private const val PAGE_SIZE = 10
+        private const val TAG = "InvoiceRepository"
+    }
+
+    // Pagination state
     private var lastDocumentSnapshot: DocumentSnapshot? = null
     private var isLastPage = false
 
-
-    suspend fun saveInvoice(invoice: Invoice): Result<Unit> = try {
-        val currentUser = auth.currentUser
-            ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
+    // Helper method to get authenticated user's phone number
+    private fun getCurrentUserPhoneNumber(): String {
+        return auth.currentUser?.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
+    }
 
-        // Create invoice with ID matching invoice number if not already set
-        val invoiceWithId = if (invoice.id.isEmpty()) {
-            invoice.copy(id = invoice.invoiceNumber)
-        } else {
-            invoice
+    // Centralized method for getting Firestore collections
+    private fun getUserCollection(collectionName: String) = firestore.collection("users")
+        .document(getCurrentUserPhoneNumber())
+        .collection(collectionName)
+
+    // Enhanced save invoice method with improved error handling and concurrency
+    suspend fun saveInvoice(invoice: Invoice): Result<Unit> = try {
+        coroutineScope {
+            // Prepare invoice with ID
+            val invoiceWithId = if (invoice.id.isEmpty()) {
+                invoice.copy(id = invoice.invoiceNumber)
+            } else {
+                invoice
+            }
+
+            // Concurrent stock and customer balance updates
+            val stockUpdateJob = async { updateInventoryStock(invoice) }
+            val customerBalanceJob = async { updateCustomerBalance(invoice) }
+
+            // Wait for both jobs to complete
+            stockUpdateJob.await()
+            customerBalanceJob.await()
+
+            // Save invoice
+            getUserCollection("invoices")
+                .document(invoiceWithId.id)
+                .set(invoiceWithId)
+                .await()
+
+            Result.success(Unit)
         }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error saving invoice", e)
+        Result.failure(e)
+    }
 
-        // Update inventory stock for each item in the invoice
-        for (invoiceItem in invoice.items) {
-            // Only attempt to update stock if current stock is greater than 0
+    // Separate method for inventory stock update
+    private suspend fun updateInventoryStock(invoice: Invoice) {
+        invoice.items.forEach { invoiceItem ->
             if (invoiceItem.itemDetails.stock > 0) {
                 try {
-                    // Get the current item to get the latest stock value
-                    val inventoryItemDoc = firestore.collection("users")
-                        .document(phoneNumber)
-                        .collection("inventory")
+                    val inventoryItemDoc = getUserCollection("inventory")
                         .document(invoiceItem.itemId)
                         .get()
                         .await()
 
-                    val currentItem = inventoryItemDoc.toObject(JewelleryItem::class.java)
+                    val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
 
-                    if (currentItem != null) {
-                        // Calculate new stock (prevent negative values)
-                        val newStock = maxOf(0.0, currentItem.stock - invoiceItem.quantity)
-
-                        // Update the stock
-                        firestore.collection("users")
-                            .document(phoneNumber)
-                            .collection("inventory")
+                    currentItem?.let {
+                        val newStock = maxOf(0.0, it.stock - invoiceItem.quantity)
+                        getUserCollection("inventory")
                             .document(invoiceItem.itemId)
                             .update("stock", newStock)
                             .await()
                     }
                 } catch (e: Exception) {
-                    // Log error but continue with other items
-                    Log.e(
-                        "InvoiceRepository",
-                        "Error updating stock for item ${invoiceItem.itemId}",
-                        e
-                    )
+                    Log.e(TAG, "Error updating stock for item ${invoiceItem.itemId}", e)
                 }
             }
         }
+    }
 
-        // Update customer balance
+    // Separate method for customer balance update
+    private suspend fun updateCustomerBalance(invoice: Invoice) {
         try {
-            // Calculate the amount to add to the customer's balance
             val unpaidAmount = invoice.totalAmount - invoice.paidAmount
 
-            // Get the current customer data
-            val customerDoc = firestore.collection("users")
-                .document(phoneNumber)
-                .collection("customers")
+            val customerDoc = getUserCollection("customers")
                 .document(invoice.customerId)
                 .get()
                 .await()
 
-            val customer = customerDoc.toObject(Customer::class.java)
+            val customer = customerDoc.toObject<Customer>()
 
-            if (customer != null) {
-                // Calculate new balance
-                // For credit sales: positive value means customer owes money
-                // For debit sales: negative value means business owes money
-                val newBalance = customer.currentBalance + unpaidAmount
-
-                // Update the customer's current balance
-                firestore.collection("users")
-                    .document(phoneNumber)
-                    .collection("customers")
+            customer?.let {
+                val newBalance = it.currentBalance + unpaidAmount
+                getUserCollection("customers")
                     .document(invoice.customerId)
                     .update("currentBalance", newBalance)
                     .await()
 
-                Log.d("InvoiceRepository", "Updated customer balance: $newBalance")
+                Log.d(TAG, "Updated customer balance: $newBalance")
             }
         } catch (e: Exception) {
-            // Log error but continue with invoice creation
-            Log.e("InvoiceRepository", "Error updating customer balance", e)
+            Log.e(TAG, "Error updating customer balance", e)
         }
-
-        // Save the invoice
-        firestore.collection("users")
-            .document(phoneNumber)
-            .collection("invoices")
-            .document(invoiceWithId.id)
-            .set(invoiceWithId)
-            .await()
-
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
     }
 
-
+    // Enhanced delete invoice method
     suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> = try {
-        val currentUser = auth.currentUser
-            ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
+        coroutineScope {
+            // Fetch invoice first
+            val invoiceDoc = getUserCollection("invoices")
+                .document(invoiceNumber)
+                .get()
+                .await()
 
-        // Get the invoice first to retrieve customer ID and unpaid amount
-        val invoiceDoc = firestore.collection("users")
-            .document(phoneNumber)
-            .collection("invoices")
-            .document(invoiceNumber)
-            .get()
-            .await()
+            val invoice = invoiceDoc.toObject<Invoice>()
 
-        val invoice = invoiceDoc.toObject(Invoice::class.java)
-
-        // If we found the invoice, update the customer balance
-        if (invoice != null) {
-            try {
-                val unpaidAmount = invoice.totalAmount - invoice.paidAmount
-
-                // Get the current customer
-                val customerDoc = firestore.collection("users")
-                    .document(phoneNumber)
-                    .collection("customers")
-                    .document(invoice.customerId)
-                    .get()
-                    .await()
-
-                val customer = customerDoc.toObject(Customer::class.java)
-
-                if (customer != null) {
-                    // When deleting an invoice, subtract the unpaid amount from the balance
-                    val newBalance = customer.currentBalance - unpaidAmount
-
-                    // Update customer balance
-                    firestore.collection("users")
-                        .document(phoneNumber)
-                        .collection("customers")
-                        .document(invoice.customerId)
-                        .update("currentBalance", newBalance)
-                        .await()
-                }
-            } catch (e: Exception) {
-                // Log error but continue with deletion
-                Log.e("InvoiceRepository", "Error updating customer balance during invoice deletion", e)
+            // Revert customer balance
+            invoice?.let {
+                updateCustomerBalanceOnDeletion(it)
             }
+
+            // Delete the invoice
+            getUserCollection("invoices")
+                .document(invoiceNumber)
+                .delete()
+                .await()
+
+            Result.success(Unit)
         }
-
-        // Delete the invoice from Firestore
-        firestore.collection("users")
-            .document(phoneNumber)
-            .collection("invoices")
-            .document(invoiceNumber)
-            .delete()
-            .await()
-
-        Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "Error deleting invoice", e)
         Result.failure(e)
     }
 
+    // Separate method to revert customer balance during invoice deletion
+    private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice) {
+        try {
+            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
 
+            val customerDoc = getUserCollection("customers")
+                .document(invoice.customerId)
+                .get()
+                .await()
+
+            val customer = customerDoc.toObject<Customer>()
+
+            customer?.let {
+                val newBalance = it.currentBalance - unpaidAmount
+                getUserCollection("customers")
+                    .document(invoice.customerId)
+                    .update("currentBalance", newBalance)
+                    .await()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating customer balance during invoice deletion", e)
+        }
+    }
+
+    // Optimized paginated invoice fetching
     suspend fun fetchInvoicesPaginated(
         loadNextPage: Boolean = false,
         source: Source = Source.DEFAULT
     ): Result<List<Invoice>> {
+        // Reset pagination if not loading next page
+        if (!loadNextPage) {
+            lastDocumentSnapshot = null
+            isLastPage = false
+        }
+
+        // Return empty list if we've reached the last page
+        if (isLastPage) {
+            return Result.success(emptyList())
+        }
+
         return try {
-            val currentUser = auth.currentUser
-                ?: throw UserNotAuthenticatedException("User not authenticated.")
-            val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-                ?: throw PhoneNumberInvalidException("User phone number not available.")
-
-            // Reset pagination if not loading next page
-            if (!loadNextPage) {
-                lastDocumentSnapshot = null
-                isLastPage = false
-            }
-
-            // Return empty list if we've reached the last page
-            if (isLastPage) {
-                return Result.success(emptyList())
-            }
-
-            // Build query with pagination, ordering by invoice date descending (newest first)
-            var query = firestore.collection("users")
-                .document(phoneNumber)
-                .collection("invoices")
+            // Build query with pagination
+            var query = getUserCollection("invoices")
                 .orderBy("invoiceDate", Query.Direction.DESCENDING)
-                .limit(pageSize.toLong())
+                .limit(PAGE_SIZE.toLong())
 
             // Add start after clause if we have a previous page
             if (loadNextPage && lastDocumentSnapshot != null) {
@@ -222,9 +206,7 @@ class InvoiceRepository(
             val snapshot = query.get(source).await()
 
             // Update pagination state
-            if (snapshot.documents.size < pageSize) {
-                isLastPage = true
-            }
+            isLastPage = snapshot.documents.size < PAGE_SIZE
 
             // Save the last document for next page query
             if (snapshot.documents.isNotEmpty()) {
@@ -236,33 +218,30 @@ class InvoiceRepository(
         } catch (e: Exception) {
             // If using cache and got an error, try from server
             if (source == Source.CACHE) {
-                return fetchInvoicesPaginated(loadNextPage, Source.SERVER)
+                fetchInvoicesPaginated(loadNextPage, Source.SERVER)
+            } else {
+                Log.e(TAG, "Error fetching invoices", e)
+                Result.failure(e)
             }
-            Result.failure(e)
         }
     }
 
+    // Get invoice by number with improved error handling
     suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> = try {
-        val currentUser = auth.currentUser
-            ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
-
-        val document = firestore.collection("users")
-            .document(phoneNumber)
-            .collection("invoices")
+        val document = getUserCollection("invoices")
             .document(invoiceNumber)
             .get()
             .await()
 
         if (document.exists()) {
-            val invoice = document.toObject(Invoice::class.java)
-                ?: throw Exception("Failed to convert document to Invoice")
-            Result.success(invoice)
+            document.toObject<Invoice>()
+                ?.let { Result.success(it) }
+                ?: Result.failure(Exception("Failed to convert document to Invoice"))
         } else {
             Result.failure(Exception("Invoice not found"))
         }
     } catch (e: Exception) {
+        Log.e(TAG, "Error getting invoice by number", e)
         Result.failure(e)
     }
 }

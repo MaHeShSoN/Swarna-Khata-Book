@@ -19,4 +19,6 @@
     <string name="available_credit">Available Credit:</string>
     <string name="credit_usage">Credit Usage</string>
     <string name="credit_limit_usage">Credit Limit Usage</string>
+    <string name="edit_notes">Edit</string>
+    <string name="save_notes">Save</string>
 </resources>

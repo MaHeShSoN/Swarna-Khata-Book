@@ -53,8 +53,7 @@ class DashBoardFragment : Fragment() {
         NotificationScheduler.scheduleNotificationCheck(requireContext())
 
         binding.topAppBar.menu.findItem(R.id.action_notifications).setOnMenuItemClickListener { menuItem ->
-            val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-            parentNavController.navigate(R.id.action_mainScreenFragment_to_notificationFragment)
+            navigateToNotificationFragment()
             true
         }
 
@@ -65,6 +64,12 @@ class DashBoardFragment : Fragment() {
 
         // Inflate the layout for this fragment
         return binding.root
+    }
+
+    // Add this method to handle navigation
+    private fun navigateToNotificationFragment() {
+        val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+        parentNavController.navigate(R.id.action_mainScreenFragment_to_notificationFragment)
     }
 
     private fun updateNotificationBadge(count: Int) {
@@ -89,7 +94,7 @@ class DashBoardFragment : Fragment() {
 
                 // Set click listener
                 actionView.setOnClickListener {
-                    onOptionsItemSelected(menuItem)
+                    navigateToNotificationFragment()
                 }
 
                 // Set as action view

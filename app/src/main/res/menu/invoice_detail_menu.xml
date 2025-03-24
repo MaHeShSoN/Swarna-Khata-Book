@@ -3,11 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
 
-    <item
-        android:id="@+id/action_edit"
-        android:icon="@drawable/material_symbols__edit_rounded"
-        android:title="Edit Invoice"
-        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_duplicate"
