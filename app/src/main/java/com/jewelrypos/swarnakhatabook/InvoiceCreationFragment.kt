@@ -4,6 +4,7 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -45,6 +46,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 
 class InvoiceCreationFragment : Fragment() {
@@ -338,13 +340,25 @@ class InvoiceCreationFragment : Fragment() {
             return Triple(false, 0.0, 0.0)
         }
 
+        // Determine the current balance
         val currentBalance = customer.currentBalance
-        val unpaidAmount = salesViewModel.calculateTotal() - salesViewModel.calculateTotalPaid()
+
+        // Calculate the unpaid amount of this new invoice
+        val invoiceTotal = salesViewModel.calculateTotal()
+        val paidAmount = salesViewModel.calculateTotalPaid()
+        val unpaidAmount = invoiceTotal - paidAmount
+
+        // The new balance would be the current balance plus the unpaid amount
         val newBalance = currentBalance + unpaidAmount
+
+        // Log the check for debugging
+        Log.d("InvoiceCreation", "Credit limit check: current=$currentBalance, new=$newBalance, " +
+                "limit=${customer.creditLimit}, unpaid=$unpaidAmount")
 
         // Check if new balance would exceed credit limit
         return Triple(newBalance > customer.creditLimit, currentBalance, newBalance)
     }
+
 
     private fun selectCustomer() {
         val customerListBottomSheet = CustomerListBottomSheet.newInstance()
@@ -512,8 +526,19 @@ class InvoiceCreationFragment : Fragment() {
             return
         }
 
-        // Check credit limit
-        val (exceedsLimit, currentBalance, newBalance) = wouldExceedCreditLimit()
+        // Check credit limit using the utility class
+        val customer = salesViewModel.selectedCustomer.value ?: return
+
+        // Create a temporary Invoice object just for credit limit checking
+        val tempInvoice = createInvoiceObject()
+
+        // Use the utility to check credit limit
+        val (exceedsLimit, currentBalance, newBalance) =
+            com.jewelrypos.swarnakhatabook.Utilitys.CustomerBalanceUtils.wouldExceedCreditLimit(
+                customer = customer,
+                invoice = tempInvoice,
+                previousInvoice = null // New invoice
+            )
 
         if (exceedsLimit) {
             // Show warning dialog
@@ -522,6 +547,47 @@ class InvoiceCreationFragment : Fragment() {
             // Proceed with saving invoice
             proceedWithSavingInvoice()
         }
+    }
+
+    private fun createInvoiceObject(): Invoice {
+        val customer = salesViewModel.selectedCustomer.value
+            ?: throw IllegalStateException("Customer must be selected")
+
+        val invoiceNumber = generateInvoiceNumber()
+
+        val invoiceItems = itemsAdapter.getItems().map { selected ->
+            InvoiceItem(
+                itemId = selected.item.id,
+                quantity = selected.quantity,
+                itemDetails = selected.item,
+                price = selected.price
+            )
+        }
+
+        val payments = paymentsAdapter.getPayments()
+        val totalAmount = salesViewModel.calculateTotal()
+        val paidAmount = salesViewModel.calculateTotalPaid()
+
+        // Get customer address components
+        val address = if (customer.streetAddress.isNotEmpty()) {
+            "${customer.streetAddress}, ${customer.city}, ${customer.state}"
+        } else {
+            "${customer.city}, ${customer.state}"
+        }
+
+        return Invoice(
+            invoiceNumber = invoiceNumber,
+            customerId = customer.id,
+            customerName = "${customer.firstName} ${customer.lastName}",
+            customerPhone = customer.phoneNumber,
+            customerAddress = address,
+            invoiceDate = System.currentTimeMillis(),
+            items = invoiceItems,
+            payments = payments,
+            totalAmount = totalAmount,
+            paidAmount = paidAmount,
+            notes = binding.notesEditText.text.toString()
+        )
     }
 
     /**
@@ -548,15 +614,18 @@ class InvoiceCreationFragment : Fragment() {
             val messageTextView = view.findViewById<TextView>(R.id.creditWarningMessage)
             val detailsTextView = view.findViewById<TextView>(R.id.creditWarningDetails)
 
-            // Set message text
+            // Set message text with customer name and credit limit
             val message = "This invoice will exceed ${customer.firstName} ${customer.lastName}'s credit limit."
             messageTextView?.text = message
 
-            // Set details text
+            // Calculate amount over limit
+            val overLimitAmount = newBalance - customer.creditLimit
+
+            // Set details text with detailed financial information
             val details = "Current Balance: ₹${formatter.format(currentBalance)}\n" +
                     "New Balance: ₹${formatter.format(newBalance)}\n" +
                     "Credit Limit: ₹${formatter.format(customer.creditLimit)}\n" +
-                    "Amount Over Limit: ₹${formatter.format(newBalance - customer.creditLimit)}"
+                    "Amount Over Limit: ₹${formatter.format(overLimitAmount)}"
             detailsTextView?.text = details
         }
 
@@ -566,62 +635,90 @@ class InvoiceCreationFragment : Fragment() {
     /**
      * Proceeds with saving the invoice after validation and warnings
      */
+    /**
+     * Proceeds with saving the invoice after validation and warnings
+     * With improved error handling
+     */
     private fun proceedWithSavingInvoice() {
-        // Create invoice object
-        val invoiceNumber = generateInvoiceNumber()
-        val customer = salesViewModel.selectedCustomer.value
-            ?: throw IllegalStateException("Customer must be selected")
+        try {
+            // Create invoice object
+            val invoiceNumber = generateInvoiceNumber()
+            val customer = salesViewModel.selectedCustomer.value
+                ?: throw IllegalStateException("Customer must be selected")
 
-        val invoiceItems = itemsAdapter.getItems().map { selected ->
-            InvoiceItem(
-                itemId = selected.item.id,
-                quantity = selected.quantity,
-                itemDetails = selected.item,
-                price = selected.price
-            )
-        }
+            // Log the customer information for debugging
+            Log.d("InvoiceCreation", "Customer selected: ${customer.firstName} ${customer.lastName}, " +
+                    "id: ${customer.id}, balanceType: ${customer.balanceType}")
 
-        val payments = paymentsAdapter.getPayments()
-        val totalAmount = salesViewModel.calculateTotal()
-        val paidAmount = salesViewModel.calculateTotalPaid()
-
-        // Get customer address components
-        val address = if (customer.streetAddress.isNotEmpty()) {
-            "${customer.streetAddress}, ${customer.city}, ${customer.state}"
-        } else {
-            "${customer.city}, ${customer.state}"
-        }
-
-        val invoice = Invoice(
-            invoiceNumber = invoiceNumber,
-            customerId = customer.id,
-            customerName = "${customer.firstName} ${customer.lastName}",
-            customerPhone = customer.phoneNumber,     // Include phone
-            customerAddress = address,                // Include address
-            invoiceDate = System.currentTimeMillis(),
-            items = invoiceItems,
-            payments = payments,
-            totalAmount = totalAmount,
-            paidAmount = paidAmount,
-            // You might want to add these fields as well
-            notes = binding.notesEditText.text.toString()
-        )
-
-        // Show loading state
-        binding.progressOverlay.visibility = View.VISIBLE
-
-        // Save the invoice
-        salesViewModel.saveInvoice(invoice) { success ->
-            // Hide loading state
-            binding.progressOverlay.visibility = View.GONE
-
-            if (success) {
-                Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
-                EventBus.postInvoiceAdded()
-                findNavController().navigateUp()
-            } else {
-                Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+            val invoiceItems = itemsAdapter.getItems().map { selected ->
+                InvoiceItem(
+                    id = UUID.randomUUID().toString(), // Ensure each item has a unique ID
+                    itemId = selected.item.id,
+                    quantity = selected.quantity,
+                    itemDetails = selected.item,
+                    price = selected.price
+                )
             }
+
+            // Validate that we have items
+            if (invoiceItems.isEmpty()) {
+                Toast.makeText(context, "Please add at least one item", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val payments = paymentsAdapter.getPayments()
+            val totalAmount = salesViewModel.calculateTotal()
+            val paidAmount = salesViewModel.calculateTotalPaid()
+
+            // Get customer address components
+            val address = if (customer.streetAddress.isNotEmpty()) {
+                "${customer.streetAddress}, ${customer.city}, ${customer.state}"
+            } else {
+                "${customer.city}, ${customer.state}"
+            }
+
+            val invoice = Invoice(
+                id = "", // Let repository assign ID based on invoice number
+                invoiceNumber = invoiceNumber,
+                customerId = customer.id,
+                customerName = "${customer.firstName} ${customer.lastName}",
+                customerPhone = customer.phoneNumber,
+                customerAddress = address,
+                invoiceDate = System.currentTimeMillis(),
+                items = invoiceItems,
+                payments = payments,
+                totalAmount = totalAmount,
+                paidAmount = paidAmount,
+                notes = binding.notesEditText.text.toString()
+            )
+
+            // Log the invoice details for debugging
+            Log.d("InvoiceCreation", "Saving invoice: number=$invoiceNumber, " +
+                    "items=${invoiceItems.size}, total=$totalAmount, paid=$paidAmount")
+
+            // Show loading state
+            binding.progressOverlay.visibility = View.VISIBLE
+
+            // Save the invoice
+            salesViewModel.saveInvoice(invoice) { success ->
+                // Always hide loading on the UI thread
+                requireActivity().runOnUiThread {
+                    binding.progressOverlay.visibility = View.GONE
+
+                    if (success) {
+                        Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+                        EventBus.postInvoiceAdded()
+                        findNavController().navigateUp()
+                    } else {
+                        Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Handle any unexpected errors
+            Log.e("InvoiceCreation", "Error saving invoice", e)
+            binding.progressOverlay.visibility = View.GONE
+            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 

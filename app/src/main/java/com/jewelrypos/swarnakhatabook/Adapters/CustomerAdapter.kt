@@ -50,23 +50,20 @@ class CustomerAdapter(
         holder.customerName.text = "${currentCustomer.firstName} ${currentCustomer.lastName}"
         holder.customerType.text = currentCustomer.customerType
 
-        // Determine the balance text (now using both opening balance and current balance)
+        // Determine the balance text - always use currentBalance for consistency
         val balanceText = when {
-            // If there's a current balance that's different from opening balance, show both
             currentCustomer.currentBalance != 0.0 -> {
                 when {
                     currentCustomer.balanceType == "Credit" && currentCustomer.currentBalance > 0 ->
                         "To Receive: ₹${formatter.format(currentCustomer.currentBalance)}"
+
                     currentCustomer.balanceType == "Debit" && currentCustomer.currentBalance > 0 ->
                         "To Pay: ₹${formatter.format(currentCustomer.currentBalance)}"
+
                     else -> "Balance: ₹${formatter.format(currentCustomer.currentBalance)}"
                 }
             }
-            // Otherwise fall back to showing just the opening balance
-            currentCustomer.balanceType == "Credit" && currentCustomer.openingBalance > 0 ->
-                "Opening: To Receive: ₹${formatter.format(currentCustomer.openingBalance)}"
-            currentCustomer.balanceType == "Debit" && currentCustomer.openingBalance > 0 ->
-                "Opening: To Pay: ₹${formatter.format(currentCustomer.openingBalance)}"
+
             else -> "Balance: ₹0.00"
         }
         holder.customerBalance.text = balanceText
@@ -82,14 +79,18 @@ class CustomerAdapter(
             )
         }
 
-        // Show credit limit information if applicable
+        // Show credit limit information if applicable - using the imported utility
         if (currentCustomer.balanceType == "Credit" &&
             currentCustomer.creditLimit > 0.0 &&
-            currentCustomer.currentBalance > 0.0) {
+            currentCustomer.currentBalance > 0.0
+        ) {
 
-            val percentage = calculateCreditUsagePercentage(currentCustomer)
+            // Import the utility for consistency
+            val percentage = com.jewelrypos.swarnakhatabook.Utilitys.CustomerBalanceUtils
+                .calculateCreditUsagePercentage(currentCustomer)
+
             holder.creditLimitContainer.visibility = View.VISIBLE
-            holder.creditLimitProgress.progress = percentage.toInt()
+            holder.creditLimitProgress.progress = percentage
             holder.creditLimitPercentage.text = "$percentage%"
 
             // Set progress color based on percentage
@@ -107,6 +108,17 @@ class CustomerAdapter(
             holder.creditLimitPercentage.setTextColor(
                 ContextCompat.getColor(holder.itemView.context, progressColor)
             )
+
+            // Add visual indicator if customer is over credit limit
+            if (percentage >= 100) {
+                holder.customerBalance.setTextColor(
+                    ContextCompat.getColor(holder.itemView.context, R.color.status_unpaid)
+                )
+            } else {
+                holder.customerBalance.setTextColor(
+                    ContextCompat.getColor(holder.itemView.context, R.color.my_light_on_surface)
+                )
+            }
         } else {
             holder.creditLimitContainer.visibility = View.GONE
         }
@@ -114,8 +126,6 @@ class CustomerAdapter(
         holder.itemView.setOnClickListener {
             itemClickListener?.onCustomerClick(currentCustomer)
         }
-
-        // Apply animation
         setAnimation(holder.itemView, position)
     }
 

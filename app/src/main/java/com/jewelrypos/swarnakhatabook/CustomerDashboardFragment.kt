@@ -236,7 +236,7 @@ class CustomerDashboardFragment : Fragment() {
 
     /**
      * Updates the credit limit section in the customer detail view
-     * Add this method to your CustomerDetailFragment/Activity
+     * Uses current balance for all calculations for consistency
      */
     private fun updateCreditLimitSection(customer: Customer) {
         val formatter = DecimalFormat("#,##,##0.00")
@@ -247,7 +247,8 @@ class CustomerDashboardFragment : Fragment() {
 
             // Calculate available credit and usage percentage
             val availableCredit = maxOf(0.0, customer.creditLimit - customer.currentBalance)
-            val usagePercentage = calculateCreditUsagePercentage(customer)
+            val usagePercentage = com.jewelrypos.swarnakhatabook.Utilitys.CustomerBalanceUtils
+                .calculateCreditUsagePercentage(customer)
 
             // Update text fields
             binding.currentBalanceValue.text = "₹${formatter.format(customer.currentBalance)}"
@@ -269,6 +270,11 @@ class CustomerDashboardFragment : Fragment() {
                 ContextCompat.getColor(requireContext(), progressColor)
             )
 
+            // Set credit limit percentage text color to match progress
+            binding.creditLimitDetailPercentage.setTextColor(
+                ContextCompat.getColor(requireContext(), progressColor)
+            )
+
             // Set available credit text color based on amount
             val availableCreditColor = when {
                 availableCredit <= 0 -> R.color.status_unpaid // Red when no credit left
@@ -279,6 +285,17 @@ class CustomerDashboardFragment : Fragment() {
             binding.availableCreditValue.setTextColor(
                 ContextCompat.getColor(requireContext(), availableCreditColor)
             )
+
+            // If over credit limit, make the current balance text red
+            if (customer.currentBalance > customer.creditLimit) {
+                binding.currentBalanceValue.setTextColor(
+                    ContextCompat.getColor(requireContext(), R.color.status_unpaid)
+                )
+            } else {
+                binding.currentBalanceValue.setTextColor(
+                    ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+                )
+            }
         } else {
             binding.creditLimitDetailCard.visibility = View.GONE
         }

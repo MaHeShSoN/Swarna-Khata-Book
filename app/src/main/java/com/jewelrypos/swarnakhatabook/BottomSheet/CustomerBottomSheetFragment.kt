@@ -317,18 +317,27 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             clearForm()
         }
     }
+
+
     private fun createCustomerFromForm(): Customer {
         val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
         val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
         val creditLimit = binding.creditLimitField.text.toString().toDoubleOrNull() ?: 0.0
 
-        // For new customers, set currentBalance to match openingBalance
-        // For existing customers being edited, keep their current balance
+        // Determine the current balance properly
         val currentBalance = if (isEditMode && existingCustomerId != null) {
-            // For edited customers, get the existing currentBalance from the original customer object
+            // For edited customers, we need to preserve their current balance to maintain
+            // the accumulated invoice history
             arguments?.let {
                 val customer = it.getSerializable(ARG_CUSTOMER) as? Customer
-                customer?.currentBalance ?: openingBalance
+                if (customer != null) {
+                    // If opening balance is changed in the form but we have an existing customer,
+                    // we need to adjust the current balance by the same amount
+                    val balanceDifference = openingBalance - customer.openingBalance
+                    customer.currentBalance + balanceDifference
+                } else {
+                    openingBalance
+                }
             } ?: openingBalance
         } else {
             // For new customers, set currentBalance equal to openingBalance
@@ -349,7 +358,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             country = binding.countryDropdown.text.toString(),
             balanceType = balanceType,
             openingBalance = openingBalance,
-            currentBalance = currentBalance, // Set the current balance
+            currentBalance = currentBalance, // Use the properly calculated current balance
             balanceNotes = binding.balanceNotesField.text.toString(),
             creditLimit = creditLimit,
             businessName = binding.businessNameField.text.toString(),
@@ -363,42 +372,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             lastUpdatedAt = System.currentTimeMillis()
         )
     }
-
-
-
-//    private fun createCustomerFromForm(): Customer {
-//        val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
-//        val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
-//        val creditLimit = binding.creditLimitField.text.toString().toDoubleOrNull() ?: 0.0
-//
-//        return Customer(
-//            id = existingCustomerId ?: "",
-//            customerType = binding.customerTypeDropdown.text.toString(),
-//            firstName = binding.firstNameField.text.toString(),
-//            lastName = binding.lastNameField.text.toString(),
-//            phoneNumber = binding.phoneNumberField.text.toString(),
-//            email = binding.emailField.text.toString(),
-//            streetAddress = binding.streetAddressField.text.toString(),
-//            city = binding.cityField.text.toString(),
-//            state = binding.stateField.text.toString(),
-//            postalCode = binding.postalCodeField.text.toString(),
-//            country = binding.countryDropdown.text.toString(),
-//            balanceType = balanceType,
-//            openingBalance = openingBalance,
-//            balanceNotes = binding.balanceNotesField.text.toString(),
-//            creditLimit = creditLimit,
-//            businessName = binding.businessNameField.text.toString(),
-//            gstNumber = binding.gstNumberField.text.toString(),
-//            taxId = binding.taxIdField.text.toString(),
-//            customerSince = binding.customerSinceDateField.text.toString(),
-//            referredBy = binding.referredByField.text.toString(),
-//            birthday = binding.birthdayField.text.toString(),
-//            anniversary = binding.anniversaryField.text.toString(),
-//            notes = binding.notesField.text.toString(),
-//            lastUpdatedAt = System.currentTimeMillis()
-//        )
-//    }
-
 
 
     private fun populateFormWithCustomerData(customer: Customer) {

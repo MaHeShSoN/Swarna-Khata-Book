@@ -293,21 +293,60 @@ class CustomerViewModel(
         reason: String
     ) {
         _isLoading.value = true
-        viewModelScope.launch {
-            repository.updateCustomerCreditLimit(customerId, currentLimit, newLimit, reason).fold(
-                onSuccess = { updatedCustomer ->
-                    // Refresh the customers list to reflect the new limit
-                    refreshData()
-                    _isLoading.value = false
+        _errorMessage.value = null
 
-                    // Optionally load the history
-                    loadCreditLimitHistory(customerId)
-                },
-                onFailure = { exception ->
-                    _errorMessage.value = exception.message
-                    _isLoading.value = false
-                }
-            )
+        viewModelScope.launch {
+            try {
+                // First get the customer to validate balance type
+                val customerResult = repository.getCustomerById(customerId)
+
+                customerResult.fold(
+                    onSuccess = { customer ->
+                        // Only proceed if this is a Credit type customer
+                        if (customer.balanceType != "Credit") {
+                            _errorMessage.value = "Credit limits only apply to Credit type customers"
+                            _isLoading.value = false
+                            return@fold
+                        }
+
+                        // Check if reducing credit limit would put customer over limit
+                        if (newLimit < currentLimit && customer.currentBalance > newLimit) {
+                            // Show warning but still allow the change
+                            _errorMessage.value = "Warning: New credit limit is below customer's current balance"
+                        }
+
+                        // Now update the credit limit
+                        repository.updateCustomerCreditLimit(customerId, currentLimit, newLimit, reason).fold(
+                            onSuccess = { updatedCustomer ->
+                                // Refresh the customers list to reflect the new limit
+                                refreshData()
+
+                                // Load the history
+                                loadCreditLimitHistory(customerId)
+
+                                // Log the change
+                                Log.d("CustomerViewModel", "Credit limit updated from $currentLimit to $newLimit for customer $customerId")
+
+                                _isLoading.value = false
+                            },
+                            onFailure = { exception ->
+                                _errorMessage.value = "Failed to update credit limit: ${exception.message}"
+                                _isLoading.value = false
+                                Log.e("CustomerViewModel", "Error updating credit limit", exception)
+                            }
+                        )
+                    },
+                    onFailure = { exception ->
+                        _errorMessage.value = "Failed to retrieve customer: ${exception.message}"
+                        _isLoading.value = false
+                        Log.e("CustomerViewModel", "Error retrieving customer for credit limit update", exception)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "Unexpected error: ${e.message}"
+                _isLoading.value = false
+                Log.e("CustomerViewModel", "Unexpected error in updateCustomerCreditLimit", e)
+            }
         }
     }
 

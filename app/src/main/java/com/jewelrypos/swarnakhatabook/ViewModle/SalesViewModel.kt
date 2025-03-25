@@ -270,24 +270,39 @@ class SalesViewModel(
     }
 
     // Save a new invoice
+    // Save a new invoice with improved error handling
     fun saveInvoice(invoice: Invoice, callback: (Boolean) -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
-            repository.saveInvoice(invoice).fold(
-                onSuccess = {
-                    // Refresh invoices list after saving
-                    refreshInvoices()
-                    // Clear current invoice data
-                    clearCurrentInvoice()
-                    callback(true)
-                    _isLoading.value = false
-                },
-                onFailure = {
-                    _errorMessage.value = "Failed to save invoice: ${it.message}"
-                    callback(false)
-                    _isLoading.value = false
-                }
-            )
+            try {
+                // Log the saving attempt for debugging
+                Log.d("SalesViewModel", "Saving invoice: ${invoice.invoiceNumber}, " +
+                        "items: ${invoice.items.size}, payments: ${invoice.payments.size}")
+
+                // Try to save the invoice
+                repository.saveInvoice(invoice).fold(
+                    onSuccess = {
+                        // Refresh invoices list after saving
+                        refreshInvoices()
+                        // Clear current invoice data
+                        clearCurrentInvoice()
+                        _isLoading.value = false
+                        callback(true)
+                        Log.d("SalesViewModel", "Invoice saved successfully: ${invoice.invoiceNumber}")
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to save invoice: ${error.message}"
+                        _isLoading.value = false
+                        callback(false)
+                        Log.e("SalesViewModel", "Failed to save invoice: ${error.message}", error)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "Unexpected error: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+                Log.e("SalesViewModel", "Unexpected error saving invoice", e)
+            }
         }
     }
 
