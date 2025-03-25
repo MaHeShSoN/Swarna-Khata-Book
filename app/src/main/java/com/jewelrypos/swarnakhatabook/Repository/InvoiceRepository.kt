@@ -49,9 +49,33 @@ class InvoiceRepository(
                 invoice
             }
 
-            // Concurrent stock and customer balance updates
+            // Get the existing invoice to calculate the balance difference (for updates)
+            val existingInvoice = if (invoiceWithId.id.isNotEmpty()) {
+                try {
+                    getUserCollection("invoices")
+                        .document(invoiceWithId.id)
+                        .get()
+                        .await()
+                        .toObject(Invoice::class.java)
+                } catch (e: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+
+            // Calculate how this affects the customer's balance
+            val unpaidAmountBefore = existingInvoice?.let { it.totalAmount - it.paidAmount } ?: 0.0
+            val unpaidAmountAfter = invoice.totalAmount - invoice.paidAmount
+            val balanceChange = unpaidAmountAfter - unpaidAmountBefore
+
+            // Update stock (can run concurrently)
             val stockUpdateJob = async { updateInventoryStock(invoice) }
-            val customerBalanceJob = async { updateCustomerBalance(invoice) }
+
+            // Update customer balance with the calculated difference
+            val customerBalanceJob = async {
+                updateCustomerBalanceWithDifference(invoice.customerId, balanceChange)
+            }
 
             // Wait for both jobs to complete
             stockUpdateJob.await()
@@ -68,6 +92,32 @@ class InvoiceRepository(
     } catch (e: Exception) {
         Log.e(TAG, "Error saving invoice", e)
         Result.failure(e)
+    }
+
+    // Update customer balance by the difference amount
+    private suspend fun updateCustomerBalanceWithDifference(customerId: String, balanceChange: Double) {
+        try {
+            if (balanceChange == 0.0) return // No change needed
+
+            val customerDoc = getUserCollection("customers")
+                .document(customerId)
+                .get()
+                .await()
+
+            val customer = customerDoc.toObject<Customer>()
+
+            customer?.let {
+                val newBalance = it.currentBalance + balanceChange
+                getUserCollection("customers")
+                    .document(customerId)
+                    .update("currentBalance", newBalance)
+                    .await()
+
+                Log.d(TAG, "Updated customer balance from ${it.currentBalance} to $newBalance")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating customer balance", e)
+        }
     }
 
     // Separate method for inventory stock update

@@ -300,21 +300,26 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             binding.taxRateInputLayout.visibility = View.GONE
         }
 
+        setUpInitalRecyclerView()
+
 
 
         if (item.listOfExtraCharges.isNotEmpty()) {
-            // Make sure chargeAdapter is initialized
-            if (!::chargeAdapter.isInitialized) {
-                setUpInitalRecyclerView()
-            }
+            // Clear any existing charges first (important!)
+            chargeAdapter.updateCharges(emptyList())
 
-            // Add all extra charges to the adapter
+            // Add all extra charges to the adapter one by one
             item.listOfExtraCharges.forEach { charge ->
+                android.util.Log.d("ItemSelection", "Adding charge: ${charge.name} = ${charge.amount}")
                 chargeAdapter.addCharge(charge)
             }
+        } else {
+            // Clear any existing charges if the item has none
+            chargeAdapter.updateCharges(emptyList())
+            android.util.Log.d("ItemSelection", "No extra charges to display")
         }
 
-        setUpInitalRecyclerView()
+
         // Update calculated fields
         updateCalculatedFields()
 
@@ -552,6 +557,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val goldValue = calculateGoldValue()
         val makingCharges = calculateMakingCharges()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
+
 
         return goldValue + makingCharges + diamondPrice
     }
@@ -798,7 +804,22 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun updateChargesVisibility() {
-        if (::chargeAdapter.isInitialized && chargeAdapter.getExtraChargeList().isNotEmpty()) {
+        // First check if the chargeAdapter is initialized
+        if (!::chargeAdapter.isInitialized) {
+            // If adapter isn't initialized, hide everything
+            binding.chargesRecyclerView.visibility = View.GONE
+            binding.emptyExtraChargesText.visibility = View.VISIBLE
+            android.util.Log.d("ItemSelection", "Charge adapter not initialized")
+            return
+        }
+
+        // Get the current charges list
+        val charges = chargeAdapter.getExtraChargeList()
+
+        // Log for debugging
+        android.util.Log.d("ItemSelection", "Updating charges visibility. Found ${charges.size} charges")
+
+        if (charges.isNotEmpty()) {
             // Show RecyclerView, hide empty state text
             binding.chargesRecyclerView.visibility = View.VISIBLE
             binding.emptyExtraChargesText.visibility = View.GONE
@@ -904,6 +925,16 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             )
         }
 
+        // Get extra charges from adapter if initialized
+        val extraCharges = if (::chargeAdapter.isInitialized) {
+            val charges = chargeAdapter.getExtraChargeList()
+            android.util.Log.d("ItemSelection", "Saving with ${charges.size} extra charges")
+            charges
+        } else {
+            android.util.Log.d("ItemSelection", "Charge adapter not initialized, no charges saved")
+            emptyList()
+        }
+
         // Create a jewelry item object with all the form data
         val jewelryItem = JewelleryItem(
             id = if (editMode && itemToEdit != null) itemToEdit!!.id else selectedItem.id,
@@ -925,7 +956,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             goldRateOn = binding.goldRateOnEditText.text.toString(),
             taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
             totalTax = binding.taxAmountEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            listOfExtraCharges = if (::chargeAdapter.isInitialized) chargeAdapter.getExtraChargeList() else emptyList()
+            listOfExtraCharges = extraCharges
         )
 
         val calculatedPrice = binding.totalChargesEditText.text.toString().toDoubleOrNull() ?: 0.0

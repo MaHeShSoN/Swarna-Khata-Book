@@ -8,6 +8,7 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -1151,6 +1152,8 @@ class InvoiceDetailFragment : Fragment() {
     }
 
     private fun updateInvoiceUI(invoice: Invoice) {
+        Log.d("InvoiceDetailFragment", "Updating UI with invoice: ${invoice.invoiceNumber}, items: ${invoice.items.size}")
+
         // Update invoice header details
         binding.invoiceNumber.text = invoice.invoiceNumber
 
@@ -1172,7 +1175,7 @@ class InvoiceDetailFragment : Fragment() {
         // Update financial information
         updateFinancialDetails(invoice)
 
-        // Update extra charges
+        // Update extra charges - make sure this happens after items are updated
         updateExtraChargesDisplay(invoice)
 
         // Update payments list
@@ -1180,7 +1183,11 @@ class InvoiceDetailFragment : Fragment() {
 
         // Update notes
         updateNotesDisplay(invoice)
+
+        Log.d("InvoiceDetailFragment", "UI update complete")
     }
+
+
 
     private fun updatePaymentStatus(invoice: Invoice) {
         val balanceDue = invoice.totalAmount - invoice.paidAmount
@@ -1203,10 +1210,17 @@ class InvoiceDetailFragment : Fragment() {
 
     private fun updateFinancialDetails(invoice: Invoice) {
         val currencyFormatter = DecimalFormat("#,##,##0.00")
+        val subtotal = calculateSubtotal(invoice)
+        val extraCharges = calculateExtraCharges(invoice)
+        val tax = calculateTax(invoice)
         val balanceDue = invoice.totalAmount - invoice.paidAmount
 
-        binding.subtotalValue.text = "₹${currencyFormatter.format(calculateSubtotal(invoice))}"
-        binding.taxValue.text = "₹${currencyFormatter.format(calculateTax(invoice))}"
+        binding.subtotalValue.text = "₹${currencyFormatter.format(subtotal)}"
+
+        // If you have a UI element to display extra charges total:
+        // binding.extraChargesValue.text = "₹${currencyFormatter.format(extraCharges)}"
+
+        binding.taxValue.text = "₹${currencyFormatter.format(tax)}"
         binding.totalValue.text = "₹${currencyFormatter.format(invoice.totalAmount)}"
         binding.amountPaidValue.text = "₹${currencyFormatter.format(invoice.paidAmount)}"
         binding.balanceDueValue.text = "₹${currencyFormatter.format(balanceDue)}"
@@ -1233,13 +1247,24 @@ class InvoiceDetailFragment : Fragment() {
             binding.notesContent.text = invoice.notes
         }
     }
+    private fun calculateExtraCharges(invoice: Invoice): Double {
+        return invoice.items.sumOf { item ->
+            item.itemDetails.listOfExtraCharges.sumOf { charge ->
+                charge.amount * item.quantity
+            }
+        }
+    }
 
     private fun calculateSubtotal(invoice: Invoice): Double {
         return invoice.items.sumOf { it.price * it.quantity }
     }
 
     private fun calculateTax(invoice: Invoice): Double {
-        return invoice.totalAmount - calculateSubtotal(invoice)
+        val subtotal = calculateSubtotal(invoice)
+        val extraCharges = calculateExtraCharges(invoice)
+
+        // Tax is whatever remains after subtracting subtotal and extra charges
+        return invoice.totalAmount - subtotal - extraCharges
     }
 
     private fun setupAddItemButton() {
@@ -1325,8 +1350,10 @@ class InvoiceDetailFragment : Fragment() {
         paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
     }
 
+
     private fun openItemEditor(item: InvoiceItem) {
         val bottomSheet = ItemSelectionBottomSheet.newInstance()
+        // Pass the current item for editing
         bottomSheet.setItemForEdit(item.itemDetails)
 
         bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
@@ -1335,11 +1362,14 @@ class InvoiceDetailFragment : Fragment() {
             }
 
             override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                // Create updated item
+                Log.d("InvoiceDetailFragment", "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges")
+
+                // Create updated item while preserving the ID
                 val updatedInvoiceItem = InvoiceItem(
-                    itemId = item.itemId,
+                    id = item.id,            // Preserve original ID
+                    itemId = item.itemId,    // Preserve original item ID
                     quantity = item.quantity,
-                    itemDetails = updatedItem,
+                    itemDetails = updatedItem, // Use the updated item details which include extra charges
                     price = price
                 )
 
@@ -1350,6 +1380,32 @@ class InvoiceDetailFragment : Fragment() {
 
         bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
     }
+
+//    private fun openItemEditor(item: InvoiceItem) {
+//        val bottomSheet = ItemSelectionBottomSheet.newInstance()
+//        bottomSheet.setItemForEdit(item.itemDetails)
+//
+//        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+//            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+//                // This shouldn't happen during editing
+//            }
+//
+//            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+//                // Create updated item
+//                val updatedInvoiceItem = InvoiceItem(
+//                    itemId = item.itemId,
+//                    quantity = item.quantity,
+//                    itemDetails = updatedItem,
+//                    price = price
+//                )
+//
+//                // Update in viewmodel
+//                viewModel.updateInvoiceItem(updatedInvoiceItem)
+//            }
+//        })
+//
+//        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
+//    }
 
     private fun confirmDeleteItem(item: InvoiceItem) {
         AlertDialog.Builder(requireContext())
@@ -1384,13 +1440,38 @@ class InvoiceDetailFragment : Fragment() {
             .show()
     }
 
+
     private fun confirmDeleteInvoice() {
         AlertDialog.Builder(requireContext())
             .setTitle("Delete Invoice")
             .setMessage("Are you sure you want to delete this invoice? This action cannot be undone.")
             .setPositiveButton("Delete") { _, _ ->
-                viewModel.deleteInvoice()
-                findNavController().navigateUp()
+                // Show loading indicator if applicable
+                binding.progressBar.visibility = View.VISIBLE
+
+                // Call deleteInvoice with a completion callback
+                viewModel.deleteInvoice { success ->
+                    // Make sure we're still attached to a context before using it
+                    if (isAdded) {
+                        // Update UI on the main thread
+                        requireActivity().runOnUiThread {
+                            binding.progressBar.visibility = View.GONE
+
+                            if (success) {
+                                // Post the event for refreshing the invoice list
+                                EventBus.postInvoiceDeleted()
+
+                                // Toast.makeText(requireContext(), "Invoice deleted successfully", Toast.LENGTH_SHORT).show()
+
+                                // Only navigate up after successful deletion
+                                findNavController().navigateUp()
+                            } else {
+                                // Show error message if deletion failed
+                                Toast.makeText(requireContext(), "Failed to delete invoice", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -1513,7 +1594,7 @@ class InvoiceDetailFragment : Fragment() {
         }
     }
 
-    // Update extra charges display
+
     private fun updateExtraChargesDisplay(invoice: Invoice) {
         // Clear existing extra charges
         binding.extraChargesContainer.removeAllViews()
@@ -1522,20 +1603,27 @@ class InvoiceDetailFragment : Fragment() {
         val allExtraCharges = mutableListOf<Pair<String, Double>>()
 
         invoice.items.forEach { item ->
+            // Log for debugging
+            Log.d("InvoiceDetailFragment", "Item: ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges")
+
             item.itemDetails.listOfExtraCharges.forEach { charge ->
                 // Multiply each charge by the item quantity
                 allExtraCharges.add(Pair(charge.name, charge.amount * item.quantity))
+                // Log each charge for debugging
+                Log.d("InvoiceDetailFragment", "Adding charge: ${charge.name} = ${charge.amount * item.quantity}")
             }
         }
 
         // If there are no extra charges, hide the container
         if (allExtraCharges.isEmpty()) {
             binding.extraChargesLayout.visibility = View.GONE
+            Log.d("InvoiceDetailFragment", "No extra charges found, hiding container")
             return
         }
 
         // Show the container
         binding.extraChargesLayout.visibility = View.VISIBLE
+        Log.d("InvoiceDetailFragment", "Showing ${allExtraCharges.size} extra charges")
 
         // Create a view for each extra charge
         for (charge in allExtraCharges) {
@@ -1554,6 +1642,7 @@ class InvoiceDetailFragment : Fragment() {
             binding.extraChargesContainer.addView(chargeView)
         }
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

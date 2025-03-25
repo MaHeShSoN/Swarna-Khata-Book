@@ -1,10 +1,13 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.Companion.TAG
 import com.jewelrypos.swarnakhatabook.DataClasses.CreditLimitChange
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import kotlinx.coroutines.tasks.await
@@ -24,6 +27,80 @@ class CustomerRepository(
         val currentUser = auth.currentUser ?: throw UserNotAuthenticatedException("User not authenticated.")
         return currentUser.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
+    }
+
+    // Add to CustomerRepository.kt
+    suspend fun getCustomerInvoiceCount(customerId: String): Result<Int> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        // Get the query snapshot first
+        val snapshot = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("invoices")
+            .whereEqualTo("customerId", customerId)
+            .get()
+            .await()
+
+        // Then get the size of the result set
+        val count = snapshot.size()
+
+        Result.success(count)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
+    suspend fun deleteCustomer(customerId: String): Result<Unit> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        // First, update any invoices to mark them as having a deleted customer
+        val invoices = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("invoices")
+            .whereEqualTo("customerId", customerId)
+            .get()
+            .await()
+
+        // For each invoice, we'll keep the customer name but mark the customerId as deleted
+        invoices.documents.forEach { doc ->
+            try {
+                // Get the current notes value
+                val currentNotes = doc.getString("notes") ?: ""
+
+                // Create the new notes by appending the deletion information
+                val updatedNotes = if (currentNotes.isNotEmpty()) {
+                    "$currentNotes\nCustomer was deleted on ${java.util.Date()}"
+                } else {
+                    "Customer was deleted on ${java.util.Date()}"
+                }
+
+                // Update the document with the correct string format
+                firestore.collection("users")
+                    .document(phoneNumber)
+                    .collection("invoices")
+                    .document(doc.id)
+                    .update(
+                        mapOf(
+                            "customerId" to "DELETED", // Mark as deleted but preserve the data
+                            "notes" to updatedNotes // Use string instead of arrayUnion
+                        )
+                    )
+                    .await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating invoice notes on customer deletion: ${e.message}")
+            }
+        }
+
+        // Now delete the customer
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .delete()
+            .await()
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
     }
 
     // Add a new customer

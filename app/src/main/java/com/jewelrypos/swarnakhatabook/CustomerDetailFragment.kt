@@ -10,6 +10,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -63,9 +64,88 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
         binding.topAppBar.setNavigationOnClickListener {
             findNavController().navigateUp()
         }
-        binding.topAppBar.menu.findItem(R.id.action_edit).setOnMenuItemClickListener { menuItem ->
-            customer?.let { openCustomerEditBottomSheet(it) }
-            true
+        binding.topAppBar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_edit -> {
+                    customer?.let { openCustomerEditBottomSheet(it) }
+                    true
+                }
+                R.id.action_delete -> {
+                    customer?.let { confirmDeleteCustomer(it) }
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
+    // Add to CustomerDetailFragment.kt
+    private fun confirmDeleteCustomer(customer: Customer) {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Delete Customer")
+            .setMessage("Are you sure you want to delete ${customer.firstName} ${customer.lastName}? This action cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                // Check for related invoices first
+                checkForRelatedInvoices(customer)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // Add to CustomerDetailFragment.kt
+    private fun checkForRelatedInvoices(customer: Customer) {
+        // Show loading state
+        binding.progressBar.visibility = View.VISIBLE
+
+        // Get invoices for this customer
+        customerViewModel.getCustomerInvoiceCount(customer.id).observe(viewLifecycleOwner) { result ->
+            binding.progressBar.visibility = View.GONE
+
+            result.fold(
+                onSuccess = { count ->
+                    if (count > 0) {
+                        // Customer has invoices, show warning
+                        showDeleteWithInvoicesWarning(customer, count)
+                    } else {
+                        // No invoices, proceed with deletion
+                        deleteCustomer(customer)
+                    }
+                },
+                onFailure = { error ->
+                    Toast.makeText(requireContext(), "Error checking invoices: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            )
+        }
+    }
+
+    private fun showDeleteWithInvoicesWarning(customer: Customer, invoiceCount: Int) {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Customer Has Invoices")
+            .setMessage("This customer has $invoiceCount ${if (invoiceCount == 1) "invoice" else "invoices"}. Deleting this customer will make these invoices inaccessible through customer views. The invoices will remain in the system but won't be linked to any customer.\n\nDo you want to proceed?")
+            .setPositiveButton("Delete Anyway") { _, _ ->
+                deleteCustomer(customer)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // Add to CustomerDetailFragment.kt
+    private fun deleteCustomer(customer: Customer) {
+        binding.progressBar.visibility = View.VISIBLE
+
+        customerViewModel.deleteCustomer(customer.id).observe(viewLifecycleOwner) { result ->
+            binding.progressBar.visibility = View.GONE
+
+            result.fold(
+                onSuccess = {
+                    Toast.makeText(requireContext(), "Customer deleted successfully", Toast.LENGTH_SHORT).show()
+                    // Navigate back to customer list
+                    findNavController().navigateUp()
+                },
+                onFailure = { error ->
+                    Toast.makeText(requireContext(), "Error deleting customer: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
     }
 

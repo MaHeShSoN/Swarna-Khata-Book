@@ -114,11 +114,24 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
         viewModelScope.launch {
             try {
+                // Store original invoice for comparison
+                val originalInvoice = currentInvoice.copy()
+
+                // Create updated invoice
                 val updatedInvoice = updateBlock(currentInvoice)
 
+                // Save invoice first
                 val result = invoiceRepository.saveInvoice(updatedInvoice)
                 result.fold(
                     onSuccess = {
+                        // Update customer balance after successful invoice save
+                        try {
+                            updateCustomerBalance(originalInvoice, updatedInvoice)
+                        } catch (e: Exception) {
+                            // Log error but don't fail the whole operation
+                            Log.e("InvoiceDetailViewModel", "Error updating customer balance", e)
+                        }
+
                         _invoice.value = updatedInvoice
                         successMessage?.let {
                             _errorMessage.value = it
@@ -191,18 +204,27 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         )
     }
 
+
     fun updateInvoiceItem(updatedItem: InvoiceItem) {
+        Log.d(
+            "InvoiceDetailViewModel",
+            "Updating item with ${updatedItem.itemDetails.listOfExtraCharges.size} extra charges"
+        )
+
         updateInvoice(
             updateBlock = { invoice ->
                 val updatedItems = invoice.items.map { existingItem ->
                     if (existingItem.id == updatedItem.id) {
+                        // Replace with updated item
                         updatedItem
                     } else {
                         existingItem
                     }
                 }
 
+                // Calculate new total amount considering all charges
                 val newTotalAmount = calculateTotalAmount(updatedItems)
+                Log.d("InvoiceDetailViewModel", "New total amount: $newTotalAmount")
 
                 invoice.copy(
                     items = updatedItems,
@@ -324,35 +346,108 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun deleteInvoice() {
+    fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
         val currentInvoice = _invoice.value ?: return
         _isLoading.value = true
         _errorMessage.value = null
 
         viewModelScope.launch {
             try {
+                // Calculate the balance adjustment
+                val unpaidAmount = currentInvoice.totalAmount - currentInvoice.paidAmount
+
+                // Delete invoice first
                 val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
                 result.fold(
                     onSuccess = {
+                        // Now update customer balance if needed
+                        if (unpaidAmount > 0 && currentInvoice.customerId.isNotEmpty()) {
+                            try {
+                                val customerResult = customerRepository.getCustomerById(currentInvoice.customerId)
+                                customerResult.fold(
+                                    onSuccess = { customer ->
+                                        // Reduce balance by the unpaid amount
+                                        val newBalance = customer.currentBalance - unpaidAmount
+                                        val updatedCustomer = customer.copy(currentBalance = newBalance)
+                                        customerRepository.updateCustomer(updatedCustomer)
+
+                                        Log.d("InvoiceDetailViewModel",
+                                            "Customer balance updated after invoice deletion: ${customer.currentBalance} -> $newBalance")
+                                    },
+                                    onFailure = { error ->
+                                        Log.e("InvoiceDetailViewModel", "Failed to update customer balance", error)
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                Log.e("InvoiceDetailViewModel", "Error updating customer balance after invoice deletion", e)
+                            }
+                        }
+
                         _errorMessage.value = "Invoice deleted successfully"
+                        onComplete(true) // Signal successful completion
                     },
                     onFailure = {
                         _errorMessage.value = "Failed to delete invoice"
                         Log.e("InvoiceDetailViewModel", "Failed to delete invoice", it)
+                        onComplete(false) // Signal failed completion
                     }
                 )
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting invoice"
                 Log.e("InvoiceDetailViewModel", "Error deleting invoice", e)
+                onComplete(false) // Signal failed completion
             } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    // Helper method to calculate total amount
+    private suspend fun updateCustomerBalance(oldInvoice: Invoice, newInvoice: Invoice) {
+        // Only proceed if customer IDs match and we're working with the same customer
+        if (oldInvoice.customerId != newInvoice.customerId || oldInvoice.customerId.isEmpty()) {
+            return
+        }
+
+        try {
+            // Get the current customer
+            val customerResult = customerRepository.getCustomerById(oldInvoice.customerId)
+
+            customerResult.fold(
+                onSuccess = { customer ->
+                    // Calculate the balance change
+                    val oldUnpaidAmount = oldInvoice.totalAmount - oldInvoice.paidAmount
+                    val newUnpaidAmount = newInvoice.totalAmount - newInvoice.paidAmount
+                    val balanceChange = newUnpaidAmount - oldUnpaidAmount
+
+                    // Only update if there's an actual change
+                    if (balanceChange != 0.0) {
+                        // Calculate new balance
+                        val newBalance = customer.currentBalance + balanceChange
+
+                        // Update customer with new balance
+                        val updatedCustomer = customer.copy(currentBalance = newBalance)
+                        customerRepository.updateCustomer(updatedCustomer)
+
+                        Log.d(
+                            "InvoiceDetailViewModel", "Customer balance updated: " +
+                                    "Old: ${customer.currentBalance}, New: $newBalance, Change: $balanceChange"
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    Log.e("InvoiceDetailViewModel", "Failed to update customer balance", error)
+                    throw error
+                }
+            )
+        } catch (e: Exception) {
+            Log.e("InvoiceDetailViewModel", "Error updating customer balance", e)
+            throw e
+        }
+    }
+
+
     private fun calculateTotalAmount(items: List<InvoiceItem>): Double {
-        // Calculate subtotal
+        // Calculate subtotal (base price * quantity for each item)
         val subtotal = items.sumOf { it.price * it.quantity }
 
         // Calculate tax amount
@@ -361,15 +456,48 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
             itemTotal * (item.itemDetails.taxRate / 100.0)
         }
 
-        // Calculate extra charges
+        // Calculate extra charges - ensure we're counting all charges
         val extraChargesTotal = items.sumOf { item ->
+            Log.d(
+                "InvoiceDetailViewModel",
+                "Item ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges"
+            )
+
             item.itemDetails.listOfExtraCharges.sumOf { charge ->
-                charge.amount * item.quantity
+                val chargeAmount = charge.amount * item.quantity
+                Log.d("InvoiceDetailViewModel", "Extra charge: ${charge.name} = $chargeAmount")
+                chargeAmount
             }
         }
 
+        Log.d(
+            "InvoiceDetailViewModel",
+            "Subtotal: $subtotal, Tax: $taxAmount, Extra Charges: $extraChargesTotal"
+        )
+
         return subtotal + taxAmount + extraChargesTotal
     }
+
+    // Helper method to calculate total amount
+//    private fun calculateTotalAmount(items: List<InvoiceItem>): Double {
+//        // Calculate subtotal
+//        val subtotal = items.sumOf { it.price * it.quantity }
+//
+//        // Calculate tax amount
+//        val taxAmount = items.sumOf { item ->
+//            val itemTotal = item.price * item.quantity
+//            itemTotal * (item.itemDetails.taxRate / 100.0)
+//        }
+//
+//        // Calculate extra charges
+//        val extraChargesTotal = items.sumOf { item ->
+//            item.itemDetails.listOfExtraCharges.sumOf { charge ->
+//                charge.amount * item.quantity
+//            }
+//        }
+//
+//        return subtotal + taxAmount + extraChargesTotal
+//    }
 
     // Getter methods with null checks
     fun getCustomerPhone(): String = _customer.value?.phoneNumber ?: ""

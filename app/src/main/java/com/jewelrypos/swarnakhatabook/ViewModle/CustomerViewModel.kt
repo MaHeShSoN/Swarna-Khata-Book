@@ -328,5 +328,47 @@ class CustomerViewModel(
         }
     }
 
+    // Add to CustomerViewModel.kt
+    fun getCustomerInvoiceCount(customerId: String): LiveData<Result<Int>> {
+        val resultLiveData = MutableLiveData<Result<Int>>()
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            repository.getCustomerInvoiceCount(customerId).fold(
+                onSuccess = { count ->
+                    resultLiveData.value = Result.success(count)
+                },
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = error.message
+                }
+            )
+            _isLoading.value = false
+        }
+
+        return resultLiveData
+    }
+
+    fun deleteCustomer(customerId: String): LiveData<Result<Unit>> {
+        val resultLiveData = MutableLiveData<Result<Unit>>()
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            repository.deleteCustomer(customerId).fold(
+                onSuccess = {
+                    resultLiveData.value = Result.success(Unit)
+                    refreshData() // Refresh the customer list
+                },
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = error.message
+                }
+            )
+            _isLoading.value = false
+        }
+
+        return resultLiveData
+    }
+
 
 }
