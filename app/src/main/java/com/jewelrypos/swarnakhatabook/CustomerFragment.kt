@@ -102,6 +102,9 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     private fun showFilterDialog() {
+
+
+
         // Create the dialog using ThemedM3Dialog (your custom dialog class)
         val filterDialog = ThemedM3Dialog(requireContext())
             .setTitle("Filter Customers")
@@ -114,14 +117,14 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
             .setNegativeButton("Cancel") { dialog ->
                 dialog.dismiss()
             }
+            .setNeutralButton("Clear Filters"){ dialog, dialogView ->
+                clearFilters(dialogView)
+                dialog.dismiss()
+            }
+
 
         // Get the dialog view before showing
         val dialogView = filterDialog.getDialogView()
-
-        // Set up the Clear Filters button
-        dialogView?.findViewById<Button>(R.id.btnClearFilters)?.setOnClickListener {
-            clearFilters(dialogView)
-        }
 
         // Pre-select the current filter options (if any)
         setupCurrentFilters(dialogView)
@@ -198,6 +201,7 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
             view.findViewById<RadioGroup>(R.id.sortOrderGroup).check(R.id.rbAscending) // Default
             view.findViewById<RadioGroup>(R.id.paymentStatusGroup).clearCheck()
         }
+        customerViewModel.applyFilters(null,"ASC",null)
     }
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {

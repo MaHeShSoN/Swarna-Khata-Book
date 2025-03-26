@@ -164,10 +164,10 @@ class ThemedM3Dialog(private val context: Context) {
      */
     fun setNeutralButton(
         buttonText: String,
-        action: ((dialog: android.content.DialogInterface) -> Unit)? = null
+        action: ((dialog: android.content.DialogInterface,dialogView: View?) -> Unit)? = null
     ): ThemedM3Dialog {
         dialogBuilder.setNeutralButton(buttonText) { dialog, _ ->
-            action?.invoke(dialog)
+            action?.invoke(dialog, dialogView)
         }
         return this
     }
@@ -192,14 +192,14 @@ class ThemedM3Dialog(private val context: Context) {
 
         // Set the button colors when the dialog is shown
         dialog.setOnShowListener { dialogInterface ->
-            val positiveButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_POSITIVE)
-            val negativeButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
-            val neutralButton = (dialogInterface as androidx.appcompat.app.AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+            val positiveButton = (dialogInterface as AlertDialog ).getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+            val negativeButton = (dialogInterface as AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+            val neutralButton = (dialogInterface as AlertDialog ).getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
 
             // Apply custom styling to positive button
             positiveButton?.let {
                 if (it is MaterialButton) {
-                    it.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_primary))
+                    it.setTextColor(ContextCompat.getColor(context, R.color.cream_background))
                     it.backgroundTintList = ColorStateList.valueOf(
                         ContextCompat.getColor(context, R.color.my_light_primary)
                     )
@@ -216,7 +216,7 @@ class ThemedM3Dialog(private val context: Context) {
                         Color.TRANSPARENT
                     )
                     it.strokeColor = ColorStateList.valueOf(
-                        ContextCompat.getColor(context, R.color.my_light_primary)
+                        ContextCompat.getColor(context, R.color.cream_background)
                     )
                     it.strokeWidth = 1
 

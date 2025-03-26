@@ -200,6 +200,7 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
     private fun openCustomerEditBottomSheet(customer: Customer) {
         val bottomSheet = CustomerBottomSheetFragment.newInstance(customer)
         bottomSheet.setCustomerOperationListener(this)
+        bottomSheet.setCalledFromInvoiceCreation(true)
         bottomSheet.show(parentFragmentManager, CustomerBottomSheetFragment.TAG)
     }
 

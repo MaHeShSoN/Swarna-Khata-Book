@@ -2,6 +2,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+
+    <item
+        android:id="@+id/action_refresh"
+        android:icon="@drawable/material_symbols__refresh_rounded"
+        android:title="Refresh"
+        app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/action_notifications"
         android:icon="@drawable/mingcute__notification_fill"

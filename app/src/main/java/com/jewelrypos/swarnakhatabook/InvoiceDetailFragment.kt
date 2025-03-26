@@ -1305,6 +1305,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 // Add to invoice
                 viewModel.addInvoiceItem(newInvoiceItem)
+                EventBus.postInvoiceAdded()
             }
 
             override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
@@ -1396,6 +1397,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 // Update in viewmodel
                 viewModel.updateInvoiceItem(updatedInvoiceItem)
+                EventBus.postInvoiceUpdated()
             }
         })
 

@@ -1,28 +1,842 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    android:fillViewport="true"
     tools:context=".DashBoardFragment">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:orientation="vertical">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/topAppBar"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/my_light_primary"
-            app:menu="@menu/dashboard_menu"
-            app:title="DashBoard"
-            app:titleTextAppearance="@style/ToolbarTitle" />
+            android:orientation="horizontal">
 
-    </com.google.android.material.appbar.AppBarLayout>
+            <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/appBarLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+                <com.google.android.material.appbar.MaterialToolbar
+                    android:id="@+id/topAppBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/my_light_primary"
+                    app:menu="@menu/dashboard_menu"
+                    app:title="Dashboard"
+                    app:titleTextAppearance="@style/ToolbarTitle" />
+
+            </com.google.android.material.appbar.AppBarLayout>
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+
+            <!-- Quick Actions Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:text="Quick Actions"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <!-- Create Invoice Button -->
+                        <LinearLayout
+                            android:id="@+id/createInvoiceAction"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/ic_invoice"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="New Invoice"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Add Customer Button -->
+                        <LinearLayout
+                            android:id="@+id/addCustomerAction"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/line_md__person_twotone"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Add Client"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Add Inventory Button -->
+                        <LinearLayout
+                            android:id="@+id/addInventoryAction"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/uil__gold"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Add Item"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <!-- Record Payment Button -->
+                        <LinearLayout
+                            android:id="@+id/recordPaymentAction"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:src="@drawable/mdi__currency_inr"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Payments"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Sales Overview Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:text="Sales Overview"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="18sp" />
+
+                        <Spinner
+                            android:id="@+id/periodSelector"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
+
+                    <!-- Chart will go here -->
+                    <FrameLayout
+                        android:id="@+id/chartContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginBottom="16dp">
+
+                        <TextView
+                            android:id="@+id/chartPlaceholder"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/montserratregular"
+                            android:gravity="center"
+                            android:text="Loading sales data..."
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="14sp" />
+                    </FrameLayout>
+
+                    <!-- Sales Metrics -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <!-- Total Sales -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Total Sales"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/totalSalesValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="₹0.00"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Invoice Count -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Invoices"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/invoiceCountValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Average Sale -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Average Sale"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/averageSaleValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="₹0.00"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Recent Activity Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:text="Recent Invoices"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/viewAllInvoices"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:fontFamily="@font/montserratmedium"
+                            android:padding="4dp"
+                            android:text="View All"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Recent Invoices List -->
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/recentInvoicesRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_invoice" />
+
+                    <!-- Empty State -->
+                    <LinearLayout
+                        android:id="@+id/emptyRecentInvoicesState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+
+                        <ImageView
+                            android:layout_width="64dp"
+                            android:layout_height="64dp"
+                            android:alpha="0.5"
+                            android:src="@drawable/empty_clients"
+                            app:tint="@color/my_light_on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/montserratmedium"
+                            android:text="No recent invoices"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Inventory Status Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:text="Inventory Status"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/viewAllInventory"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:fontFamily="@font/montserratmedium"
+                            android:padding="4dp"
+                            android:text="View All"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Inventory Metrics -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <!-- Total Items -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Total Items"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/totalItemsValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Low Stock -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Low Stock"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/lowStockValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/status_unpaid"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Gold Items -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Gold Items"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/goldItemsValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Low Stock Alert Section -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Low Stock Alerts"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/lowStockRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        tools:itemCount="2"
+                        tools:listitem="@layout/inventory_item_jewelry" />
+
+                    <!-- Empty Low Stock State -->
+                    <LinearLayout
+                        android:id="@+id/emptyLowStockState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratmedium"
+                            android:text="No low stock items"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Customer Insights Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:text="Customer Insights"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:id="@+id/viewAllCustomers"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:fontFamily="@font/montserratmedium"
+                            android:padding="4dp"
+                            android:text="View All"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <!-- Customer Metrics -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <!-- Total Customers -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Total Clients"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/totalCustomersValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Today's Birthdays -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Birthdays Today"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/birthdaysTodayValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="0"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Outstanding Balance -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Outstanding"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/outstandingBalanceValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratbold"
+                                android:text="₹0.00"
+                                android:textColor="@color/status_unpaid"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Top Customers Section -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Top Clients"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/topCustomersRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        tools:itemCount="3"
+                        tools:listitem="@layout/item_customer" />
+
+                    <!-- Empty Customers State -->
+                    <LinearLayout
+                        android:id="@+id/emptyCustomersState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratmedium"
+                            android:text="No customers yet"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Upcoming Events Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:text="Upcoming Events"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/upcomingEventsRecyclerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:visibility="visible"
+                        tools:itemCount="2"
+                        tools:listitem="@layout/item_notification" />
+
+                    <!-- Empty Events State -->
+                    <LinearLayout
+                        android:id="@+id/emptyEventsState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="16dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratmedium"
+                            android:text="No upcoming events"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

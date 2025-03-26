@@ -2,6 +2,7 @@ package com.jewelrypos.swarnakhatabook
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
 
 class MainActivity : AppCompatActivity() {

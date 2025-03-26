@@ -33,11 +33,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private var _binding: CustomerBottomSheetFragmentBinding? = null
     private val binding get() = _binding!!
 
-    private val db = FirebaseFirestore.getInstance()
     private var isEditMode = false
     private var existingCustomerId: String? = null
     private var listener: CustomerOperationListener? = null
     private var calledFromInvoiceCreation = false
+    private var calledFromCustomerDetails = false
 
     interface CustomerOperationListener {
         fun onCustomerAdded(customer: Customer)
@@ -90,6 +90,16 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         if (calledFromInvoiceCreation) {
             // Hide the "Save and Add" button when called from invoice creation
             binding.saveAndAddButton.visibility = View.GONE
+
+            // Optionally, adjust the layout to make the "Save and Close" button full width
+            val layoutParams = binding.saveAndCloseButton.layoutParams as LinearLayout.LayoutParams
+            layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT
+            binding.saveAndCloseButton.layoutParams = layoutParams
+        }
+        if (calledFromCustomerDetails) {
+            // Hide the "Save and Add" button when called from invoice creation
+            binding.saveAndAddButton.visibility = View.GONE
+            binding.saveAndCloseButton.setText("Update")
 
             // Optionally, adjust the layout to make the "Save and Close" button full width
             val layoutParams = binding.saveAndCloseButton.layoutParams as LinearLayout.LayoutParams
@@ -462,6 +472,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     fun setCalledFromInvoiceCreation(fromInvoice: Boolean) {
         calledFromInvoiceCreation = fromInvoice
+    }
+    fun setCalledFromCustomerDetails(fromInvoice: Boolean) {
+        calledFromCustomerDetails = fromInvoice
     }
 
 

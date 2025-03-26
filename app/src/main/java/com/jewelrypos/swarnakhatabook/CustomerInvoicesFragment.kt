@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.InvoicesAdapter
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
@@ -72,7 +73,7 @@ class CustomerInvoicesFragment : Fragment() {
         setupRecyclerView()
         setupSwipeRefresh()
         setupObservers()
-
+        setupEventListeners()
         // Initial load of customer invoices
         loadCustomerInvoices()
 
@@ -82,23 +83,32 @@ class CustomerInvoicesFragment : Fragment() {
         }
     }
 
+    private fun setupEventListeners() {
+        // Listen for invoice updates
+        EventBus.invoiceUpdatedEvent.observe(viewLifecycleOwner) { updated ->
+            if (updated) {
+                loadCustomerInvoices()
+                EventBus.resetInvoiceUpdatedEvent()
+            }
+        }
 
-    // Add this new method to the class
-//    private fun navigateToCreateInvoice() {
-//        // Navigate to the invoice creation screen with the customer ID pre-selected
-//        val navController = findNavController()
-//        val action = CustomerDetailFragmentDirections.actionCustomerDetailFragmentToInvoiceCreationFragment()
-//        navController.navigate(action)
-//
-//        // Pre-select the customer in the invoice screen
-//        // This requires you to add a mechanism to pre-select a customer in the InvoiceCreationFragment
-//        // For example, through a shared ViewModel or arguments
-//        customerId.let { id ->
-//            // You could use a singleton to pass the ID or modify InvoiceCreationFragment
-//            // to accept the customer ID as an argument
-//            CustomerSelectionManager.selectedCustomerId = id
-//        }
-//    }
+        // Listen for invoice deletions
+        EventBus.invoiceDeletedEvent.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                loadCustomerInvoices()
+                EventBus.resetInvoiceDeletedEvent()
+            }
+        }
+
+        // Listen for invoice additions
+        EventBus.invoiceAddedEvent.observe(viewLifecycleOwner) { added ->
+            if (added) {
+                loadCustomerInvoices()
+                EventBus.resetInvoiceAddedEvent()
+            }
+        }
+    }
+
 
     private fun navigateToCreateInvoice() {
         try {
@@ -135,14 +145,6 @@ class CustomerInvoicesFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = InvoicesAdapter(emptyList())
-//        adapter.onItemClickListener = { invoice ->
-//            // Navigate to invoice details
-//            val navController = findNavController()
-//            val action = CustomerDetailFragmentDirections.actionCustomerDetailFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
-//            navController.navigate(action)
-//
-//
-//        }
 
         // In CustomerInvoicesFragment.kt
         adapter.onItemClickListener = { invoice ->
