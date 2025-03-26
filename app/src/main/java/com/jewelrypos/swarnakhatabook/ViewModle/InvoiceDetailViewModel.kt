@@ -484,6 +484,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
+// In InvoiceDetailViewModel.kt, make sure the deleteInvoice method properly handles errors:
 
     fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
         val currentInvoice = _invoice.value ?: return
@@ -492,49 +493,22 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
         viewModelScope.launch {
             try {
-                // Calculate the balance adjustment
-                val unpaidAmount = currentInvoice.totalAmount - currentInvoice.paidAmount
-
-                // Delete invoice first
                 val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
                 result.fold(
                     onSuccess = {
-                        // Now update customer balance if needed
-                        if (unpaidAmount > 0 && currentInvoice.customerId.isNotEmpty()) {
-                            try {
-                                val customerResult = customerRepository.getCustomerById(currentInvoice.customerId)
-                                customerResult.fold(
-                                    onSuccess = { customer ->
-                                        // Reduce balance by the unpaid amount
-                                        val newBalance = customer.currentBalance - unpaidAmount
-                                        val updatedCustomer = customer.copy(currentBalance = newBalance)
-                                        customerRepository.updateCustomer(updatedCustomer)
-
-                                        Log.d("InvoiceDetailViewModel",
-                                            "Customer balance updated after invoice deletion: ${customer.currentBalance} -> $newBalance")
-                                    },
-                                    onFailure = { error ->
-                                        Log.e("InvoiceDetailViewModel", "Failed to update customer balance", error)
-                                    }
-                                )
-                            } catch (e: Exception) {
-                                Log.e("InvoiceDetailViewModel", "Error updating customer balance after invoice deletion", e)
-                            }
-                        }
-
                         _errorMessage.value = "Invoice deleted successfully"
-                        onComplete(true) // Signal successful completion
+                        onComplete(true)  // Signal successful completion
                     },
-                    onFailure = {
-                        _errorMessage.value = "Failed to delete invoice"
-                        Log.e("InvoiceDetailViewModel", "Failed to delete invoice", it)
-                        onComplete(false) // Signal failed completion
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to delete invoice: ${error.message}"
+                        Log.e("InvoiceDetailViewModel", "Failed to delete invoice", error)
+                        onComplete(false)  // Signal failed completion
                     }
                 )
             } catch (e: Exception) {
-                _errorMessage.value = "Error deleting invoice"
+                _errorMessage.value = "Error deleting invoice: ${e.message}"
                 Log.e("InvoiceDetailViewModel", "Error deleting invoice", e)
-                onComplete(false) // Signal failed completion
+                onComplete(false)  // Signal failed completion
             } finally {
                 _isLoading.value = false
             }

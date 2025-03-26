@@ -21,7 +21,6 @@ data class Customer(
     val openingBalance: Double = 0.0,
     val currentBalance: Double = 0.0, // New field to track ongoing balance
     val balanceNotes: String = "",
-    val creditLimit: Double = 0.0,
     // Business information (for wholesale customers)
     val businessName: String = "",
     val gstNumber: String = "",

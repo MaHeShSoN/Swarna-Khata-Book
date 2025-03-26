@@ -8,7 +8,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.Source
-import com.jewelrypos.swarnakhatabook.DataClasses.CreditLimitChange
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import kotlinx.coroutines.launch
@@ -50,10 +49,6 @@ class CustomerViewModel(
 
     private val _activePaymentStatus = MutableLiveData<String?>()
     val activePaymentStatus: LiveData<String?> = _activePaymentStatus
-
-    private val _creditLimitHistory = MutableLiveData<List<CreditLimitChange>>()
-    val creditLimitHistory: LiveData<List<CreditLimitChange>> = _creditLimitHistory
-
 
 
     init {
@@ -278,94 +273,6 @@ class CustomerViewModel(
         return resultLiveData
     }
 
-
-    /**
-     * Update a customer's credit limit
-     * @param customerId Customer ID
-     * @param currentLimit Current credit limit for verification
-     * @param newLimit New credit limit to set
-     * @param reason Reason for the change
-     */
-    fun updateCustomerCreditLimit(
-        customerId: String,
-        currentLimit: Double,
-        newLimit: Double,
-        reason: String
-    ) {
-        _isLoading.value = true
-        _errorMessage.value = null
-
-        viewModelScope.launch {
-            try {
-                // First get the customer to validate balance type
-                val customerResult = repository.getCustomerById(customerId)
-
-                customerResult.fold(
-                    onSuccess = { customer ->
-                        // Only proceed if this is a Credit type customer
-                        if (customer.balanceType != "Credit") {
-                            _errorMessage.value = "Credit limits only apply to Credit type customers"
-                            _isLoading.value = false
-                            return@fold
-                        }
-
-                        // Check if reducing credit limit would put customer over limit
-                        if (newLimit < currentLimit && customer.currentBalance > newLimit) {
-                            // Show warning but still allow the change
-                            _errorMessage.value = "Warning: New credit limit is below customer's current balance"
-                        }
-
-                        // Now update the credit limit
-                        repository.updateCustomerCreditLimit(customerId, currentLimit, newLimit, reason).fold(
-                            onSuccess = { updatedCustomer ->
-                                // Refresh the customers list to reflect the new limit
-                                refreshData()
-
-                                // Load the history
-                                loadCreditLimitHistory(customerId)
-
-                                // Log the change
-                                Log.d("CustomerViewModel", "Credit limit updated from $currentLimit to $newLimit for customer $customerId")
-
-                                _isLoading.value = false
-                            },
-                            onFailure = { exception ->
-                                _errorMessage.value = "Failed to update credit limit: ${exception.message}"
-                                _isLoading.value = false
-                                Log.e("CustomerViewModel", "Error updating credit limit", exception)
-                            }
-                        )
-                    },
-                    onFailure = { exception ->
-                        _errorMessage.value = "Failed to retrieve customer: ${exception.message}"
-                        _isLoading.value = false
-                        Log.e("CustomerViewModel", "Error retrieving customer for credit limit update", exception)
-                    }
-                )
-            } catch (e: Exception) {
-                _errorMessage.value = "Unexpected error: ${e.message}"
-                _isLoading.value = false
-                Log.e("CustomerViewModel", "Unexpected error in updateCustomerCreditLimit", e)
-            }
-        }
-    }
-
-    /**
-     * Load credit limit history for a customer
-     * @param customerId Customer ID
-     */
-    fun loadCreditLimitHistory(customerId: String) {
-        viewModelScope.launch {
-            repository.getCreditLimitHistory(customerId).fold(
-                onSuccess = { history ->
-                    _creditLimitHistory.value = history
-                },
-                onFailure = { exception ->
-                    _errorMessage.value = exception.message
-                }
-            )
-        }
-    }
 
     // Add to CustomerViewModel.kt
     fun getCustomerInvoiceCount(customerId: String): LiveData<Result<Int>> {

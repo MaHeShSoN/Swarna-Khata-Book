@@ -14,7 +14,6 @@ import androidx.fragment.app.viewModels
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.Adapters.CreditLimitHistoryAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
@@ -31,7 +30,6 @@ class CustomerDashboardFragment : Fragment() {
 
     private lateinit var customer: Customer
 
-    private lateinit var creditHistoryAdapter: CreditLimitHistoryAdapter
     private val customerViewModel: CustomerViewModel by viewModels {
         // Use the same factory as in your CustomerFragment
         val firestore = FirebaseFirestore.getInstance()
@@ -74,83 +72,10 @@ class CustomerDashboardFragment : Fragment() {
 
         // Populate dashboard with customer info
         setupDashboard()
-        // Setup credit limit history
-        setupCreditLimitHistory()
 
-        // Observe credit limit history
-        observeCreditLimitHistory()
+
+
     }
-
-    private fun setupCreditLimitHistory() {
-        // Initialize adapter
-        creditHistoryAdapter = CreditLimitHistoryAdapter(emptyList())
-        binding.creditHistoryRecyclerView.adapter = creditHistoryAdapter
-
-        // Load credit limit history
-        customerViewModel.loadCreditLimitHistory(customer.id)
-
-        // Setup update button
-        binding.updateCreditLimitButton.setOnClickListener {
-            showUpdateCreditLimitDialog()
-        }
-    }
-
-    private fun observeCreditLimitHistory() {
-        customerViewModel.creditLimitHistory.observe(viewLifecycleOwner) { history ->
-            creditHistoryAdapter.updateChanges(history)
-
-            // Show/hide empty state
-            if (history.isEmpty()) {
-                binding.noCreditHistoryText.visibility = View.VISIBLE
-                binding.creditHistoryRecyclerView.visibility = View.GONE
-            } else {
-                binding.noCreditHistoryText.visibility = View.GONE
-                binding.creditHistoryRecyclerView.visibility = View.VISIBLE
-            }
-        }
-    }
-
-    private fun showUpdateCreditLimitDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_credit_limit_change, null)
-
-        // Get references to dialog views
-        val currentLimitField = dialogView.findViewById<TextInputEditText>(R.id.currentLimitField)
-        val newLimitField = dialogView.findViewById<TextInputEditText>(R.id.newLimitField)
-        val reasonField = dialogView.findViewById<TextInputEditText>(R.id.reasonField)
-
-        // Set current limit
-        val formatter = DecimalFormat("#,##,##0.00")
-        currentLimitField.setText(formatter.format(customer.creditLimit))
-        newLimitField.setText(formatter.format(customer.creditLimit))
-
-        // Create and show the dialog
-        AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setPositiveButton("Update") { dialog, _ ->
-                // Get the new values
-                val newLimit = newLimitField.text.toString().replace(",", "").toDoubleOrNull() ?: customer.creditLimit
-                val reason = reasonField.text.toString().trim()
-
-                // Validate input
-                if (reason.isEmpty()) {
-                    Toast.makeText(requireContext(), "Please provide a reason for the change", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-
-                // Update credit limit
-                customerViewModel.updateCustomerCreditLimit(
-                    customerId = customer.id,
-                    currentLimit = customer.creditLimit,
-                    newLimit = newLimit,
-                    reason = reason
-                )
-            }
-            .setNegativeButton("Cancel", null)
-            .create()
-            .show()
-    }
-
-
 
     private fun setupDashboard() {
         // Contact information
@@ -214,9 +139,6 @@ class CustomerDashboardFragment : Fragment() {
         } else {
             binding.notesCard.visibility = View.GONE
         }
-
-        updateCreditLimitSection(customer)
-
     }
 
     private fun formatDate(dateString: String): String {
@@ -232,87 +154,6 @@ class CustomerDashboardFragment : Fragment() {
         } catch (e: Exception) {
             return dateString
         }
-    }
-
-    /**
-     * Updates the credit limit section in the customer detail view
-     * Uses current balance for all calculations for consistency
-     */
-    private fun updateCreditLimitSection(customer: Customer) {
-        val formatter = DecimalFormat("#,##,##0.00")
-
-        // Only show credit section for Credit type customers with a limit
-        if (customer.balanceType == "Credit" && customer.creditLimit > 0.0) {
-            binding.creditLimitDetailCard.visibility = View.VISIBLE
-
-            // Calculate available credit and usage percentage
-            val availableCredit = maxOf(0.0, customer.creditLimit - customer.currentBalance)
-            val usagePercentage = com.jewelrypos.swarnakhatabook.Utilitys.CustomerBalanceUtils
-                .calculateCreditUsagePercentage(customer)
-
-            // Update text fields
-            binding.currentBalanceValue.text = "₹${formatter.format(customer.currentBalance)}"
-            binding.creditLimitValue.text = "₹${formatter.format(customer.creditLimit)}"
-            binding.availableCreditValue.text = "₹${formatter.format(availableCredit)}"
-            binding.creditLimitDetailPercentage.text = "$usagePercentage%"
-
-            // Update progress bar
-            binding.creditLimitDetailProgress.progress = usagePercentage
-
-            // Set progress color based on percentage
-            val progressColor = when {
-                usagePercentage >= 90 -> R.color.status_unpaid // Red for > 90%
-                usagePercentage >= 75 -> R.color.status_partial // Orange for > 75%
-                else -> R.color.my_light_primary // Default gold color
-            }
-
-            binding.creditLimitDetailProgress.setIndicatorColor(
-                ContextCompat.getColor(requireContext(), progressColor)
-            )
-
-            // Set credit limit percentage text color to match progress
-            binding.creditLimitDetailPercentage.setTextColor(
-                ContextCompat.getColor(requireContext(), progressColor)
-            )
-
-            // Set available credit text color based on amount
-            val availableCreditColor = when {
-                availableCredit <= 0 -> R.color.status_unpaid // Red when no credit left
-                availableCredit < (customer.creditLimit * 0.25) -> R.color.status_partial // Orange when < 25% left
-                else -> R.color.status_paid // Green otherwise
-            }
-
-            binding.availableCreditValue.setTextColor(
-                ContextCompat.getColor(requireContext(), availableCreditColor)
-            )
-
-            // If over credit limit, make the current balance text red
-            if (customer.currentBalance > customer.creditLimit) {
-                binding.currentBalanceValue.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.status_unpaid)
-                )
-            } else {
-                binding.currentBalanceValue.setTextColor(
-                    ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
-                )
-            }
-        } else {
-            binding.creditLimitDetailCard.visibility = View.GONE
-        }
-    }
-
-    /**
-     * Calculate the percentage of credit limit used
-     * @return Percentage of credit used (0-100)
-     */
-    private fun calculateCreditUsagePercentage(customer: Customer): Int {
-        if (customer.creditLimit <= 0.0 || customer.currentBalance <= 0.0) {
-            return 0
-        }
-
-        val percentage = (customer.currentBalance / customer.creditLimit) * 100
-        // Cap at 100% for display purposes
-        return percentage.coerceAtMost(100.0).toInt()
     }
 
 

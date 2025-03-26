@@ -38,17 +38,7 @@ class NotificationWorker(
                 auth
             )
 
-            // Check for notifications
-            repository.generateCreditLimitNotifications().fold(
-                onSuccess = { notificationsCount ->
-                    Log.d(TAG, "Notification check completed. Created $notificationsCount notifications")
-                    return Result.success()
-                },
-                onFailure = { exception ->
-                    Log.e(TAG, "Error during notification check", exception)
-                    return Result.retry()
-                }
-            )
+
 
             return Result.success()
 

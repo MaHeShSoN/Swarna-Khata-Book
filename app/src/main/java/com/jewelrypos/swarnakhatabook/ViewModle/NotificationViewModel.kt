@@ -184,27 +184,4 @@ class NotificationViewModel(
             )
         }
     }
-
-    /**
-     * Generates credit limit notifications for all customers
-     */
-    fun generateCreditLimitNotifications() {
-        _isLoading.value = true
-        viewModelScope.launch {
-            repository.generateCreditLimitNotifications().fold(
-                onSuccess = { count ->
-                    if (count > 0) {
-                        loadNotifications() // Refresh the list if new notifications were created
-                        refreshUnreadCount()
-                    }
-                    _isLoading.value = false
-                },
-                onFailure = { exception ->
-                    _errorMessage.value = exception.message
-                    _isLoading.value = false
-                    Log.e("NotificationViewModel", "Error generating notifications", exception)
-                }
-            )
-        }
-    }
 }

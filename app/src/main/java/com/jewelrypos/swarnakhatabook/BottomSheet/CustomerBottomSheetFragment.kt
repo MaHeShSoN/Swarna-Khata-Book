@@ -322,7 +322,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private fun createCustomerFromForm(): Customer {
         val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
         val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
-        val creditLimit = binding.creditLimitField.text.toString().toDoubleOrNull() ?: 0.0
 
         // Determine the current balance properly
         val currentBalance = if (isEditMode && existingCustomerId != null) {
@@ -360,7 +359,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             openingBalance = openingBalance,
             currentBalance = currentBalance, // Use the properly calculated current balance
             balanceNotes = binding.balanceNotesField.text.toString(),
-            creditLimit = creditLimit,
             businessName = binding.businessNameField.text.toString(),
             gstNumber = binding.gstNumberField.text.toString(),
             taxId = binding.taxIdField.text.toString(),
@@ -397,7 +395,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         }
         binding.openingBalanceField.setText(customer.openingBalance.toString())
         binding.balanceNotesField.setText(customer.balanceNotes)
-        binding.creditLimitField.setText(customer.creditLimit.toString())
 
         // Business Information
         binding.businessNameField.setText(customer.businessName)
@@ -427,8 +424,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.creditRadioButton.isChecked = true
         binding.openingBalanceField.setText("0.00")
         binding.balanceNotesField.text = null
-        binding.creditLimitField.setText("0.00")
-
         binding.businessNameField.text = null
         binding.gstNumberField.text = null
         binding.taxIdField.text = null

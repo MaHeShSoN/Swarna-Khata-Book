@@ -294,12 +294,12 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
-            app:drawableEndCompat="@drawable/solar__star_bold"
             android:drawablePadding="2dp"
             android:fontFamily="@font/librebaskervilleregular"
             android:text="Financial Information"
             android:textColor="@color/my_light_on_surface"
-            android:textSize="20sp" />
+            android:textSize="20sp"
+            app:drawableEndCompat="@drawable/solar__star_bold" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -404,28 +404,6 @@
                         android:gravity="top|start"
                         android:inputType="textMultiLine|textCapWords"
                         android:minLines="2"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <!-- Credit Limit -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/creditLimitLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Credit Limit"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary"
-                    app:prefixText="₹">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/creditLimitField"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:inputType="numberDecimal"
-                        android:text="0.00"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>

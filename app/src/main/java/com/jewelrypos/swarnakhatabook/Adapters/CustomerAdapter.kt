@@ -27,10 +27,7 @@ class CustomerAdapter(
         val customerType: TextView = itemView.findViewById(R.id.customerType)
         val customerBalance: TextView = itemView.findViewById(R.id.customerBalance)
 
-        // New credit limit UI elements
-        val creditLimitContainer: LinearLayout = itemView.findViewById(R.id.creditLimitContainer)
-        val creditLimitProgress: LinearProgressIndicator = itemView.findViewById(R.id.creditLimitProgress)
-        val creditLimitPercentage: TextView = itemView.findViewById(R.id.creditLimitPercentage)
+
     }
 
     interface OnCustomerClickListener {
@@ -79,50 +76,6 @@ class CustomerAdapter(
             )
         }
 
-        // Show credit limit information if applicable - using the imported utility
-        if (currentCustomer.balanceType == "Credit" &&
-            currentCustomer.creditLimit > 0.0 &&
-            currentCustomer.currentBalance > 0.0
-        ) {
-
-            // Import the utility for consistency
-            val percentage = com.jewelrypos.swarnakhatabook.Utilitys.CustomerBalanceUtils
-                .calculateCreditUsagePercentage(currentCustomer)
-
-            holder.creditLimitContainer.visibility = View.VISIBLE
-            holder.creditLimitProgress.progress = percentage
-            holder.creditLimitPercentage.text = "$percentage%"
-
-            // Set progress color based on percentage
-            val progressColor = when {
-                percentage >= 90 -> R.color.status_unpaid // Red for > 90%
-                percentage >= 75 -> R.color.status_partial // Orange for > 75%
-                else -> R.color.my_light_primary // Default gold color
-            }
-
-            holder.creditLimitProgress.setIndicatorColor(
-                ContextCompat.getColor(holder.itemView.context, progressColor)
-            )
-
-            // Set percentage text color to match progress
-            holder.creditLimitPercentage.setTextColor(
-                ContextCompat.getColor(holder.itemView.context, progressColor)
-            )
-
-            // Add visual indicator if customer is over credit limit
-            if (percentage >= 100) {
-                holder.customerBalance.setTextColor(
-                    ContextCompat.getColor(holder.itemView.context, R.color.status_unpaid)
-                )
-            } else {
-                holder.customerBalance.setTextColor(
-                    ContextCompat.getColor(holder.itemView.context, R.color.my_light_on_surface)
-                )
-            }
-        } else {
-            holder.creditLimitContainer.visibility = View.GONE
-        }
-
         holder.itemView.setOnClickListener {
             itemClickListener?.onCustomerClick(currentCustomer)
         }
@@ -133,15 +86,6 @@ class CustomerAdapter(
      * Calculate the percentage of credit limit used
      * @return Percentage of credit used (0-100)
      */
-    private fun calculateCreditUsagePercentage(customer: Customer): Int {
-        if (customer.creditLimit <= 0.0 || customer.currentBalance <= 0.0) {
-            return 0
-        }
-
-        val percentage = (customer.currentBalance / customer.creditLimit) * 100
-        // Cap at 100% for display purposes
-        return percentage.coerceAtMost(100.0).toInt()
-    }
 
     private var lastPosition = -1
 

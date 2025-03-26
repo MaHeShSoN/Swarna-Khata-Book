@@ -256,81 +256,50 @@ class InvoiceRepository(
     }
 
     // Enhanced delete invoice method
-    // Enhanced delete invoice method with proper customer balance adjustment
-    suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> = try {
-        coroutineScope {
-            // Fetch invoice first
+    // In InvoiceRepository.kt:
+
+    suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> {
+        try {
+            // Log deletion attempt for debugging
+            Log.d(TAG, "Attempting to delete invoice: $invoiceNumber")
+
+            // Get the invoice first to properly update customer balance
             val invoiceDoc = getUserCollection("invoices")
                 .document(invoiceNumber)
                 .get()
                 .await()
 
             val invoice = invoiceDoc.toObject<Invoice>()
-
             if (invoice == null) {
                 Log.w(TAG, "Invoice not found: $invoiceNumber")
-                return@coroutineScope Result.failure(Exception("Invoice not found"))
+                return Result.failure(Exception("Invoice not found"))
             }
 
-            // Calculate unpaid amount that needs to be removed from customer balance
-            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
+            // Log details about the invoice being deleted
+            Log.d(TAG, "Deleting invoice: $invoiceNumber, total: ${invoice.totalAmount}, paid: ${invoice.paidAmount}")
 
-            // Execute as a transaction to ensure both invoice and customer updates happen atomically
-            firestore.runTransaction { transaction ->
-                // 1. Remove the invoice
-                val invoiceRef = getUserCollection("invoices").document(invoiceNumber)
-                transaction.delete(invoiceRef)
+            // Delete the invoice document
+            getUserCollection("invoices")
+                .document(invoiceNumber)
+                .delete()
+                .await()
 
-                // 2. Update customer balance if there's unpaid amount and a valid customer
-                if (unpaidAmount != 0.0 && invoice.customerId.isNotEmpty()) {
-                    val customerRef = getUserCollection("customers").document(invoice.customerId)
-                    val customerSnapshot = transaction.get(customerRef)
-
-                    if (customerSnapshot.exists()) {
-                        val customer = customerSnapshot.toObject(Customer::class.java)
-                        customer?.let {
-                            // Apply balance change based on customer type - for deletion, we're reducing the balance
-                            val balanceChange = if (it.balanceType.uppercase() == "DEBIT") {
-                                unpaidAmount  // For debit customers, remove positive value
-                            } else {
-                                -unpaidAmount  // For credit customers, remove negative value
-                            }
-
-                            val newBalance = it.currentBalance + balanceChange
-                            transaction.update(customerRef, "currentBalance", newBalance)
-                            Log.d(TAG, "Delete transaction updating customer balance from ${it.currentBalance} to $newBalance")
-                        }
-                    }
+            // Update customer balance if needed
+            if (invoice.customerId.isNotEmpty()) {
+                try {
+                    updateCustomerBalanceOnDeletion(invoice)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating customer balance during deletion", e)
+                    // Continue with deletion even if balance update fails
                 }
+            }
 
-                // 3. Return stock to inventory if needed
-                invoice.items.forEach { item ->
-                    if (item.itemDetails.stock > 0) {
-                        val inventoryRef = getUserCollection("inventory").document(item.itemId)
-                        try {
-                            val itemSnapshot = transaction.get(inventoryRef)
-                            if (itemSnapshot.exists()) {
-                                val currentItem = itemSnapshot.toObject(JewelleryItem::class.java)
-                                currentItem?.let {
-                                    // Increase stock by the item quantity that was in the invoice
-                                    val newStock = it.stock + item.quantity
-                                    transaction.update(inventoryRef, "stock", newStock)
-                                    Log.d(TAG, "Returning ${item.quantity} to stock for ${it.displayName}")
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error restoring stock for item ${item.itemId}", e)
-                            // Continue even if one item fails
-                        }
-                    }
-                }
-            }.await()
-
-            Result.success(Unit)
+            Log.d(TAG, "Successfully deleted invoice: $invoiceNumber")
+            return Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting invoice: ${e.message}", e)
+            return Result.failure(e)
         }
-    } catch (e: Exception) {
-        Log.e(TAG, "Error deleting invoice", e)
-        Result.failure(e)
     }
 
     // Separate method to revert customer balance during invoice deletion

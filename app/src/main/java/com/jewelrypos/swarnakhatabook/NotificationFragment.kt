@@ -67,7 +67,7 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_refresh -> {
-                    viewModel.generateCreditLimitNotifications()
+
                     true
                 }
                 else -> false
@@ -114,7 +114,6 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     private fun setupEmptyState() {
         binding.checkNotificationsButton.setOnClickListener {
             binding.swipeRefreshLayout.isRefreshing = true
-            viewModel.generateCreditLimitNotifications()
         }
     }
 
