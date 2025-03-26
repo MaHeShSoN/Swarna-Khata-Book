@@ -78,6 +78,9 @@
         <action
             android:id="@+id/action_invoiceCreationFragment_to_invoiceDetailFragment"
             app:destination="@id/invoiceDetailFragment" />
+        <action
+            android:id="@+id/action_invoiceCreationFragment_to_customerDetailFragment"
+            app:destination="@id/customerDetailFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceDetailFragment"
@@ -89,14 +92,8 @@
         <action
             android:id="@+id/action_invoiceDetailFragment_to_invoiceCreationFragment"
             app:destination="@id/invoiceCreationFragment" />
-        <action
-            android:id="@+id/action_invoiceDetailFragment_to_editInvoiceItemsFragment"
-            app:destination="@id/editInvoiceItemsFragment" />
     </fragment>
-    <fragment
-        android:id="@+id/editInvoiceItemsFragment"
-        android:name="com.jewelrypos.swarnakhatabook.EditInvoiceItemsFragment"
-        android:label="EditInvoiceItemsFragment" />
+
     <fragment
         android:id="@+id/customerDetailFragment"
         android:name="com.jewelrypos.swarnakhatabook.CustomerDetailFragment"
@@ -106,10 +103,19 @@
         <argument
             android:name="customerId"
             app:argType="string" />
+
         <action
             android:id="@+id/action_customerDetailFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment" />
 
+        <!-- Add these new actions -->
+        <action
+            android:id="@+id/action_customerDetailFragment_to_invoiceDetailFragment"
+            app:destination="@id/invoiceDetailFragment" />
+
+        <action
+            android:id="@+id/action_customerDetailFragment_to_invoiceCreationFragment"
+            app:destination="@id/invoiceCreationFragment" />
     </fragment>
     <fragment
         android:id="@+id/notificationFragment"

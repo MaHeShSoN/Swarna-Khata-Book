@@ -7,6 +7,8 @@ import android.graphics.Canvas
 import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
+import androidx.navigation.NavOptions
+import androidx.core.os.bundleOf
 import android.os.Environment
 import android.util.Log
 import android.view.LayoutInflater
@@ -20,6 +22,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
@@ -54,6 +57,7 @@ import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import kotlinx.coroutines.launch
+
 //
 //class InvoiceDetailFragment : Fragment() {
 //
@@ -1022,7 +1026,6 @@ import kotlinx.coroutines.launch
 //}
 
 
-
 class InvoiceDetailFragment : Fragment() {
 
     private var _binding: FragmentInvoiceDetailBinding? = null
@@ -1056,11 +1059,15 @@ class InvoiceDetailFragment : Fragment() {
         setupNotesEditing()
         setupAddItemButton()
 
+        binding.topAppBar.overflowIcon = ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
         // Load invoice data based on passed ID
         viewModel.loadInvoice(args.invoiceId)
 
         // Add the callback
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
     }
 
     private fun setupToolbar() {
@@ -1075,18 +1082,22 @@ class InvoiceDetailFragment : Fragment() {
                     confirmDuplicateInvoice()
                     true
                 }
+
                 R.id.action_share_whatsapp -> {
                     shareInvoiceToWhatsApp()
                     true
                 }
+
                 R.id.action_save_pdf -> {
                     generateAndSavePdf()
                     true
                 }
+
                 R.id.action_delete -> {
                     confirmDeleteInvoice()
                     true
                 }
+
                 else -> false
             }
         }
@@ -1095,7 +1106,8 @@ class InvoiceDetailFragment : Fragment() {
     private fun setupRecyclerViews() {
         // Setup items recycler view with edit/delete functionality
         itemsAdapter = EditableInvoiceItemAdapter(emptyList())
-        itemsAdapter.setOnItemActionListener(object : EditableInvoiceItemAdapter.OnItemActionListener {
+        itemsAdapter.setOnItemActionListener(object :
+            EditableInvoiceItemAdapter.OnItemActionListener {
             override fun onRemoveItem(item: InvoiceItem) {
                 confirmDeleteItem(item)
             }
@@ -1116,7 +1128,8 @@ class InvoiceDetailFragment : Fragment() {
 
         // Setup payments recycler view with delete functionality
         paymentsAdapter = PaymentsAdapter(emptyList())
-        paymentsAdapter.setOnPaymentActionListener(object : PaymentsAdapter.OnPaymentActionListener {
+        paymentsAdapter.setOnPaymentActionListener(object :
+            PaymentsAdapter.OnPaymentActionListener {
             override fun onRemovePayment(payment: Payment) {
                 confirmDeletePayment(payment)
             }
@@ -1152,7 +1165,10 @@ class InvoiceDetailFragment : Fragment() {
     }
 
     private fun updateInvoiceUI(invoice: Invoice) {
-        Log.d("InvoiceDetailFragment", "Updating UI with invoice: ${invoice.invoiceNumber}, items: ${invoice.items.size}")
+        Log.d(
+            "InvoiceDetailFragment",
+            "Updating UI with invoice: ${invoice.invoiceNumber}, items: ${invoice.items.size}"
+        )
 
         // Update invoice header details
         binding.invoiceNumber.text = invoice.invoiceNumber
@@ -1186,7 +1202,6 @@ class InvoiceDetailFragment : Fragment() {
 
         Log.d("InvoiceDetailFragment", "UI update complete")
     }
-
 
 
     private fun updatePaymentStatus(invoice: Invoice) {
@@ -1247,6 +1262,7 @@ class InvoiceDetailFragment : Fragment() {
             binding.notesContent.text = invoice.notes
         }
     }
+
     private fun calculateExtraCharges(invoice: Invoice): Double {
         return invoice.items.sumOf { item ->
             item.itemDetails.listOfExtraCharges.sumOf { charge ->
@@ -1276,7 +1292,8 @@ class InvoiceDetailFragment : Fragment() {
     private fun openItemSelector() {
         val bottomSheet = ItemSelectionBottomSheet.newInstance()
 
-        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+        bottomSheet.setOnItemSelectedListener(object :
+            ItemSelectionBottomSheet.OnItemSelectedListener {
             override fun onItemSelected(newItem: JewelleryItem, price: Double) {
                 // Create new invoice item
                 val newInvoiceItem = InvoiceItem(
@@ -1356,13 +1373,17 @@ class InvoiceDetailFragment : Fragment() {
         // Pass the current item for editing
         bottomSheet.setItemForEdit(item.itemDetails)
 
-        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+        bottomSheet.setOnItemSelectedListener(object :
+            ItemSelectionBottomSheet.OnItemSelectedListener {
             override fun onItemSelected(newItem: JewelleryItem, price: Double) {
                 // This shouldn't happen during editing
             }
 
             override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                Log.d("InvoiceDetailFragment", "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges")
+                Log.d(
+                    "InvoiceDetailFragment",
+                    "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
+                )
 
                 // Create updated item while preserving the ID
                 val updatedInvoiceItem = InvoiceItem(
@@ -1421,7 +1442,13 @@ class InvoiceDetailFragment : Fragment() {
     private fun confirmDeletePayment(payment: Payment) {
         AlertDialog.Builder(requireContext())
             .setTitle("Delete Payment")
-            .setMessage("Are you sure you want to delete this payment of ₹${DecimalFormat("#,##,##0.00").format(payment.amount)}?")
+            .setMessage(
+                "Are you sure you want to delete this payment of ₹${
+                    DecimalFormat("#,##,##0.00").format(
+                        payment.amount
+                    )
+                }?"
+            )
             .setPositiveButton("Delete") { _, _ ->
                 viewModel.removePayment(payment)
             }
@@ -1442,33 +1469,59 @@ class InvoiceDetailFragment : Fragment() {
 
 
     private fun confirmDeleteInvoice() {
+        // Check if we came from CustomerInvoicesFragment
+        val fromCustomerInvoice = arguments?.getBoolean("FROM_CUSTOMER_INVOICE", false) ?: false
+        // Store the customerId for later use
+        val customerId = if (fromCustomerInvoice) viewModel.invoice.value?.customerId else null
+
         AlertDialog.Builder(requireContext())
             .setTitle("Delete Invoice")
             .setMessage("Are you sure you want to delete this invoice? This action cannot be undone.")
             .setPositiveButton("Delete") { _, _ ->
-                // Show loading indicator if applicable
+                // Show loading indicator
                 binding.progressBar.visibility = View.VISIBLE
 
                 // Call deleteInvoice with a completion callback
                 viewModel.deleteInvoice { success ->
-                    // Make sure we're still attached to a context before using it
-                    if (isAdded) {
-                        // Update UI on the main thread
-                        requireActivity().runOnUiThread {
-                            binding.progressBar.visibility = View.GONE
+                    // Make sure we're still attached to a context
+                    if (!isAdded) return@deleteInvoice
 
-                            if (success) {
-                                // Post the event for refreshing the invoice list
-                                EventBus.postInvoiceDeleted()
+                    requireActivity().runOnUiThread {
+                        // Check if binding is still valid
+                        val binding = _binding ?: return@runOnUiThread
 
-                                // Toast.makeText(requireContext(), "Invoice deleted successfully", Toast.LENGTH_SHORT).show()
+                        binding.progressBar.visibility = View.GONE
 
-                                // Only navigate up after successful deletion
-                                findNavController().navigateUp()
-                            } else {
-                                // Show error message if deletion failed
-                                Toast.makeText(requireContext(), "Failed to delete invoice", Toast.LENGTH_SHORT).show()
+                        if (success) {
+                            // Post the event for refreshing the invoice list
+                            EventBus.postInvoiceDeleted()
+
+                            try {
+                                if (fromCustomerInvoice && customerId != null) {
+                                    // Navigate back to CustomerDetailFragment with popUpTo
+                                    findNavController().navigate(
+                                        R.id.customerDetailFragment,
+                                        bundleOf("customerId" to customerId),
+                                        NavOptions.Builder()
+                                            .setPopUpTo(R.id.customerDetailFragment, true)
+                                            .build()
+                                    )
+                                } else {
+                                    // Regular navigation up for other cases
+                                    findNavController().navigateUp()
+                                }
+                            } catch (e: Exception) {
+                                Log.e("InvoiceDetailFragment", "Navigation error after deletion", e)
+                                // Try fallback navigation
+                                try {
+                                    findNavController().popBackStack()
+                                } catch (e: Exception) {
+                                    Log.e("InvoiceDetailFragment", "Fallback navigation failed", e)
+                                }
                             }
+                        } else {
+                            // Show error message if deletion failed
+                            Toast.makeText(requireContext(), "Failed to delete invoice", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -1604,13 +1657,19 @@ class InvoiceDetailFragment : Fragment() {
 
         invoice.items.forEach { item ->
             // Log for debugging
-            Log.d("InvoiceDetailFragment", "Item: ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges")
+            Log.d(
+                "InvoiceDetailFragment",
+                "Item: ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges"
+            )
 
             item.itemDetails.listOfExtraCharges.forEach { charge ->
                 // Multiply each charge by the item quantity
                 allExtraCharges.add(Pair(charge.name, charge.amount * item.quantity))
                 // Log each charge for debugging
-                Log.d("InvoiceDetailFragment", "Adding charge: ${charge.name} = ${charge.amount * item.quantity}")
+                Log.d(
+                    "InvoiceDetailFragment",
+                    "Adding charge: ${charge.name} = ${charge.amount * item.quantity}"
+                )
             }
         }
 

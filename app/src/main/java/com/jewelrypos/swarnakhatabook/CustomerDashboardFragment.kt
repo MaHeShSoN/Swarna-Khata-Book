@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -72,11 +73,51 @@ class CustomerDashboardFragment : Fragment() {
 
         // Populate dashboard with customer info
         setupDashboard()
-
-
-
     }
 
+    // Add this method to the CustomerDashboardFragment class
+    private fun setupFinancialInfo() {
+        // Format currency amounts with proper formatting
+        val formatter = DecimalFormat("#,##,##0.00")
+
+        // Set the balance type (Credit/Debit)
+        binding.balanceTypeText.text = customer.balanceType
+
+        // Set the background color of the balance type badge
+        val balanceTypeColor = if (customer.balanceType == "Credit") {
+            ContextCompat.getColor(requireContext(), R.color.status_paid)
+        } else {
+            ContextCompat.getColor(requireContext(), R.color.status_unpaid)
+        }
+        binding.balanceTypeText.backgroundTintList = ColorStateList.valueOf(balanceTypeColor)
+
+        // Set current balance with appropriate formatting and color
+        val currentBalanceText = "₹${formatter.format(customer.currentBalance)}"
+        binding.currentBalanceText.text = currentBalanceText
+
+        // Color the balance based on balance type and amount
+        val textColor = when {
+            (customer.balanceType == "Credit" && customer.currentBalance > 0) ||
+                    (customer.balanceType == "Debit" && customer.currentBalance <= 0) ->
+                ContextCompat.getColor(requireContext(), R.color.status_paid)
+            else ->
+                ContextCompat.getColor(requireContext(), R.color.status_unpaid)
+        }
+        binding.currentBalanceText.setTextColor(textColor)
+
+        // Set the opening balance
+        binding.openingBalanceText.text = "₹${formatter.format(customer.openingBalance)}"
+
+        // Show balance notes if available
+        if (customer.balanceNotes.isNotEmpty()) {
+            binding.balanceNotesContainer.visibility = View.VISIBLE
+            binding.balanceNotesText.text = customer.balanceNotes
+        } else {
+            binding.balanceNotesContainer.visibility = View.GONE
+        }
+    }
+
+    // Modify the setupDashboard method to call our new method
     private fun setupDashboard() {
         // Contact information
         binding.customerName.text = "${customer.firstName} ${customer.lastName}"
@@ -94,6 +135,8 @@ class CustomerDashboardFragment : Fragment() {
         }
         binding.customerAddress.text = fullAddress
 
+        // Set up financial information
+        setupFinancialInfo()
 
         // Business information (for wholesalers)
         if (customer.customerType.equals("Wholesaler", ignoreCase = true)) {

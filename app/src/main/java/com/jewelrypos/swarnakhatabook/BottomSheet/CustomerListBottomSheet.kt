@@ -165,14 +165,40 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+//    private fun showCustomerCreationBottomSheet() {
+//        val bottomSheet = CustomerBottomSheetFragment.newInstance()
+//        bottomSheet.setCustomerOperationListener(object : CustomerBottomSheetFragment.CustomerOperationListener {
+//            override fun onCustomerAdded(customer: Customer) {
+//                customerViewModel.addCustomer(customer)
+//                // Optional: Automatically select the newly created customer
+//                onCustomerSelectedListener?.invoke(customer)
+//                dismiss()
+//            }
+//
+//            override fun onCustomerUpdated(customer: Customer) {
+//                // Not needed for customer creation
+//            }
+//        })
+//        bottomSheet.show(parentFragmentManager, CustomerBottomSheetFragment.TAG)
+//    }
+
     private fun showCustomerCreationBottomSheet() {
         val bottomSheet = CustomerBottomSheetFragment.newInstance()
+
+        bottomSheet.setCalledFromInvoiceCreation(true)
+
         bottomSheet.setCustomerOperationListener(object : CustomerBottomSheetFragment.CustomerOperationListener {
             override fun onCustomerAdded(customer: Customer) {
-                customerViewModel.addCustomer(customer)
-                // Optional: Automatically select the newly created customer
-                onCustomerSelectedListener?.invoke(customer)
-                dismiss()
+                customerViewModel.addCustomer(customer).observe(viewLifecycleOwner) { result ->
+                    result.onSuccess { newCustomer ->
+                        // Customer added successfully, newCustomer now contains the ID
+                        onCustomerSelectedListener?.invoke(newCustomer)
+                        dismiss()
+                    }.onFailure { e ->
+                        Log.e(TAG, "Error adding customer: ${e.message}")
+                        // Handle error, perhaps show a toast
+                    }
+                }
             }
 
             override fun onCustomerUpdated(customer: Customer) {

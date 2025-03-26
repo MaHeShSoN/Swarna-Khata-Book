@@ -13,9 +13,11 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -92,24 +94,34 @@ class InvoiceCreationFragment : Fragment() {
         setupListeners()
         observePayments()
 
-        CustomerSelectionManager.selectedCustomerId?.let { customerId ->
+        // Check for a customer ID passed as an argument first
+        val passedCustomerId = arguments?.getString("customerId")
+
+        // If no ID in arguments, check the CustomerSelectionManager
+        val effectiveCustomerId = passedCustomerId ?: CustomerSelectionManager.selectedCustomerId
+
+        // Check if we came from CustomerInvoicesFragment
+        val fromCustomerInvoice = arguments?.getBoolean("FROM_CUSTOMER_INVOICE", false) ?: false
+
+        // Load the customer data if we have an ID
+        effectiveCustomerId?.let { id ->
             // Load the customer data using this ID
-            customerViewModel.getCustomerById(customerId).observe(viewLifecycleOwner) { result ->
+            customerViewModel.getCustomerById(id).observe(viewLifecycleOwner) { result ->
                 if (result.isSuccess) {
                     val customer = result.getOrNull()
                     if (customer != null) {
                         // Update UI with customer info
                         updateCustomerSection(customer)
                         salesViewModel.setSelectedCustomer(customer)
-
-                        // Clear the selection so it won't affect future invoice creations
-                        CustomerSelectionManager.selectedCustomerId = null
                     }
                 }
             }
+
+            // Clear the selection only if using the singleton approach
+            if (passedCustomerId == null) {
+                CustomerSelectionManager.selectedCustomerId = null
+            }
         }
-
-
     }
 
     private fun observePayments() {
@@ -302,6 +314,7 @@ class InvoiceCreationFragment : Fragment() {
     private fun selectCustomer() {
         val customerListBottomSheet = CustomerListBottomSheet.newInstance()
         customerListBottomSheet.setOnCustomerSelectedListener { customer ->
+            Log.d("InvoiceCreationFragmnet", "Selected customer: $customer")
             updateCustomerSection(customer)
             salesViewModel.setSelectedCustomer(customer)
         }
@@ -530,16 +543,51 @@ class InvoiceCreationFragment : Fragment() {
 
             // Save the invoice
             salesViewModel.saveInvoice(invoice) { success ->
-                // Always hide loading on the UI thread
+                if (!isAdded) return@saveInvoice
+
                 requireActivity().runOnUiThread {
+                    if (_binding == null) return@runOnUiThread
+
                     binding.progressOverlay.visibility = View.GONE
 
                     if (success) {
-                        Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+                        context?.let { ctx ->
+                            Toast.makeText(ctx, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+                        }
+
                         EventBus.postInvoiceAdded()
-                        findNavController().navigateUp()
+
+                        // Check if we came from CustomerInvoicesFragment
+                        val fromCustomerInvoice = arguments?.getBoolean("FROM_CUSTOMER_INVOICE", false) ?: false
+
+                        try {
+                            if (fromCustomerInvoice) {
+                                // Get the customer ID
+                                val customerId = arguments?.getString("customerId")
+                                if (customerId != null) {
+                                    // Navigate back to CustomerDetailFragment
+                                    findNavController().navigate(
+                                        R.id.customerDetailFragment,
+                                        bundleOf("customerId" to customerId),
+                                        NavOptions.Builder()
+                                            .setPopUpTo(R.id.customerDetailFragment, true)
+                                            .build()
+                                    )
+                                } else {
+                                    // Fallback
+                                    findNavController().navigateUp()
+                                }
+                            } else {
+                                // Standard navigateUp() for other cases
+                                findNavController().navigateUp()
+                            }
+                        } catch (e: Exception) {
+                            Log.e("InvoiceCreation", "Navigation error: ${e.message}", e)
+                        }
                     } else {
-                        Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+                        context?.let { ctx ->
+                            Toast.makeText(ctx, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
             }
@@ -550,72 +598,6 @@ class InvoiceCreationFragment : Fragment() {
             Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-
-//
-//    private fun saveInvoice() {
-//        // Validate
-//        if (!validateInvoice()) {
-//            return
-//        }
-//
-//        // Create invoice object
-//        val invoiceNumber = generateInvoiceNumber()
-//        val customer = salesViewModel.selectedCustomer.value
-//            ?: throw IllegalStateException("Customer must be selected")
-//
-//        val invoiceItems = itemsAdapter.getItems().map { selected ->
-//            InvoiceItem(
-//                itemId = selected.item.id,
-//                quantity = selected.quantity,
-//                itemDetails = selected.item,
-//                price = selected.price
-//            )
-//        }
-//
-//        val payments = paymentsAdapter.getPayments()
-//        val totalAmount = salesViewModel.calculateTotal()
-//        val paidAmount = salesViewModel.calculateTotalPaid()
-//
-//        // Get customer address components
-//        val address = if (customer.streetAddress.isNotEmpty()) {
-//            "${customer.streetAddress}, ${customer.city}, ${customer.state}"
-//        } else {
-//            "${customer.city}, ${customer.state}"
-//        }
-//
-//
-//        val invoice = Invoice(
-//            invoiceNumber = invoiceNumber,
-//            customerId = customer.id,
-//            customerName = "${customer.firstName} ${customer.lastName}",
-//            customerPhone = customer.phoneNumber,     // Include phone
-//            customerAddress = address,                // Include address
-//            invoiceDate = System.currentTimeMillis(),
-//            items = invoiceItems,
-//            payments = payments,
-//            totalAmount = totalAmount,
-//            paidAmount = paidAmount,
-//            // You might want to add these fields as well
-//            notes = binding.notesEditText.text.toString()
-//        )
-//
-//        // Show loading state
-//        binding.progressOverlay.visibility = View.VISIBLE
-//
-//        // Save the invoice
-//        salesViewModel.saveInvoice(invoice) { success ->
-//            // Hide loading state
-//            binding.progressOverlay.visibility = View.GONE
-//
-//            if (success) {
-//                Toast.makeText(context, "Invoice saved successfully", Toast.LENGTH_SHORT).show()
-//                EventBus.postInvoiceAdded()
-//                 findNavController().navigateUp()
-//            } else {
-//                Toast.makeText(context, "Failed to save invoice", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//    }
 
     private fun validateInvoice(): Boolean {
         if (salesViewModel.selectedCustomer.value == null) {

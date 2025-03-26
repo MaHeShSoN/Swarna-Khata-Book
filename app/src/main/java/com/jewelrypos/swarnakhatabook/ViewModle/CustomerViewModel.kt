@@ -220,21 +220,26 @@ class CustomerViewModel(
         }
     }
 
-    fun addCustomer(customer: Customer) {
+    fun addCustomer(customer: Customer): LiveData<Result<Customer>> {
+        val resultLiveData = MutableLiveData<Result<Customer>>()
         viewModelScope.launch {
             _isLoading.value = true
             repository.addCustomer(customer).fold(
-                onSuccess = {
+                onSuccess = { newCustomer ->
+                    resultLiveData.value = Result.success(newCustomer)
                     loadFirstPage() // Refresh to show updated data
-                    Log.d("CustomerViewModel", "Customer added successfully")
+                    Log.d("CustomerViewModel", "Customer added successfully with ID: ${newCustomer.id}")
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = error.message
                     _isLoading.value = false
-                    Log.d("CustomerViewModel", "Error adding customer: ${it.message}")
+                    Log.d("CustomerViewModel", "Error adding customer: ${error.message}")
                 }
             )
+            _isLoading.value = false
         }
+        return resultLiveData
     }
 
     fun updateCustomer(customer: Customer) {

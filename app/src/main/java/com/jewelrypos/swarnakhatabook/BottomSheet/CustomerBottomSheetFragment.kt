@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.RadioButton
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
@@ -36,6 +37,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private var isEditMode = false
     private var existingCustomerId: String? = null
     private var listener: CustomerOperationListener? = null
+    private var calledFromInvoiceCreation = false
 
     interface CustomerOperationListener {
         fun onCustomerAdded(customer: Customer)
@@ -83,6 +85,16 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 existingCustomerId = customer.id
                 populateFormWithCustomerData(customer)
             }
+        }
+
+        if (calledFromInvoiceCreation) {
+            // Hide the "Save and Add" button when called from invoice creation
+            binding.saveAndAddButton.visibility = View.GONE
+
+            // Optionally, adjust the layout to make the "Save and Close" button full width
+            val layoutParams = binding.saveAndCloseButton.layoutParams as LinearLayout.LayoutParams
+            layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT
+            binding.saveAndCloseButton.layoutParams = layoutParams
         }
     }
 
@@ -446,6 +458,10 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.cityLayout.isErrorEnabled = false
         binding.stateLayout.isErrorEnabled = false
         binding.businessNameLayout.isErrorEnabled = false
+    }
+
+    fun setCalledFromInvoiceCreation(fromInvoice: Boolean) {
+        calledFromInvoiceCreation = fromInvoice
     }
 
 

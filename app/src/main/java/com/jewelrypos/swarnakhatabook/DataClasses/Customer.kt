@@ -4,7 +4,7 @@ import java.io.Serializable
 
 // Customer data class for Firebase
 data class Customer(
-    var id: String = "", // Firebase document ID
+    var id: String = "",
     val customerType: String = "",
     val firstName: String = "",
     val lastName: String = "",

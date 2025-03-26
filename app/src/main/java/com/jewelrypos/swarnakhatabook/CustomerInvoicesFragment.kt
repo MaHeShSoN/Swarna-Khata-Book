@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -82,29 +84,79 @@ class CustomerInvoicesFragment : Fragment() {
 
 
     // Add this new method to the class
-    private fun navigateToCreateInvoice() {
-        // Navigate to the invoice creation screen with the customer ID pre-selected
-        val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-        val action = MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceCreationFragment()
-        mainNavController.navigate(action)
+//    private fun navigateToCreateInvoice() {
+//        // Navigate to the invoice creation screen with the customer ID pre-selected
+//        val navController = findNavController()
+//        val action = CustomerDetailFragmentDirections.actionCustomerDetailFragmentToInvoiceCreationFragment()
+//        navController.navigate(action)
+//
+//        // Pre-select the customer in the invoice screen
+//        // This requires you to add a mechanism to pre-select a customer in the InvoiceCreationFragment
+//        // For example, through a shared ViewModel or arguments
+//        customerId.let { id ->
+//            // You could use a singleton to pass the ID or modify InvoiceCreationFragment
+//            // to accept the customer ID as an argument
+//            CustomerSelectionManager.selectedCustomerId = id
+//        }
+//    }
 
-        // Pre-select the customer in the invoice screen
-        // This requires you to add a mechanism to pre-select a customer in the InvoiceCreationFragment
-        // For example, through a shared ViewModel or arguments
-        customerId.let { id ->
-            // You could use a singleton to pass the ID or modify InvoiceCreationFragment
-            // to accept the customer ID as an argument
-            CustomerSelectionManager.selectedCustomerId = id
+    private fun navigateToCreateInvoice() {
+        try {
+            // Add a bundle with necessary information
+            val bundle = Bundle().apply {
+                putString("customerId", customerId)
+                putBoolean("FROM_CUSTOMER_INVOICE", true)
+            }
+
+            // Get the nav controller
+            val navController = findNavController()
+
+            // Navigate with the bundle
+            navController.navigate(R.id.action_customerDetailFragment_to_invoiceCreationFragment, bundle)
+
+            // Keep using CustomerSelectionManager as well for backward compatibility
+            CustomerSelectionManager.selectedCustomerId = customerId
+
+        } catch (e: Exception) {
+            // Log the error and show a message
+            Log.e("CustomerInvoicesFragment", "Navigation error", e)
+            Toast.makeText(context, "Navigation error: ${e.message}", Toast.LENGTH_SHORT).show()
+
+            // Fallback navigation if needed
+            try {
+                val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                mainNavController.navigate(R.id.invoiceCreationFragment)
+                CustomerSelectionManager.selectedCustomerId = customerId
+            } catch (e: Exception) {
+                Log.e("CustomerInvoicesFragment", "Fallback navigation failed", e)
+            }
         }
     }
 
     private fun setupRecyclerView() {
         adapter = InvoicesAdapter(emptyList())
+//        adapter.onItemClickListener = { invoice ->
+//            // Navigate to invoice details
+//            val navController = findNavController()
+//            val action = CustomerDetailFragmentDirections.actionCustomerDetailFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
+//            navController.navigate(action)
+//
+//
+//        }
+
+        // In CustomerInvoicesFragment.kt
         adapter.onItemClickListener = { invoice ->
             // Navigate to invoice details
-            val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-            val action = MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
-            mainNavController.navigate(action)
+            try {
+                val bundle = Bundle().apply {
+                    putString("invoiceId", invoice.invoiceNumber)
+                    putBoolean("FROM_CUSTOMER_INVOICE", true)
+                }
+                findNavController().navigate(R.id.action_customerDetailFragment_to_invoiceDetailFragment, bundle)
+            } catch (e: Exception) {
+                Log.e("CustomerInvoicesFragment", "Navigation error", e)
+                Toast.makeText(context, "Error opening invoice: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.recyclerViewInvoices.apply {

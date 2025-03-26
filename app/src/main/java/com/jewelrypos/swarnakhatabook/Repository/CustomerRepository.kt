@@ -103,7 +103,7 @@ class CustomerRepository(
     }
 
     // Add a new customer
-    suspend fun addCustomer(customer: Customer): Result<String> = try {
+    suspend fun addCustomer(customer: Customer): Result<Customer> = try {
         val phoneNumber = getCurrentUserPhoneNumber()
 
         // Create document with auto-generated ID
@@ -118,7 +118,7 @@ class CustomerRepository(
         // Save to Firestore
         docRef.set(customerWithId).await()
 
-        Result.success(docRef.id)
+        Result.success(customerWithId)
     } catch (e: Exception) {
         Result.failure(e)
     }

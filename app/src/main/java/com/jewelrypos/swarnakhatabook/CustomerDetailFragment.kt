@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -59,6 +60,8 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
 
         // Load customer details
         loadCustomerDetails(args.customerId)
+
+        binding.topAppBar.overflowIcon = ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
 
         // Set up back button
         binding.topAppBar.setNavigationOnClickListener {

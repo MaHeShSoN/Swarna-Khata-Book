@@ -175,6 +175,144 @@
         </com.google.android.material.card.MaterialCardView>
 
 
+        <!-- Financial Information Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/financialInfoCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/my_light_surface">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Financial Information"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_primary"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Balance Type -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Account Type"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/balanceTypeText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:background="@drawable/rounded_badge_background"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:textColor="@color/cream_background"
+                        android:textSize="14sp"
+                        tools:text="Credit" />
+                </LinearLayout>
+
+                <!-- Current Balance -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Current Balance"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/currentBalanceText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratbold"
+                        android:textSize="16sp"
+                        tools:text="₹25,000.00"
+                        tools:textColor="@color/status_paid" />
+                </LinearLayout>
+
+                <!-- Opening Balance -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Opening Balance"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/openingBalanceText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="₹20,000.00" />
+                </LinearLayout>
+
+                <!-- Balance Notes (if any) -->
+                <LinearLayout
+                    android:id="@+id/balanceNotesContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Notes"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/balanceNotesText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="Payment due by end of month. Prefers cash transactions." />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Business Information Card (for Wholesalers) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/businessInfoCard"
