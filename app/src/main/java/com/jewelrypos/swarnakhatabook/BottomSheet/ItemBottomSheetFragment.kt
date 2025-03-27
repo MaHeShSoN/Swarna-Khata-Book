@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -54,8 +55,13 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // Update title if in edit mode
         if (editMode) {
             binding.titleTextView.text = "Edit Jewellery Item"
-            binding.saveAddButton.text = "Update"
-            binding.saveCloseButton.text = "Update & Close"
+            binding.saveAddButton.visibility = View.GONE
+            binding.saveCloseButton.text = "Update"
+
+            // Optionally, adjust the layout to make the "Save and Close" button full width
+            val layoutParams = binding.saveCloseButton.layoutParams as LinearLayout.LayoutParams
+            layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT
+            binding.saveCloseButton.layoutParams = layoutParams
         }
 
 

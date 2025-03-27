@@ -258,7 +258,7 @@
                             android:layout_height="wrap_content"
                             android:text="Add"
                             android:textColor="@color/my_light_primary"
-                            app:icon="@drawable/ic_plus_white_24dp"
+                            app:icon="@drawable/material_symbols__add_rounded"
                             app:iconTint="@color/my_light_primary"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent" />

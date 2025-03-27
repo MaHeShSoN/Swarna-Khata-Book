@@ -12,6 +12,7 @@ import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
@@ -234,6 +235,15 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         showBottomSheetDialog()
     }
 
+    private fun navigateToItemDetail(item: JewelleryItem) {
+        val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+
+        // Using the generated NavDirections class
+        val action =
+            MainScreenFragmentDirections.actionMainScreenFragmentToItemDetailFragmnet(itemId = item.id)
+        parentNavController.navigate(action)
+    }
+
     override fun onItemAdded(item: JewelleryItem) {
         inventoryViewModel.addJewelleryItem(item)
     }
@@ -245,8 +255,12 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     override fun onItemClick(item: JewelleryItem) {
+
+        navigateToItemDetail(item)
+
+
         // Open ItemBottomSheetFragment with item data for editing
-        showBottomSheetDialog(item)
+//        showBottomSheetDialog(item)
     }
 
     // Inside your InventoryFragment class:

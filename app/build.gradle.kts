@@ -99,8 +99,6 @@ dependencies {
 
     implementation ("com.github.ibrahimsn98:SmoothBottomBar:1.7.9")
 
-    implementation ("com.nambimobile.widgets:expandable-fab:1.2.1")
-
     implementation("com.google.code.gson:gson:2.10.1")
 
 

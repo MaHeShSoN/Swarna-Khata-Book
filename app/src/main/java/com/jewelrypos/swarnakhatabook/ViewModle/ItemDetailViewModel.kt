@@ -1,0 +1,264 @@
+package com.jewelrypos.swarnakhatabook.ViewModle
+
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.DataClasses.ItemUsageStats
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+
+class ItemDetailViewModel(
+    private val repository: InventoryRepository,
+    private val connectivityManager: ConnectivityManager
+) : ViewModel() {
+
+    private val _jewelryItem = MutableLiveData<JewelleryItem>()
+    val jewelryItem: LiveData<JewelleryItem> = _jewelryItem
+
+
+    private val _itemUsageStats = MutableLiveData<ItemUsageStats>()
+    val itemUsageStats: LiveData<ItemUsageStats> = _itemUsageStats
+
+    private val _errorMessage = MutableLiveData<String>()
+    val errorMessage: LiveData<String> = _errorMessage
+
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private var itemId: String = ""
+
+    private val firestore = FirebaseFirestore.getInstance()
+
+    // Load item details by ID
+    fun loadItem(id: String) {
+        this.itemId = id
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                // Choose source based on connectivity
+                val source = if (isOnline()) Source.DEFAULT else Source.CACHE
+
+                repository.getJewelleryItemById(id, source).fold(
+                    onSuccess = { item ->
+                        _jewelryItem.value = item
+                        loadItemUsageStats(id)
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to load item: ${error.message}"
+                        _isLoading.value = false
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "An error occurred: ${e.message}"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Load item usage statistics from invoices
+    private fun loadItemUsageStats(itemId: String) {
+        viewModelScope.launch {
+            try {
+                val userId = repository.getCurrentUserId()
+                val invoiceCollection = firestore.collection("users")
+                    .document(userId)
+                    .collection("invoices")
+
+                // Get all invoices containing this item
+                val invoicesQuery = invoiceCollection
+                    .get()
+                    .await()
+
+                val invoicesWithItem = invoicesQuery.documents.filter { invoiceDoc ->
+                    val items = invoiceDoc.get("items") as? List<Map<String, Any>> ?: emptyList()
+                    items.any { it["itemId"] == itemId }
+                }
+
+                var totalQuantity = 0
+                var totalRevenue = 0.0
+                var lastSoldDate = 0L
+                val customerSales = mutableMapOf<String, Int>() // Customer ID to quantity sold
+
+                // Process each invoice to gather statistics
+                invoicesWithItem.forEach { invoiceDoc ->
+                    val invoiceData = invoiceDoc.data ?: return@forEach
+                    val items = invoiceData["items"] as? List<Map<String, Any>> ?: emptyList()
+                    val customerId = invoiceData["customerId"] as? String ?: ""
+                    val customerName = invoiceData["customerName"] as? String ?: ""
+                    val invoiceDate = (invoiceData["invoiceDate"] as? Long) ?: 0L
+
+                    items.forEach { itemMap ->
+                        if (itemMap["itemId"] == itemId) {
+                            val quantity = (itemMap["quantity"] as? Long)?.toInt() ?: 0
+                            val price = (itemMap["price"] as? Double) ?: 0.0
+
+                            totalQuantity += quantity
+                            totalRevenue += price * quantity
+
+                            // Track customer purchase quantities
+                            if (customerId.isNotEmpty() && customerName.isNotEmpty()) {
+                                customerSales[customerName] = (customerSales[customerName] ?: 0) + quantity
+                            }
+
+                            // Track latest sale date
+                            if (invoiceDate > lastSoldDate) {
+                                lastSoldDate = invoiceDate
+                            }
+                        }
+                    }
+                }
+
+                // Find top customer
+                val topCustomerEntry = customerSales.entries.maxByOrNull { it.value }
+                val topCustomerName = topCustomerEntry?.key ?: ""
+                val topCustomerQuantity = topCustomerEntry?.value ?: 0
+
+                // Update stats LiveData
+                _itemUsageStats.value = ItemUsageStats(
+                    totalInvoicesUsed = invoicesWithItem.size,
+                    totalQuantitySold = totalQuantity,
+                    totalRevenue = totalRevenue,
+                    lastSoldDate = lastSoldDate,
+                    topCustomerName = topCustomerName,
+                    topCustomerQuantity = topCustomerQuantity
+                )
+
+                _isLoading.value = false
+
+            } catch (e: Exception) {
+                Log.e("ItemDetailViewModel", "Error loading usage stats", e)
+                _errorMessage.value = "Failed to load usage statistics"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Update item stock
+    fun updateStock(adjustment: Int, callback: (Boolean) -> Unit) {
+        val currentItem = _jewelryItem.value ?: return
+        val newStock = currentItem.stock + adjustment
+
+        if (newStock < 0) {
+            _errorMessage.value = "Stock cannot be negative"
+            callback(false)
+            return
+        }
+
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                val result = repository.updateItemStock(currentItem.id, newStock)
+                result.fold(
+                    onSuccess = {
+                        // Update the local item data
+                        _jewelryItem.value = currentItem.copy(stock = newStock)
+                        _isLoading.value = false
+                        callback(true)
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to update stock: ${error.message}"
+                        _isLoading.value = false
+                        callback(false)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "An error occurred: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+            }
+        }
+    }
+
+    // Update the entire item
+    fun updateItem(updatedItem: JewelleryItem, callback: (Boolean) -> Unit) {
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                // Since updateJewelleryItem throws exceptions on failure,
+                // we just call it directly and handle exceptions in the catch block
+                repository.updateJewelleryItem(updatedItem)
+
+                // If we reach here, it means the update was successful
+                // Reload the item to get fresh data
+                loadItem(updatedItem.id)
+                callback(true)
+            } catch (e: Exception) {
+                _errorMessage.value = "Failed to update item: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+            }
+        }
+    }
+
+    // Check if item is used in any invoices
+    fun checkItemUsage(callback: (Int) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val userId = repository.getCurrentUserId()
+                val invoiceCollection = firestore.collection("users")
+                    .document(userId)
+                    .collection("invoices")
+
+                // Count invoices with this item
+                val invoicesQuery = invoiceCollection
+                    .get()
+                    .await()
+
+                val count = invoicesQuery.documents.count { invoiceDoc ->
+                    val items = invoiceDoc.get("items") as? List<Map<String, Any>> ?: emptyList()
+                    items.any { it["itemId"] == itemId }
+                }
+
+                callback(count)
+            } catch (e: Exception) {
+                Log.e("ItemDetailViewModel", "Error checking item usage", e)
+                callback(0) // Default to 0 on error
+            }
+        }
+    }
+
+    // Delete the item
+    fun deleteItem(callback: (Boolean) -> Unit) {
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                repository.deleteJewelleryItem(itemId).fold(
+                    onSuccess = {
+                        _isLoading.value = false
+                        callback(true)
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to delete item: ${error.message}"
+                        _isLoading.value = false
+                        callback(false)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "An error occurred: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+            }
+        }
+    }
+
+    // Helper to check network connectivity
+    private fun isOnline(): Boolean {
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        return networkCapabilities != null &&
+                (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+    }
+}

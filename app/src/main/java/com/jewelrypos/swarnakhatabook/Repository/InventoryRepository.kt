@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,6 +22,7 @@ class InventoryRepository(
     private val pageSize = 10
     private var lastDocumentSnapshot: DocumentSnapshot? = null
     private var isLastPage = false
+
 
 
 
@@ -122,6 +124,97 @@ class InventoryRepository(
             .addOnFailureListener { e ->
                 continuation.resumeWithException(e)
             }
+    }
+    // Add these methods to your existing InventoryRepository class
+
+    /**
+     * Get a jewelry item by its ID
+     */
+    suspend fun getJewelleryItemById(itemId: String, source: Source = Source.DEFAULT): Result<JewelleryItem> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            val documentSnapshot = firestore
+                .collection("users")
+                .document(phoneNumber)
+                .collection("inventory")
+                .document(itemId)
+                .get(source)
+                .await()
+
+            if (documentSnapshot.exists()) {
+                val item = documentSnapshot.toObject(JewelleryItem::class.java)
+                if (item != null) {
+                    Result.success(item)
+                } else {
+                    Result.failure(Exception("Failed to parse item data"))
+                }
+            } else {
+                Result.failure(Exception("Item not found"))
+            }
+        } catch (e: Exception) {
+            Log.e("InventoryRepository", "Error getting item by ID", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Update the stock quantity of a jewelry item
+     */
+    suspend fun updateItemStock(itemId: String, newStock: Double): Result<Unit> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            firestore
+                .collection("users")
+                .document(phoneNumber)
+                .collection("inventory")
+                .document(itemId)
+                .update("stock", newStock)
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("InventoryRepository", "Error updating item stock", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Delete a jewelry item from inventory
+     */
+    suspend fun deleteJewelleryItem(itemId: String): Result<Unit> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            firestore
+                .collection("users")
+                .document(phoneNumber)
+                .collection("inventory")
+                .document(itemId)
+                .delete()
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("InventoryRepository", "Error deleting item", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get the current user ID (phone number)
+     */
+    fun getCurrentUserId(): String {
+        return getCurrentUserPhoneNumber()
+    }
+
+    private fun getCurrentUserPhoneNumber(): String {
+        val currentUser = auth.currentUser
+            ?: throw UserNotAuthenticatedException("User not authenticated.")
+        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
+            ?: throw PhoneNumberInvalidException("User phone number not available.")
+        return phoneNumber
     }
 }
 
