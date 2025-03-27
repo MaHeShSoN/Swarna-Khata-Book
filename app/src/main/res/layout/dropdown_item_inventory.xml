@@ -26,4 +26,35 @@
         android:textAppearance="?attr/textAppearanceBody2"
         android:textColor="@color/my_light_secondary"
         android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:backgroundTint="@color/cream_background"
+        android:background="@color/cream_background">
+
+        <TextView
+            android:id="@+id/details_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="@color/cream_background"
+            android:background="@color/cream_background"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/stock_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="@color/cream_background"
+            android:background="@color/cream_background"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textStyle="bold"
+            android:textSize="14sp" />
+    </LinearLayout>
 </LinearLayout>

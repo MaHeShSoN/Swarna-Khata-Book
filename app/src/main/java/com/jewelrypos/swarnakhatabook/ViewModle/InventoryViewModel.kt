@@ -198,4 +198,7 @@ class InventoryViewModel(
             }
         }
     }
+    fun getAllItemsForDropdown() = viewModelScope.launch {
+        repository.getAllInventoryItems()
+    }
 }

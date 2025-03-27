@@ -7,6 +7,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.Companion.TAG
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
@@ -198,6 +199,32 @@ class InventoryRepository(
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("InventoryRepository", "Error deleting item", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getAllInventoryItems(source: Source = Source.DEFAULT): Result<List<JewelleryItem>> {
+        return try {
+            val userPhoneNumber = getCurrentUserId()
+
+            // This query gets all items without pagination
+            val snapshot = firestore.collection("users")
+                .document(userPhoneNumber)
+                .collection("inventory")
+                .get(source)
+                .await()
+
+            val items = snapshot.toObjects(JewelleryItem::class.java)
+            Log.d(TAG, "Loaded all ${items.size} inventory items")
+            Result.success(items)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading all inventory items", e)
+
+            // If using cache and got an error, try from server
+            if (source == Source.CACHE) {
+                return getAllInventoryItems(Source.SERVER)
+            }
+
             Result.failure(e)
         }
     }

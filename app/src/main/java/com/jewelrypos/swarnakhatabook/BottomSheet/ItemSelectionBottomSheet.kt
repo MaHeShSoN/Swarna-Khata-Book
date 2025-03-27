@@ -32,6 +32,11 @@ import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.databinding.ItemSelectionBottomSheetBinding
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 
 class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
@@ -75,6 +80,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         InventoryViewModelFactory(repository, connectivityManager)
     }
+    private lateinit var inventoryRepository: InventoryRepository
 
     // Store inventory items for dropdown
     private var inventoryItems: List<JewelleryItem> = emptyList()
@@ -104,7 +110,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         // Set up the inventory items observer
-        setupInventoryObserver()
+//        setupInventoryObserver()
+
+        // Initialize repository directly
+        initializeRepository()
 
         // If we're in edit mode, populate the form with the item data
         if (editMode && itemToEdit != null) {
@@ -118,7 +127,52 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         setupChangeListeners()
         setupListeners()
         setupTaxFields()
+        loadAllInventoryItems()
     }
+
+    private fun initializeRepository() {
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        inventoryRepository = InventoryRepository(firestore, auth)
+    }
+
+    // Load all inventory items for the dropdown
+    private fun loadAllInventoryItems() {
+        binding.progressBar.visibility = View.VISIBLE
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Load all items without pagination
+                val result = inventoryRepository.getAllInventoryItems()
+
+                withContext(Dispatchers.Main) {
+                    result.fold(
+                        onSuccess = { items ->
+                            inventoryItems = items
+                            setupInventoryDropdown()
+                            binding.progressBar.visibility = View.GONE
+                        },
+                        onFailure = { exception ->
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    "Failed to load inventory items: ${exception.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                binding.progressBar.visibility = View.GONE
+                            }
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    binding.progressBar.visibility = View.GONE
+                }
+            }
+        }
+    }
+
 
     // Setup observer for inventory items
     private fun setupInventoryObserver() {
@@ -180,7 +234,34 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     // Custom adapter for inventory items dropdown
-    private inner class InventoryItemAdapter(
+//    private inner class InventoryItemAdapter(
+//        context: android.content.Context,
+//        private val items: List<JewelleryItem>
+//    ) : ArrayAdapter<JewelleryItem>(context, R.layout.dropdown_item_inventory, items), Filterable {
+//
+//        private var filteredItems: List<JewelleryItem> = items
+//
+//        override fun getCount(): Int = filteredItems.size
+//
+//        override fun getItem(position: Int): JewelleryItem = filteredItems[position]
+//
+//        // This is the method that determines what appears in the TextView when an item is selected
+//        override fun getItemId(position: Int): Long = position.toLong()
+//
+//        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+//            val view = convertView ?: LayoutInflater.from(context)
+//                .inflate(R.layout.dropdown_item_inventory, parent, false)
+//
+//            val item = getItem(position)
+//            val primaryText = view.findViewById<TextView>(R.id.primary_text)
+//            val secondaryText = view.findViewById<TextView>(R.id.secondary_text)
+//
+//            primaryText.text = item.displayName
+//            secondaryText.text = "Category: ${item.category} | Type: ${item.itemType}"
+//
+//            return view
+//        }
+    private inner class DetailedInventoryItemAdapter(
         context: android.content.Context,
         private val items: List<JewelleryItem>
     ) : ArrayAdapter<JewelleryItem>(context, R.layout.dropdown_item_inventory, items), Filterable {
@@ -191,7 +272,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
         override fun getItem(position: Int): JewelleryItem = filteredItems[position]
 
-        // This is the method that determines what appears in the TextView when an item is selected
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
@@ -201,9 +281,26 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             val item = getItem(position)
             val primaryText = view.findViewById<TextView>(R.id.primary_text)
             val secondaryText = view.findViewById<TextView>(R.id.secondary_text)
+            val detailsText = view.findViewById<TextView>(R.id.details_text)
+            val stockText = view.findViewById<TextView>(R.id.stock_text)
 
+            // Format the display to show important details
             primaryText.text = item.displayName
-            secondaryText.text = "Category: ${item.category} | Type: ${item.itemType}"
+            secondaryText.text = "Code: ${item.jewelryCode} | Type: ${item.itemType}"
+            detailsText.text = "Weight: ${item.grossWeight}g | Purity: ${item.purity}"
+
+            // Show stock information with color coding
+            val stockDisplay = "${item.stock} ${item.stockUnit}"
+            stockText.text = stockDisplay
+
+            // Color code based on stock level
+            if (item.stock <= 1.0) {
+                stockText.setTextColor(context.getColor(R.color.status_unpaid))
+            } else if (item.stock <= 5.0) {
+                stockText.setTextColor(context.getColor(R.color.status_partial))
+            } else {
+                stockText.setTextColor(context.getColor(R.color.status_paid))
+            }
 
             return view
         }
@@ -242,9 +339,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+
     // Setup inventory dropdown
     private fun setupInventoryDropdown() {
-        val adapter = InventoryItemAdapter(requireContext(), inventoryItems)
+        val adapter = DetailedInventoryItemAdapter(requireContext(), inventoryItems)
         binding.itemNameDropdown.setAdapter(adapter)
 
         // Handle item selection
@@ -264,11 +362,52 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     // Fill form fields from selected inventory item
+//    private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
+//        binding.grossWeightEditText.setText(item.grossWeight.toString())
+//        binding.netWeightEditText.setText(item.netWeight.toString())
+//        binding.wastageEditText.setText(item.wastage.toString())
+//        binding.purityEditText.setText(item.purity)
+//
+//        // Update calculated fields
+//        updateCalculatedFields()
+//    }
+
     private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
+        // Fill all available fields
         binding.grossWeightEditText.setText(item.grossWeight.toString())
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.purityEditText.setText(item.purity)
+        binding.mackingChargesEditText.setText(item.makingCharges.toString())
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
+        binding.goldRateEditText.setText(item.goldRate.toString())
+        binding.goldRateOnEditText.setText(item.goldRateOn)
+        binding.diamondPrizeEditText.setText(item.diamondPrice.toString())
+
+        // Set tax rate and update checkbox
+        if (item.taxRate > 0) {
+            binding.taxApplicableCheckbox.isChecked = true
+            binding.taxRateEditText.setText(item.taxRate.toString())
+            binding.taxRateInputLayout.visibility = View.VISIBLE
+        } else {
+            binding.taxApplicableCheckbox.isChecked = false
+            binding.taxRateEditText.setText("0.0")
+            binding.taxRateInputLayout.visibility = View.GONE
+        }
+
+        // Handle extra charges
+        if (::chargeAdapter.isInitialized) {
+            // Clear any existing charges first
+            chargeAdapter.updateCharges(emptyList())
+
+            // Add all extra charges to the adapter
+            if (item.listOfExtraCharges.isNotEmpty()) {
+                item.listOfExtraCharges.forEach { charge ->
+                    chargeAdapter.addCharge(charge)
+                }
+            }
+            updateChargesVisibility()
+        }
 
         // Update calculated fields
         updateCalculatedFields()
@@ -310,7 +449,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
             // Add all extra charges to the adapter one by one
             item.listOfExtraCharges.forEach { charge ->
-                android.util.Log.d("ItemSelection", "Adding charge: ${charge.name} = ${charge.amount}")
+                android.util.Log.d(
+                    "ItemSelection",
+                    "Adding charge: ${charge.name} = ${charge.amount}"
+                )
                 chargeAdapter.addCharge(charge)
             }
         } else {
@@ -357,7 +499,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val goldRate = binding.goldRateEditText.text.toString().trim()
         val goldRateOn = binding.goldRateOnEditText.text.toString().trim()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().trim()
-
 
 
         // Add this check near the beginning of your validateJewelryItemForm method
@@ -817,7 +958,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val charges = chargeAdapter.getExtraChargeList()
 
         // Log for debugging
-        android.util.Log.d("ItemSelection", "Updating charges visibility. Found ${charges.size} charges")
+        android.util.Log.d(
+            "ItemSelection",
+            "Updating charges visibility. Found ${charges.size} charges"
+        )
 
         if (charges.isNotEmpty()) {
             // Show RecyclerView, hide empty state text
@@ -980,6 +1124,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             // Only clear the form if we're not in edit mode
             if (!editMode) {
                 clearForm()
+                setupInitialValues()
             }
         }
     }
