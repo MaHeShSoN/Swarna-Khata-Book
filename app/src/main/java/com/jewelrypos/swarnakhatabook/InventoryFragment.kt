@@ -240,7 +240,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
         // Using the generated NavDirections class
         val action =
-            MainScreenFragmentDirections.actionMainScreenFragmentToItemDetailFragmnet(itemId = item.id)
+            MainScreenFragmentDirections.actionMainScreenFragmentToItemDetailFragment(itemId = item.id)
         parentNavController.navigate(action)
     }
 

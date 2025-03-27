@@ -22,15 +22,15 @@ import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.ItemDetailViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.ItemDetailViewModel
-import com.jewelrypos.swarnakhatabook.databinding.FragmentItemDetailFragmnetBinding
+import com.jewelrypos.swarnakhatabook.databinding.FragmentItemDetailBinding
 import java.text.DecimalFormat
 
-class ItemDetailFragmnet : Fragment() {
+class ItemDetailFragment : Fragment() {
 
-    private var _binding: FragmentItemDetailFragmnetBinding? = null
+    private var _binding: FragmentItemDetailBinding? = null
     private val binding get() = _binding!!
 
-    private val args: ItemDetailFragmnetArgs by navArgs()
+    private val args: ItemDetailFragmentArgs by navArgs()
 
     private val viewModel: ItemDetailViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
@@ -45,7 +45,7 @@ class ItemDetailFragmnet : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentItemDetailFragmnetBinding.inflate(inflater, container, false)
+        _binding = FragmentItemDetailBinding.inflate(inflater, container, false)
         return binding.root
     }
 

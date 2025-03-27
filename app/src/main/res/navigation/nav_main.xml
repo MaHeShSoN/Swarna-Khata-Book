@@ -73,6 +73,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_itemDetailFragmnet"
             app:destination="@id/itemDetailFragmnet" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_itemDetailFragment"
+            app:destination="@id/itemDetailFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -129,13 +132,15 @@
             android:id="@+id/action_notificationFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment" />
     </fragment>
+
     <fragment
-        android:id="@+id/itemDetailFragmnet"
-        android:name="com.jewelrypos.swarnakhatabook.ItemDetailFragmnet"
-        android:label="fragment_item_detail_fragmnet"
-        tools:layout="@layout/fragment_item_detail_fragmnet" >
+        android:id="@+id/itemDetailFragment"
+        android:name="com.jewelrypos.swarnakhatabook.ItemDetailFragment"
+        android:label="fragment_item_detail"
+        tools:layout="@layout/fragment_item_detail" >
         <argument
             android:name="itemId"
             app:argType="string" />
+
     </fragment>
 </navigation>

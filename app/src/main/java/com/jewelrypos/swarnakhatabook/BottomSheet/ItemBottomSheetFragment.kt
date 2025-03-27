@@ -216,7 +216,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
 
                 // Populate AutoCompleteTextView with enum values
-                val metalTypes = MetalItemType.values().map { it.name }
+                val metalTypes = MetalItemType.entries.map { it.name }
                 val adapter = ArrayAdapter(
                     requireContext(), // Context
                     android.R.layout.simple_dropdown_item_1line, // Default dropdown layout
