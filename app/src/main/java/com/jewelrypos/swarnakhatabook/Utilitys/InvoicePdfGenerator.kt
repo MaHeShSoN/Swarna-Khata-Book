@@ -323,7 +323,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
             drawText(
                 contentStream,
-                formatter.format(item.itemDetails.goldRate),
+                formatter.format(item.itemDetails.metalRate),
                 xPos + 5f,
                 currentY,
                 10f,

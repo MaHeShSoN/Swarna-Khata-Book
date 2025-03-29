@@ -144,8 +144,8 @@ class ItemDetailFragment : Fragment() {
         binding.locationValue.text = if (item.location.isNotEmpty()) item.location else "Not specified"
 
         // Price information
-        if (item.goldRate > 0) {
-            binding.goldRateValue.text = "₹${formatter.format(item.goldRate)}/g (on ${item.goldRateOn})"
+        if (item.metalRate > 0) {
+            binding.goldRateValue.text = "₹${formatter.format(item.metalRate)}/g (on ${item.metalRateOn})"
             binding.goldRateLayout.visibility = View.VISIBLE
         } else {
             binding.goldRateLayout.visibility = View.GONE

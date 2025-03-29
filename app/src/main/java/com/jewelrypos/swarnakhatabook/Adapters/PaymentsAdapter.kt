@@ -52,8 +52,9 @@ class PaymentsAdapter(
         // Set amount
         holder.paymentAmount.text = "₹${formatter.format(payment.amount)}"
 
-        // Set method
         holder.paymentMethod.text = payment.method
+
+
 
         // Format date
         val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -66,6 +67,7 @@ class PaymentsAdapter(
             "upi" -> R.drawable.material_symbols__upi_pay
             "bank transfer" -> R.drawable.mdi__bank
             "old gold" -> R.drawable.uil__gold
+            "old silver" -> R.drawable.uil__gold
             else -> R.drawable.mdi__currency_inr
         }
         holder.paymentIcon.setImageResource(iconResId)

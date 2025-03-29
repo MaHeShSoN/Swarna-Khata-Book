@@ -63,8 +63,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         stockUnit = "",
         location = "",
         diamondPrice = 0.0,
-        goldRate = 0.0,
-        goldRateOn = "Net Weight",
+        metalRate = 0.0,
+        metalRateOn = "Net Weight",
         taxRate = 0.0,
         totalTax = 0.0,
         listOfExtraCharges = emptyList()
@@ -380,8 +380,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
         binding.mackingChargesTypeEditText.setText(item.makingChargesType)
-        binding.goldRateEditText.setText(item.goldRate.toString())
-        binding.goldRateOnEditText.setText(item.goldRateOn)
+        binding.goldRateEditText.setText(item.metalRate.toString())
+        binding.goldRateOnEditText.setText(item.metalRateOn)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString())
 
         // Set tax rate and update checkbox
@@ -422,8 +422,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
         binding.mackingChargesTypeEditText.setText(item.makingChargesType)
-        binding.goldRateEditText.setText(item.goldRate.toString() ?: "0.0")
-        binding.goldRateOnEditText.setText(item.goldRateOn ?: "Net Weight")
+        binding.goldRateEditText.setText(item.metalRate.toString() ?: "0.0")
+        binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight")
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString() ?: "0.0")
 
 
@@ -470,7 +470,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
     private fun setUpDropDownMenus() {
         // Rate on list
-        val listOfRatOn = listOf<String>("Net Weight", "Gross Weight")
+        val listOfRatOn = listOf<String>("Net Weight", "Gross Weight", "Fine")
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_dropdown_item_1line,
@@ -479,7 +479,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.goldRateOnEditText.setAdapter(adapter)
 
         // Making charge type list
-        val listOfMakingChargeType = listOf<String>("PER GRAM", "FIX")
+        val listOfMakingChargeType = listOf<String>("PER GRAM", "FIX", "PERCENTAGE")
         val adapter2 = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_dropdown_item_1line,
@@ -500,7 +500,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val goldRateOn = binding.goldRateOnEditText.text.toString().trim()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().trim()
 
-
         // Add this check near the beginning of your validateJewelryItemForm method
         val itemName = binding.itemNameDropdown.text.toString().trim()
         if (itemName.isEmpty()) {
@@ -510,6 +509,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         } else {
             binding.itemNameInputLayout.error = null
         }
+
         // Numeric field validations
         // Gross Weight - required
         if (grossWeight.isEmpty()) {
@@ -562,7 +562,29 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             binding.purityEditText.requestFocus()
             return Pair(false, "Purity is required")
         } else {
-            binding.purityInputLayout.error = null
+            try {
+                val purityValue = purity.toDouble()
+                if (purityValue <= 0 || purityValue > 100) {
+                    binding.purityInputLayout.error = "Purity must be between 0 and 100"
+                    binding.purityEditText.requestFocus()
+                    return Pair(false, "Purity must be between 0 and 100")
+                } else {
+                    binding.purityInputLayout.error = null
+                }
+
+                // Extra validation when "Fine" is selected for gold rate
+                if (goldRateOn.equals("Fine", ignoreCase = true)) {
+                    if (purityValue <= 0) {
+                        binding.purityInputLayout.error = "Purity must be greater than zero when using Fine weight"
+                        binding.purityEditText.requestFocus()
+                        return Pair(false, "Purity must be greater than zero when using Fine weight")
+                    }
+                }
+            } catch (e: NumberFormatException) {
+                binding.purityInputLayout.error = "Invalid purity value"
+                binding.purityEditText.requestFocus()
+                return Pair(false, "Invalid purity value")
+            }
         }
 
         // Validate wastage if provided
@@ -595,6 +617,14 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                     binding.mackingChargesInputLayout.error = null
                 }
 
+                // If making charges type is PERCENTAGE, validate it's between 0 and 100
+                if (makingChargesType.equals("PERCENTAGE", ignoreCase = true) &&
+                    (makingChargesValue < 0 || makingChargesValue > 100)) {
+                    binding.mackingChargesInputLayout.error = "Percentage must be between 0 and 100"
+                    binding.mackingChargesEditText.requestFocus()
+                    return Pair(false, "Percentage must be between 0 and 100")
+                }
+
                 // If making charges are provided, type must also be provided
                 if (makingChargesType.isEmpty()) {
                     binding.mackingChargesTypeInputLayout.error = "Making charges type is required"
@@ -624,9 +654,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
                 // If gold rate is provided, gold rate on must also be provided
                 if (goldRateOn.isEmpty()) {
-                    binding.goldRateOnInputLayout.error = "Gold rate purity is required"
+                    binding.goldRateOnInputLayout.error = "Rate Based On is required"
                     binding.goldRateOnEditText.requestFocus()
-                    return Pair(false, "Gold rate purity is required")
+                    return Pair(false, "Rate Based On is required")
                 } else {
                     binding.goldRateOnInputLayout.error = null
                 }
@@ -655,11 +685,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-
         // All validations passed
         return Pair(true, "")
     }
-
     /**
      * Calculates the total making charges based on the type and weight
      */
@@ -671,6 +699,11 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         return when (makingChargesType.uppercase()) {
             "PER GRAM" -> makingCharges * netWeight
             "FIX" -> makingCharges
+            "PERCENTAGE" -> {
+                // Calculate percentage of total gold value
+                val goldValue = calculateGoldValue()
+                goldValue * (makingCharges / 100.0)
+            }
             else -> 0.0
         }
     }
@@ -678,19 +711,39 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     /**
      * Calculates the total gold value based on weight, wastage, and gold rate
      */
+    /**
+     * Calculates the total gold value based on weight, wastage, and gold rate
+     * Now supports "Fine" calculation based on purity percentage
+     */
     private fun calculateGoldValue(): Double {
         val goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0
         val goldRateOn = binding.goldRateOnEditText.text.toString()
         val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
         val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
         val wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val purity = binding.purityEditText.text.toString().toDoubleOrNull() ?: 0.0
 
-        val selectedWeight =
-            if (goldRateOn.equals("Net Weight", ignoreCase = true)) netWeight else grossWeight
+        // Calculate the weight to use based on the selection
+        val selectedWeight = when (goldRateOn) {
+            "Net Weight" -> netWeight
+            "Gross Weight" -> grossWeight
+            "Fine" -> {
+                // For "Fine" option, we calculate with the purity percentage
+                // First determine which weight to use (net or gross)
+                val baseWeight = if (netWeight > 0.0) netWeight else grossWeight
 
+                // Calculate fine weight (applying purity percentage)
+                val purityDecimal = purity / 100.0
+
+                // Return the fine weight
+                baseWeight * purityDecimal
+            }
+            else -> netWeight // Default to net weight if something unexpected
+        }
+
+        // Add wastage and multiply by gold rate
         return (selectedWeight + wastage) * goldRate
     }
-
     /**
      * Calculates the total charges by adding gold value, making charges, and diamond price
      */
@@ -743,6 +796,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     /**
      * Sets up initial values for all fields
      */
+    /**
+     * Sets up initial values for all fields
+     * Now includes "Fine" option in default values
+     */
     private fun setupInitialValues() {
         // Reset selectedItem to a new default instance
         selectedItem = JewelleryItem(
@@ -761,8 +818,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             stockUnit = "",
             location = "",
             diamondPrice = 0.0,
-            goldRate = 0.0,
-            goldRateOn = "Net Weight",
+            metalRate = 0.0,
+            metalRateOn = "Net Weight", // Default to Net Weight
             taxRate = 0.0,
             totalTax = 0.0,
             listOfExtraCharges = emptyList()
@@ -791,7 +848,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Update calculated fields
         updateCalculatedFields()
     }
-
     private fun setUpInitalRecyclerView() {
         chargeAdapter = ExtraChargeAdapter()
         binding.chargesRecyclerView.apply {
@@ -1096,8 +1152,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             stockUnit = selectedItem.stockUnit,
             location = selectedItem.location,
             diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            goldRateOn = binding.goldRateOnEditText.text.toString(),
+            metalRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            metalRateOn = binding.goldRateOnEditText.text.toString(),
             taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
             totalTax = binding.taxAmountEditText.text.toString().toDoubleOrNull() ?: 0.0,
             listOfExtraCharges = extraCharges

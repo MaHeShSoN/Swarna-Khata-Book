@@ -17,8 +17,8 @@ data class JewelleryItem(
     val stockUnit: String = "",
     val location: String = "",
     val diamondPrice: Double = 0.0,
-    val goldRate: Double = 0.0,
-    val goldRateOn: String = "",
+    val metalRate: Double = 0.0,
+    val metalRateOn: String = "",
     val taxRate: Double = 0.0,
     val totalTax: Double = 0.0,
     val listOfExtraCharges: List<ExtraCharge> = emptyList()

@@ -50,9 +50,11 @@ class SalesViewModel(
     val customerInvoices: LiveData<List<Invoice>> = _customerInvoices
 
 
+
     init {
         loadFirstPage()
     }
+
 
     // Check if device is online
     private fun isOnline(): Boolean {
@@ -236,6 +238,18 @@ class SalesViewModel(
 
         return charges
     }
+    fun updateItems(newItems: List<SelectedItemWithPrice>) {
+        // Clear current items
+        _selectedItems.value?.forEach { item ->
+            removeSelectedItem(item)
+        }
+
+        // Add all new items
+        newItems.forEach { item ->
+            _selectedItems.value = (_selectedItems.value ?: mutableListOf()) + item
+        }
+    }
+
 
     // Calculate total extra charges
     fun calculateExtraCharges(): Double {
@@ -338,6 +352,7 @@ class SalesViewModel(
             }
         }
     }
+
 
 
 
