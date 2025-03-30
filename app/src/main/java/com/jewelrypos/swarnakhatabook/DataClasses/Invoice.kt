@@ -12,5 +12,10 @@ data class Invoice(
     val payments: List<Payment> = listOf(),
     val totalAmount: Double = 0.0,
     val paidAmount: Double = 0.0,
-    val notes: String = ""
+    val notes: String = "",
+
+    val fineGoldAmount: Double = 0.0,
+    val fineSilverAmount: Double = 0.0,
+    val originalTotalBeforeFine: Double = 0.0,
+    val isMetalExchangeApplied: Boolean = false
 )

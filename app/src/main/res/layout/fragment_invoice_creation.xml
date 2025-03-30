@@ -409,6 +409,7 @@
             app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
+            android:visibility="gone"
             app:layout_constraintTop_toBottomOf="@+id/itemsCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
