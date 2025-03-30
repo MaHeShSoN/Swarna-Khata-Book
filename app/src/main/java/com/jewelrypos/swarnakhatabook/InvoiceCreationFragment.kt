@@ -208,7 +208,8 @@ class InvoiceCreationFragment : Fragment() {
                                 updateMetalExchangeUI()
                             }
 
-                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT)
+                                .show()
                         } else {
                             Toast.makeText(
                                 context,
@@ -220,6 +221,7 @@ class InvoiceCreationFragment : Fragment() {
                 })
                 itemSelectionSheet.show(parentFragmentManager, "ItemSelectionBottomSheet")
             }
+
             override fun onQuantityChanged(item: SelectedItemWithPrice, newQuantity: Int) {
                 salesViewModel.updateItemQuantity(item, newQuantity)
             }
@@ -254,7 +256,12 @@ class InvoiceCreationFragment : Fragment() {
                     binding.goldFineEditText.setText("")
                     binding.goldFineEditText.isEnabled = true
                     binding.applyGoldFineButton.text = "Apply"
-                    binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    binding.applyGoldFineButton.setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.my_light_primary
+                        )
+                    )
                     binding.goldFineDeductionLayout.visibility = View.GONE
                     wasReset = true
                 }
@@ -266,7 +273,12 @@ class InvoiceCreationFragment : Fragment() {
                     binding.silverFineEditText.setText("")
                     binding.silverFineEditText.isEnabled = true
                     binding.applySilverFineButton.text = "Apply"
-                    binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    binding.applySilverFineButton.setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            R.color.my_light_primary
+                        )
+                    )
                     binding.silverFineDeductionLayout.visibility = View.GONE
                     wasReset = true
                 }
@@ -513,7 +525,12 @@ class InvoiceCreationFragment : Fragment() {
                 binding.goldFineEditText.isEnabled = false
                 binding.goldFineEditText.setText(String.format("%.2f", fineGoldAmount))
                 binding.applyGoldFineButton.text = "Reset"
-                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+                binding.applyGoldFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.status_unpaid
+                    )
+                )
                 binding.goldFineDeductionLayout.visibility = View.VISIBLE
                 binding.goldFineDeductionValue.text = String.format("%.2f", fineGoldAmount) + "g"
             }
@@ -523,9 +540,15 @@ class InvoiceCreationFragment : Fragment() {
                 binding.silverFineEditText.isEnabled = false
                 binding.silverFineEditText.setText(String.format("%.2f", fineSilverAmount))
                 binding.applySilverFineButton.text = "Reset"
-                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+                binding.applySilverFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.status_unpaid
+                    )
+                )
                 binding.silverFineDeductionLayout.visibility = View.VISIBLE
-                binding.silverFineDeductionValue.text = String.format("%.2f", fineSilverAmount) + "g"
+                binding.silverFineDeductionValue.text =
+                    String.format("%.2f", fineSilverAmount) + "g"
             }
 
             // Make sure the summary section is visible
@@ -598,7 +621,6 @@ class InvoiceCreationFragment : Fragment() {
     }
 
 
-
     private fun updateTotals() {
         val subtotal = salesViewModel.calculateSubtotal()
         val extraChargesTotal = salesViewModel.calculateExtraCharges()
@@ -650,14 +672,6 @@ class InvoiceCreationFragment : Fragment() {
         // Update extra charges display
         updateExtraChargesDisplay()
     }
-
-
-
-
-
-
-
-
 
 
 //    private fun updateTotals() {
@@ -930,7 +944,8 @@ class InvoiceCreationFragment : Fragment() {
     // Apply the metal exchange to the invoice
     private fun applyMetalExchange() {
         if (fineGoldAmount <= 0.0 && fineSilverAmount <= 0.0) {
-            Toast.makeText(requireContext(), "Please enter metal amounts first", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Please enter metal amounts first", Toast.LENGTH_SHORT)
+                .show()
             return
         }
 
@@ -947,7 +962,19 @@ class InvoiceCreationFragment : Fragment() {
         if (totalPaid > newTotal) {
             val dialog = MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Cannot Apply Metal Exchange")
-                .setMessage("Applying this metal exchange would reduce the total (₹${String.format("%.2f", newTotal)}) below the amount already paid (₹${String.format("%.2f", totalPaid)}). Please reduce the fine metal amount or remove some payments first.")
+                .setMessage(
+                    "Applying this metal exchange would reduce the total (₹${
+                        String.format(
+                            "%.2f",
+                            newTotal
+                        )
+                    }) below the amount already paid (₹${
+                        String.format(
+                            "%.2f",
+                            totalPaid
+                        )
+                    }). Please reduce the fine metal amount or remove some payments first."
+                )
                 .setPositiveButton("OK", null)
                 .create()
             dialog.show()
@@ -964,14 +991,24 @@ class InvoiceCreationFragment : Fragment() {
         // Change the apply buttons to reset buttons
         if (fineGoldAmount > 0) {
             binding.applyGoldFineButton.text = "Reset"
-            binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+            binding.applyGoldFineButton.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.status_unpaid
+                )
+            )
             binding.goldFineDeductionLayout.visibility = View.VISIBLE
             binding.goldFineDeductionValue.text = String.format("%.2f", fineGoldAmount) + "g"
         }
 
         if (fineSilverAmount > 0) {
             binding.applySilverFineButton.text = "Reset"
-            binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+            binding.applySilverFineButton.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.status_unpaid
+                )
+            )
             binding.silverFineDeductionLayout.visibility = View.VISIBLE
             binding.silverFineDeductionValue.text = String.format("%.2f", fineSilverAmount) + "g"
         }
@@ -983,8 +1020,13 @@ class InvoiceCreationFragment : Fragment() {
 
         // Show feedback about price change
         val difference = currentTotal - newTotal
-        Toast.makeText(requireContext(), "Total reduced by ₹${String.format("%.2f", difference)}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            requireContext(),
+            "Total reduced by ₹${String.format("%.2f", difference)}",
+            Toast.LENGTH_SHORT
+        ).show()
     }
+
     private fun resetMetalExchange(metalType: String) {
         // Store current values for calculations
         val currentGoldAmount = fineGoldAmount
@@ -1008,9 +1050,29 @@ class InvoiceCreationFragment : Fragment() {
             val maxResetAllowed = currentTotal - newTotal - remainingBalance
 
             val message = if (maxResetAllowed <= 0) {
-                "Cannot reset metal exchange because payments (₹${String.format("%.2f", totalPaid)}) would exceed the new total (₹${String.format("%.2f", newTotal)}).\n\nPlease remove some payments first."
+                "Cannot reset metal exchange because payments (₹${
+                    String.format(
+                        "%.2f",
+                        totalPaid
+                    )
+                }) would exceed the new total (₹${
+                    String.format(
+                        "%.2f",
+                        newTotal
+                    )
+                }).\n\nPlease remove some payments first."
             } else {
-                "Warning: Resetting this metal exchange would cause payments to exceed the total amount.\n\nCurrent total: ₹${String.format("%.2f", currentTotal)}\nTotal paid: ₹${String.format("%.2f", totalPaid)}\nNew total after reset: ₹${String.format("%.2f", newTotal)}"
+                "Warning: Resetting this metal exchange would cause payments to exceed the total amount.\n\nCurrent total: ₹${
+                    String.format(
+                        "%.2f",
+                        currentTotal
+                    )
+                }\nTotal paid: ₹${
+                    String.format(
+                        "%.2f",
+                        totalPaid
+                    )
+                }\nNew total after reset: ₹${String.format("%.2f", newTotal)}"
             }
 
             val dialog = MaterialAlertDialogBuilder(requireContext())
@@ -1031,9 +1093,15 @@ class InvoiceCreationFragment : Fragment() {
                     isEnabled = true
                 }
                 binding.applyGoldFineButton.text = "Apply"
-                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.applyGoldFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.my_light_primary
+                    )
+                )
                 binding.goldFineDeductionLayout.visibility = View.GONE
             }
+
             "silver" -> {
                 fineSilverAmount = 0.0
                 binding.silverFineEditText.apply {
@@ -1041,9 +1109,15 @@ class InvoiceCreationFragment : Fragment() {
                     isEnabled = true
                 }
                 binding.applySilverFineButton.text = "Apply"
-                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.applySilverFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.my_light_primary
+                    )
+                )
                 binding.silverFineDeductionLayout.visibility = View.GONE
             }
+
             "all" -> {
                 // Reset both gold and silver
                 fineGoldAmount = 0.0
@@ -1058,8 +1132,18 @@ class InvoiceCreationFragment : Fragment() {
                 }
                 binding.applyGoldFineButton.text = "Apply"
                 binding.applySilverFineButton.text = "Apply"
-                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
-                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.applyGoldFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.my_light_primary
+                    )
+                )
+                binding.applySilverFineButton.setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        R.color.my_light_primary
+                    )
+                )
                 binding.goldFineDeductionLayout.visibility = View.GONE
                 binding.silverFineDeductionLayout.visibility = View.GONE
             }
@@ -1078,14 +1162,27 @@ class InvoiceCreationFragment : Fragment() {
         if (newTotal != currentTotal) {
             val difference = currentTotal - newTotal
             if (difference > 0) {
-                Toast.makeText(requireContext(), "Total increased by ₹${String.format("%.2f", difference)}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Total increased by ₹${String.format("%.2f", difference)}",
+                    Toast.LENGTH_SHORT
+                ).show()
             } else {
-                Toast.makeText(requireContext(), "Total decreased by ₹${String.format("%.2f", -difference)}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Total decreased by ₹${String.format("%.2f", -difference)}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         } else {
-            Toast.makeText(requireContext(), "Metal exchange reset successfully", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                requireContext(),
+                "Metal exchange reset successfully",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
+
     // Calculate total gold weight from selected items
     private fun calculateTotalGoldWeight(): Double {
         val selectedItems = salesViewModel.selectedItems.value ?: emptyList()
@@ -1333,12 +1430,17 @@ class InvoiceCreationFragment : Fragment() {
             }
 
             val payments = paymentsAdapter.getPayments()
-//            val totalAmount = salesViewModel.calculateTotal()
+
+            // Original total before metal fine adjustment
+            val originalTotal = salesViewModel.calculateTotal()
+
+
             val totalAmount = if (isMetalExchangeApplied) {
                 calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
             } else {
-                salesViewModel.calculateTotal()
+                originalTotal
             }
+
             val paidAmount = salesViewModel.calculateTotalPaid()
 
             // Get customer address components
@@ -1347,27 +1449,6 @@ class InvoiceCreationFragment : Fragment() {
             } else {
                 "${customer.city}, ${customer.state}"
             }
-
-            val invoice = Invoice(
-                id = "", // Let repository assign ID based on invoice number
-                invoiceNumber = invoiceNumber,
-                customerId = customer.id,
-                customerName = "${customer.firstName} ${customer.lastName}",
-                customerPhone = customer.phoneNumber,
-                customerAddress = address,
-                invoiceDate = System.currentTimeMillis(),
-                items = invoiceItems,
-                payments = payments,
-                totalAmount = totalAmount,
-                paidAmount = paidAmount,
-                notes = binding.notesEditText.text.toString()
-            )
-
-            // Log the invoice details for debugging
-            Log.d(
-                "InvoiceCreation", "Saving invoice: number=$invoiceNumber, " +
-                        "items=${invoiceItems.size}, total=$totalAmount, paid=$paidAmount"
-            )
 
             if (isMetalExchangeApplied) {
                 val notes = binding.notesEditText.text.toString()
@@ -1388,6 +1469,40 @@ class InvoiceCreationFragment : Fragment() {
 
                 binding.notesEditText.setText(if (notes.isEmpty()) metalExchangeNote else "$notes\n$metalExchangeNote")
             }
+
+            Log.d(
+                "InvoiceDetailFragment",
+                isMetalExchangeApplied.toString() + " FineGoldAmount " + fineGoldAmount + " FineSilverAmount "
+                        + fineSilverAmount + " TotalAmount " +
+                        totalAmount + " PaidAmount " + paidAmount + " Notes " + binding.notesEditText.text.toString()
+            )
+
+
+            val invoice = Invoice(
+                id = "", // Let repository assign ID based on invoice number
+                invoiceNumber = invoiceNumber,
+                customerId = customer.id,
+                customerName = "${customer.firstName} ${customer.lastName}",
+                customerPhone = customer.phoneNumber,
+                customerAddress = address,
+                invoiceDate = System.currentTimeMillis(),
+                items = invoiceItems,
+                payments = payments,
+                totalAmount = totalAmount,
+                paidAmount = paidAmount,
+                notes = binding.notesEditText.text.toString(),
+                fineGoldAmount = if (isMetalExchangeApplied) fineGoldAmount else 0.0,
+                fineSilverAmount = if (isMetalExchangeApplied) fineSilverAmount else 0.0,
+                originalTotalBeforeFine = originalTotal,
+                isMetalExchangeApplied = isMetalExchangeApplied
+            )
+
+            // Log the invoice details for debugging
+            Log.d(
+                "InvoiceCreation", "Saving invoice: number=$invoiceNumber, " +
+                        "items=${invoiceItems.size}, total=$totalAmount, paid=$paidAmount"
+            )
+
 
             // Show loading state
             binding.progressOverlay.visibility = View.VISIBLE
