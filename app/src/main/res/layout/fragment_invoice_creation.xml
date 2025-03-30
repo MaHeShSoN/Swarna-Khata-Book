@@ -365,6 +365,7 @@
                         app:layout_constraintTop_toTopOf="@id/taxLabel"
                         tools:text="₹2,340.00" />
 
+
                     <View
                         android:id="@+id/totalDivider"
                         android:layout_width="match_parent"
@@ -550,7 +551,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:gravity="end"
                     android:orientation="vertical"
                     android:visibility="gone">
 
@@ -561,26 +561,27 @@
                         android:background="@color/my_light_outline" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
-                        android:text="Metal Fine Deductions"
+                        android:text="Deductions Summary"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
+                        android:textSize="16sp" />
 
                     <LinearLayout
                         android:id="@+id/goldFineDeductionLayout"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="8dp"
                         android:orientation="horizontal"
                         android:visibility="gone">
 
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:fontFamily="@font/montserratregular"
-                            android:text="Gold Fine: "
+                            android:text="Gold Fine Deduction:"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -596,17 +597,18 @@
 
                     <LinearLayout
                         android:id="@+id/silverFineDeductionLayout"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:orientation="horizontal"
                         android:visibility="gone">
 
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:fontFamily="@font/montserratregular"
-                            android:text="Silver Fine: "
+                            android:text="Silver Fine Deduction:"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -620,6 +622,72 @@
                             android:textSize="14sp" />
                     </LinearLayout>
 
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="8dp"
+                        android:background="@color/my_light_outline" />
+
+
+                    <LinearLayout
+                        android:id="@+id/originalTotalLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/taxLabel">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/montserratregular"
+                            android:text="Original Total:"
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/originalTotalValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight=".34"
+                            android:fontFamily="@font/montserratregular"
+                            android:textAlignment="viewEnd"
+                            android:textColor="@color/my_light_secondary"
+                            android:foreground="@drawable/strikethrough"
+                            android:textSize="14sp"
+                            tools:text="₹80,340.00" />
+                    </LinearLayout>
+
+
+                    <LinearLayout
+                        android:id="@+id/adjustedTotalLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="Adjusted Total:"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/adjustedTotalValue"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹0.00"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

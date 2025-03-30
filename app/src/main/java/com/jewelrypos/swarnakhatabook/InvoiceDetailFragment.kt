@@ -30,8 +30,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.jewelrypos.swarnakhatabook.Adapters.InvoiceItemAdapter
-import com.jewelrypos.swarnakhatabook.Adapters.InvoicePrintAdapter
 import com.jewelrypos.swarnakhatabook.Adapters.PaymentsAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.PaymentEntryBottomSheet
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice

@@ -26,6 +26,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
@@ -179,7 +180,12 @@ class InvoiceCreationFragment : Fragment() {
             }
 
             override fun onEditItem(item: SelectedItemWithPrice) {
-                // Open the item selection sheet for editing (optional)
+                // Store the current metal exchange state
+                val currentExchangeApplied = isMetalExchangeApplied
+                val currentGoldAmount = fineGoldAmount
+                val currentSilverAmount = fineSilverAmount
+
+                // Open the item selection sheet for editing
                 val itemSelectionSheet = ItemSelectionBottomSheet.newInstance()
                 itemSelectionSheet.setItemForEdit(item.item)
                 itemSelectionSheet.setOnItemSelectedListener(object :
@@ -189,14 +195,20 @@ class InvoiceCreationFragment : Fragment() {
                     }
 
                     override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                        val updated = salesViewModel.updateSelectedItem(
-                            updatedItem,
-                            price
-                        ) // Keep this for now, we might adjust it.
+                        val updated = salesViewModel.updateSelectedItem(updatedItem, price)
 
                         if (updated) {
-                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT)
-                                .show()
+                            // Restore metal exchange state if it was previously applied
+                            if (currentExchangeApplied) {
+                                isMetalExchangeApplied = true
+                                fineGoldAmount = currentGoldAmount
+                                fineSilverAmount = currentSilverAmount
+
+                                // Restore the UI state
+                                updateMetalExchangeUI()
+                            }
+
+                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(
                                 context,
@@ -208,7 +220,6 @@ class InvoiceCreationFragment : Fragment() {
                 })
                 itemSelectionSheet.show(parentFragmentManager, "ItemSelectionBottomSheet")
             }
-
             override fun onQuantityChanged(item: SelectedItemWithPrice, newQuantity: Int) {
                 salesViewModel.updateItemQuantity(item, newQuantity)
             }
@@ -222,38 +233,62 @@ class InvoiceCreationFragment : Fragment() {
 
     }
 
-
-    // Add a method to observe selected items
     private fun observeSelectedItems() {
         salesViewModel.selectedItems.observe(viewLifecycleOwner) { items ->
             itemsAdapter.updateItems(items)
-            updateTotals()
 
             // Update metal weights display when items change
             updateMetalWeightsDisplay()
 
-            // Reset metal exchange if items change significantly
+            // Check if we need to reset metal exchange due to item type changes
             if (isMetalExchangeApplied) {
-                isMetalExchangeApplied = false
-                fineGoldAmount = 0.0
-                fineSilverAmount = 0.0
+                val hasGold = items.any { isGoldItem(it.item) }
+                val hasSilver = items.any { isSilverItem(it.item) }
 
-                // Reset input fields and enable them
-                binding.goldFineEditText.apply {
-                    setText("")
-                    isEnabled = true
-                }
-                binding.silverFineEditText.apply {
-                    setText("")
-                    isEnabled = true
+                var wasReset = false
+
+                // If gold exchange was applied but no gold items exist now
+                if (fineGoldAmount > 0 && !hasGold) {
+                    // Reset gold exchange
+                    fineGoldAmount = 0.0
+                    binding.goldFineEditText.setText("")
+                    binding.goldFineEditText.isEnabled = true
+                    binding.applyGoldFineButton.text = "Apply"
+                    binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    binding.goldFineDeductionLayout.visibility = View.GONE
+                    wasReset = true
                 }
 
-                Toast.makeText(
-                    requireContext(),
-                    "Metal exchange reset due to item changes",
-                    Toast.LENGTH_SHORT
-                ).show()
+                // If silver exchange was applied but no silver items exist now
+                if (fineSilverAmount > 0 && !hasSilver) {
+                    // Reset silver exchange
+                    fineSilverAmount = 0.0
+                    binding.silverFineEditText.setText("")
+                    binding.silverFineEditText.isEnabled = true
+                    binding.applySilverFineButton.text = "Apply"
+                    binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    binding.silverFineDeductionLayout.visibility = View.GONE
+                    wasReset = true
+                }
+
+                // Update the overall metal exchange state
+                isMetalExchangeApplied = fineGoldAmount > 0 || fineSilverAmount > 0
+
+                if (!isMetalExchangeApplied) {
+                    binding.fineMetalSummarySection.visibility = View.GONE
+                }
+
+                if (wasReset) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Metal exchange reset due to item changes",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
+
+            // Update totals after potentially modifying metal exchange state
+            updateTotals()
 
             // Update empty state
             if (items.isEmpty()) {
@@ -271,6 +306,54 @@ class InvoiceCreationFragment : Fragment() {
             }
         }
     }
+    // Add a method to observe selected items
+//    private fun observeSelectedItems() {
+//        salesViewModel.selectedItems.observe(viewLifecycleOwner) { items ->
+//            itemsAdapter.updateItems(items)
+//            updateTotals()
+//
+//            // Update metal weights display when items change
+//            updateMetalWeightsDisplay()
+//
+//            // Reset metal exchange if items change significantly
+//            if (isMetalExchangeApplied) {
+//                isMetalExchangeApplied = false
+//                fineGoldAmount = 0.0
+//                fineSilverAmount = 0.0
+//
+//                // Reset input fields and enable them
+//                binding.goldFineEditText.apply {
+//                    setText("")
+//                    isEnabled = true
+//                }
+//                binding.silverFineEditText.apply {
+//                    setText("")
+//                    isEnabled = true
+//                }
+//
+//                Toast.makeText(
+//                    requireContext(),
+//                    "Metal exchange reset due to item changes",
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//            }
+//
+//            // Update empty state
+//            if (items.isEmpty()) {
+//                binding.noItemSelected.visibility = View.VISIBLE
+//                binding.itemsRecyclerView.visibility = View.GONE
+//                binding.addItemButton.visibility = View.GONE
+//                binding.itemsSectionTitle.visibility = View.GONE
+//                binding.itemViewWithDetailes.visibility = View.GONE
+//            } else {
+//                binding.noItemSelected.visibility = View.GONE
+//                binding.itemsRecyclerView.visibility = View.VISIBLE
+//                binding.addItemButton.visibility = View.VISIBLE
+//                binding.itemsSectionTitle.visibility = View.VISIBLE
+//                binding.itemViewWithDetailes.visibility = View.VISIBLE
+//            }
+//        }
+//    }
 
     private fun setupListeners() {
 
@@ -302,6 +385,22 @@ class InvoiceCreationFragment : Fragment() {
 
         binding.saveButton.setOnClickListener {
             saveInvoice()
+        }
+
+        binding.applyGoldFineButton.setOnClickListener {
+            if (binding.applyGoldFineButton.text.toString() == "Apply") {
+                applyMetalExchange()
+            } else {
+                resetMetalExchange("gold")
+            }
+        }
+
+        binding.applySilverFineButton.setOnClickListener {
+            if (binding.applySilverFineButton.text.toString() == "Apply") {
+                applyMetalExchange()
+            } else {
+                resetMetalExchange("silver")
+            }
         }
 
 
@@ -407,8 +506,42 @@ class InvoiceCreationFragment : Fragment() {
         itemSelectionSheet.show(parentFragmentManager, "ItemSelectionBottomSheet")
     }
 
+    private fun updateMetalExchangeUI() {
+        if (isMetalExchangeApplied) {
+            // Update gold UI if needed
+            if (fineGoldAmount > 0) {
+                binding.goldFineEditText.isEnabled = false
+                binding.goldFineEditText.setText(String.format("%.2f", fineGoldAmount))
+                binding.applyGoldFineButton.text = "Reset"
+                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+                binding.goldFineDeductionLayout.visibility = View.VISIBLE
+                binding.goldFineDeductionValue.text = String.format("%.2f", fineGoldAmount) + "g"
+            }
+
+            // Update silver UI if needed
+            if (fineSilverAmount > 0) {
+                binding.silverFineEditText.isEnabled = false
+                binding.silverFineEditText.setText(String.format("%.2f", fineSilverAmount))
+                binding.applySilverFineButton.text = "Reset"
+                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
+                binding.silverFineDeductionLayout.visibility = View.VISIBLE
+                binding.silverFineDeductionValue.text = String.format("%.2f", fineSilverAmount) + "g"
+            }
+
+            // Make sure the summary section is visible
+            binding.fineMetalSummarySection.visibility = View.VISIBLE
+
+            // Update the totals to reflect the adjusted values
+            updateTotals()
+        }
+    }
+
     private fun addPayment() {
-        val totalAmount = salesViewModel.calculateTotal()
+        val totalAmount = if (isMetalExchangeApplied) {
+            calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
+        } else {
+            salesViewModel.calculateTotal()
+        }
         val paidAmount = salesViewModel.calculateTotalPaid()
         val dueAmount = totalAmount - paidAmount
 
@@ -419,7 +552,30 @@ class InvoiceCreationFragment : Fragment() {
 
         val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
         paymentSheet.setTitle("Add Payment")
-        paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
+
+        // Create a description that includes metal fine details when applied
+        val description = if (isMetalExchangeApplied) {
+            val fineMetalInfo = StringBuilder("Fine Metal Applied: ")
+
+            if (fineGoldAmount > 0) {
+                fineMetalInfo.append("${String.format("%.2f", fineGoldAmount)}g Gold")
+            }
+
+            if (fineGoldAmount > 0 && fineSilverAmount > 0) {
+                fineMetalInfo.append(" and ")
+            }
+
+            if (fineSilverAmount > 0) {
+                fineMetalInfo.append("${String.format("%.2f", fineSilverAmount)}g Silver")
+            }
+
+            "Invoice Total: ₹${String.format("%.2f", totalAmount)}\n${fineMetalInfo}"
+        } else {
+            "Invoice Total: ₹${String.format("%.2f", totalAmount)}"
+        }
+
+        paymentSheet.setDescription(description)
+        paymentSheet.setAmount(dueAmount) // Set the correct amount due
 
         paymentSheet.setOnPaymentAddedListener(object :
             PaymentEntryBottomSheet.OnPaymentAddedListener {
@@ -441,15 +597,160 @@ class InvoiceCreationFragment : Fragment() {
         paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
     }
 
+
+
+    private fun updateTotals() {
+        val subtotal = salesViewModel.calculateSubtotal()
+        val extraChargesTotal = salesViewModel.calculateExtraCharges()
+        val tax = salesViewModel.calculateTax()
+
+        // Calculate the original total without metal exchange
+        val originalTotal = salesViewModel.calculateTotal()
+
+        // Calculate adjusted total if metal exchange is applied
+        val adjustedTotal = if (isMetalExchangeApplied) {
+            calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
+        } else {
+            originalTotal
+        }
+
+        val paid = salesViewModel.calculateTotalPaid()
+        val due = adjustedTotal - paid
+
+        // Update standard values
+        binding.subtotalValue.text = "₹${String.format("%.2f", subtotal)}"
+        binding.taxValue.text = "₹${String.format("%.2f", tax)}"
+
+        // Update total section - show both original and adjusted if metal exchange applied
+        if (isMetalExchangeApplied) {
+            // For the main items card, show the original total (not strikethrough)
+            binding.totalValue.text = "₹${String.format("%.2f", originalTotal)}"
+
+            // In the metal fine card summary section
+            binding.originalTotalLayout.visibility = View.VISIBLE
+            binding.originalTotalValue.text = "₹${String.format("%.2f", originalTotal)}"
+
+            binding.adjustedTotalLayout.visibility = View.VISIBLE
+            binding.adjustedTotalValue.text = "₹${String.format("%.2f", adjustedTotal)}"
+        } else {
+            // Hide metal exchange related layouts
+            binding.originalTotalLayout.visibility = View.GONE
+            binding.adjustedTotalLayout.visibility = View.GONE
+
+            // Show normal total
+            binding.totalValue.text = "₹${String.format("%.2f", originalTotal)}"
+        }
+
+        binding.amountPaidValue.text = "₹${String.format("%.2f", paid)}"
+        binding.balanceDueValue.text = "₹${String.format("%.2f", due)}"
+
+        // Update payment status badge
+        updatePaymentStatusBadge(due, paid)
+
+        // Update extra charges display
+        updateExtraChargesDisplay()
+    }
+
+
+
+
+
+
+
+
+
+
 //    private fun updateTotals() {
 //        val subtotal = salesViewModel.calculateSubtotal()
 //        val extraChargesTotal = salesViewModel.calculateExtraCharges()
 //        val tax = salesViewModel.calculateTax()
-//        val total = salesViewModel.calculateTotal()
-//        val paid = salesViewModel.calculateTotalPaid() // Use view model method
-//        val due = total - paid
+//
+//        // Calculate the original total without metal exchange
+//        val originalTotal = salesViewModel.calculateTotal()
+//
+//        // Calculate adjusted total if metal exchange is applied
+//        val adjustedTotal = if (isMetalExchangeApplied) {
+//            calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
+//        } else {
+//            originalTotal
+//        }
+//
+//        val paid = salesViewModel.calculateTotalPaid()
+//        val due = adjustedTotal - paid
 //
 //        // Update standard values
+//        binding.subtotalValue.text = "₹${String.format("%.2f", subtotal)}"
+//        binding.taxValue.text = "₹${String.format("%.2f", tax)}"
+//
+//        // Update total section - show both original and adjusted if metal exchange applied
+//        if (isMetalExchangeApplied) {
+//            // Show original total with strikethrough
+//            binding.originalTotalLayout.visibility = View.VISIBLE
+//            binding.originalTotalValue.text = "₹${String.format("%.2f", originalTotal)}"
+//
+//            // Show adjusted total
+//            binding.totalValue.text = "₹${String.format("%.2f", originalTotal)}"
+//        } else {
+//            // Hide original total section when no metal exchange
+//            binding.originalTotalLayout.visibility = View.GONE
+//
+//            // Show normal total
+//            binding.totalValue.text = "₹${String.format("%.2f", originalTotal)}"
+//        }
+//
+//        binding.amountPaidValue.text = "₹${String.format("%.2f", paid)}"
+//        binding.balanceDueValue.text = "₹${String.format("%.2f", due)}"
+//
+//        // Update payment status badge
+//        updatePaymentStatusBadge(due, paid)
+//
+//        // Update extra charges display
+//        updateExtraChargesDisplay()
+//
+//        // Update metal fine summary if applied
+//        if (isMetalExchangeApplied) {
+//            binding.fineMetalSummarySection.visibility = View.VISIBLE
+//
+//            if (fineGoldAmount > 0) {
+//                binding.goldFineDeductionLayout.visibility = View.VISIBLE
+//                binding.goldFineDeductionValue.text = String.format("%.2f", fineGoldAmount) + "g"
+//            } else {
+//                binding.goldFineDeductionLayout.visibility = View.GONE
+//            }
+//
+//            if (fineSilverAmount > 0) {
+//                binding.silverFineDeductionLayout.visibility = View.VISIBLE
+//                binding.silverFineDeductionValue.text = String.format("%.2f", fineSilverAmount) + "g"
+//            } else {
+//                binding.silverFineDeductionLayout.visibility = View.GONE
+//            }
+//
+//            // Show adjusted total in summary
+//            binding.adjustedTotalLayout.visibility = View.VISIBLE
+//            binding.adjustedTotalValue.text = "₹${String.format("%.2f", adjustedTotal)}"
+//        } else {
+//            binding.fineMetalSummarySection.visibility = View.GONE
+//        }
+//    }
+
+
+    // Update the totals display with adjusted total if metal exchange is applied
+//    private fun updateTotals() {
+//        val subtotal = salesViewModel.calculateSubtotal()
+//        val extraChargesTotal = salesViewModel.calculateExtraCharges()
+//        val tax = salesViewModel.calculateTax()
+//
+//        // Calculate total based on metal exchange status
+//        val total = if (isMetalExchangeApplied) {
+//            calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
+//        } else {
+//            calculateInvoiceTotal()
+//        }
+//
+//        val paid = salesViewModel.calculateTotalPaid()
+//        val due = total - paid
+//
+//        // Update the UI
 //        binding.subtotalValue.text = "₹${String.format("%.2f", subtotal)}"
 //        binding.taxValue.text = "₹${String.format("%.2f", tax)}"
 //        binding.totalValue.text = "₹${String.format("%.2f", total)}"
@@ -462,36 +763,6 @@ class InvoiceCreationFragment : Fragment() {
 //        // Update extra charges display
 //        updateExtraChargesDisplay()
 //    }
-
-    // Update the totals display with adjusted total if metal exchange is applied
-    private fun updateTotals() {
-        val subtotal = salesViewModel.calculateSubtotal()
-        val extraChargesTotal = salesViewModel.calculateExtraCharges()
-        val tax = salesViewModel.calculateTax()
-
-        // Calculate total based on metal exchange status
-        val total = if (isMetalExchangeApplied) {
-            calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
-        } else {
-            calculateInvoiceTotal()
-        }
-
-        val paid = salesViewModel.calculateTotalPaid()
-        val due = total - paid
-
-        // Update the UI
-        binding.subtotalValue.text = "₹${String.format("%.2f", subtotal)}"
-        binding.taxValue.text = "₹${String.format("%.2f", tax)}"
-        binding.totalValue.text = "₹${String.format("%.2f", total)}"
-        binding.amountPaidValue.text = "₹${String.format("%.2f", paid)}"
-        binding.balanceDueValue.text = "₹${String.format("%.2f", due)}"
-
-        // Update payment status badge
-        updatePaymentStatusBadge(due, paid)
-
-        // Update extra charges display
-        updateExtraChargesDisplay()
-    }
 
     private fun updateExtraChargesDisplay() {
         // Get all extra charges
@@ -579,15 +850,6 @@ class InvoiceCreationFragment : Fragment() {
         // Setup input fields with validation
         setupFineMetalInputs()
 
-        // Setup apply button
-
-        binding.applyGoldFineButton.setOnClickListener {
-            applyMetalExchange()
-        }
-
-        binding.applySilverFineButton.setOnClickListener {
-            applyMetalExchange()
-        }
         // Hide the view initially
         binding.metalFineCard.visibility = View.GONE
     }
@@ -668,37 +930,162 @@ class InvoiceCreationFragment : Fragment() {
     // Apply the metal exchange to the invoice
     private fun applyMetalExchange() {
         if (fineGoldAmount <= 0.0 && fineSilverAmount <= 0.0) {
-            Toast.makeText(requireContext(), "Please enter metal amounts first", Toast.LENGTH_SHORT)
-                .show()
+            Toast.makeText(requireContext(), "Please enter metal amounts first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Calculate current total without metal exchange
+        val currentTotal = salesViewModel.calculateTotal()
+
+        // Calculate new total with metal exchange
+        val newTotal = calculateAdjustedTotal(fineGoldAmount, fineSilverAmount)
+
+        // Get paid amount
+        val totalPaid = salesViewModel.calculateTotalPaid()
+
+        // Check if applying would cause negative balance
+        if (totalPaid > newTotal) {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Cannot Apply Metal Exchange")
+                .setMessage("Applying this metal exchange would reduce the total (₹${String.format("%.2f", newTotal)}) below the amount already paid (₹${String.format("%.2f", totalPaid)}). Please reduce the fine metal amount or remove some payments first.")
+                .setPositiveButton("OK", null)
+                .create()
+            dialog.show()
             return
         }
 
         // Set the flag to indicate metal exchange is applied
         isMetalExchangeApplied = true
 
-//        // Disable input fields and apply button
-//        binding.goldFineEditText.isEnabled = false
-//        binding.silverFineEditText.isEnabled = false
-//        binding.applyGoldFineButton.isEnabled = false
+        // Disable input fields
+        binding.goldFineEditText.isEnabled = false
+        binding.silverFineEditText.isEnabled = false
 
-        // Update total calculations
-        updateTotals()
-
-        Toast.makeText(requireContext(), "Metal exchange applied", Toast.LENGTH_SHORT).show()
-
-        binding.fineMetalSummarySection.visibility = View.VISIBLE
+        // Change the apply buttons to reset buttons
         if (fineGoldAmount > 0) {
+            binding.applyGoldFineButton.text = "Reset"
+            binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
             binding.goldFineDeductionLayout.visibility = View.VISIBLE
             binding.goldFineDeductionValue.text = String.format("%.2f", fineGoldAmount) + "g"
         }
+
         if (fineSilverAmount > 0) {
+            binding.applySilverFineButton.text = "Reset"
+            binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.status_unpaid))
             binding.silverFineDeductionLayout.visibility = View.VISIBLE
             binding.silverFineDeductionValue.text = String.format("%.2f", fineSilverAmount) + "g"
         }
 
+        // Update total calculations
+        updateTotals()
 
+        binding.fineMetalSummarySection.visibility = View.VISIBLE
+
+        // Show feedback about price change
+        val difference = currentTotal - newTotal
+        Toast.makeText(requireContext(), "Total reduced by ₹${String.format("%.2f", difference)}", Toast.LENGTH_SHORT).show()
     }
+    private fun resetMetalExchange(metalType: String) {
+        // Store current values for calculations
+        val currentGoldAmount = fineGoldAmount
+        val currentSilverAmount = fineSilverAmount
+        val currentTotal = if (isMetalExchangeApplied) {
+            calculateAdjustedTotal(currentGoldAmount, currentSilverAmount)
+        } else {
+            salesViewModel.calculateTotal()
+        }
+        val totalPaid = salesViewModel.calculateTotalPaid()
 
+        // Calculate what the new total would be after reset
+        val newGoldAmount = if (metalType == "gold") 0.0 else currentGoldAmount
+        val newSilverAmount = if (metalType == "silver") 0.0 else currentSilverAmount
+        val newTotal = calculateAdjustedTotal(newGoldAmount, newSilverAmount)
+
+        // Only check for negative balance if total is decreasing
+        if (newTotal < currentTotal && totalPaid > newTotal) {
+            // This would cause a negative balance
+            val remainingBalance = currentTotal - totalPaid
+            val maxResetAllowed = currentTotal - newTotal - remainingBalance
+
+            val message = if (maxResetAllowed <= 0) {
+                "Cannot reset metal exchange because payments (₹${String.format("%.2f", totalPaid)}) would exceed the new total (₹${String.format("%.2f", newTotal)}).\n\nPlease remove some payments first."
+            } else {
+                "Warning: Resetting this metal exchange would cause payments to exceed the total amount.\n\nCurrent total: ₹${String.format("%.2f", currentTotal)}\nTotal paid: ₹${String.format("%.2f", totalPaid)}\nNew total after reset: ₹${String.format("%.2f", newTotal)}"
+            }
+
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Cannot Reset Metal Exchange")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .create()
+            dialog.show()
+            return
+        }
+
+        // Safe to proceed with reset
+        when (metalType) {
+            "gold" -> {
+                fineGoldAmount = 0.0
+                binding.goldFineEditText.apply {
+                    setText("")
+                    isEnabled = true
+                }
+                binding.applyGoldFineButton.text = "Apply"
+                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.goldFineDeductionLayout.visibility = View.GONE
+            }
+            "silver" -> {
+                fineSilverAmount = 0.0
+                binding.silverFineEditText.apply {
+                    setText("")
+                    isEnabled = true
+                }
+                binding.applySilverFineButton.text = "Apply"
+                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.silverFineDeductionLayout.visibility = View.GONE
+            }
+            "all" -> {
+                // Reset both gold and silver
+                fineGoldAmount = 0.0
+                fineSilverAmount = 0.0
+                binding.goldFineEditText.apply {
+                    setText("")
+                    isEnabled = true
+                }
+                binding.silverFineEditText.apply {
+                    setText("")
+                    isEnabled = true
+                }
+                binding.applyGoldFineButton.text = "Apply"
+                binding.applySilverFineButton.text = "Apply"
+                binding.applyGoldFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.applySilverFineButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.goldFineDeductionLayout.visibility = View.GONE
+                binding.silverFineDeductionLayout.visibility = View.GONE
+            }
+        }
+
+        // Check if both gold and silver are reset
+        if (fineGoldAmount <= 0.0 && fineSilverAmount <= 0.0) {
+            isMetalExchangeApplied = false
+            binding.fineMetalSummarySection.visibility = View.GONE
+        }
+
+        // Update totals
+        updateTotals()
+
+        // Show a toast if new total is different
+        if (newTotal != currentTotal) {
+            val difference = currentTotal - newTotal
+            if (difference > 0) {
+                Toast.makeText(requireContext(), "Total increased by ₹${String.format("%.2f", difference)}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Total decreased by ₹${String.format("%.2f", -difference)}", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(requireContext(), "Metal exchange reset successfully", Toast.LENGTH_SHORT).show()
+        }
+    }
     // Calculate total gold weight from selected items
     private fun calculateTotalGoldWeight(): Double {
         val selectedItems = salesViewModel.selectedItems.value ?: emptyList()
