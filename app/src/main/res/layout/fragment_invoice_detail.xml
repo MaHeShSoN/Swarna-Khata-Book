@@ -390,9 +390,10 @@
                             android:textSize="16sp"
                             tools:text="₹80,340.00" />
                     </LinearLayout>
+
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
 
             <!-- Payments Card -->
             <com.google.android.material.card.MaterialCardView
