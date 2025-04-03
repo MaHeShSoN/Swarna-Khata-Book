@@ -73,6 +73,12 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_itemDetailFragment"
             app:destination="@id/itemDetailFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_invoicePdfSettingsFragment"
+            app:destination="@id/invoicePdfSettingsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_shopSettingsFragment"
+            app:destination="@id/shopSettingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -140,4 +146,14 @@
             app:argType="string" />
 
     </fragment>
+    <fragment
+        android:id="@+id/invoicePdfSettingsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.InvoicePdfSettingsFragment"
+        android:label="fragment_invoice_pdf_settings"
+        tools:layout="@layout/fragment_invoice_pdf_settings" />
+    <fragment
+        android:id="@+id/shopSettingsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.ShopSettingsFragment"
+        android:label="fragment_shop_settings"
+        tools:layout="@layout/fragment_shop_settings" />
 </navigation>

@@ -27,6 +27,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
+
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
@@ -473,19 +474,26 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val listOfRatOn = listOf<String>("Net Weight", "Gross Weight", "Fine")
         val adapter = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
+            R.layout.dropdown_item,
             listOfRatOn
         )
-        binding.goldRateOnEditText.setAdapter(adapter)
+        binding.goldRateOnEditText.apply {
+            setAdapter(adapter)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
+
 
         // Making charge type list
         val listOfMakingChargeType = listOf<String>("PER GRAM", "FIX", "PERCENTAGE")
         val adapter2 = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
+            R.layout.dropdown_item,
             listOfMakingChargeType
         )
-        binding.mackingChargesTypeEditText.setAdapter(adapter2)
+        binding.mackingChargesTypeEditText.apply {
+            setAdapter(adapter2)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
     }
 
     fun validateJewelryItemForm(): Pair<Boolean, String> {
@@ -575,9 +583,13 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 // Extra validation when "Fine" is selected for gold rate
                 if (goldRateOn.equals("Fine", ignoreCase = true)) {
                     if (purityValue <= 0) {
-                        binding.purityInputLayout.error = "Purity must be greater than zero when using Fine weight"
+                        binding.purityInputLayout.error =
+                            "Purity must be greater than zero when using Fine weight"
                         binding.purityEditText.requestFocus()
-                        return Pair(false, "Purity must be greater than zero when using Fine weight")
+                        return Pair(
+                            false,
+                            "Purity must be greater than zero when using Fine weight"
+                        )
                     }
                 }
             } catch (e: NumberFormatException) {
@@ -619,7 +631,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
                 // If making charges type is PERCENTAGE, validate it's between 0 and 100
                 if (makingChargesType.equals("PERCENTAGE", ignoreCase = true) &&
-                    (makingChargesValue < 0 || makingChargesValue > 100)) {
+                    (makingChargesValue < 0 || makingChargesValue > 100)
+                ) {
                     binding.mackingChargesInputLayout.error = "Percentage must be between 0 and 100"
                     binding.mackingChargesEditText.requestFocus()
                     return Pair(false, "Percentage must be between 0 and 100")
@@ -688,6 +701,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // All validations passed
         return Pair(true, "")
     }
+
     /**
      * Calculates the total making charges based on the type and weight
      */
@@ -704,6 +718,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 val goldValue = calculateGoldValue()
                 goldValue * (makingCharges / 100.0)
             }
+
             else -> 0.0
         }
     }
@@ -738,12 +753,14 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 // Return the fine weight
                 baseWeight * purityDecimal
             }
+
             else -> netWeight // Default to net weight if something unexpected
         }
 
         // Add wastage and multiply by gold rate
         return (selectedWeight + wastage) * goldRate
     }
+
     /**
      * Calculates the total charges by adding gold value, making charges, and diamond price
      */
@@ -761,7 +778,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val makingCharges = calculateMakingCharges()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
         val extraChargesTotal =
-            if (!::chargeAdapter.isInitialized && chargeAdapter.getExtraChargeList()
+            if (::chargeAdapter.isInitialized && chargeAdapter.getExtraChargeList()
                     .isNotEmpty()
             ) chargeAdapter.getTotalCharges() else 0.0
 
@@ -848,6 +865,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Update calculated fields
         updateCalculatedFields()
     }
+
     private fun setUpInitalRecyclerView() {
         chargeAdapter = ExtraChargeAdapter()
         binding.chargesRecyclerView.apply {

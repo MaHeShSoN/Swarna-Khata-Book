@@ -66,8 +66,8 @@ class PaymentsAdapter(
             "card" -> R.drawable.ic_payment_card
             "upi" -> R.drawable.material_symbols__upi_pay
             "bank transfer" -> R.drawable.mdi__bank
-            "old gold" -> R.drawable.uil__gold
-            "old silver" -> R.drawable.uil__gold
+            "gold exchange" -> R.drawable.uil__gold
+            "silver exchange" -> R.drawable.uil__gold
             else -> R.drawable.mdi__currency_inr
         }
         holder.paymentIcon.setImageResource(iconResId)

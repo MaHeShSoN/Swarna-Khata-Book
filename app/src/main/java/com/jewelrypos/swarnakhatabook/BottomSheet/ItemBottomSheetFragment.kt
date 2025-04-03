@@ -128,12 +128,13 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         val adapter3 = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
+            R.layout.dropdown_item,
             listOfUnits
         )
-
-        binding.stockChargesTypeEditText.setAdapter(adapter3)
-
+        binding.stockChargesTypeEditText.apply {
+            setAdapter(adapter3)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
 
     }
 
@@ -156,11 +157,13 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         val adapter = ArrayAdapter(
             requireContext(),
-            android.R.layout.simple_dropdown_item_1line,
+            R.layout.dropdown_item,
             itemNames
         )
-
-        binding.categoryDropdown.setAdapter(adapter)
+        binding.categoryDropdown.apply {
+            setAdapter(adapter)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
     }
 
     fun showThemedDialog() {
@@ -219,10 +222,13 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 val metalTypes = MetalItemType.entries.map { it.name }
                 val adapter = ArrayAdapter(
                     requireContext(), // Context
-                    android.R.layout.simple_dropdown_item_1line, // Default dropdown layout
+                    R.layout.dropdown_item, // Default dropdown layout
                     metalTypes
                 )
-                dialogBinding.editText2.setAdapter(adapter)
+                dialogBinding.editText2.apply {
+                    setAdapter(adapter)
+                    setDropDownBackgroundResource(R.color.my_light_primary_container)
+                }
 
                 // Set the prepared view to the dialog
                 setView(dialogView)

@@ -9,5 +9,8 @@ data class Shop(
     val hasGst: Boolean = false,
     val gstNumber: String = "",
     val address: String = "",
-    val createdAt: Timestamp = Timestamp.now()
+    val createdAt: Timestamp = Timestamp.now(),
+    val email: String = "",
+    var logo: String? = null,
+    var signature: String? = null
 )

@@ -51,7 +51,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
     fun loadInvoice(invoiceId: String) {
         _isLoading.value = true
-        _errorMessage.value = null
+        _errorMessage.value = ""
 
         viewModelScope.launch {
             try {
@@ -110,7 +110,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         val currentInvoice = _invoice.value ?: return
 
         _isLoading.value = true
-        _errorMessage.value = null
+        _errorMessage.value = ""
 
         viewModelScope.launch {
             try {
@@ -446,7 +446,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     fun duplicateInvoice() {
         val currentInvoice = _invoice.value ?: return
         _isLoading.value = true
-        _errorMessage.value = null
+        _errorMessage.value = ""
 
         viewModelScope.launch {
             try {
@@ -489,7 +489,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
         val currentInvoice = _invoice.value ?: return
         _isLoading.value = true
-        _errorMessage.value = null
+        _errorMessage.value = ""
 
         viewModelScope.launch {
             try {

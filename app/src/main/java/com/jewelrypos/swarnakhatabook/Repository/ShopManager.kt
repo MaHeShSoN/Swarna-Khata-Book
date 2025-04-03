@@ -2,6 +2,8 @@ package com.jewelrypos.swarnakhatabook.Repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
+import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -14,12 +16,15 @@ import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+import com.jewelrypos.swarnakhatabook.DataClasses.ShopInvoiceDetails
 import kotlinx.coroutines.tasks.await
 import java.lang.reflect.Type
 
 object ShopManager {
+    private const val TAG = "ShopManager"
     private const val PREF_NAME = "shop_preferences"
     private const val KEY_SHOP_DATA = "shop_data"
+    private const val KEY_SHOP_BRANDING = "shop_branding"
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var gson: Gson
 
@@ -46,7 +51,10 @@ object ShopManager {
             "address" to shop.address,
             "gstNumber" to shop.gstNumber,
             "hasGST" to shop.hasGst,
-            "createdAt" to shop.createdAt
+            "createdAt" to shop.createdAt,
+            "email" to shop.email,
+            "logo" to shop.logo,
+            "signature" to shop.signature
         )
 
         // Save to Firebase
@@ -95,7 +103,10 @@ object ShopManager {
                         address = document.getString("address") ?: "",
                         gstNumber = document.getString("gstNumber") ?: "",
                         hasGst = document.getBoolean("hasGST") ?: false,
-                        createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
+                        createdAt = document.getTimestamp("createdAt") ?: Timestamp.now(),
+                        email = document.getString("email") ?: "",
+                        logo = document.getString("logo"),
+                        signature = document.getString("signature")
                     )
 
                     // Save fetched data to SharedPreferences
@@ -137,7 +148,10 @@ object ShopManager {
                     address = document.getString("address") ?: "",
                     gstNumber = document.getString("gstNumber") ?: "",
                     hasGst = document.getBoolean("hasGST") ?: false,
-                    createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
+                    createdAt = document.getTimestamp("createdAt") ?: Timestamp.now(),
+                    email = document.getString("email") ?: "",
+                    logo = document.getString("logo"),
+                    signature = document.getString("signature")
                 )
 
                 // Save to SharedPreferences
@@ -147,6 +161,7 @@ object ShopManager {
                 null
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Error getting shop from Firestore", e)
             null
         }
     }
@@ -171,6 +186,7 @@ object ShopManager {
         return try {
             gson.fromJson(shopJson, Shop::class.java)
         } catch (e: Exception) {
+            Log.e(TAG, "Error parsing shop data from SharedPreferences", e)
             null
         }
     }
@@ -182,6 +198,52 @@ object ShopManager {
         }
 
         sharedPreferences.edit().remove(KEY_SHOP_DATA).apply()
+    }
+
+    // Function to update shop logo
+    fun updateShopLogo(logoUri: Uri, context: Context, onComplete: (Boolean, Exception?) -> Unit) {
+        val shop =
+            getShopFromLocal(context) ?: return onComplete(false, Exception("Shop data not found"))
+
+        // Update the shop object with the new logo URI
+        val updatedShop = shop.copy(logo = logoUri.toString())
+
+        // Save the updated shop
+        saveShop(updatedShop, context, onComplete)
+    }
+
+    // Function to update shop signature
+    fun updateShopSignature(
+        signatureUri: Uri,
+        context: Context,
+        onComplete: (Boolean, Exception?) -> Unit
+    ) {
+        val shop =
+            getShopFromLocal(context) ?: return onComplete(false, Exception("Shop data not found"))
+
+        // Update the shop object with the new signature URI
+        val updatedShop = shop.copy(signature = signatureUri.toString())
+
+        // Save the updated shop
+        saveShop(updatedShop, context, onComplete)
+    }
+
+    // Get shop details in the format needed for invoice generation
+    fun getShopDetails(context: Context): ShopInvoiceDetails {
+        // Get the shop from local storage
+        val shop = getShopFromLocal(context)
+
+        // Convert to the invoice-compatible Shop object
+        return ShopInvoiceDetails(
+            id = FirebaseAuth.getInstance().currentUser?.uid ?: "default",
+            shopName = shop?.shopName ?: "Your Jewelry Shop",
+            address = shop?.address ?: "123 Jewelry Lane, Bangalore, 560001",
+            phoneNumber = shop?.phoneNumber ?: "9876543210",
+            email = shop?.email ?: "contact@yourjewelryshop.com",
+            gstNumber = shop?.gstNumber ?: "29ABCDE1234F1Z5",
+            logo = shop?.logo,
+            signature = shop?.signature
+        )
     }
 
     // Custom serializer/deserializer for Firebase Timestamp
@@ -196,7 +258,7 @@ object ShopManager {
     }
 
     private class TimestampDeserializer : JsonDeserializer<Timestamp> {
-           override fun deserialize(
+        override fun deserialize(
             json: JsonElement?,
             typeOfT: Type?,
             context: JsonDeserializationContext?

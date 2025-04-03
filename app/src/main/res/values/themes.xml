@@ -14,7 +14,6 @@
     <style name="Theme.SwarnaKhataBook" parent="Base.Theme.SwarnaKhataBook" />
 
 
-
     <style name="CustomPopupMenu" parent="Widget.MaterialComponents.PopupMenu">
         <item name="android:popupBackground">@color/cream_background</item>
         <item name="android:textColor">@color/my_light_on_primary</item>

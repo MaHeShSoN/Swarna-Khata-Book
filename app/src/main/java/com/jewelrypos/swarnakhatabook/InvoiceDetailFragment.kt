@@ -207,17 +207,6 @@ class InvoiceDetailFragment : Fragment() {
         val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
         binding.invoiceDate.text = dateFormatter.format(Date(invoice.invoiceDate))
 
-        Log.d("InvoiceDetailFragment", invoice.isMetalExchangeApplied.toString())
-
-
-        // Check if there's metal fine payment info
-        if (invoice.isMetalExchangeApplied) {
-            // Show a section for metal fine payments
-            showMetalFineExchangeInfo(invoice)
-        } else {
-            // Hide metal fine section if it exists
-            hideMetalFinePaymentsSection()
-        }
 
         // Update payment status
         updatePaymentStatus(invoice)
@@ -246,97 +235,11 @@ class InvoiceDetailFragment : Fragment() {
     }
 
 
-    private fun showMetalFineExchangeInfo(invoice: Invoice) {
-        Log.d("InvoiceDetailFragment", "Showing metal fine info: gold=${invoice.fineGoldAmount}, silver=${invoice.fineSilverAmount}")
 
-        // Show the metal fine card
-        binding.metalFineCard.visibility = View.VISIBLE
 
-        // Update total gold weight display
-        if (invoice.fineGoldAmount > 0.0) {
-            binding.goldFineSection.visibility = View.VISIBLE
-            binding.totalGoldWeightValue.text = "Total: ${String.format("%.2f", calculateTotalGoldWeight(invoice))}g"
-            binding.goldFineEditText.setText(String.format("%.2f", invoice.fineGoldAmount))
-            binding.goldFineEditText.isEnabled = false
-            binding.applyGoldFineButton.text = "Reset"
-            binding.applyGoldFineButton.visibility = View.GONE // Hide in detail view
-            binding.goldFineDeductionLayout.visibility = View.VISIBLE
-            binding.goldFineDeductionValue.text = "${String.format("%.2f", invoice.fineGoldAmount)}g"
-        } else {
-            binding.goldFineSection.visibility = View.GONE
-        }
 
-        // Update total silver weight display
-        if (invoice.fineSilverAmount > 0.0) {
-            binding.silverFineSection.visibility = View.VISIBLE
-            binding.totalSilverWeightValue.text = "Total: ${String.format("%.2f", calculateTotalSilverWeight(invoice))}g"
-            binding.silverFineEditText.setText(String.format("%.2f", invoice.fineSilverAmount))
-            binding.silverFineEditText.isEnabled = false
-            binding.applySilverFineButton.text = "Reset"
-            binding.applySilverFineButton.visibility = View.GONE // Hide in detail view
-            binding.silverFineDeductionLayout.visibility = View.VISIBLE
-            binding.silverFineDeductionValue.text = "${String.format("%.2f", invoice.fineSilverAmount)}g"
-        } else {
-            binding.silverFineSection.visibility = View.GONE
-        }
 
-        // Show fine metal summary section
-        binding.fineMetalSummarySection.visibility = View.VISIBLE
 
-        // Show original and adjusted totals
-        val formatter = DecimalFormat("#,##,##0.00")
-        binding.originalTotalLayout.visibility = View.VISIBLE
-        binding.originalTotalValue.text = "₹${formatter.format(invoice.originalTotalBeforeFine)}"
-
-        binding.adjustedTotalLayout.visibility = View.VISIBLE
-        binding.adjustedTotalValue.text = "₹${formatter.format(invoice.totalAmount)}"
-    }
-
-    private fun hideMetalFinePaymentsSection() {
-        binding.metalFineCard.visibility = View.GONE
-    }
-
-    // Helper methods to calculate total metal weights from items
-    private fun calculateTotalGoldWeight(invoice: Invoice): Double {
-        return invoice.items.sumOf { item ->
-            if (isGoldItem(item.itemDetails)) {
-                val weight = if (item.itemDetails.metalRateOn.equals("Net Weight", ignoreCase = true)) {
-                    item.itemDetails.netWeight
-                } else {
-                    item.itemDetails.grossWeight
-                }
-                weight * item.quantity
-            } else {
-                0.0
-            }
-        }
-    }
-
-    private fun calculateTotalSilverWeight(invoice: Invoice): Double {
-        return invoice.items.sumOf { item ->
-            if (isSilverItem(item.itemDetails)) {
-                val weight = if (item.itemDetails.metalRateOn.equals("Net Weight", ignoreCase = true)) {
-                    item.itemDetails.netWeight
-                } else {
-                    item.itemDetails.grossWeight
-                }
-                weight * item.quantity
-            } else {
-                0.0
-            }
-        }
-    }
-
-    // Helper methods to check item types
-    private fun isGoldItem(item: JewelleryItem): Boolean {
-        return item.itemType.contains("gold", ignoreCase = true) ||
-                item.category.contains("gold", ignoreCase = true)
-    }
-
-    private fun isSilverItem(item: JewelleryItem): Boolean {
-        return item.itemType.contains("silver", ignoreCase = true) ||
-                item.category.contains("silver", ignoreCase = true)
-    }
 
     private fun updatePaymentStatus(invoice: Invoice) {
         val balanceDue = invoice.totalAmount - invoice.paidAmount
@@ -409,48 +312,22 @@ class InvoiceDetailFragment : Fragment() {
         return invoice.items.sumOf { it.price * it.quantity }
     }
 
-//    private fun calculateTax(invoice: Invoice): Double {
-//        val subtotal = calculateSubtotal(invoice)
-//        val extraCharges = calculateExtraCharges(invoice)
-//
-//        // Tax is whatever remains after subtracting subtotal and extra charges
-//        return invoice.totalAmount - subtotal - extraCharges
-//    }
 
     private fun calculateTax(invoice: Invoice): Double {
-        // If metal exchange is applied, use a direct calculation instead of a difference
-        if (invoice.isMetalExchangeApplied) {
-            // Sum up tax directly from items
-            return invoice.items.sumOf { item ->
-                val itemSubtotal = item.price * item.quantity
-                val itemExtraCharges = item.itemDetails.listOfExtraCharges.sumOf { charge ->
-                    charge.amount * item.quantity
-                }
-
-                // Calculate tax using the tax rate from item
-                (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
-            }
-        } else {
-            // Regular tax calculation for invoices without metal exchange
-            val subtotal = calculateSubtotal(invoice)
-            val extraCharges = calculateExtraCharges(invoice)
-
-            // Tax is calculated as a direct value, not as a remainder
-            return invoice.items.sumOf { item ->
-                val itemSubtotal = item.price * item.quantity
-                val itemExtraCharges = item.itemDetails.listOfExtraCharges.sumOf {
-                        charge -> charge.amount * item.quantity
-                }
-                (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
-            }
+        // Regular tax calculation
+        return invoice.items.sumOf { item ->
+            val itemSubtotal = calculateSubtotal(invoice)
+            val itemExtraCharges = calculateExtraCharges(invoice)
+            (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
         }
     }
-
     private fun setupAddItemButton() {
         binding.addItemsButton.setOnClickListener {
             openItemSelector()
         }
     }
+
+
 
     private fun openItemSelector() {
         val bottomSheet = ItemSelectionBottomSheet.newInstance()
@@ -532,29 +409,96 @@ class InvoiceDetailFragment : Fragment() {
     }
 
 
+    /**
+     * Calculate the total extra charges for a specific item
+     */
+    private fun getItemExtraChargesTotal(item: InvoiceItem): Double {
+        return item.itemDetails.listOfExtraCharges.sumOf { charge ->
+            charge.amount * item.quantity
+        }
+    }
+
+    /**
+     * Calculate the tax amount for a specific item
+     */
+    private fun getItemTaxAmount(item: InvoiceItem): Double {
+        val itemSubtotal = item.price * item.quantity
+        val itemExtraCharges = getItemExtraChargesTotal(item)
+        return (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
+    }
+
+
     private fun openItemEditor(item: InvoiceItem) {
+        // Get the current invoice
+        val invoice = viewModel.invoice.value ?: return
+
+        // Store original item price for later comparison
+        val originalItemTotal = item.price * item.quantity
+        val originalItemContribution = originalItemTotal + getItemExtraChargesTotal(item) + getItemTaxAmount(item)
+
+        // Store total paid amount
+        val totalPaid = invoice.paidAmount
+
+        // Calculate how low the price can go without causing negative balance
+        val otherItemsTotal = invoice.totalAmount - originalItemContribution
+        val minimumAllowedTotal = Math.max(0.0, totalPaid - otherItemsTotal)
+
+        // Create and configure the bottom sheet
         val bottomSheet = ItemSelectionBottomSheet.newInstance()
-        // Pass the current item for editing
         bottomSheet.setItemForEdit(item.itemDetails)
 
-        bottomSheet.setOnItemSelectedListener(object :
-            ItemSelectionBottomSheet.OnItemSelectedListener {
+        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
             override fun onItemSelected(newItem: JewelleryItem, price: Double) {
                 // This shouldn't happen during editing
             }
 
             override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                Log.d(
-                    "InvoiceDetailFragment",
-                    "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
+                Log.d("InvoiceDetailFragment", "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges")
+
+                // Calculate what the new total would be for this item
+                val newQuantity = item.quantity // Quantity remains the same
+                val newItemTotal = price * newQuantity
+
+                // Create temporary item to calculate extras and tax
+                val tempItem = InvoiceItem(
+                    id = item.id,
+                    itemId = item.itemId,
+                    quantity = newQuantity,
+                    itemDetails = updatedItem,
+                    price = price
                 )
 
-                // Create updated item while preserving the ID
+                val newItemExtraCharges = getItemExtraChargesTotal(tempItem)
+                val newItemTax = getItemTaxAmount(tempItem)
+                val newItemContribution = newItemTotal + newItemExtraCharges + newItemTax
+
+                // Check if this would cause the total to go below the minimum allowed
+                if (newItemContribution < minimumAllowedTotal) {
+                    // Calculate how much the item total can be reduced
+                    val maxReduction = originalItemContribution - minimumAllowedTotal
+                    val formatter = DecimalFormat("#,##,##0.00")
+
+                    // Show warning dialog
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Cannot Update Item")
+                        .setMessage(
+                            "This change would reduce the invoice total below the amount already paid.\n\n" +
+                                    "Current amount paid: ₹${formatter.format(totalPaid)}\n" +
+                                    "Maximum reduction allowed: ₹${formatter.format(maxReduction)}\n\n" +
+                                    "Please adjust your changes or remove some payments first."
+                        )
+                        .setPositiveButton("OK", null)
+                        .show()
+
+                    return
+                }
+
+                // Safe to proceed - create updated invoice item
                 val updatedInvoiceItem = InvoiceItem(
-                    id = item.id,            // Preserve original ID
-                    itemId = item.itemId,    // Preserve original item ID
+                    id = item.id,
+                    itemId = item.itemId,
                     quantity = item.quantity,
-                    itemDetails = updatedItem, // Use the updated item details which include extra charges
+                    itemDetails = updatedItem,
                     price = price
                 )
 
@@ -566,6 +510,44 @@ class InvoiceDetailFragment : Fragment() {
 
         bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
     }
+
+
+
+
+//    private fun openItemEditor(item: InvoiceItem) {
+//        val bottomSheet = ItemSelectionBottomSheet.newInstance()
+//        // Pass the current item for editing
+//        bottomSheet.setItemForEdit(item.itemDetails)
+//
+//        bottomSheet.setOnItemSelectedListener(object :
+//            ItemSelectionBottomSheet.OnItemSelectedListener {
+//            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+//                // This shouldn't happen during editing
+//            }
+//
+//            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+//                Log.d(
+//                    "InvoiceDetailFragment",
+//                    "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
+//                )
+//
+//                // Create updated item while preserving the ID
+//                val updatedInvoiceItem = InvoiceItem(
+//                    id = item.id,            // Preserve original ID
+//                    itemId = item.itemId,    // Preserve original item ID
+//                    quantity = item.quantity,
+//                    itemDetails = updatedItem, // Use the updated item details which include extra charges
+//                    price = price
+//                )
+//
+//                // Update in viewmodel
+//                viewModel.updateInvoiceItem(updatedInvoiceItem)
+//                EventBus.postInvoiceUpdated()
+//            }
+//        })
+//
+//        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
+//    }
 
 //    private fun openItemEditor(item: InvoiceItem) {
 //        val bottomSheet = ItemSelectionBottomSheet.newInstance()
@@ -708,22 +690,93 @@ class InvoiceDetailFragment : Fragment() {
     private fun callCustomer() {
         val phone = viewModel.getCustomerPhone()
         if (phone.isNotEmpty()) {
-            // Implement phone call intent
+            try {
+                // Create phone call intent
+                val intent = Intent(Intent.ACTION_DIAL)
+                // Format phone number to ensure it has proper format with country code
+                val formattedPhone = formatPhoneNumber(phone)
+                intent.data = Uri.parse("tel:$formattedPhone")
+                startActivity(intent)
+            } catch (e: Exception) {
+                showErrorMessage("Could not place call: ${e.message}")
+                Log.e("InvoiceDetailFragment", "Error placing call", e)
+            }
         } else {
             showErrorMessage("No phone number available")
+        }
+    }
+    private fun formatPhoneNumber(phone: String): String {
+        // If phone doesn't start with +, assume it's an Indian number and add +91
+        // You can modify this logic based on your app's region
+        return if (phone.startsWith("+")) {
+            phone
+        } else if (phone.startsWith("0")) {
+            "+${phone.substring(1)}"
+        } else {
+            "+91$phone" // Default to India country code
         }
     }
 
     private fun messageCustomerOnWhatsApp() {
         val phone = viewModel.getCustomerPhone()
         if (phone.isNotEmpty()) {
-            // Implement WhatsApp messaging
+            try {
+                // Format phone number (remove any non-digit characters except +)
+                val formattedPhone = phone.replace(Regex("[^\\d+]"), "")
+
+                // Try regular WhatsApp first
+                val whatsappIntent = Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone"))
+                whatsappIntent.setPackage("com.whatsapp")
+
+                // Try WhatsApp Business if needed
+                val whatsappBusinessIntent = Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone"))
+                whatsappBusinessIntent.setPackage("com.whatsapp.w4b")
+
+                // Check which app is available
+                val packageManager = requireActivity().packageManager
+                val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
+                val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
+
+                when {
+                    whatsappInstalled -> {
+                        startActivity(whatsappIntent)
+                    }
+                    whatsappBusinessInstalled -> {
+                        startActivity(whatsappBusinessIntent)
+                    }
+                    else -> {
+                        // Neither app is installed, show error message
+                        showErrorMessage("WhatsApp not installed")
+
+                        // Ask if they want to message through another app
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("WhatsApp not found")
+                            .setMessage("Would you like to contact the customer using another app?")
+                            .setPositiveButton("Yes") { _, _ ->
+                                // Create SMS intent as fallback
+                                val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
+                                    data = Uri.parse("smsto:$phone")
+                                }
+                                if (smsIntent.resolveActivity(packageManager) != null) {
+                                    startActivity(smsIntent)
+                                } else {
+                                    showErrorMessage("No messaging apps found")
+                                }
+                            }
+                            .setNegativeButton("No", null)
+                            .show()
+                    }
+                }
+            } catch (e: Exception) {
+                showErrorMessage("Could not open messaging app: ${e.message}")
+                Log.e("InvoiceDetailFragment", "Error opening messaging app", e)
+            }
         } else {
             showErrorMessage("No phone number available")
         }
-    }
-
-    private fun printInvoice() {
+    }    private fun printInvoice() {
         // Implement invoice printing
     }
 
@@ -731,12 +784,199 @@ class InvoiceDetailFragment : Fragment() {
         // Implement invoice sharing
     }
 
-    private fun shareInvoiceToWhatsApp() {
-        // Implement WhatsApp invoice sharing
+
+    // Add this method to InvoiceDetailFragment
+    private fun generateAndSavePdf() {
+        val invoice = viewModel.invoice.value ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+//                val shop = ShopManager.getShopCoroutine(requireContext())
+                val shop = ShopManager.getShopDetails(requireContext())
+
+                if (shop == null) {
+                    showErrorMessage("Shop information not found")
+                    return@launch
+                }
+
+
+                PDFBoxResourceLoader.init(requireContext())
+                
+                // Generate PDF
+                val pdfGenerator = InvoicePdfGenerator(requireContext())
+                val pdfFile = pdfGenerator.generateInvoicePdf(
+                    invoice,
+                    shop,
+                    "Invoice_${invoice.invoiceNumber}"
+                )
+
+                // Share or open the PDF
+                sharePdfFile(pdfFile)
+
+            } catch (e: Exception) {
+                Log.e("PDFGeneration", "Error generating PDF", e)
+                showErrorMessage("Failed to generate PDF")
+            }
+        }
     }
 
-    private fun generateAndSavePdf() {
-        // Implement PDF generation
+    private fun sharePdfFile(pdfFile: File) {
+        try {
+            val uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.provider",
+                pdfFile
+            )
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            startActivity(Intent.createChooser(shareIntent, "Share Invoice PDF"))
+        } catch (e: Exception) {
+            Log.e("PDFSharing", "Error sharing PDF", e)
+            showErrorMessage("Failed to share PDF")
+        }
+    }
+
+
+    // Share invoice summary to WhatsApp
+// Share invoice summary to WhatsApp
+// Share invoice summary to WhatsApp
+    private fun shareInvoiceToWhatsApp() {
+        val invoice = viewModel.invoice.value ?: return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // First try to get shop information
+                val shop = ShopManager.getShopCoroutine(requireContext())
+
+                // Create a nicely formatted invoice summary
+                val message = buildString {
+                    // Shop information header if available
+                    if (shop != null && shop.shopName.isNotEmpty()) {
+                        append("*${shop.shopName}*\n")
+                        if (shop.address.isNotEmpty()) {
+                            append("${shop.address}\n")
+                        }
+                        if (shop.phoneNumber.isNotEmpty()) {
+                            append("Phone: ${shop.phoneNumber}\n")
+                        }
+                        if (shop.hasGst && shop.gstNumber.isNotEmpty()) {
+                            append("GST: ${shop.gstNumber}\n")
+                        }
+                        append("\n")
+                    }
+
+                    append("*INVOICE: ${invoice.invoiceNumber}*\n")
+
+                    // Invoice date
+                    val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                    append("Date: ${dateFormatter.format(Date(invoice.invoiceDate))}\n\n")
+
+                    // Customer info
+                    append("*Customer:*\n")
+                    append("${invoice.customerName}\n")
+                    if (invoice.customerPhone.isNotEmpty()) {
+                        append("Phone: ${invoice.customerPhone}\n")
+                    }
+                    if (invoice.customerAddress.isNotEmpty()) {
+                        append("Address: ${invoice.customerAddress}\n")
+                    }
+                    append("\n")
+
+                    // Items summary
+                    append("*Items:*\n")
+                    invoice.items.forEach { item ->
+                        append("• ${item.itemDetails.displayName}")
+                        if (item.itemDetails.purity.isNotEmpty()) {
+                            append(" (${item.itemDetails.purity})")
+                        }
+                        if (item.quantity > 1) {
+                            append(" x ${item.quantity}")
+                        }
+                        append(": ₹${DecimalFormat("#,##,##0.00").format(item.price * item.quantity)}\n")
+                    }
+                    append("\n")
+
+                    // Payment summary
+                    val formatter = DecimalFormat("#,##,##0.00")
+                    append("*Payment Details:*\n")
+                    append("Subtotal: ₹${formatter.format(calculateSubtotal(invoice))}\n")
+
+                    // Check if there are any extra charges to show
+                    val extraCharges = calculateExtraCharges(invoice)
+                    if (extraCharges > 0) {
+                        append("Extra Charges: ₹${formatter.format(extraCharges)}\n")
+                    }
+
+                    append("Tax: ₹${formatter.format(calculateTax(invoice))}\n")
+                    append("Total Amount: ₹${formatter.format(invoice.totalAmount)}\n")
+                    append("Amount Paid: ₹${formatter.format(invoice.paidAmount)}\n")
+
+                    val balanceDue = invoice.totalAmount - invoice.paidAmount
+                    append("Balance Due: ₹${formatter.format(balanceDue)}\n")
+
+                    // Payment status
+                    val paymentStatus = when {
+                        balanceDue <= 0 -> "PAID"
+                        invoice.paidAmount > 0 -> "PARTIAL"
+                        else -> "UNPAID"
+                    }
+                    append("Status: *$paymentStatus*\n\n")
+
+                    // Add notes if present
+                    if (invoice.notes.isNotEmpty()) {
+                        append("*Notes:*\n${invoice.notes}\n")
+                    }
+                }
+
+                // Create separate intents for WhatsApp and WhatsApp Business
+                val whatsappIntent = Intent(Intent.ACTION_SEND)
+                whatsappIntent.type = "text/plain"
+                whatsappIntent.setPackage("com.whatsapp")
+                whatsappIntent.putExtra(Intent.EXTRA_TEXT, message)
+
+                val whatsappBusinessIntent = Intent(Intent.ACTION_SEND)
+                whatsappBusinessIntent.type = "text/plain"
+                whatsappBusinessIntent.setPackage("com.whatsapp.w4b")
+                whatsappBusinessIntent.putExtra(Intent.EXTRA_TEXT, message)
+
+                // Check which app is available
+                val packageManager = requireActivity().packageManager
+                val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
+                val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
+
+                try {
+                    when {
+                        whatsappInstalled -> {
+                            startActivity(whatsappIntent)
+                        }
+                        whatsappBusinessInstalled -> {
+                            startActivity(whatsappBusinessIntent)
+                        }
+                        else -> {
+                            // Neither WhatsApp nor WhatsApp Business installed, use general share
+                            val generalIntent = Intent(Intent.ACTION_SEND)
+                            generalIntent.type = "text/plain"
+                            generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+                            startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Fall back to general share on any error
+                    val generalIntent = Intent(Intent.ACTION_SEND)
+                    generalIntent.type = "text/plain"
+                    generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+                    startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
+                }
+            } catch (e: Exception) {
+                showErrorMessage("Error sharing invoice: ${e.message}")
+                Log.e("InvoiceDetailFragment", "Error sharing invoice", e)
+            }
+        }
     }
 
     // Setup notes editing
@@ -849,7 +1089,7 @@ class InvoiceDetailFragment : Fragment() {
         binding.extraChargesLayout.visibility = View.VISIBLE
         Log.d("InvoiceDetailFragment", "Showing ${allExtraCharges.size} extra charges")
 
-        // Create a view for each extra charge
+        // Create a view for each extra charge when creating a new signed app bundle we need to fill key store ,when uploding on google play store ,should google give us the keystore
         for (charge in allExtraCharges) {
             val chargeView = layoutInflater.inflate(
                 R.layout.item_extra_charge_layout,
