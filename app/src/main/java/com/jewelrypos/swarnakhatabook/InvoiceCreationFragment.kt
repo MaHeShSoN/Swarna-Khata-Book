@@ -645,7 +645,6 @@ class InvoiceCreationFragment : Fragment() {
         // Get shop information
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-//                val shop = ShopManager.getShopCoroutine(requireContext())
                 val shop = ShopManager.getShopDetails(requireContext())
 
                 if (shop == null) {

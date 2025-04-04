@@ -89,6 +89,55 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Template Selection Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/templateCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/librebaskervillebold"
+                        android:text="Template Settings"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Choose from multiple professional invoice templates and customize colors"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/selectTemplateButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Select Template"
+                        android:textColor="@color/my_light_primary"
+                        app:strokeColor="@color/my_light_primary"
+                        app:icon="@drawable/ic_template"
+                        app:iconTint="@color/my_light_primary" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Branding Settings Card -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/brandingCard"
@@ -184,7 +233,6 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Logo Section -->
                     <!-- Logo Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -335,7 +383,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Upload Signature"
+                        android:text="Create Signature"
                         android:textColor="@color/my_light_primary"
                         app:strokeColor="@color/my_light_primary" />
 

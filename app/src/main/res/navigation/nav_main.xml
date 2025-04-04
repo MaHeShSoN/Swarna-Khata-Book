@@ -79,6 +79,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_shopSettingsFragment"
             app:destination="@id/shopSettingsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_templateSelectionFragment"
+            app:destination="@id/templateSelectionFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -150,10 +153,18 @@
         android:id="@+id/invoicePdfSettingsFragment"
         android:name="com.jewelrypos.swarnakhatabook.InvoicePdfSettingsFragment"
         android:label="fragment_invoice_pdf_settings"
-        tools:layout="@layout/fragment_invoice_pdf_settings" />
+        tools:layout="@layout/fragment_invoice_pdf_settings" >
+        <action
+            android:id="@+id/action_invoicePdfSettingsFragment_to_templateSelectionFragment"
+            app:destination="@id/templateSelectionFragment" />
+    </fragment>
     <fragment
         android:id="@+id/shopSettingsFragment"
         android:name="com.jewelrypos.swarnakhatabook.ShopSettingsFragment"
         android:label="fragment_shop_settings"
         tools:layout="@layout/fragment_shop_settings" />
+    <fragment
+        android:id="@+id/templateSelectionFragment"
+        android:name="com.jewelrypos.swarnakhatabook.TemplateSelectionFragment"
+        android:label="TemplateSelectionFragment" />
 </navigation>

@@ -48,7 +48,13 @@ class MoreSettingFragment : Fragment() {
                 id = "invoice_format",
                 title = "Invoice PDF Format",
                 subtitle = "Customize the appearance of your invoice PDFs",
-                iconResId = R.drawable.ic_invoice,
+                iconResId = R.drawable.ic_invoice
+            ),
+            SettingsItem(
+                id = "invoice_template",
+                title = "Invoice Template",
+                subtitle = "Choose from multiple professional templates",
+                iconResId = R.drawable.ic_template,
                 badgeText = "NEW"
             )
         )
@@ -64,6 +70,10 @@ class MoreSettingFragment : Fragment() {
                     val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
                     mainNavController.navigate(R.id.action_mainScreenFragment_to_invoicePdfSettingsFragment)
                 }
+                "invoice_template" -> {
+                    val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
+                }
             }
         }
 
@@ -77,5 +87,4 @@ class MoreSettingFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-
 }

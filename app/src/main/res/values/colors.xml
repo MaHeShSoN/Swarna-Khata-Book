@@ -47,4 +47,15 @@
     <color name="status_paid">#43A047</color>             <!-- Green for Paid -->
     <color name="status_partial">#FFA000</color>          <!-- Amber/Orange for Partial payment -->
     <color name="status_unpaid">#E53935</color>           <!-- Red for Unpaid -->
+
+
+    <color name="color_green">#4CAF50</color>
+    <color name="color_blue">#2196F3</color>
+    <color name="color_purple">#9C27B0</color>
+    <color name="color_red">#F44336</color>
+    <color name="color_indigo">#3F51B5</color>
+    <color name="color_gold">#FFC107</color>
+    <color name="color_orange">#FF9800</color>
+
+
 </resources>

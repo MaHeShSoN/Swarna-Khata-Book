@@ -13,17 +13,10 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
 import com.github.barteksc.pdfviewer.PDFView
-import com.google.firebase.auth.FirebaseAuth
-import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
-import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
-import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
-import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
-import com.jewelrypos.swarnakhatabook.DataClasses.Shop
-import com.jewelrypos.swarnakhatabook.DataClasses.ShopInvoiceDetails
-import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
@@ -32,10 +25,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.Date
-import java.util.UUID
 
-class InvoicePdfSettingsFragment : Fragment() {
+class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatureCapturedListener {
 
     private var _binding: FragmentInvoicePdfSettingsBinding? = null
     private val binding get() = _binding!!
@@ -43,7 +34,6 @@ class InvoicePdfSettingsFragment : Fragment() {
     private lateinit var pdfView: PDFView
     private lateinit var pdfSettingsManager: PdfSettingsManager
     private var pdfSettings: PdfSettings? = null
-    private var shopDetails: ShopInvoiceDetails? = null
 
     private var logoUri: Uri? = null
     private var watermarkUri: Uri? = null
@@ -69,18 +59,6 @@ class InvoicePdfSettingsFragment : Fragment() {
 
             // Save the watermark URI to settings
             pdfSettings?.watermarkUri = it.toString()
-            updatePdfPreview()
-        }
-    }
-
-    private val getSignatureContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            signatureUri = it
-            binding.signaturePreviewLayout.visibility = View.VISIBLE
-            binding.signatureImageView.setImageURI(it)
-
-            // Save the signature URI to settings
-            pdfSettings?.signatureUri = it.toString()
             updatePdfPreview()
         }
     }
@@ -148,11 +126,6 @@ class InvoicePdfSettingsFragment : Fragment() {
                 pdfSettingsManager.loadSettings()
             }
 
-            // Load shop details from the ShopManager
-            shopDetails = ShopManager.getShopDetails(requireContext())
-//            shopDetails = convertToShopInvoiceDetails(ShopManager.getShopDetails(requireContext()))
-
-
             // Apply settings to UI
             pdfSettings?.let { settings ->
                 // Apply color settings
@@ -204,20 +177,12 @@ class InvoicePdfSettingsFragment : Fragment() {
         }
     }
 
-    private fun convertToShopInvoiceDetails(shop: Shop): ShopInvoiceDetails {
-        return ShopInvoiceDetails(
-            id = FirebaseAuth.getInstance().currentUser?.uid ?: "default",
-            shopName = shop.shopName,
-            address = shop.address,
-            phoneNumber = shop.phoneNumber,
-            email = shop.email,
-            gstNumber = shop.gstNumber,
-            logo = shop.logo,
-            signature = shop.signature
-        )
-    }
-
     private fun setupColorPickers() {
+        // New template selection button
+        binding.selectTemplateButton.setOnClickListener {
+            navigateToTemplateSelection()
+        }
+
         // Setup color picker views
         val colorOptions = listOf(
             R.color.my_light_primary,
@@ -286,12 +251,32 @@ class InvoicePdfSettingsFragment : Fragment() {
         }
 
         binding.uploadSignatureButton.setOnClickListener {
-            getSignatureContent.launch("image/*")
+            showSignatureDialog()
         }
 
         binding.generatePreviewButton.setOnClickListener {
             updatePdfPreview()
         }
+    }
+
+    private fun showSignatureDialog() {
+        val signatureDialog = SignatureDialogFragment.newInstance()
+        signatureDialog.show(childFragmentManager, "signature_dialog")
+    }
+
+    override fun onSignatureCaptured(signatureUri: Uri) {
+        this.signatureUri = signatureUri
+        binding.signaturePreviewLayout.visibility = View.VISIBLE
+        binding.signatureImageView.setImageURI(signatureUri)
+
+        // Save the signature URI to settings
+        pdfSettings?.signatureUri = signatureUri.toString()
+        updatePdfPreview()
+    }
+
+    private fun navigateToTemplateSelection() {
+        val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+        mainNavController.navigate(R.id.action_invoicePdfSettingsFragment_to_templateSelectionFragment)
     }
 
     private fun setupTextInputs() {
@@ -338,6 +323,25 @@ class InvoicePdfSettingsFragment : Fragment() {
             .show()
     }
 
+    private fun createSampleInvoice(): Invoice {
+        // Create a new sample invoice since we can't directly call the method
+        return Invoice(
+            id = "sample",
+            invoiceNumber = "2024-001",
+            customerId = "cust123",
+            customerName = "Rahul Sharma",
+            customerPhone = "9876543210",
+            customerAddress = "123 Main St, Bangalore, Karnataka",
+            invoiceDate = System.currentTimeMillis(),
+            items = emptyList(), // Simplified for demonstration
+            payments = emptyList(),
+            totalAmount = 72600.0,
+            paidAmount = 30000.0,
+            notes = "Sample invoice for preview"
+        )
+    }
+
+
     private fun updatePdfPreview() {
         binding.previewProgressBar.visibility = View.VISIBLE
 
@@ -371,7 +375,6 @@ class InvoicePdfSettingsFragment : Fragment() {
                     .defaultPage(0)
                     .onError { t ->
                         Log.e("InvoicePdfSettings", "Error loading PDF: ${t.message}")
-                        Toast.makeText(requireContext(), "Error loading PDF preview", Toast.LENGTH_SHORT).show()
                     }
                     .onLoad {
                         binding.previewProgressBar.visibility = View.GONE
@@ -386,96 +389,6 @@ class InvoicePdfSettingsFragment : Fragment() {
                 }
             }
         }
-    }
-
-    private fun createSampleInvoice(): Invoice {
-        // Create a sample invoice for preview purposes
-        val invoiceItems = listOf(
-            InvoiceItem(
-                id = "item1",
-                itemId = "gold1",
-                quantity = 1,
-                itemDetails = JewelleryItem(
-                    id = "gold1",
-                    displayName = "Gold Necklace",
-                    jewelryCode = "GN-001",
-                    itemType = "gold",
-                    category = "Necklace",
-                    grossWeight = 12.5,
-                    netWeight = 11.8,
-                    wastage = 0.5,
-                    purity = "22K",
-                    makingCharges = 1200.0,
-                    makingChargesType = "PER GRAM",
-                    stock = 2.0,
-                    stockUnit = "PCS",
-                    location = "Main Shelf",
-                    diamondPrice = 0.0,
-                    metalRate = 5200.0,
-                    metalRateOn = "Net Weight",
-                    taxRate = 3.0,
-                    totalTax = 1850.0,
-                    listOfExtraCharges = listOf(
-                        ExtraCharge(name = "Polishing", amount = 500.0)
-                    )
-                ),
-                price = 65000.0
-            ),
-            InvoiceItem(
-                id = "item2",
-                itemId = "silver1",
-                quantity = 2,
-                itemDetails = JewelleryItem(
-                    id = "silver1",
-                    displayName = "Silver Anklet",
-                    jewelryCode = "SA-002",
-                    itemType = "silver",
-                    category = "Anklet",
-                    grossWeight = 25.0,
-                    netWeight = 24.0,
-                    wastage = 0.2,
-                    purity = "92.5%",
-                    makingCharges = 200.0,
-                    makingChargesType = "PER GRAM",
-                    stock = 5.0,
-                    stockUnit = "PCS",
-                    location = "Display",
-                    diamondPrice = 0.0,
-                    metalRate = 75.0,
-                    metalRateOn = "Net Weight",
-                    taxRate = 3.0,
-                    totalTax = 120.0,
-                    listOfExtraCharges = listOf()
-                ),
-                price = 3800.0
-            )
-        )
-
-        val payments = listOf(
-            Payment(
-                id = "payment1",
-                amount = 30000.0,
-                method = "Cash",
-                date = System.currentTimeMillis() - 86400000, // Yesterday
-                reference = "",
-                notes = "First installment"
-            )
-        )
-
-        return Invoice(
-            id = "sample",
-            invoiceNumber = "INV-2024-001",
-            customerId = "cust123",
-            customerName = "Rahul Sharma",
-            customerPhone = "9876543210",
-            customerAddress = "123 Main St, Bangalore, Karnataka",
-            invoiceDate = System.currentTimeMillis(),
-            items = invoiceItems,
-            payments = payments,
-            totalAmount = 72600.0,
-            paidAmount = 30000.0,
-            notes = "Sample invoice for preview"
-        )
     }
 
     private fun saveSettings() {
