@@ -56,6 +56,12 @@
     <color name="color_indigo">#3F51B5</color>
     <color name="color_gold">#FFC107</color>
     <color name="color_orange">#FF9800</color>
+    <color name="green">#4D8415</color>
+    <color name="blue">#0B6EA5</color>
+    <color name="purple">#9C27B0</color>
+    <color name="red">#C30C0C</color>
+    <color name="indigo">#696FCA</color>
+    <color name="gold">#D1A131</color>
 
 
 </resources>

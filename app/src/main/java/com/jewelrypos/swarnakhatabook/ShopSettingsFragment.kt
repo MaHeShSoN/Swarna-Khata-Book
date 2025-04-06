@@ -31,27 +31,6 @@ class ShopSettingsFragment : Fragment() {
     private var logoUri: Uri? = null
     private var signatureUri: Uri? = null
 
-    private val getLogoContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            logoUri = it
-            binding.logoImageView.setImageURI(it)
-            binding.logoImageView.visibility = View.VISIBLE
-
-            // Save logo URI to shop
-            updateShopLogo(it)
-        }
-    }
-
-    private val getSignatureContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            signatureUri = it
-            binding.signatureImageView.setImageURI(it)
-            binding.signatureImageView.visibility = View.VISIBLE
-
-            // Save signature URI to shop
-            updateShopSignature(it)
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -74,8 +53,6 @@ class ShopSettingsFragment : Fragment() {
         // Load shop details
         loadShopDetails()
 
-        // Setup buttons
-        setupButtons()
     }
 
     private fun setupToolbar() {
@@ -90,6 +67,7 @@ class ShopSettingsFragment : Fragment() {
                     saveShopDetails()
                     true
                 }
+
                 else -> false
             }
         }
@@ -128,68 +106,9 @@ class ShopSettingsFragment : Fragment() {
         binding.emailEditText.setText(shop.email)
         binding.gstNumberEditText.setText(shop.gstNumber)
 
-        // Load logo if available
-        shop.logo?.let { logoUriString ->
-            try {
-                logoUri = Uri.parse(logoUriString)
-                binding.logoImageView.setImageURI(logoUri)
-                binding.logoImageView.visibility = View.VISIBLE
-            } catch (e: Exception) {
-                Log.e("ShopSettings", "Error loading logo: ${e.message}")
-            }
-        }
 
-        // Load signature if available
-        shop.signature?.let { signatureUriString ->
-            try {
-                signatureUri = Uri.parse(signatureUriString)
-                binding.signatureImageView.setImageURI(signatureUri)
-                binding.signatureImageView.visibility = View.VISIBLE
-            } catch (e: Exception) {
-                Log.e("ShopSettings", "Error loading signature: ${e.message}")
-            }
-        }
     }
 
-    private fun setupButtons() {
-        binding.uploadLogoButton.setOnClickListener {
-            getLogoContent.launch("image/*")
-        }
-
-        binding.uploadSignatureButton.setOnClickListener {
-            getSignatureContent.launch("image/*")
-        }
-    }
-
-    private fun updateShopLogo(uri: Uri) {
-        binding.progressBar.visibility = View.VISIBLE
-
-        ShopManager.updateShopLogo(uri, requireContext()) { success, error ->
-            binding.progressBar.visibility = View.GONE
-
-            if (success) {
-                Toast.makeText(context, "Shop logo updated", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Failed to update logo: ${error?.message}", Toast.LENGTH_SHORT).show()
-                Log.e("ShopSettings", "Error updating logo", error)
-            }
-        }
-    }
-
-    private fun updateShopSignature(uri: Uri) {
-        binding.progressBar.visibility = View.VISIBLE
-
-        ShopManager.updateShopSignature(uri, requireContext()) { success, error ->
-            binding.progressBar.visibility = View.GONE
-
-            if (success) {
-                Toast.makeText(context, "Shop signature updated", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(context, "Failed to update signature: ${error?.message}", Toast.LENGTH_SHORT).show()
-                Log.e("ShopSettings", "Error updating signature", error)
-            }
-        }
-    }
 
     private fun saveShopDetails() {
         val shopName = binding.shopNameEditText.text.toString().trim()
@@ -234,10 +153,15 @@ class ShopSettingsFragment : Fragment() {
                 binding.progressBar.visibility = View.GONE
 
                 if (success) {
-                    Toast.makeText(context, "Shop details saved successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Shop details saved successfully", Toast.LENGTH_SHORT)
+                        .show()
                     shop = updatedShop
                 } else {
-                    Toast.makeText(context, "Failed to save shop details: ${error?.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Failed to save shop details: ${error?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     Log.e("ShopSettings", "Error saving shop details", error)
                 }
             }

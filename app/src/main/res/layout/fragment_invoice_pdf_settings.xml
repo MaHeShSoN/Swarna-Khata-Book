@@ -132,9 +132,9 @@
                         android:layout_marginTop="16dp"
                         android:text="Select Template"
                         android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary"
                         app:icon="@drawable/ic_template"
-                        app:iconTint="@color/my_light_primary" />
+                        app:iconTint="@color/my_light_primary"
+                        app:strokeColor="@color/my_light_primary" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -164,82 +164,14 @@
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="18sp" />
 
-                    <!-- Colors Section -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="Colors"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="horizontal">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:text="Primary Color"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="14sp" />
-
-                            <View
-                                android:id="@+id/primaryColorPicker"
-                                android:layout_width="match_parent"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="4dp"
-                                android:background="@color/my_light_primary"
-                                android:clickable="true"
-                                android:focusable="true" />
-                        </LinearLayout>
-
-                        <Space
-                            android:layout_width="16dp"
-                            android:layout_height="wrap_content" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:text="Secondary Color"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="14sp" />
-
-                            <View
-                                android:id="@+id/secondaryColorPicker"
-                                android:layout_width="match_parent"
-                                android:layout_height="40dp"
-                                android:layout_marginTop="4dp"
-                                android:background="@color/my_light_secondary"
-                                android:clickable="true"
-                                android:focusable="true" />
-                        </LinearLayout>
-                    </LinearLayout>
 
                     <!-- Logo Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
@@ -288,8 +220,8 @@
                             android:layout_width="120dp"
                             android:layout_height="60dp"
                             android:layout_marginTop="4dp"
-                            android:scaleType="fitCenter"
-                            android:background="@color/my_light_primary_container" />
+                            android:background="@color/my_light_primary_container"
+                            android:scaleType="fitCenter" />
                     </LinearLayout>
 
                     <!-- Watermark Section -->
@@ -297,8 +229,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
@@ -322,10 +254,10 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
+                        android:enabled="false"
                         android:text="Upload Watermark"
                         android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary"
-                        android:enabled="false" />
+                        app:strokeColor="@color/my_light_primary" />
 
                     <LinearLayout
                         android:id="@+id/watermarkPreviewLayout"
@@ -348,9 +280,9 @@
                             android:layout_width="120dp"
                             android:layout_height="60dp"
                             android:layout_marginTop="4dp"
-                            android:scaleType="fitCenter"
+                            android:alpha="0.5"
                             android:background="@color/my_light_primary_container"
-                            android:alpha="0.5" />
+                            android:scaleType="fitCenter" />
                     </LinearLayout>
 
                     <!-- Signature Section -->
@@ -358,8 +290,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
@@ -408,8 +340,8 @@
                             android:layout_width="120dp"
                             android:layout_height="60dp"
                             android:layout_marginTop="4dp"
-                            android:scaleType="fitCenter"
-                            android:background="@color/my_light_primary_container" />
+                            android:background="@color/my_light_primary_container"
+                            android:scaleType="fitCenter" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -445,8 +377,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
@@ -476,8 +408,8 @@
                             android:id="@+id/upiIdEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:fontFamily="@font/montserratregular" />
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="text" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Invoice Prefix -->
@@ -502,9 +434,9 @@
                             android:id="@+id/invoicePrefixEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="text"
-                            android:text="INV-"
-                            android:fontFamily="@font/montserratregular" />
+                            android:text="INV-" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Terms & Conditions -->
@@ -529,9 +461,9 @@
                             android:id="@+id/termsEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="textMultiLine"
                             android:minLines="3"
-                            android:fontFamily="@font/montserratregular"
                             android:text="1. Goods once sold cannot be returned.\n2. All disputes subject to local jurisdiction.\n3. E&amp;OE: Errors and Omissions Excepted." />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>

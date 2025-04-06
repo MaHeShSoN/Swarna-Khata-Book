@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Rename this file to fragment_template_selection.xml (note the spelling correction) -->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -18,7 +17,9 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:navigationIcon="@drawable/famicons__arrow_back"
-            app:title="Invoice Template"
+            app:menu="@menu/template_selection_fragment"
+            app:popupTheme="@style/CustomPopupMenu"
+            app:title="Theme &amp; Color"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
@@ -31,140 +32,341 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <!-- Template Preview Card -->
+            <!-- PDF Preview with card styling -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/previewCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/my_light_surface"
+                android:layout_margin="16dp"
                 app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
+                app:cardElevation="4dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
 
-                <LinearLayout
+                <FrameLayout
                     android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+
+                    <com.github.barteksc.pdfviewer.PDFView
+                        android:id="@+id/pdfView"
+                        android:layout_width="match_parent"
+                        android:layout_height="480dp" />
+
+                    <ProgressBar
+                        android:id="@+id/previewProgressBar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:indeterminateTint="@color/my_light_primary"
+                        android:visibility="gone" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Template Selection Section -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                    <TextView
-                        android:layout_width="match_parent"
+                    <!-- Simple -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/templateSimple"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Preview"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
 
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp">
-
-                        <com.github.barteksc.pdfviewer.PDFView
-                            android:id="@+id/pdfView"
-                            android:layout_width="match_parent"
-                            android:layout_height="400dp" />
-
-                        <ProgressBar
-                            android:id="@+id/previewProgressBar"
+                        <TextView
+                            android:id="@+id/templateSimpleText"
+                            style="@style/TextAppearance.App.Body"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:text="Simple" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Stylish -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/templateStylish"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
+
+                        <TextView
+                            android:id="@+id/templateStylishText"
+                            style="@style/TextAppearance.App.Body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:text="Stylish" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Advance GST (Tally) -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/templateAdvanceGstTally"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
+
+                        <TextView
+                            android:id="@+id/templateAdvanceGstTallyText"
+                            style="@style/TextAppearance.App.Body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:text="Advance GST (Tally)" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Billbook -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/templateBillbook"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:cardCornerRadius="20dp"
+                        app:strokeWidth="1dp"
+                        app:cardElevation="2dp">
+
+                        <TextView
+                            android:id="@+id/templateBillbookText"
+                            style="@style/TextAppearance.App.Body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:text="Billbook"
+                            android:textStyle="bold" />
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Advance GST -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/templateAdvanceGst"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="12dp"
+                        app:cardCornerRadius="20dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
+
+                        <TextView
+                            android:id="@+id/templateAdvanceGstText"
+                            style="@style/TextAppearance.App.Body"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:padding="12dp"
+                            android:text="Advance GST (A5)" />
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Color Selection Section -->
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="16dp">
+
+                    <!-- Gold -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorGold"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="@color/my_light_primary" />
+
+                        <ImageView
+                            android:id="@+id/checkGold"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:layout_gravity="center"
-                            android:visibility="gone" />
+                            android:src="@drawable/ic_check"
+                            android:visibility="visible"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Black -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorBlack"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="@color/black"
+                            android:elevation="2dp" />
+
+                        <ImageView
+                            android:id="@+id/checkBlack"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Green -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorGreen"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="#4CAF50" />
+
+                        <ImageView
+                            android:id="@+id/checkGreen"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Blue -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorBlue"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="#2196F3" />
+
+                        <ImageView
+                            android:id="@+id/checkBlue"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Purple -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorPurple"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="#9C27B0" />
+
+                        <ImageView
+                            android:id="@+id/checkPurple"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Red -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorRed"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="#F44336" />
+
+                        <ImageView
+                            android:id="@+id/checkRed"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
+                    </FrameLayout>
+
+                    <!-- Indigo -->
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp">
+
+                        <View
+                            android:id="@+id/colorIndigo"
+                            android:layout_width="46dp"
+                            android:layout_height="46dp"
+                            android:background="@drawable/circle_shape"
+                            android:backgroundTint="#3F51B5" />
+
+                        <ImageView
+                            android:id="@+id/checkIndigo"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check"
+                            android:visibility="gone"
+                            app:tint="@color/white" />
                     </FrameLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Template Selection Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/templateCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Select Template"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/templateRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:clipToPadding="false"
-                        android:orientation="horizontal"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                        tools:itemCount="3"
-                        tools:listitem="@layout/item_invoice_template" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Color Selection Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/colorCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Primary Color"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <com.jewelrypos.swarnakhatabook.Utilitys.ColorPickerView
-                        android:id="@+id/colorPicker"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Save Button -->
-            <Button
-                android:id="@+id/saveButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:backgroundTint="@color/my_light_primary"
-                android:padding="12dp"
-                android:text="Save &amp; Continue"
-                android:textColor="@color/my_light_on_primary" />
-
-        </LinearLayout>
+            </HorizontalScrollView>
+      </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

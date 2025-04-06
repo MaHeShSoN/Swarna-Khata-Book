@@ -129,8 +129,8 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             // Apply settings to UI
             pdfSettings?.let { settings ->
                 // Apply color settings
-                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.primaryColorRes))
-                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.secondaryColorRes))
+//                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.primaryColorRes))
+//                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.secondaryColorRes))
 
                 // Apply switch settings
                 binding.showLogoSwitch.isChecked = settings.showLogo
@@ -192,22 +192,22 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             R.color.status_unpaid,
             android.R.color.black
         )
-
-        binding.primaryColorPicker.setOnClickListener {
-            showColorPickerDialog(colorOptions) { colorRes ->
-                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
-                pdfSettings?.primaryColorRes = colorRes
-                updatePdfPreview()
-            }
-        }
-
-        binding.secondaryColorPicker.setOnClickListener {
-            showColorPickerDialog(colorOptions) { colorRes ->
-                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
-                pdfSettings?.secondaryColorRes = colorRes
-                updatePdfPreview()
-            }
-        }
+//
+//        binding.primaryColorPicker.setOnClickListener {
+//            showColorPickerDialog(colorOptions) { colorRes ->
+//                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
+//                pdfSettings?.primaryColorRes = colorRes
+//                updatePdfPreview()
+//            }
+//        }
+//
+//        binding.secondaryColorPicker.setOnClickListener {
+//            showColorPickerDialog(colorOptions) { colorRes ->
+//                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
+//                pdfSettings?.secondaryColorRes = colorRes
+//                updatePdfPreview()
+//            }
+//        }
     }
 
     private fun setupSwitches() {

@@ -5,19 +5,22 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.jewelrypos.swarnakhatabook.Adapters.TemplateAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceTemplate
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
+import com.jewelrypos.swarnakhatabook.Enums.TemplateType
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
+
 import com.jewelrypos.swarnakhatabook.databinding.FragmentTempleteSelectionBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,8 +33,24 @@ class TemplateSelectionFragment : Fragment() {
 
     private lateinit var pdfSettingsManager: PdfSettingsManager
     private var pdfSettings: PdfSettings? = null
-    private lateinit var templateAdapter: TemplateAdapter
     private var selectedTemplate: InvoiceTemplate? = null
+
+    // Template buttons
+    private lateinit var templateButtons: Map<TemplateType, CardView>
+    private lateinit var templateLabels: Map<TemplateType, TextView>
+
+    // Color options
+    private val colorOptions = listOf(
+        R.color.black,
+        R.color.green,
+        R.color.blue,
+        R.color.purple,
+        R.color.red,
+        R.color.indigo,
+        R.color.gold
+    )
+
+    private var selectedColorIndex = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -51,19 +70,62 @@ class TemplateSelectionFragment : Fragment() {
         // Setup toolbar
         setupToolbar()
 
+        // Initialize template buttons map
+        initializeTemplateButtons()
+
         // Load settings
         loadSettings()
 
-        // Setup save button
-        binding.saveButton.setOnClickListener {
-            saveSettings()
+        // Setup color selection
+        setupColorSelection()
+
+        binding.topAppBar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.action_save -> {
+                    saveSettings()
+                    true
+                }
+//                R.id.action_notifications -> {
+//                    navigateToNotifications()
+//                    true
+//                }
+                else -> false
+            }
         }
+       
     }
 
     private fun setupToolbar() {
         val toolbar: Toolbar = binding.topAppBar
         toolbar.setNavigationOnClickListener {
             requireActivity().onBackPressed()
+        }
+        toolbar.title = "Theme & Color"
+    }
+
+    private fun initializeTemplateButtons() {
+        // Associate each template type with its button view
+        templateButtons = mapOf(
+            TemplateType.SIMPLE to binding.templateSimple,
+            TemplateType.STYLISH to binding.templateStylish,
+            TemplateType.ADVANCE_GST to binding.templateAdvanceGst,
+            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTally,
+            TemplateType.BILLBOOK to binding.templateBillbook
+        )
+
+        templateLabels = mapOf(
+            TemplateType.SIMPLE to binding.templateSimpleText,
+            TemplateType.STYLISH to binding.templateStylishText,
+            TemplateType.ADVANCE_GST to binding.templateAdvanceGstText,
+            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTallyText,
+            TemplateType.BILLBOOK to binding.templateBillbookText
+        )
+
+        // Set click listeners for all template buttons
+        for ((type, button) in templateButtons) {
+            button.setOnClickListener {
+                selectTemplate(type)
+            }
         }
     }
 
@@ -77,13 +139,37 @@ class TemplateSelectionFragment : Fragment() {
                 pdfSettingsManager.loadSettings()
             }
 
-            // Setup template selection
-            setupTemplateSelection()
+            // Find the selected color index
+            pdfSettings?.let { settings ->
+                colorOptions.forEachIndexed { index, colorRes ->
+                    if (colorRes == settings.primaryColorRes) {
+                        selectedColorIndex = index
+                    }
+                }
+            }
 
-            // Setup color picker
-            setupColorPicker()
+            // Update color selection UI
+            updateColorSelection()
 
-            // Generate preview with current settings
+            // Update template selection
+            pdfSettings?.let { settings ->
+                selectTemplate(settings.templateType, false)
+            }
+
+            // Load all available templates
+            val templates = PdfSettings.getAvailableTemplates()
+
+            // Mark premium templates
+            for (template in templates) {
+                if (template.isPremium) {
+                    val templateType = template.templateType
+                    templateLabels[templateType]?.let { label ->
+                        label.text = "${label.text} 👑"
+                    }
+                }
+            }
+
+            // Load PDF preview
             updatePreview()
 
             // Hide loading
@@ -91,37 +177,74 @@ class TemplateSelectionFragment : Fragment() {
         }
     }
 
-    private fun setupTemplateSelection() {
-        val templates = PdfSettings.getAvailableTemplates()
-
-        // Set selected template based on current settings
-        selectedTemplate = templates.find { it.templateType == pdfSettings?.templateType }
-
-        // Create template adapter
-        templateAdapter = TemplateAdapter(
-            templates,
-            pdfSettings?.templateType ?: templates.first().templateType
-        ) { template ->
-            selectedTemplate = template
-            updatePreview()
+    private fun selectTemplate(templateType: TemplateType, updatePreview: Boolean = true) {
+        // Reset all template buttons
+        for (button in templateButtons.values) {
+            button.setBackgroundResource(R.drawable.template_button_unselected)
         }
 
-        // Set up RecyclerView
-        binding.templateRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-            adapter = templateAdapter
+        // Set selected button
+        templateButtons[templateType]?.setBackgroundResource(R.drawable.template_button_selected)
+
+        // Update pdf settings
+        pdfSettings?.templateType = templateType
+
+        // Update preview if needed
+        if (updatePreview) {
+            updatePreview()
         }
     }
 
-    private fun setupColorPicker() {
-        // Set initial color
-        binding.colorPicker.setSelectedColor(pdfSettings?.primaryColorRes ?: R.color.my_light_primary)
+    private fun setupColorSelection() {
+        // Setup color selection buttons
+        setupColorButton(binding.colorBlack, colorOptions[0], 0)
+        setupColorButton(binding.colorGreen, colorOptions[1], 1)
+        setupColorButton(binding.colorBlue, colorOptions[2], 2)
+        setupColorButton(binding.colorPurple, colorOptions[3], 3)
+        setupColorButton(binding.colorRed, colorOptions[4], 4)
+        setupColorButton(binding.colorIndigo, colorOptions[5], 5)
+        setupColorButton(binding.colorGold, colorOptions[6], 6)
+    }
 
-        // Set color change listener
-        binding.colorPicker.onColorSelected = { colorRes ->
-            pdfSettings?.primaryColorRes = colorRes
-            updatePreview()
+    private fun setupColorButton(buttonView: View, colorRes: Int, index: Int) {
+        // Set button background color
+        buttonView.backgroundTintList = android.content.res.ColorStateList.valueOf(
+            ContextCompat.getColor(requireContext(), colorRes)
+        )
+
+        // Setup click listener
+        buttonView.setOnClickListener {
+            selectedColorIndex = index
+            updateColorSelection()
+            updateColorSettings()
         }
+    }
+
+    private fun updateColorSelection() {
+        // Hide all checkmarks
+        binding.checkBlack.visibility = View.GONE
+        binding.checkGreen.visibility = View.GONE
+        binding.checkBlue.visibility = View.GONE
+        binding.checkPurple.visibility = View.GONE
+        binding.checkRed.visibility = View.GONE
+        binding.checkIndigo.visibility = View.GONE
+        binding.checkGold.visibility = View.GONE
+
+        // Show selected checkmark
+        when (selectedColorIndex) {
+            0 -> binding.checkBlack.visibility = View.VISIBLE
+            1 -> binding.checkGreen.visibility = View.VISIBLE
+            2 -> binding.checkBlue.visibility = View.VISIBLE
+            3 -> binding.checkPurple.visibility = View.VISIBLE
+            4 -> binding.checkRed.visibility = View.VISIBLE
+            5 -> binding.checkIndigo.visibility = View.VISIBLE
+            6 -> binding.checkGold.visibility = View.VISIBLE
+        }
+    }
+
+    private fun updateColorSettings() {
+        pdfSettings?.primaryColorRes = colorOptions[selectedColorIndex]
+        updatePreview()
     }
 
     private fun updatePreview() {
@@ -131,11 +254,6 @@ class TemplateSelectionFragment : Fragment() {
             try {
                 // Generate a sample invoice for preview
                 val sampleInvoice = createSampleInvoice()
-
-                // Apply template type if selected
-                selectedTemplate?.let {
-                    pdfSettings?.templateType = it.templateType
-                }
 
                 // Create temporary file for preview
                 val pdfFile = withContext(Dispatchers.IO) {
@@ -162,7 +280,11 @@ class TemplateSelectionFragment : Fragment() {
                     .defaultPage(0)
                     .onError { t ->
                         Log.e("TemplateSelection", "Error loading PDF: ${t.message}")
-                        Toast.makeText(requireContext(), "Error loading PDF preview", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            requireContext(),
+                            "Error loading PDF preview",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                     .onLoad {
                         binding.previewProgressBar.visibility = View.GONE
@@ -173,7 +295,11 @@ class TemplateSelectionFragment : Fragment() {
                 Log.e("TemplateSelection", "Error generating PDF preview: ${e.message}")
                 withContext(Dispatchers.Main) {
                     binding.previewProgressBar.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Error generating preview: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "Error generating preview: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -187,14 +313,22 @@ class TemplateSelectionFragment : Fragment() {
                     pdfSettingsManager.saveSettings(settings)
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Template settings saved", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            requireContext(),
+                            "Template settings saved",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         requireActivity().onBackPressed()
                     }
                 } catch (e: Exception) {
                     Log.e("TemplateSelection", "Error saving settings: ${e.message}")
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Error saving settings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            requireContext(),
+                            "Error saving settings",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -202,19 +336,19 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     private fun createSampleInvoice(): Invoice {
-        // Create a new sample invoice since we can't directly call the method
+        // Create a new sample invoice
         return Invoice(
             id = "sample",
             invoiceNumber = "2024-001",
             customerId = "cust123",
-            customerName = "Rahul Sharma",
-            customerPhone = "9876543210",
-            customerAddress = "123 Main St, Bangalore, Karnataka",
+            customerName = "Rakesh Enterprises",
+            customerPhone = "9999XXXXXX",
+            customerAddress = "2nd Floor, 123 Main Street, Sector 5, Mysore 570001",
             invoiceDate = System.currentTimeMillis(),
-            items = emptyList(), // Simplified for demonstration
+            items = emptyList(),
             payments = emptyList(),
-            totalAmount = 72600.0,
-            paidAmount = 30000.0,
+            totalAmount = 226713.0,
+            paidAmount = 226713.0,
             notes = "Sample invoice for preview"
         )
     }
