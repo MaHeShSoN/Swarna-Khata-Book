@@ -20,7 +20,7 @@
         android:layout_height="24dp"
         android:layout_gravity="center"
         android:src="@drawable/ic_check"
-        android:tint="@color/white"
+        app:tint="@color/white"
         android:visibility="gone" />
 
 </FrameLayout>

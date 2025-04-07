@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import com.github.barteksc.pdfviewer.PDFView
+import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
@@ -39,20 +40,36 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     private var watermarkUri: Uri? = null
     private var signatureUri: Uri? = null
 
-    private val getLogoContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
-            logoUri = it
-            binding.logoPreviewLayout.visibility = View.VISIBLE
-            binding.logoImageView.setImageURI(it)
+    // Flag to prevent multiple concurrent preview generations
+    private var isGeneratingPreview = false
 
-            // Save the logo URI to settings
-            pdfSettings?.logoUri = it.toString()
-            updatePdfPreview()
+    private val getLogoContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { originalUri ->
+            // Copy the image to app storage
+            val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
+
+            copiedUri?.let {
+                logoUri = it
+                binding.logoPreviewLayout.visibility = View.VISIBLE
+                binding.logoImageView.setImageURI(it)
+
+                // Save the logo URI to settings
+                pdfSettings?.logoUri = it.toString()
+                updatePdfPreview()
+            } ?: run {
+                // Show error if copying failed
+                Toast.makeText(requireContext(), "Failed to process selected image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private val getWatermarkContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let {
+        uri?.let { originalUri ->
+
+            val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
+
+            copiedUri?.let {
+
             watermarkUri = it
             binding.watermarkPreviewLayout.visibility = View.VISIBLE
             binding.watermarkImageView.setImageURI(it)
@@ -60,6 +77,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             // Save the watermark URI to settings
             pdfSettings?.watermarkUri = it.toString()
             updatePdfPreview()
+                }
         }
     }
 
@@ -128,10 +146,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
             // Apply settings to UI
             pdfSettings?.let { settings ->
-                // Apply color settings
-//                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.primaryColorRes))
-//                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), settings.secondaryColorRes))
-
                 // Apply switch settings
                 binding.showLogoSwitch.isChecked = settings.showLogo
                 binding.showWatermarkSwitch.isChecked = settings.showWatermark
@@ -173,7 +187,42 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                         Log.e("InvoicePdfSettings", "Error loading signature: ${e.message}")
                     }
                 }
+
+                // Generate preview automatically after loading settings
+                updatePdfPreview()
             }
+        }
+    }
+
+    /**
+     * Helper function to copy a picked image to app's internal storage
+     * @param context The context
+     * @param uri The uri from the picker
+     * @return A new Uri pointing to the copied file, or null if copying failed
+     */
+    fun copyImageToAppStorage(context: Context, uri: Uri): Uri? {
+        try {
+            // Create a unique file name
+            val fileName = "img_${System.currentTimeMillis()}.jpg"
+
+            // Get the input stream from the uri
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+
+            // Create a file in your app's private storage
+            val outputFile = File(context.filesDir, fileName)
+
+            // Copy the file
+            inputStream.use { input ->
+                outputFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // Return a Uri to the copied file
+            return Uri.fromFile(outputFile)
+        } catch (e: Exception) {
+            Log.e("ImageCopyHelper", "Error copying image: ${e.message}")
+            return null
         }
     }
 
@@ -192,22 +241,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             R.color.status_unpaid,
             android.R.color.black
         )
-//
-//        binding.primaryColorPicker.setOnClickListener {
-//            showColorPickerDialog(colorOptions) { colorRes ->
-//                binding.primaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
-//                pdfSettings?.primaryColorRes = colorRes
-//                updatePdfPreview()
-//            }
-//        }
-//
-//        binding.secondaryColorPicker.setOnClickListener {
-//            showColorPickerDialog(colorOptions) { colorRes ->
-//                binding.secondaryColorPicker.setBackgroundColor(ContextCompat.getColor(requireContext(), colorRes))
-//                pdfSettings?.secondaryColorRes = colorRes
-//                updatePdfPreview()
-//            }
-//        }
     }
 
     private fun setupSwitches() {
@@ -254,9 +287,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             showSignatureDialog()
         }
 
-        binding.generatePreviewButton.setOnClickListener {
-            updatePdfPreview()
-        }
     }
 
     private fun showSignatureDialog() {
@@ -309,21 +339,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         })
     }
 
-    private fun showColorPickerDialog(colorOptions: List<Int>, onColorSelected: (Int) -> Unit) {
-        // Create a simple dialog with color options
-        val colorNames = colorOptions.map {
-            resources.getResourceEntryName(it).replace("_", " ").capitalize()
-        }.toTypedArray()
-
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Select Color")
-            .setItems(colorNames) { _, which ->
-                onColorSelected(colorOptions[which])
-            }
-            .show()
-    }
-
-    private fun createSampleInvoice(): Invoice {
+        private fun createSampleInvoice(): Invoice {
         // Create a new sample invoice since we can't directly call the method
         return Invoice(
             id = "sample",
@@ -343,6 +359,10 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
 
     private fun updatePdfPreview() {
+        // Prevent multiple concurrent preview generations
+        if (isGeneratingPreview) return
+        isGeneratingPreview = true
+
         binding.previewProgressBar.visibility = View.VISIBLE
 
         lifecycleScope.launch {
@@ -367,16 +387,27 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     generator.generateInvoicePdf(sampleInvoice, shopDetails, "sample_invoice_preview")
                 }
 
-                // Load PDF into the viewer
+                // Load PDF into the viewer with enhanced settings for smooth zooming
                 pdfView.fromFile(pdfFile)
                     .enableSwipe(true)
                     .swipeHorizontal(false)
                     .enableDoubletap(true)
                     .defaultPage(0)
+                    .enableAnnotationRendering(true)
+                    .scrollHandle(DefaultScrollHandle(requireContext()))
+                    .spacing(10) // Add spacing between pages
+                    .autoSpacing(true) // Add auto spacing based on screen
+                    .pageFitPolicy(com.github.barteksc.pdfviewer.util.FitPolicy.WIDTH) // Fit page to width
+                    .pageSnap(true) // Snap pages to screen boundaries
+                    .pageFling(true) // Make fling change pages
+                    .nightMode(false) // Set night mode based on system setting
                     .onError { t ->
                         Log.e("InvoicePdfSettings", "Error loading PDF: ${t.message}")
+                        isGeneratingPreview = false
+                        binding.previewProgressBar.visibility = View.GONE
                     }
                     .onLoad {
+                        isGeneratingPreview = false
                         binding.previewProgressBar.visibility = View.GONE
                     }
                     .load()
@@ -384,6 +415,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             } catch (e: Exception) {
                 Log.e("InvoicePdfSettings", "Error generating PDF preview: ${e.message}")
                 withContext(Dispatchers.Main) {
+                    isGeneratingPreview = false
                     binding.previewProgressBar.visibility = View.GONE
                     Toast.makeText(requireContext(), "Error generating PDF preview: ${e.message}", Toast.LENGTH_SHORT).show()
                 }

@@ -48,21 +48,12 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Invoice Preview"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
 
                     <FrameLayout
                         android:layout_width="match_parent"
-                        android:layout_height="400dp"
-                        android:layout_marginTop="8dp">
+                        android:layout_height="200dp">
 
                         <com.github.barteksc.pdfviewer.PDFView
                             android:id="@+id/pdfView"
@@ -76,16 +67,6 @@
                             android:layout_gravity="center"
                             android:visibility="gone" />
                     </FrameLayout>
-
-                    <Button
-                        android:id="@+id/generatePreviewButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="8dp"
-                        android:backgroundTint="@color/my_light_primary"
-                        android:text="Generate Preview"
-                        android:textColor="@color/my_light_on_primary" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

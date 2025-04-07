@@ -5,8 +5,8 @@ import com.jewelrypos.swarnakhatabook.Enums.TemplateType
 import com.jewelrypos.swarnakhatabook.R
 
 class PdfSettings(
-    @ColorRes var primaryColorRes: Int = R.color.my_light_primary,
-    @ColorRes var secondaryColorRes: Int = R.color.my_light_secondary,
+    @ColorRes var primaryColorRes: Int = R.color.black,
+    @ColorRes var secondaryColorRes: Int = R.color.black,
     var showLogo: Boolean = true,
     var showWatermark: Boolean = false,
     var showQrCode: Boolean = true,

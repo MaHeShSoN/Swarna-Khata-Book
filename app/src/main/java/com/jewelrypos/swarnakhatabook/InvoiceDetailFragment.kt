@@ -51,6 +51,7 @@ import com.jewelrypos.swarnakhatabook.Adapters.EditableInvoiceItemAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -89,7 +90,8 @@ class InvoiceDetailFragment : Fragment() {
         setupNotesEditing()
         setupAddItemButton()
 
-        binding.topAppBar.overflowIcon = ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
+        binding.topAppBar.overflowIcon =
+            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
         // Load invoice data based on passed ID
         viewModel.loadInvoice(args.invoiceId)
 
@@ -235,12 +237,6 @@ class InvoiceDetailFragment : Fragment() {
     }
 
 
-
-
-
-
-
-
     private fun updatePaymentStatus(invoice: Invoice) {
         val balanceDue = invoice.totalAmount - invoice.paidAmount
         val paymentStatus = when {
@@ -321,12 +317,12 @@ class InvoiceDetailFragment : Fragment() {
             (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
         }
     }
+
     private fun setupAddItemButton() {
         binding.addItemsButton.setOnClickListener {
             openItemSelector()
         }
     }
-
 
 
     private fun openItemSelector() {
@@ -434,7 +430,8 @@ class InvoiceDetailFragment : Fragment() {
 
         // Store original item price for later comparison
         val originalItemTotal = item.price * item.quantity
-        val originalItemContribution = originalItemTotal + getItemExtraChargesTotal(item) + getItemTaxAmount(item)
+        val originalItemContribution =
+            originalItemTotal + getItemExtraChargesTotal(item) + getItemTaxAmount(item)
 
         // Store total paid amount
         val totalPaid = invoice.paidAmount
@@ -447,13 +444,17 @@ class InvoiceDetailFragment : Fragment() {
         val bottomSheet = ItemSelectionBottomSheet.newInstance()
         bottomSheet.setItemForEdit(item.itemDetails)
 
-        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+        bottomSheet.setOnItemSelectedListener(object :
+            ItemSelectionBottomSheet.OnItemSelectedListener {
             override fun onItemSelected(newItem: JewelleryItem, price: Double) {
                 // This shouldn't happen during editing
             }
 
             override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                Log.d("InvoiceDetailFragment", "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges")
+                Log.d(
+                    "InvoiceDetailFragment",
+                    "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
+                )
 
                 // Calculate what the new total would be for this item
                 val newQuantity = item.quantity // Quantity remains the same
@@ -510,8 +511,6 @@ class InvoiceDetailFragment : Fragment() {
 
         bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
     }
-
-
 
 
 //    private fun openItemEditor(item: InvoiceItem) {
@@ -668,7 +667,11 @@ class InvoiceDetailFragment : Fragment() {
                             }
                         } else {
                             // Show error message if deletion failed
-                            Toast.makeText(requireContext(), "Failed to delete invoice", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                requireContext(),
+                                "Failed to delete invoice",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 }
@@ -705,6 +708,7 @@ class InvoiceDetailFragment : Fragment() {
             showErrorMessage("No phone number available")
         }
     }
+
     private fun formatPhoneNumber(phone: String): String {
         // If phone doesn't start with +, assume it's an Indian number and add +91
         // You can modify this logic based on your app's region
@@ -725,27 +729,34 @@ class InvoiceDetailFragment : Fragment() {
                 val formattedPhone = phone.replace(Regex("[^\\d+]"), "")
 
                 // Try regular WhatsApp first
-                val whatsappIntent = Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone"))
+                val whatsappIntent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone")
+                )
                 whatsappIntent.setPackage("com.whatsapp")
 
                 // Try WhatsApp Business if needed
-                val whatsappBusinessIntent = Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone"))
+                val whatsappBusinessIntent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://api.whatsapp.com/send?phone=$formattedPhone")
+                )
                 whatsappBusinessIntent.setPackage("com.whatsapp.w4b")
 
                 // Check which app is available
                 val packageManager = requireActivity().packageManager
                 val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
-                val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
+                val whatsappBusinessInstalled =
+                    whatsappBusinessIntent.resolveActivity(packageManager) != null
 
                 when {
                     whatsappInstalled -> {
                         startActivity(whatsappIntent)
                     }
+
                     whatsappBusinessInstalled -> {
                         startActivity(whatsappBusinessIntent)
                     }
+
                     else -> {
                         // Neither app is installed, show error message
                         showErrorMessage("WhatsApp not installed")
@@ -776,7 +787,9 @@ class InvoiceDetailFragment : Fragment() {
         } else {
             showErrorMessage("No phone number available")
         }
-    }    private fun printInvoice() {
+    }
+
+    private fun printInvoice() {
         // Implement invoice printing
     }
 
@@ -791,34 +804,51 @@ class InvoiceDetailFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-//                val shop = ShopManager.getShopCoroutine(requireContext())
+                binding.progressBar.visibility = View.VISIBLE
+
+                // Get shop information
                 val shop = ShopManager.getShopDetails(requireContext())
 
                 if (shop == null) {
-                    showErrorMessage("Shop information not found")
+                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    binding.progressBar.visibility = View.GONE
                     return@launch
                 }
 
-
+                // Initialize PDFBox
                 PDFBoxResourceLoader.init(requireContext())
-                
-                // Generate PDF
+
+                // Create the PDF generator
                 val pdfGenerator = InvoicePdfGenerator(requireContext())
+
+                // Load PDF settings and apply them - this is the key addition
+                val pdfSettingsManager = PdfSettingsManager(requireContext())
+                val pdfSettings = pdfSettingsManager.loadSettings()
+                pdfGenerator.applySettings(pdfSettings)
+
+                // Generate the PDF
                 val pdfFile = pdfGenerator.generateInvoicePdf(
                     invoice,
                     shop,
                     "Invoice_${invoice.invoiceNumber}"
                 )
 
-                // Share or open the PDF
+                // Hide progress and share the PDF
+                binding.progressBar.visibility = View.GONE
                 sharePdfFile(pdfFile)
 
             } catch (e: Exception) {
-                Log.e("PDFGeneration", "Error generating PDF", e)
-                showErrorMessage("Failed to generate PDF")
+                binding.progressBar.visibility = View.GONE
+                Log.e("InvoiceDetailsFragment", "Error generating PDF: ${e.message}", e)
+                Toast.makeText(
+                    requireContext(),
+                    "Error generating PDF: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
+
 
     private fun sharePdfFile(pdfFile: File) {
         try {
@@ -947,16 +977,19 @@ class InvoiceDetailFragment : Fragment() {
                 // Check which app is available
                 val packageManager = requireActivity().packageManager
                 val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
-                val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
+                val whatsappBusinessInstalled =
+                    whatsappBusinessIntent.resolveActivity(packageManager) != null
 
                 try {
                     when {
                         whatsappInstalled -> {
                             startActivity(whatsappIntent)
                         }
+
                         whatsappBusinessInstalled -> {
                             startActivity(whatsappBusinessIntent)
                         }
+
                         else -> {
                             // Neither WhatsApp nor WhatsApp Business installed, use general share
                             val generalIntent = Intent(Intent.ACTION_SEND)

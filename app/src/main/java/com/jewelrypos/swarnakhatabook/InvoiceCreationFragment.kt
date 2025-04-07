@@ -43,6 +43,7 @@ import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
@@ -656,6 +657,11 @@ class InvoiceCreationFragment : Fragment() {
 
                 // Generate PDF
                 val pdfGenerator = InvoicePdfGenerator(requireContext())
+
+                // Load PDF settings and apply them
+                val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
+                pdfGenerator.applySettings(pdfSettings)
+
                 val pdfFile = pdfGenerator.generateInvoicePdf(
                     invoice,
                     shop,
@@ -671,7 +677,6 @@ class InvoiceCreationFragment : Fragment() {
             }
         }
     }
-
     private fun sharePdfFile(pdfFile: File) {
         try {
             val uri = FileProvider.getUriForFile(
