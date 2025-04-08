@@ -7,11 +7,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.Toolbar
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceTemplate
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
@@ -34,11 +37,12 @@ class TemplateSelectionFragment : Fragment() {
     private lateinit var pdfSettingsManager: PdfSettingsManager
     private var pdfSettings: PdfSettings? = null
     private var selectedTemplate: InvoiceTemplate? = null
-
+    private var hasUnsavedChanges = false
     // Template buttons
     private lateinit var templateButtons: Map<TemplateType, CardView>
     private lateinit var templateLabels: Map<TemplateType, TextView>
 
+    private var isLoadingSettings = false
     // Color options
     private val colorOptions = listOf(
         R.color.black,
@@ -57,6 +61,10 @@ class TemplateSelectionFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentTempleteSelectionBinding.inflate(inflater, container, false)
+
+        binding.topAppBar.overflowIcon =
+            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
+
         return binding.root
     }
 
@@ -92,8 +100,45 @@ class TemplateSelectionFragment : Fragment() {
                 else -> false
             }
         }
+
+        // Add the callback
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
+
+
        
     }
+
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (hasUnsavedChanges) {
+                // If editing notes, ask to save changes
+                showUnsavedChangesDialog()
+            } else {
+                // Normal back behavior
+                findNavController().navigateUp()
+            }
+        }
+    }
+
+    private fun showUnsavedChangesDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Unsaved Changes")
+            .setMessage("You have unsaved changes to your template settings. Do you want to save them before leaving?")
+            .setPositiveButton("Save") { _, _ ->
+                saveSettings()
+            }
+            .setNegativeButton("Discard") { _, _ ->
+                findNavController().navigateUp()
+            }
+            .setNeutralButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
 
     private fun setupToolbar() {
         val toolbar: Toolbar = binding.topAppBar
@@ -108,17 +153,17 @@ class TemplateSelectionFragment : Fragment() {
         templateButtons = mapOf(
             TemplateType.SIMPLE to binding.templateSimple,
             TemplateType.STYLISH to binding.templateStylish,
-            TemplateType.ADVANCE_GST to binding.templateAdvanceGst,
-            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTally,
-            TemplateType.BILLBOOK to binding.templateBillbook
+//            TemplateType.ADVANCE_GST to binding.templateAdvanceGst,
+//            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTally,
+//            TemplateType.BILLBOOK to binding.templateBillbook
         )
 
         templateLabels = mapOf(
             TemplateType.SIMPLE to binding.templateSimpleText,
             TemplateType.STYLISH to binding.templateStylishText,
-            TemplateType.ADVANCE_GST to binding.templateAdvanceGstText,
-            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTallyText,
-            TemplateType.BILLBOOK to binding.templateBillbookText
+//            TemplateType.ADVANCE_GST to binding.templateAdvanceGstText,
+//            TemplateType.ADVANCE_GST_TALLY to binding.templateAdvanceGstTallyText,
+//            TemplateType.BILLBOOK to binding.templateBillbookText
         )
 
         // Set click listeners for all template buttons
@@ -132,6 +177,7 @@ class TemplateSelectionFragment : Fragment() {
     private fun loadSettings() {
         lifecycleScope.launch {
             // Show loading
+            isLoadingSettings = true // Set flag before loading
             binding.previewProgressBar.visibility = View.VISIBLE
 
             // Load PDF settings
@@ -174,6 +220,9 @@ class TemplateSelectionFragment : Fragment() {
 
             // Hide loading
             binding.previewProgressBar.visibility = View.GONE
+
+            isLoadingSettings = false // Reset flag
+            hasUnsavedChanges = false
         }
     }
 
@@ -182,7 +231,9 @@ class TemplateSelectionFragment : Fragment() {
         for (button in templateButtons.values) {
             button.setBackgroundResource(R.drawable.template_button_unselected)
         }
-
+        if (!isLoadingSettings) {
+            hasUnsavedChanges = true
+        }
         // Set selected button
         templateButtons[templateType]?.setBackgroundResource(R.drawable.template_button_selected)
 
@@ -240,11 +291,18 @@ class TemplateSelectionFragment : Fragment() {
             5 -> binding.checkIndigo.visibility = View.VISIBLE
             6 -> binding.checkGold.visibility = View.VISIBLE
         }
+        if (!isLoadingSettings) {
+            hasUnsavedChanges = true
+        }
     }
 
     private fun updateColorSettings() {
         pdfSettings?.primaryColorRes = colorOptions[selectedColorIndex]
         updatePreview()
+        // Only mark as unsaved if not during initial load
+        if (!isLoadingSettings) {
+            hasUnsavedChanges = true
+        }
     }
 
     private fun updatePreview() {
@@ -313,12 +371,13 @@ class TemplateSelectionFragment : Fragment() {
                     pdfSettingsManager.saveSettings(settings)
 
                     withContext(Dispatchers.Main) {
+                        hasUnsavedChanges = false
                         Toast.makeText(
                             requireContext(),
                             "Template settings saved",
                             Toast.LENGTH_SHORT
                         ).show()
-                        requireActivity().onBackPressed()
+                        findNavController().navigateUp()
                     }
                 } catch (e: Exception) {
                     Log.e("TemplateSelection", "Error saving settings: ${e.message}")

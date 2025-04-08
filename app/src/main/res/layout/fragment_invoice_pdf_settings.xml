@@ -17,438 +17,413 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:menu="@menu/invoice_setting_menu"
+            app:popupTheme="@style/CustomPopupMenu"
             app:navigationIcon="@drawable/famicons__arrow_back"
             app:title="Invoice PDF Settings"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.core.widget.NestedScrollView
+    <!-- Split the layout into two parts -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+        <!-- PDF Viewer Card (Outside NestedScrollView) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/previewCard"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_height="250dp"
+            android:layout_margin="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
 
-            <!-- PDF Preview Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/previewCard"
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <com.github.barteksc.pdfviewer.PDFView
+                    android:id="@+id/pdfView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <ProgressBar
+                    android:id="@+id/previewProgressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Rest of the components in NestedScrollView -->
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingBottom="16dp">
 
-                <LinearLayout
+                <!-- Template Selection Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/templateCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
 
-
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp">
-
-                        <com.github.barteksc.pdfviewer.PDFView
-                            android:id="@+id/pdfView"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent" />
-
-                        <ProgressBar
-                            android:id="@+id/previewProgressBar"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:visibility="gone" />
-                    </FrameLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Template Selection Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/templateCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Template Settings"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="Choose from multiple professional invoice templates and customize colors"
-                        android:textColor="@color/my_light_secondary"
-                        android:textSize="14sp" />
-
-                    <Button
-                        android:id="@+id/selectTemplateButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="Select Template"
-                        android:textColor="@color/my_light_primary"
-                        app:icon="@drawable/ic_template"
-                        app:iconTint="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Branding Settings Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/brandingCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Branding Settings"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-
-                    <!-- Logo Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="Shop Logo"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/showLogoSwitch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
-                    </LinearLayout>
-
-                    <Button
-                        android:id="@+id/uploadLogoButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Upload Logo"
-                        android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
-
-                    <LinearLayout
-                        android:id="@+id/logoPreviewLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
                         android:orientation="vertical"
-                        android:visibility="gone">
+                        android:padding="16dp">
 
                         <TextView
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:text="Logo Preview:"
+                            android:fontFamily="@font/librebaskervillebold"
+                            android:text="Template Settings"
                             android:textColor="@color/my_light_on_surface"
+                            android:textSize="18sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/montserratregular"
+                            android:text="Choose from multiple professional invoice templates and customize colors"
+                            android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
 
-                        <ImageView
-                            android:id="@+id/logoImageView"
-                            android:layout_width="120dp"
-                            android:layout_height="60dp"
-                            android:layout_marginTop="4dp"
-                            android:background="@color/my_light_primary_container"
-                            android:scaleType="fitCenter" />
-                    </LinearLayout>
-
-                    <!-- Watermark Section -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="Watermark"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/showWatermarkSwitch"
+                        <Button
+                            android:id="@+id/selectTemplateButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="false" />
+                            android:layout_marginTop="16dp"
+                            android:text="Select Template"
+                            android:textColor="@color/my_light_primary"
+                            app:icon="@drawable/ic_template"
+                            app:iconTint="@color/my_light_primary"
+                            app:strokeColor="@color/my_light_primary" />
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
-                    <Button
-                        android:id="@+id/uploadWatermarkButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:enabled="false"
-                        android:text="Upload Watermark"
-                        android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
-
-                    <LinearLayout
-                        android:id="@+id/watermarkPreviewLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="vertical"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:text="Watermark Preview:"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-
-                        <ImageView
-                            android:id="@+id/watermarkImageView"
-                            android:layout_width="120dp"
-                            android:layout_height="60dp"
-                            android:layout_marginTop="4dp"
-                            android:alpha="0.5"
-                            android:background="@color/my_light_primary_container"
-                            android:scaleType="fitCenter" />
-                    </LinearLayout>
-
-                    <!-- Signature Section -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="Signature"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/showSignatureSwitch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
-                    </LinearLayout>
-
-                    <Button
-                        android:id="@+id/uploadSignatureButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Create Signature"
-                        android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
-
-                    <LinearLayout
-                        android:id="@+id/signaturePreviewLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:orientation="vertical"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:text="Signature Preview:"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-
-                        <ImageView
-                            android:id="@+id/signatureImageView"
-                            android:layout_width="120dp"
-                            android:layout_height="60dp"
-                            android:layout_marginTop="4dp"
-                            android:background="@color/my_light_primary_container"
-                            android:scaleType="fitCenter" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Content Settings Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/contentCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
+                <!-- Branding Settings Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/brandingCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervillebold"
-                        android:text="Content Settings"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <!-- QR Code Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
                         <TextView
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervillebold"
+                            android:text="Branding Settings"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="18sp" />
+
+                        <!-- Logo Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Shop Logo"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/showLogoSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/uploadLogoButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Upload Logo"
+                            android:textColor="@color/my_light_primary"
+                            app:strokeColor="@color/my_light_primary" />
+
+                        <LinearLayout
+                            android:id="@+id/logoPreviewLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Logo Preview:"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/logoImageView"
+                                android:layout_width="120dp"
+                                android:layout_height="60dp"
+                                android:layout_marginTop="4dp"
+                                android:background="@color/my_light_primary_container"
+                                android:scaleType="fitCenter" />
+                        </LinearLayout>
+
+                        <!-- Watermark Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Watermark"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/showWatermarkSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="false" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/uploadWatermarkButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:enabled="false"
+                            android:text="Upload Watermark"
+                            android:textColor="@color/my_light_primary"
+                            app:strokeColor="@color/my_light_primary" />
+
+                        <LinearLayout
+                            android:id="@+id/watermarkPreviewLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Watermark Preview:"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/watermarkImageView"
+                                android:layout_width="120dp"
+                                android:layout_height="60dp"
+                                android:layout_marginTop="4dp"
+                                android:alpha="0.5"
+                                android:background="@color/my_light_primary_container"
+                                android:scaleType="fitCenter" />
+                        </LinearLayout>
+
+                        <!-- Signature Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="Signature"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/showSignatureSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <Button
+                            android:id="@+id/uploadSignatureButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Create Signature"
+                            android:textColor="@color/my_light_primary"
+                            app:strokeColor="@color/my_light_primary" />
+
+                        <LinearLayout
+                            android:id="@+id/signaturePreviewLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Signature Preview:"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+
+                            <ImageView
+                                android:id="@+id/signatureImageView"
+                                android:layout_width="120dp"
+                                android:layout_height="60dp"
+                                android:layout_marginTop="4dp"
+                                android:background="@color/my_light_primary_container"
+                                android:scaleType="fitCenter" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Content Settings Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/contentCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="2dp"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/librebaskervillebold"
+                            android:text="Content Settings"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="18sp" />
+
+                        <!-- QR Code Section -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="UPI Payment QR Code"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/showQrCodeSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/upiIdInputLayout"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="UPI ID">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/upiIdEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Terms & Conditions -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
                             android:fontFamily="@font/montserratmedium"
-                            android:text="UPI Payment QR Code"
+                            android:text="Terms &amp; Conditions"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
 
-                        <com.google.android.material.switchmaterial.SwitchMaterial
-                            android:id="@+id/showQrCodeSwitch"
-                            android:layout_width="wrap_content"
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/termsInputLayout"
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:checked="true" />
+                            android:layout_marginTop="8dp"
+                            android:hint="Terms &amp; Conditions">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/termsEditText"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:inputType="textMultiLine"
+                                android:minLines="3"
+                                android:text="1. Goods once sold cannot be returned.\n2. All disputes subject to local jurisdiction.\n3. E&amp;OE: Errors and Omissions Excepted." />
+                        </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/upiIdInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="UPI ID">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/upiIdEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Invoice Prefix -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="Invoice Prefix"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/invoicePrefixInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Invoice Prefix">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/invoicePrefixEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:inputType="text"
-                            android:text="INV-" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <!-- Terms & Conditions -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="Terms &amp; Conditions"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/termsInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:hint="Terms &amp; Conditions">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/termsEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:inputType="textMultiLine"
-                            android:minLines="3"
-                            android:text="1. Goods once sold cannot be returned.\n2. All disputes subject to local jurisdiction.\n3. E&amp;OE: Errors and Omissions Excepted." />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

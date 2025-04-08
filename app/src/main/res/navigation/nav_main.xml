@@ -82,6 +82,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_templateSelectionFragment"
             app:destination="@id/templateSelectionFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_accountSettingsFragment"
+            app:destination="@id/accountSettingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -167,4 +170,9 @@
         android:id="@+id/templateSelectionFragment"
         android:name="com.jewelrypos.swarnakhatabook.TemplateSelectionFragment"
         android:label="TemplateSelectionFragment" />
+    <fragment
+        android:id="@+id/accountSettingsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.AccountSettingsFragment"
+        android:label="fragment_account_settings"
+        tools:layout="@layout/fragment_account_settings" />
 </navigation>

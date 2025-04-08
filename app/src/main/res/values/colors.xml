@@ -63,5 +63,6 @@
     <color name="indigo">#696FCA</color>
     <color name="gold">#D1A131</color>
 
-
+    <color name="my_light_on_surface_variant">#544E3A</color>  <!-- A bit lighter/softer than my_light_on_surface -->
+    <color name="status_unpaid_light">#FFCDD2</color>
 </resources>

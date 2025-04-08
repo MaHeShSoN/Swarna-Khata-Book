@@ -101,5 +101,5 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
 
-
+    implementation ("androidx.biometric:biometric-ktx:1.4.0-alpha02")
 }

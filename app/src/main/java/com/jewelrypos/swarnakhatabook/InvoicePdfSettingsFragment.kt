@@ -5,17 +5,26 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
 import com.github.barteksc.pdfviewer.PDFView
+import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener
+import com.github.barteksc.pdfviewer.listener.OnTapListener
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
+import com.github.barteksc.pdfviewer.util.FitPolicy
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
@@ -27,7 +36,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatureCapturedListener {
+class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatureCapturedListener,
+    OnPageChangeListener, OnLoadCompleteListener, OnTapListener {
 
     private var _binding: FragmentInvoicePdfSettingsBinding? = null
     private val binding get() = _binding!!
@@ -40,46 +50,61 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     private var watermarkUri: Uri? = null
     private var signatureUri: Uri? = null
 
+    // Add these properties
+    private var pageNumber = 0
+    private var isZoomedIn = false
+
     // Flag to prevent multiple concurrent preview generations
     private var isGeneratingPreview = false
 
-    private val getLogoContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { originalUri ->
-            // Copy the image to app storage
-            val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
+    private var hasUnsavedChanges = false
+    // Add a flag to track if we're currently loading settings
+    private var isLoadingSettings = false
 
-            copiedUri?.let {
-                logoUri = it
-                binding.logoPreviewLayout.visibility = View.VISIBLE
-                binding.logoImageView.setImageURI(it)
+    private val getLogoContent =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { originalUri ->
+                // Copy the image to app storage
+                val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
 
-                // Save the logo URI to settings
-                pdfSettings?.logoUri = it.toString()
-                updatePdfPreview()
-            } ?: run {
-                // Show error if copying failed
-                Toast.makeText(requireContext(), "Failed to process selected image", Toast.LENGTH_SHORT).show()
+                copiedUri?.let {
+                    logoUri = it
+                    binding.logoPreviewLayout.visibility = View.VISIBLE
+                    binding.logoImageView.setImageURI(it)
+
+                    // Save the logo URI to settings
+                    pdfSettings?.logoUri = it.toString()
+                    hasUnsavedChanges = true
+                    updatePdfPreview()
+                } ?: run {
+                    // Show error if copying failed
+                    Toast.makeText(
+                        requireContext(),
+                        "Failed to process selected image",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
-    }
 
-    private val getWatermarkContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { originalUri ->
+    private val getWatermarkContent =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            uri?.let { originalUri ->
 
-            val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
+                val copiedUri = copyImageToAppStorage(requireContext(), originalUri)
 
-            copiedUri?.let {
+                copiedUri?.let {
+                    watermarkUri = it
+                    binding.watermarkPreviewLayout.visibility = View.VISIBLE
+                    binding.watermarkImageView.setImageURI(it)
 
-            watermarkUri = it
-            binding.watermarkPreviewLayout.visibility = View.VISIBLE
-            binding.watermarkImageView.setImageURI(it)
-
-            // Save the watermark URI to settings
-            pdfSettings?.watermarkUri = it.toString()
-            updatePdfPreview()
+                    // Save the watermark URI to settings
+                    pdfSettings?.watermarkUri = it.toString()
+                    hasUnsavedChanges = true
+                    updatePdfPreview()
                 }
+            }
         }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -87,6 +112,11 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentInvoicePdfSettingsBinding.inflate(inflater, container, false)
+
+        binding.topAppBar.overflowIcon =
+            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
+
+
         return binding.root
     }
 
@@ -103,17 +133,52 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         // Setup toolbar
         setupToolbar()
 
-        // Load existing settings
-        loadSettings()
-
-        // Setup UI components
+        // Setup UI components before loading settings
         setupColorPickers()
         setupSwitches()
         setupButtons()
         setupTextInputs()
 
+        // Load existing settings
+        loadSettings()
+
         // Generate initial preview
         updatePdfPreview()
+
+        // Add the callback
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
+    }
+
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            if (hasUnsavedChanges) {
+                // If editing notes, ask to save changes
+                showUnsavedChangesDialog()
+            } else {
+                // Normal back behavior
+                findNavController().navigateUp()
+            }
+        }
+    }
+
+    private fun showUnsavedChangesDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Unsaved Changes")
+            .setMessage("You have unsaved changes. Do you want to save them before leaving?")
+            .setPositiveButton("Save") { _, _ ->
+                saveSettings()
+                findNavController().navigateUp()
+            }
+            .setNegativeButton("Discard") { _, _ ->
+                findNavController().navigateUp()
+            }
+            .setNeutralButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun setupToolbar() {
@@ -128,10 +193,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     saveSettings()
                     true
                 }
+
                 R.id.action_reset -> {
                     resetSettings()
                     true
                 }
+
                 else -> false
             }
         }
@@ -139,6 +206,8 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
     private fun loadSettings() {
         lifecycleScope.launch {
+            isLoadingSettings = true
+
             // Load PDF settings
             pdfSettings = withContext(Dispatchers.IO) {
                 pdfSettingsManager.loadSettings()
@@ -154,7 +223,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
                 // Apply text settings
                 binding.termsEditText.setText(settings.termsAndConditions)
-                binding.invoicePrefixEditText.setText(settings.invoicePrefix)
                 binding.upiIdEditText.setText(settings.upiId)
 
                 // Load images if available
@@ -191,6 +259,10 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 // Generate preview automatically after loading settings
                 updatePdfPreview()
             }
+
+            // Reset the flag and unsaved changes tracker after loading
+            isLoadingSettings = false
+            hasUnsavedChanges = false
         }
     }
 
@@ -247,29 +319,52 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         // Set up toggle switches
         binding.showLogoSwitch.setOnCheckedChangeListener { _, isChecked ->
             binding.uploadLogoButton.isEnabled = isChecked
-            binding.logoPreviewLayout.visibility = if (isChecked && logoUri != null) View.VISIBLE else View.GONE
+            binding.logoPreviewLayout.visibility =
+                if (isChecked && logoUri != null) View.VISIBLE else View.GONE
             pdfSettings?.showLogo = isChecked
-            updatePdfPreview()
+
+            // Only mark as unsaved if this is a user action, not initial loading
+            if (!isLoadingSettings) {
+                hasUnsavedChanges = true
+                updatePdfPreview()
+            }
         }
 
         binding.showWatermarkSwitch.setOnCheckedChangeListener { _, isChecked ->
             binding.uploadWatermarkButton.isEnabled = isChecked
-            binding.watermarkPreviewLayout.visibility = if (isChecked && watermarkUri != null) View.VISIBLE else View.GONE
+            binding.watermarkPreviewLayout.visibility =
+                if (isChecked && watermarkUri != null) View.VISIBLE else View.GONE
             pdfSettings?.showWatermark = isChecked
-            updatePdfPreview()
+
+            // Only mark as unsaved if this is a user action, not initial loading
+            if (!isLoadingSettings) {
+                hasUnsavedChanges = true
+                updatePdfPreview()
+            }
         }
 
         binding.showQrCodeSwitch.setOnCheckedChangeListener { _, isChecked ->
             binding.upiIdInputLayout.isEnabled = isChecked
             pdfSettings?.showQrCode = isChecked
-            updatePdfPreview()
+
+            // Only mark as unsaved if this is a user action, not initial loading
+            if (!isLoadingSettings) {
+                hasUnsavedChanges = true
+                updatePdfPreview()
+            }
         }
 
         binding.showSignatureSwitch.setOnCheckedChangeListener { _, isChecked ->
             binding.uploadSignatureButton.isEnabled = isChecked
-            binding.signaturePreviewLayout.visibility = if (isChecked && signatureUri != null) View.VISIBLE else View.GONE
+            binding.signaturePreviewLayout.visibility =
+                if (isChecked && signatureUri != null) View.VISIBLE else View.GONE
             pdfSettings?.showSignature = isChecked
-            updatePdfPreview()
+
+            // Only mark as unsaved if this is a user action, not initial loading
+            if (!isLoadingSettings) {
+                hasUnsavedChanges = true
+                updatePdfPreview()
+            }
         }
     }
 
@@ -286,7 +381,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         binding.uploadSignatureButton.setOnClickListener {
             showSignatureDialog()
         }
-
     }
 
     private fun showSignatureDialog() {
@@ -301,6 +395,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
         // Save the signature URI to settings
         pdfSettings?.signatureUri = signatureUri.toString()
+        hasUnsavedChanges = true
         updatePdfPreview()
     }
 
@@ -316,15 +411,10 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 pdfSettings?.termsAndConditions = s.toString()
-                // Not updating preview on every keystroke for performance
-            }
-        })
-
-        binding.invoicePrefixEditText.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                pdfSettings?.invoicePrefix = s.toString()
+                // Only mark as unsaved if this is a user action, not initial loading
+                if (!isLoadingSettings) {
+                    hasUnsavedChanges = true
+                }
                 // Not updating preview on every keystroke for performance
             }
         })
@@ -334,12 +424,16 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: android.text.Editable?) {
                 pdfSettings?.upiId = s.toString()
+                // Only mark as unsaved if this is a user action, not initial loading
+                if (!isLoadingSettings) {
+                    hasUnsavedChanges = true
+                }
                 // Not updating preview on every keystroke for performance
             }
         })
     }
 
-        private fun createSampleInvoice(): Invoice {
+    private fun createSampleInvoice(): Invoice {
         // Create a new sample invoice since we can't directly call the method
         return Invoice(
             id = "sample",
@@ -356,7 +450,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             notes = "Sample invoice for preview"
         )
     }
-
 
     private fun updatePdfPreview() {
         // Prevent multiple concurrent preview generations
@@ -384,29 +477,34 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     val shopDetails = ShopManager.getShopDetails(requireContext())
 
                     // Generate PDF with sample data
-                    generator.generateInvoicePdf(sampleInvoice, shopDetails, "sample_invoice_preview")
+                    generator.generateInvoicePdf(
+                        sampleInvoice,
+                        shopDetails,
+                        "sample_invoice_preview"
+                    )
                 }
 
-                // Load PDF into the viewer with enhanced settings for smooth zooming
+                // Load PDF into the viewer with enhanced settings for smooth zooming and scrolling
                 pdfView.fromFile(pdfFile)
+                    .defaultPage(pageNumber)
+                    .onPageChange(this@InvoicePdfSettingsFragment)
+                    .onLoad(this@InvoicePdfSettingsFragment)
+                    .onTap(this@InvoicePdfSettingsFragment)
                     .enableSwipe(true)
-                    .swipeHorizontal(false)
-                    .enableDoubletap(true)
-                    .defaultPage(0)
+                    .swipeHorizontal(true) // Enable horizontal swiping
+                    .enableDoubletap(true) // Enable double tap to zoom
                     .enableAnnotationRendering(true)
                     .scrollHandle(DefaultScrollHandle(requireContext()))
                     .spacing(10) // Add spacing between pages
                     .autoSpacing(true) // Add auto spacing based on screen
-                    .pageFitPolicy(com.github.barteksc.pdfviewer.util.FitPolicy.WIDTH) // Fit page to width
+                    .pageFitPolicy(FitPolicy.WIDTH) // Fit page to width
                     .pageSnap(true) // Snap pages to screen boundaries
                     .pageFling(true) // Make fling change pages
-                    .nightMode(false) // Set night mode based on system setting
+                    .fitEachPage(true) // Fit each page to the view
+                    .enableAntialiasing(true) // Improve rendering quality
+                    .nightMode(false) // Disable night mode
                     .onError { t ->
                         Log.e("InvoicePdfSettings", "Error loading PDF: ${t.message}")
-                        isGeneratingPreview = false
-                        binding.previewProgressBar.visibility = View.GONE
-                    }
-                    .onLoad {
                         isGeneratingPreview = false
                         binding.previewProgressBar.visibility = View.GONE
                     }
@@ -417,10 +515,36 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 withContext(Dispatchers.Main) {
                     isGeneratingPreview = false
                     binding.previewProgressBar.visibility = View.GONE
-                    Toast.makeText(requireContext(), "Error generating PDF preview: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "Error generating PDF preview: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
+    }
+
+    override fun onPageChanged(page: Int, pageCount: Int) {
+        pageNumber = page
+    }
+
+    override fun loadComplete(nbPages: Int) {
+        isGeneratingPreview = false
+        binding.previewProgressBar.visibility = View.GONE
+    }
+
+    override fun onTap(e: MotionEvent?): Boolean {
+        // Toggle between zoomed and normal view on tap
+        if (isZoomedIn) {
+            pdfView.resetZoom()
+            isZoomedIn = false
+        } else {
+            // You can set a specific zoom level or use a multiplier
+            pdfView.zoomTo(2.0f) // Zoom to 2x
+            isZoomedIn = true
+        }
+        return true
     }
 
     private fun saveSettings() {
@@ -431,13 +555,22 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     pdfSettingsManager.saveSettings(settings)
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Settings saved successfully", Toast.LENGTH_SHORT).show()
+                        hasUnsavedChanges = false
+                        Toast.makeText(
+                            requireContext(),
+                            "Settings saved successfully",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 } catch (e: Exception) {
                     Log.e("InvoicePdfSettings", "Error saving settings: ${e.message}")
 
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), "Error saving settings", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            requireContext(),
+                            "Error saving settings",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -465,7 +598,11 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     // Update preview
                     updatePdfPreview()
 
-                    Toast.makeText(requireContext(), "Settings reset to defaults", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "Settings reset to defaults",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
             .setNegativeButton("Cancel", null)

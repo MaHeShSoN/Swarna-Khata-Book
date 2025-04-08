@@ -56,7 +56,14 @@ class MoreSettingFragment : Fragment() {
                 subtitle = "Choose from multiple professional templates",
                 iconResId = R.drawable.ic_template,
                 badgeText = "NEW"
+            ),
+            SettingsItem(
+                id = "account_settings",
+                title = "Account Settings",
+                subtitle = "Manage app lock, security and account options",
+                iconResId = R.drawable.ic_account
             )
+
         )
 
         settingsAdapter = SettingsAdapter(settingsItems) { item ->
@@ -73,6 +80,10 @@ class MoreSettingFragment : Fragment() {
                 "invoice_template" -> {
                     val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
                     mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
+                }
+                "account_settings" -> {
+                    val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_accountSettingsFragment)
                 }
             }
         }
