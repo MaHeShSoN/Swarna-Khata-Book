@@ -1,30 +1,41 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.app.AlertDialog
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.jewelrypos.swarnakhatabook.ViewModle.SplashViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentLauncherBinding
-
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import java.util.concurrent.Executor
 
 class launcherFragment : Fragment() {
 
     private var _binding: FragmentLauncherBinding? = null
     private val binding get() = _binding!!
     private lateinit var viewModel: SplashViewModel
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var executor: Executor
+    private lateinit var biometricPrompt: BiometricPrompt
+    private lateinit var promptInfo: BiometricPrompt.PromptInfo
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentLauncherBinding.inflate(inflater, container, false)
-        // Inflate the layout for this fragment
         return binding.root
     }
 
@@ -34,8 +45,27 @@ class launcherFragment : Fragment() {
         // Initialize ViewModel using ViewModelProvider.Factory for AndroidViewModel
         val factory =
             ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)
-        viewModel = ViewModelProvider(this, factory).get(SplashViewModel::class.java)
+        viewModel = ViewModelProvider(this, factory)[SplashViewModel::class.java]
 
+        // Initialize SharedPreferences
+        sharedPreferences = requireActivity().getSharedPreferences(
+            "jewelry_pos_settings",
+            Context.MODE_PRIVATE
+        )
+
+        // Check if app lock is enabled
+        val isAppLockEnabled = sharedPreferences.getBoolean("app_lock_enabled", false)
+
+        if (isAppLockEnabled) {
+            // Setup biometrics for app lock
+            setupBiometrics()
+        } else {
+            // No app lock, proceed with normal flow
+            startNormalFlow()
+        }
+    }
+
+    private fun startNormalFlow() {
         // Observe navigation events
         viewModel.navigationEvent.observe(viewLifecycleOwner) { event ->
             Handler(Looper.getMainLooper()).postDelayed({
@@ -43,11 +73,9 @@ class launcherFragment : Fragment() {
                     is SplashViewModel.NavigationEvent.NavigateToDashboard -> {
                         findNavController().navigate(R.id.action_launcherFragment_to_mainScreenFragment)
                     }
-
                     is SplashViewModel.NavigationEvent.NavigateToRegistration -> {
                         findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
                     }
-
                     is SplashViewModel.NavigationEvent.NoInternet -> {
                         showNoInternetDialog()
                     }
@@ -57,6 +85,100 @@ class launcherFragment : Fragment() {
 
         // Trigger connectivity and auth check
         viewModel.checkInternetAndAuth()
+    }
+
+    private fun setupBiometrics() {
+        executor = ContextCompat.getMainExecutor(requireContext())
+
+        biometricPrompt = BiometricPrompt(this, executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    // Authentication successful, proceed with normal flow
+                    startNormalFlow()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                        // User clicked cancel, close the app
+                        requireActivity().finish()
+                    } else if (errorCode != BiometricPrompt.ERROR_USER_CANCELED) {
+                        // Show error
+                        Toast.makeText(
+                            requireContext(),
+                            "Authentication error: $errString",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        // For now, let's proceed to the app anyway if there's a hardware error
+                        // You might want to implement a fallback PIN mechanism later
+                        startNormalFlow()
+                    }
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    Toast.makeText(
+                        requireContext(),
+                        "Authentication failed",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
+
+        promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("Authentication Required")
+            .setSubtitle("Please authenticate to access the app")
+            .setNegativeButtonText("Cancel")
+            .build()
+
+        // Check biometric support and prompt authentication if supported
+        checkBiometricSupport()
+    }
+
+    // Replace the checkBiometricSupport method in launcherFragment
+    private fun checkBiometricSupport() {
+        val biometricManager = BiometricManager.from(requireContext())
+        when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> {
+                // Device supports biometric authentication, show prompt
+                biometricPrompt.authenticate(promptInfo)
+            }
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                // Device doesn't support biometric authentication
+                Toast.makeText(
+                    requireContext(),
+                    "Your device doesn't support biometric authentication",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                // Fall back to PIN authentication
+                showPinFallbackDialog()
+            }
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
+                // Biometric features are currently unavailable
+                Toast.makeText(
+                    requireContext(),
+                    "Biometric authentication is currently unavailable",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                // Fall back to PIN authentication
+                showPinFallbackDialog()
+            }
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
+                // User hasn't enrolled any biometrics, offer to set them up
+                Toast.makeText(
+                    requireContext(),
+                    "No biometric credentials enrolled. Using PIN instead.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                // Fall back to PIN authentication
+                showPinFallbackDialog()
+            }
+        }
     }
 
     private fun showNoInternetDialog() {
@@ -76,4 +198,48 @@ class launcherFragment : Fragment() {
         dialog.show()
     }
 
+
+    private fun showPinFallbackDialog() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = requireActivity().layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
+        val pinEditText = dialogView.findViewById<EditText>(R.id.pinEditText)
+
+        builder.setView(dialogView)
+            .setTitle("Enter PIN")
+            .setMessage("Please enter your PIN to unlock the app")
+            .setPositiveButton("Unlock") { _, _ ->
+                // Empty, will be set below to avoid automatic dismissal
+            }
+            .setNegativeButton("Cancel") { _, _ ->
+                // User canceled, close the app
+                requireActivity().finish()
+            }
+            .setCancelable(false)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Override the positive button click to validate PIN
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val enteredPin = pinEditText.text.toString()
+            val savedPin = sharedPreferences.getString("app_lock_pin", "1234") // Default PIN is 1234
+
+            if (enteredPin == savedPin) {
+                // PIN is correct
+                dialog.dismiss()
+                findNavController().navigate(R.id.action_launcherFragment_to_mainScreenFragment)
+            } else {
+                // PIN is incorrect
+                pinEditText.error = "Incorrect PIN"
+                pinEditText.text.clear()
+            }
+        }
+    }
+
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }

@@ -3,19 +3,19 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentAccountSettingsBinding
@@ -33,7 +33,7 @@ class AccountSettingsFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
+    ): View? {
         _binding = FragmentAccountSettingsBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -208,9 +208,68 @@ class AccountSettingsFragment : Fragment() {
     }
 
     private fun showChangePINDialog() {
-        // Show dialog to change PIN
-        // This is a placeholder for actual PIN change functionality
-        Toast.makeText(requireContext(), "PIN change functionality to be implemented", Toast.LENGTH_SHORT).show()
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = requireActivity().layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_pin_setup, null)
+
+        val currentPinEditText = dialogView.findViewById<TextInputEditText>(R.id.currentPinEditText)
+        val newPinEditText = dialogView.findViewById<TextInputEditText>(R.id.newPinEditText)
+        val confirmPinEditText = dialogView.findViewById<TextInputEditText>(R.id.confirmPinEditText)
+
+        // Get current PIN
+        val currentPin = sharedPreferences.getString("app_lock_pin", "1234") // Default is 1234
+        val currentPinLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPinLayout)
+
+        // Hide current PIN field if no PIN is set yet (still using default)
+        if (currentPin == "1234" && !sharedPreferences.contains("app_lock_pin")) {
+            currentPinLayout.visibility = View.GONE
+        }
+
+        builder.setView(dialogView)
+            .setTitle("Set PIN")
+            .setMessage("This PIN will be used as a backup if biometric authentication is unavailable")
+            .setPositiveButton("Save", null) // Will be set below
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Override the positive button click to validate inputs
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val enteredCurrentPin = currentPinEditText.text.toString()
+            val newPin = newPinEditText.text.toString()
+            val confirmPin = confirmPinEditText.text.toString()
+
+            var isValid = true
+
+            // Validate current PIN if required
+            if (currentPinLayout.visibility == View.VISIBLE && enteredCurrentPin != currentPin) {
+                currentPinEditText.error = "Current PIN is incorrect"
+                isValid = false
+            }
+
+            // Validate new PIN
+            if (newPin.length < 4) {
+                newPinEditText.error = "PIN must be at least 4 digits"
+                isValid = false
+            }
+
+            // Validate confirmation PIN
+            if (newPin != confirmPin) {
+                confirmPinEditText.error = "PINs do not match"
+                isValid = false
+            }
+
+            if (isValid) {
+                // Save the new PIN
+                sharedPreferences.edit().putString("app_lock_pin", newPin).apply()
+
+                dialog.dismiss()
+                Toast.makeText(requireContext(), "PIN updated successfully", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showSecurityQuestionsDialog() {
