@@ -261,6 +261,7 @@
                         app:tint="@color/my_light_on_surface" />
 
                     <TextView
+                        android:id="@+id/NoTextAddedId"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"

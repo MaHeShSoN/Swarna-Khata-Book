@@ -321,6 +321,23 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonDeleteAllData"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:fontFamily="@font/montserratmedium"
+                android:text="DELETE ALL MY DATA"
+                android:textColor="@color/status_unpaid"
+                android:textSize="14sp"
+                app:icon="@drawable/material_symbols__delete"
+                app:iconGravity="textStart"
+                app:iconTint="@color/status_unpaid"
+                app:rippleColor="@color/status_unpaid_light"
+                app:strokeColor="@color/status_unpaid" />
+
+
             <!-- Logout Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonLogout"

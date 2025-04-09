@@ -11,13 +11,8 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.Adapters.CustomerAdapter
-import com.jewelrypos.swarnakhatabook.Adapters.InvoicesAdapter
-import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
-import com.jewelrypos.swarnakhatabook.Adapters.NotificationAdapter
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.NotificationViewModelFactory
@@ -33,6 +28,8 @@ import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentDashBoardBinding
 import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.util.Locale
 
 class DashBoardFragment : Fragment() {
 
@@ -75,10 +72,8 @@ class DashBoardFragment : Fragment() {
         NotificationViewModelFactory(repository, connectivityManager)
     }
 
-    private lateinit var recentInvoicesAdapter: InvoicesAdapter
-    private lateinit var lowStockAdapter: JewelleryAdapter
-    private lateinit var topCustomersAdapter: CustomerAdapter
-    private lateinit var upcomingEventsAdapter: NotificationAdapter
+    // Currency formatter
+    private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -93,9 +88,7 @@ class DashBoardFragment : Fragment() {
 
         setupToolbar()
         setupPeriodSelector()
-        setupRecyclerViews()
         setupQuickActions()
-        setupViewAllButtons()
 
         // Load data for dashboard
         loadDashboardData()
@@ -140,61 +133,6 @@ class DashBoardFragment : Fragment() {
         }
     }
 
-    private fun setupRecyclerViews() {
-        // Recent Invoices
-        recentInvoicesAdapter = InvoicesAdapter(emptyList())
-        recentInvoicesAdapter.onItemClickListener = { invoice ->
-            navigateToInvoiceDetail(invoice.invoiceNumber)
-        }
-        binding.recentInvoicesRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = recentInvoicesAdapter
-        }
-
-        // Low Stock Items
-        lowStockAdapter = JewelleryAdapter(emptyList(), object : JewelleryAdapter.OnItemClickListener {
-            override fun onItemClick(item: com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem) {
-                // Navigate to item detail when clicked
-                // This would be implemented with a navigation call
-            }
-        })
-        binding.lowStockRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = lowStockAdapter
-        }
-
-        // Top Customers
-        topCustomersAdapter = CustomerAdapter(emptyList(), object : CustomerAdapter.OnCustomerClickListener {
-            override fun onCustomerClick(customer: com.jewelrypos.swarnakhatabook.DataClasses.Customer) {
-                navigateToCustomerDetail(customer.id)
-            }
-        })
-        binding.topCustomersRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = topCustomersAdapter
-        }
-
-        // Upcoming Events
-        upcomingEventsAdapter = NotificationAdapter(emptyList())
-        upcomingEventsAdapter.setOnNotificationActionListener(object : NotificationAdapter.OnNotificationActionListener {
-            override fun onNotificationClick(notification: com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification) {
-                // Handle notification click
-            }
-
-            override fun onActionButtonClick(notification: com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification) {
-                // Handle action button click
-            }
-
-            override fun onDismissButtonClick(notification: com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification) {
-                // Handle dismiss button click
-            }
-        })
-        binding.upcomingEventsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = upcomingEventsAdapter
-        }
-    }
-
     private fun setupQuickActions() {
         // Create Invoice Action
         binding.createInvoiceAction.setOnClickListener {
@@ -215,20 +153,7 @@ class DashBoardFragment : Fragment() {
         binding.recordPaymentAction.setOnClickListener {
             navigateToPayments()
         }
-    }
 
-    private fun setupViewAllButtons() {
-        // View all invoices
-        binding.viewAllInvoices.setOnClickListener {
-            navigateToSalesTab()
-        }
-
-        // View all inventory
-        binding.viewAllInventory.setOnClickListener {
-            navigateToInventoryTab()
-        }
-
-        // View all customers
         binding.viewAllCustomers.setOnClickListener {
             navigateToCustomersTab()
         }
@@ -237,69 +162,69 @@ class DashBoardFragment : Fragment() {
     private fun loadDashboardData() {
         // Load data for each section of the dashboard
         loadSalesData(binding.periodSelector.selectedItem.toString())
-        loadInventoryData()
+
         loadCustomerData()
-        loadNotificationData()
+
+        // Hide low stock recycler view container since we're not using it
+        binding.lowStockRecyclerView.visibility = View.GONE
+        binding.emptyLowStockState.visibility = View.GONE
+
+        // Hide recent invoices section
+        binding.recentInvoicesRecyclerView.visibility = View.GONE
+        binding.emptyRecentInvoicesState.visibility = View.GONE
+
     }
 
     private fun loadSalesData(period: String) {
-        // Here we would filter the sales data based on the selected period
-        // For now, we'll just show all invoices
+        // Refresh sales data from the repository
         salesViewModel.refreshInvoices()
 
         // Listen for changes to invoices data
         salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
-            // Update recent invoices list
-            val recentInvoices = invoices.take(5) // Only show top 5 recent invoices
-            recentInvoicesAdapter.updateInvoices(recentInvoices)
-
-            // Update empty state visibility
-            binding.emptyRecentInvoicesState.visibility = if (recentInvoices.isEmpty()) View.VISIBLE else View.GONE
-            binding.recentInvoicesRecyclerView.visibility = if (recentInvoices.isEmpty()) View.GONE else View.VISIBLE
+            // Apply period filter
+            val filteredInvoices = when (period) {
+                "Today" -> {
+                    val today = System.currentTimeMillis()
+                    val dayStart = today - (today % 86400000) // Start of day in millis
+                    invoices.filter { it.invoiceDate >= dayStart }
+                }
+                "This Week" -> {
+                    val today = System.currentTimeMillis()
+                    val weekStart = today - ((today % 86400000) + ((System.currentTimeMillis() / 86400000) % 7) * 86400000)
+                    invoices.filter { it.invoiceDate >= weekStart }
+                }
+                "This Month" -> {
+                    val calendar = java.util.Calendar.getInstance()
+                    calendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                    calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(java.util.Calendar.MINUTE, 0)
+                    calendar.set(java.util.Calendar.SECOND, 0)
+                    calendar.set(java.util.Calendar.MILLISECOND, 0)
+                    val monthStart = calendar.timeInMillis
+                    invoices.filter { it.invoiceDate >= monthStart }
+                }
+                else -> invoices // "All Time"
+            }
 
             // Update sales metrics
-            updateSalesMetrics(invoices)
+            updateSalesMetrics(filteredInvoices)
         }
     }
 
     private fun updateSalesMetrics(invoices: List<com.jewelrypos.swarnakhatabook.DataClasses.Invoice>) {
-        val formatter = DecimalFormat("#,##,##0.00")
-
         // Calculate total sales
         val totalSales = invoices.sumOf { it.totalAmount }
-        binding.totalSalesValue.text = "₹${formatter.format(totalSales)}"
+        binding.totalSalesValue.text = currencyFormatter.format(totalSales)
 
         // Count of invoices
         binding.invoiceCountValue.text = invoices.size.toString()
 
         // Calculate average sale
         val averageSale = if (invoices.isNotEmpty()) totalSales / invoices.size else 0.0
-        binding.averageSaleValue.text = "₹${formatter.format(averageSale)}"
+        binding.averageSaleValue.text = currencyFormatter.format(averageSale)
     }
 
-    private fun loadInventoryData() {
-        inventoryViewModel.refreshData()
 
-        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
-            // Count total items
-            binding.totalItemsValue.text = items.size.toString()
-
-            // Count gold items
-            val goldItems = items.count { it.itemType.equals("gold", ignoreCase = true) }
-            binding.goldItemsValue.text = goldItems.toString()
-
-            // Find low stock items (arbitrary threshold of 5 units)
-            val lowStockItems = items.filter { it.stock in 0.0..5.0 }
-            binding.lowStockValue.text = lowStockItems.size.toString()
-
-            // Update low stock recycler view
-            lowStockAdapter.updateList(lowStockItems)
-
-            // Update empty state visibility
-            binding.emptyLowStockState.visibility = if (lowStockItems.isEmpty()) View.VISIBLE else View.GONE
-            binding.lowStockRecyclerView.visibility = if (lowStockItems.isEmpty()) View.GONE else View.VISIBLE
-        }
-    }
 
     private fun loadCustomerData() {
         customerViewModel.refreshData()
@@ -313,8 +238,7 @@ class DashBoardFragment : Fragment() {
                 .filter { it.balanceType == "Credit" } // Only include credit customers
                 .sumOf { it.currentBalance }
 
-            val formatter = DecimalFormat("#,##,##0.00")
-            binding.outstandingBalanceValue.text = "₹${formatter.format(outstandingBalance)}"
+            binding.outstandingBalanceValue.text = currencyFormatter.format(outstandingBalance)
 
             // Check for birthdays today
             val today = java.time.LocalDate.now()
@@ -339,34 +263,6 @@ class DashBoardFragment : Fragment() {
                 }
             }
             binding.birthdaysTodayValue.text = birthdaysToday.toString()
-
-            // Get top customers by purchase value (We would need to join with invoices data)
-            // For now, we'll just show the first few customers
-            val topCustomers = customers.take(3)
-            topCustomersAdapter.updateList(topCustomers)
-
-            // Update empty state visibility
-            binding.emptyCustomersState.visibility = if (customers.isEmpty()) View.VISIBLE else View.GONE
-            binding.topCustomersRecyclerView.visibility = if (customers.isEmpty()) View.GONE else View.VISIBLE
-        }
-    }
-
-    private fun loadNotificationData() {
-        notificationViewModel.loadNotifications()
-
-        notificationViewModel.notifications.observe(viewLifecycleOwner) { notifications ->
-            // Filter for upcoming events (birthdays, anniversaries, payment reminders)
-            val upcomingEvents = notifications.filter {
-                it.type == com.jewelrypos.swarnakhatabook.Enums.NotificationType.BIRTHDAY ||
-                        it.type == com.jewelrypos.swarnakhatabook.Enums.NotificationType.ANNIVERSARY ||
-                        it.type == com.jewelrypos.swarnakhatabook.Enums.NotificationType.PAYMENT_DUE
-            }
-
-            upcomingEventsAdapter.updateNotifications(upcomingEvents)
-
-            // Update empty state visibility
-            binding.emptyEventsState.visibility = if (upcomingEvents.isEmpty()) View.VISIBLE else View.GONE
-            binding.upcomingEventsRecyclerView.visibility = if (upcomingEvents.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 
@@ -386,34 +282,22 @@ class DashBoardFragment : Fragment() {
     }
 
     private fun navigateToAddInventory() {
-        // This would open the inventory fragment and then trigger the add item dialog
-        requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(R.id.inventoryFragment)
-        // You'll need to add code to automatically open the add item dialog
+        // Navigate to inventory tab first
+        navigateToInventoryTab()
+
+        // Let the inventory fragment know that we want to add an item
+        // This would be implemented as a callback or event bus mechanism
     }
 
     private fun navigateToPayments() {
-        // Navigate to a payments management screen
-        Toast.makeText(context, "Payments functionality to be implemented", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun navigateToInvoiceDetail(invoiceId: String) {
+        // Navigate to the payments management screen
         requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoiceId))
+            .navigate(R.id.paymentsFragment)
     }
 
-    private fun navigateToCustomerDetail(customerId: String) {
+    private fun navigateToNotifications() {
         requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(MainScreenFragmentDirections.actionMainScreenFragmentToCustomerDetailFragment(customerId))
-    }
-
-    private fun navigateToSalesTab() {
-        // Navigate to sales tab in bottom navigation
-        val parentFragment = parentFragment
-        if (parentFragment is MainScreenFragment) {
-            val navigator = MainScreenNavigator(parentFragment)
-            navigator.navigateToSalesTab()
-        }
+            .navigate(R.id.action_mainScreenFragment_to_notificationFragment)
     }
 
     private fun navigateToInventoryTab() {
@@ -432,11 +316,6 @@ class DashBoardFragment : Fragment() {
             val navigator = MainScreenNavigator(parentFragment)
             navigator.navigateToCustomersTab()
         }
-    }
-
-    private fun navigateToNotifications() {
-        requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(R.id.action_mainScreenFragment_to_notificationFragment)
     }
 
     override fun onDestroyView() {

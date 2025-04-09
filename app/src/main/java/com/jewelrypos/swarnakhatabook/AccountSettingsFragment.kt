@@ -159,6 +159,11 @@ class AccountSettingsFragment : Fragment() {
             showSecurityQuestionsDialog()
         }
 
+        // Delete All Data button
+        binding.buttonDeleteAllData.setOnClickListener {
+            showDeleteDataConfirmationDialog()
+        }
+
         // Logout button
         binding.buttonLogout.setOnClickListener {
             showLogoutConfirmationDialog()
@@ -276,6 +281,184 @@ class AccountSettingsFragment : Fragment() {
         // Show dialog to set up security questions
         // This is a placeholder for actual security questions setup
         Toast.makeText(requireContext(), "Security questions to be implemented", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showDeleteDataConfirmationDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete All Data")
+            .setMessage("Are you sure you want to delete all your data? This action cannot be undone and all your business data will be permanently deleted.")
+            .setPositiveButton("Delete") { _, _ ->
+                showPinConfirmationForDataDeletion()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showPinConfirmationForDataDeletion() {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = requireActivity().layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
+        val pinEditText = dialogView.findViewById<TextInputEditText>(R.id.pinEditText)
+
+        builder.setView(dialogView)
+            .setTitle("Confirm with PIN")
+            .setMessage("Please enter your PIN to confirm data deletion")
+            .setPositiveButton("Confirm", null) // Will be set below
+            .setNegativeButton("Cancel", null)
+
+        val dialog = builder.create()
+        dialog.show()
+
+        // Override the positive button click to validate PIN
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val enteredPin = pinEditText.text.toString()
+            val savedPin = sharedPreferences.getString("app_lock_pin", "1234") // Default is 1234
+
+            if (enteredPin == savedPin) {
+                // PIN is correct, proceed with data deletion
+                dialog.dismiss()
+                deleteAllData()
+            } else {
+                // PIN is incorrect
+                pinEditText.error = "Incorrect PIN"
+                pinEditText.text?.clear()
+            }
+        }
+    }
+
+    private fun deleteAllData() {
+        // Show loading dialog
+        val loadingDialog = AlertDialog.Builder(requireContext())
+            .setTitle("Deleting Data")
+            .setMessage("Please wait while we delete your data...")
+            .setCancelable(false)
+            .create()
+
+        loadingDialog.show()
+
+        // Start deleting data
+        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        val userId = auth.currentUser?.phoneNumber?.replace("+", "") ?: ""
+
+        if (userId.isNotEmpty()) {
+            // Delete Firestore data
+            deleteFirestoreData(userId, loadingDialog)
+        } else {
+            // No user ID, just clear local data and redirect
+            clearLocalDataAndRedirect(loadingDialog)
+        }
+    }
+
+    private fun deleteFirestoreData(userId: String, loadingDialog: AlertDialog) {
+        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val userDoc = firestore.collection("users").document(userId)
+
+        // Define collections to delete
+        val collections = listOf(
+            "customers",
+            "invoices",
+            "inventory",
+            "notifications",
+            "payments",
+            "settings"
+        )
+
+        // Delete each collection
+        var completedCollections = 0
+        var hasError = false
+
+        for (collection in collections) {
+            userDoc.collection(collection)
+                .get()
+                .addOnSuccessListener { querySnapshot ->
+                    // Create batch to delete documents
+                    val batch = firestore.batch()
+                    for (document in querySnapshot.documents) {
+                        batch.delete(document.reference)
+                    }
+
+                    // Commit the batch
+                    if (querySnapshot.documents.isNotEmpty()) {
+                        batch.commit()
+                            .addOnSuccessListener {
+                                completedCollections++
+                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                            }
+                            .addOnFailureListener {
+                                hasError = true
+                                completedCollections++
+                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                            }
+                    } else {
+                        // No documents in this collection
+                        completedCollections++
+                        checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                    }
+                }
+                .addOnFailureListener {
+                    hasError = true
+                    completedCollections++
+                    checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                }
+        }
+    }
+
+    private fun checkDeletionProgress(completed: Int, total: Int, loadingDialog: AlertDialog, hasError: Boolean) {
+        if (completed >= total) {
+            // All collections processed
+            clearLocalDataAndRedirect(loadingDialog, hasError)
+        }
+    }
+
+    private fun clearLocalDataAndRedirect(loadingDialog: AlertDialog, hasError: Boolean = false) {
+        // Clear SharedPreferences
+        val allPrefs = listOf(
+            "jewelry_pos_settings",
+            "shop_preferences",
+            "jewelry_pos_pdf_settings"
+        )
+
+        for (prefName in allPrefs) {
+            val prefs = requireContext().getSharedPreferences(prefName, Context.MODE_PRIVATE)
+            prefs.edit().clear().apply()
+        }
+
+        // Clear any local Room database
+        try {
+            val databases = requireContext().databaseList()
+            for (dbName in databases) {
+                requireContext().deleteDatabase(dbName)
+            }
+        } catch (e: Exception) {
+            // Ignore database deletion errors
+        }
+
+        // Clear shop data
+        ShopManager.clearLocalShop(requireContext())
+
+        // Dismiss loading dialog
+        loadingDialog.dismiss()
+
+        // Show completion message
+        val message = if (hasError) {
+            "Some data may not have been completely deleted due to errors. Local data has been cleared."
+        } else {
+            "All your data has been successfully deleted."
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Data Deletion Complete")
+            .setMessage(message)
+            .setPositiveButton("OK") { _, _ ->
+                // Redirect to launcher screen
+                val intent = Intent(requireContext(), MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                requireActivity().finish()
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun showLogoutConfirmationDialog() {

@@ -8,7 +8,6 @@
     android:fillViewport="true"
     tools:context=".DashBoardFragment">
 
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -37,13 +36,11 @@
             </com.google.android.material.appbar.AppBarLayout>
         </LinearLayout>
 
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
-
 
             <!-- Quick Actions Card -->
             <com.google.android.material.card.MaterialCardView
@@ -239,24 +236,6 @@
                             android:layout_height="wrap_content" />
                     </LinearLayout>
 
-                    <!-- Chart will go here -->
-                    <FrameLayout
-                        android:id="@+id/chartContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:layout_marginBottom="16dp">
-
-                        <TextView
-                            android:id="@+id/chartPlaceholder"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:fontFamily="@font/montserratregular"
-                            android:gravity="center"
-                            android:text="Loading sales data..."
-                            android:textColor="@color/my_light_secondary"
-                            android:textSize="14sp" />
-                    </FrameLayout>
-
                     <!-- Sales Metrics -->
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -348,7 +327,36 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Recent Activity Card -->
+            <!-- Hidden Recent Invoices section - kept for compatibility but not shown -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recentInvoicesRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/emptyRecentInvoicesState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+
+
+            <!-- Hidden Low Stock section - kept for compatibility but not shown -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/lowStockRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/emptyLowStockState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone" />
+
+            <!-- Business Insights Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -376,266 +384,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Recent Invoices"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="18sp" />
-
-                        <TextView
-                            android:id="@+id/viewAllInvoices"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="?attr/selectableItemBackground"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:fontFamily="@font/montserratmedium"
-                            android:padding="4dp"
-                            android:text="View All"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-
-                    <!-- Recent Invoices List -->
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/recentInvoicesRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="visible"
-                        tools:itemCount="3"
-                        tools:listitem="@layout/item_invoice" />
-
-                    <!-- Empty State -->
-                    <LinearLayout
-                        android:id="@+id/emptyRecentInvoicesState"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:visibility="gone">
-
-                        <ImageView
-                            android:layout_width="64dp"
-                            android:layout_height="64dp"
-                            android:alpha="0.5"
-                            android:src="@drawable/empty_clients"
-                            app:tint="@color/my_light_on_surface" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="No recent invoices"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Inventory Status Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Inventory Status"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="18sp" />
-
-                        <TextView
-                            android:id="@+id/viewAllInventory"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="?attr/selectableItemBackground"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:fontFamily="@font/montserratmedium"
-                            android:padding="4dp"
-                            android:text="View All"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-
-                    <!-- Inventory Metrics -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
-
-                        <!-- Total Items -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="Total Items"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <TextView
-                                android:id="@+id/totalItemsValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratbold"
-                                android:text="0"
-                                android:textColor="@color/my_light_primary"
-                                android:textSize="16sp" />
-                        </LinearLayout>
-
-                        <!-- Low Stock -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="Low Stock"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <TextView
-                                android:id="@+id/lowStockValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratbold"
-                                android:text="0"
-                                android:textColor="@color/status_unpaid"
-                                android:textSize="16sp" />
-                        </LinearLayout>
-
-                        <!-- Gold Items -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="Gold Items"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <TextView
-                                android:id="@+id/goldItemsValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratbold"
-                                android:text="0"
-                                android:textColor="@color/my_light_primary"
-                                android:textSize="16sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- Low Stock Alert Section -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Low Stock Alerts"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/lowStockRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="visible"
-                        tools:itemCount="2"
-                        tools:listitem="@layout/inventory_item_jewelry" />
-
-                    <!-- Empty Low Stock State -->
-                    <LinearLayout
-                        android:id="@+id/emptyLowStockState"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="No low stock items"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Customer Insights Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Customer Insights"
+                            android:text="Business Insights"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp" />
 
@@ -648,7 +397,7 @@
                             android:focusable="true"
                             android:fontFamily="@font/montserratmedium"
                             android:padding="4dp"
-                            android:text="View All"
+                            android:text="View All Clients"
                             android:textColor="@color/my_light_primary"
                             android:textSize="14sp" />
                     </LinearLayout>
@@ -657,7 +406,6 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
                         android:baselineAligned="false"
                         android:orientation="horizontal">
 
@@ -741,97 +489,6 @@
                                 android:textColor="@color/status_unpaid"
                                 android:textSize="16sp" />
                         </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- Top Customers Section -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Top Clients"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/topCustomersRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="visible"
-                        tools:itemCount="3"
-                        tools:listitem="@layout/item_customer" />
-
-                    <!-- Empty Customers State -->
-                    <LinearLayout
-                        android:id="@+id/emptyCustomersState"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="No customers yet"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Upcoming Events Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Upcoming Events"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="18sp" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/upcomingEventsRecyclerView"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:visibility="visible"
-                        tools:itemCount="2"
-                        tools:listitem="@layout/item_notification" />
-
-                    <!-- Empty Events State -->
-                    <LinearLayout
-                        android:id="@+id/emptyEventsState"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="16dp"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="No upcoming events"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

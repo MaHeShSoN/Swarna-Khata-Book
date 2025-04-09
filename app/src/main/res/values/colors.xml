@@ -65,4 +65,8 @@
 
     <color name="my_light_on_surface_variant">#544E3A</color>  <!-- A bit lighter/softer than my_light_on_surface -->
     <color name="status_unpaid_light">#FFCDD2</color>
+    <!-- Supplier/Wholesaler specific colors -->
+    <color name="supplier_button_color">#6B5B95</color>       <!-- Your existing my_light_tertiary (purple) -->
+    <color name="supplier_badge_color">#9C27B0</color>        <!-- Your existing color_purple, a bit more vibrant -->
+    <color name="supplier_text_color">#544E3A</color>
 </resources>

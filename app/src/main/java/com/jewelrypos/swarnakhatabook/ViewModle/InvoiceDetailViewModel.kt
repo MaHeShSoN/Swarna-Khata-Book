@@ -493,28 +493,38 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
         viewModelScope.launch {
             try {
+                // Ensure we have customer data if needed for the repository
+                if (_customer.value == null && currentInvoice.customerId.isNotEmpty()) {
+                    // Fetch customer data if we don't have it yet
+                    customerRepository.getCustomerById(currentInvoice.customerId).fold(
+                        onSuccess = { customer ->
+                            _customer.value = customer
+                        },
+                        onFailure = { /* Continue with deletion anyway */ }
+                    )
+                }
+
                 val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
                 result.fold(
                     onSuccess = {
                         _errorMessage.value = "Invoice deleted successfully"
-                        onComplete(true)  // Signal successful completion
+                        onComplete(true)
                     },
                     onFailure = { error ->
                         _errorMessage.value = "Failed to delete invoice: ${error.message}"
                         Log.e("InvoiceDetailViewModel", "Failed to delete invoice", error)
-                        onComplete(false)  // Signal failed completion
+                        onComplete(false)
                     }
                 )
             } catch (e: Exception) {
                 _errorMessage.value = "Error deleting invoice: ${e.message}"
                 Log.e("InvoiceDetailViewModel", "Error deleting invoice", e)
-                onComplete(false)  // Signal failed completion
+                onComplete(false)
             } finally {
                 _isLoading.value = false
             }
         }
     }
-
     // Improved customer balance update after invoices change
 //    private suspend fun updateCustomerBalance(oldInvoice: Invoice, newInvoice: Invoice) {
 //        // Only proceed if customer IDs match and we're working with the same customer

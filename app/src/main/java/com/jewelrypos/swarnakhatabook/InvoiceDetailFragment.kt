@@ -218,6 +218,15 @@ class InvoiceDetailFragment : Fragment() {
         binding.customerPhone.text = invoice.customerPhone
         binding.customerAddress.text = invoice.customerAddress
 
+        // First fetch the customer to determine the type
+        viewModel.customer.observe(viewLifecycleOwner) { customer ->
+            val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+            // Update UI based on customer type
+            updateUIForCustomerType(isWholesaler)
+        }
+
+
         // Update items list
         itemsAdapter.updateItems(invoice.items)
 
@@ -237,20 +246,75 @@ class InvoiceDetailFragment : Fragment() {
     }
 
 
+    private fun updateUIForCustomerType(isWholesaler: Boolean) {
+        if (isWholesaler) {
+            // Update for wholesaler/supplier
+            binding.topAppBar.title = "Purchase Order Details"
+            binding.customerSectionTitle.text = "Supplier Details"
+            binding.addItemsButton.text = "Add Purchase"
+            binding.itemsSectionTitle.text = "Items Purchased"
+            binding.paymentsSectionTitle.text = "Payments to Supplier"
+            binding.amountPaidLabel.text = "Amount Paid to Supplier:"
+            binding.balanceDueLabel.text = "Balance to Pay:"
+            binding.addPaymentButton.text = "Add Payment to Supplier"
+
+            // Apply wholesaler-specific colors
+            binding.topAppBar.setBackgroundColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.supplier_button_color
+                )
+            )
+            binding.printButton.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.supplier_text_color
+                )
+            )
+        } else {
+            // Reset to default consumer UI
+            binding.topAppBar.title = "Invoice Details"
+            binding.customerSectionTitle.text = "Customer Details"
+            binding.addItemsButton.text = "Add Item"
+            binding.itemsSectionTitle.text = "Items Sold"
+            binding.paymentsSectionTitle.text = "Payments"
+            binding.amountPaidLabel.text = "Amount Paid:"
+            binding.balanceDueLabel.text = "Balance Due:"
+            binding.addPaymentButton.text = "Add Payment"
+
+            // Reset to default colors
+            binding.topAppBar.setBackgroundColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.my_light_primary
+                )
+            )
+            binding.printButton.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.my_light_primary
+                )
+            )
+        }
+    }
+
     private fun updatePaymentStatus(invoice: Invoice) {
+        val isWholesaler =
+            viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
         val balanceDue = invoice.totalAmount - invoice.paidAmount
+
         val paymentStatus = when {
-            balanceDue <= 0 -> "PAID"
-            invoice.paidAmount > 0 -> "PARTIAL"
-            else -> "UNPAID"
+            balanceDue <= 0 -> if (isWholesaler) "PAID" else "PAID"
+            invoice.paidAmount > 0 -> if (isWholesaler) "PARTIALLY PAID" else "PARTIAL"
+            else -> if (isWholesaler) "TO PAY" else "UNPAID"
         }
         binding.paymentStatus.text = paymentStatus
 
         // Set status background color
         val statusColor = when (paymentStatus) {
             "PAID" -> R.color.status_paid
-            "PARTIAL" -> R.color.status_partial
-            else -> R.color.status_unpaid
+            "PARTIAL", "PARTIALLY PAID" -> R.color.status_partial
+            else -> if (isWholesaler) R.color.supplier_badge_color else R.color.status_unpaid
         }
         binding.paymentStatus.backgroundTintList =
             ContextCompat.getColorStateList(requireContext(), statusColor)
@@ -381,18 +445,37 @@ class InvoiceDetailFragment : Fragment() {
 
     private fun showAddPaymentBottomSheet() {
         val invoice = viewModel.invoice.value ?: return
+        val isWholesaler =
+            viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
+
         val totalAmount = invoice.totalAmount
         val paidAmount = invoice.paidAmount
         val dueAmount = totalAmount - paidAmount
 
         if (dueAmount <= 0) {
-            showErrorMessage("Invoice is already fully paid")
+            val message = if (isWholesaler)
+                "Purchase is already fully paid"
+            else
+                "Invoice is already fully paid"
+            showErrorMessage(message)
             return
         }
 
         val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
-        paymentSheet.setTitle("Add Payment")
-        paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
+        if (isWholesaler) {
+            paymentSheet.setTitle("Add Payment to Supplier")
+            paymentSheet.setDescription(
+                "Purchase Order Total: ₹${
+                    String.format(
+                        "%.2f",
+                        totalAmount
+                    )
+                }"
+            )
+        } else {
+            paymentSheet.setTitle("Add Payment")
+            paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
+        }
         paymentSheet.setAmount(dueAmount)
 
         paymentSheet.setOnPaymentAddedListener(object :
@@ -615,14 +698,18 @@ class InvoiceDetailFragment : Fragment() {
 
 
     private fun confirmDeleteInvoice() {
-        // Check if we came from CustomerInvoicesFragment
-        val fromCustomerInvoice = arguments?.getBoolean("FROM_CUSTOMER_INVOICE", false) ?: false
-        // Store the customerId for later use
-        val customerId = if (fromCustomerInvoice) viewModel.invoice.value?.customerId else null
+        val isWholesaler =
+            viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
+
+        val title = if (isWholesaler) "Delete Purchase Order" else "Delete Invoice"
+        val message = if (isWholesaler)
+            "Are you sure you want to delete this purchase order? This will remove items from your inventory and update supplier balance."
+        else
+            "Are you sure you want to delete this invoice? This will return items to your inventory and update customer balance."
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Delete Invoice")
-            .setMessage("Are you sure you want to delete this invoice? This action cannot be undone.")
+            .setTitle(title)
+            .setMessage(message)
             .setPositiveButton("Delete") { _, _ ->
                 // Show loading indicator
                 binding.progressBar.visibility = View.VISIBLE
@@ -635,36 +722,13 @@ class InvoiceDetailFragment : Fragment() {
                     requireActivity().runOnUiThread {
                         // Check if binding is still valid
                         val binding = _binding ?: return@runOnUiThread
-
                         binding.progressBar.visibility = View.GONE
 
                         if (success) {
                             // Post the event for refreshing the invoice list
                             EventBus.postInvoiceDeleted()
-
-                            try {
-                                if (fromCustomerInvoice && customerId != null) {
-                                    // Navigate back to CustomerDetailFragment with popUpTo
-                                    findNavController().navigate(
-                                        R.id.customerDetailFragment,
-                                        bundleOf("customerId" to customerId),
-                                        NavOptions.Builder()
-                                            .setPopUpTo(R.id.customerDetailFragment, true)
-                                            .build()
-                                    )
-                                } else {
-                                    // Regular navigation up for other cases
-                                    findNavController().navigateUp()
-                                }
-                            } catch (e: Exception) {
-                                Log.e("InvoiceDetailFragment", "Navigation error after deletion", e)
-                                // Try fallback navigation
-                                try {
-                                    findNavController().popBackStack()
-                                } catch (e: Exception) {
-                                    Log.e("InvoiceDetailFragment", "Fallback navigation failed", e)
-                                }
-                            }
+                            // Navigate back
+                            findNavController().navigateUp()
                         } else {
                             // Show error message if deletion failed
                             Toast.makeText(

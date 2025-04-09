@@ -262,21 +262,103 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     private fun updateCustomerSection(customer: Customer) {
+        // Check if the customer is a wholesaler
+        val isWholesaler = customer.customerType.equals("Wholesaler", ignoreCase = true)
+
+        // Update UI elements based on customer type
+        if (isWholesaler) {
+            // Update section titles and labels for wholesaler (supplier)
+            binding.titleTextView.text = "Create Purchase Order"
+            binding.customerSectionTitle.text = "Supplier Details"
+            binding.itemsSectionTitle.text = "Items Purchased From Supplier"
+            binding.paymentsSectionTitle.text = "Payments To Supplier"
+            binding.amountPaidLabel.text = "Amount Paid To Supplier:"
+            binding.balanceDueLabel.text = "Balance To Pay:"
+            binding.saveButton.text = "Save Purchase"
+            binding.saveButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+            binding.selectCustomerButton.text = "Select Supplier"
+            binding.selectAddItemForFirstTimeButton.text = "Add Purchase Item"
+            binding.addItemButton.text = "+ Add Purchase"
+            binding.addPaymentButton.text = "+ Add Payment"
+            binding.NoTextAddedId.text = "No Items Purchased"
+
+            // Optionally change colors to visually differentiate
+            binding.saveButton.setBackgroundColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.supplier_button_color
+                )
+            )
+            binding.titleTextView.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.supplier_text_color
+                )
+            )
+            binding.paymentStatusBadge.backgroundTintList =
+                ContextCompat.getColorStateList(requireContext(), R.color.supplier_badge_color)
+        } else {
+            // Reset UI elements for normal consumer customer
+            binding.titleTextView.text = "Create Invoice"
+            binding.customerSectionTitle.text = "Customer Details"
+            binding.itemsSectionTitle.text = "Items Sold"
+            binding.paymentsSectionTitle.text = "Payments"
+            binding.amountPaidLabel.text = "Amount Paid:"
+            binding.balanceDueLabel.text = "Balance Due:"
+            binding.saveButton.text = "Save Invoice"
+            binding.selectCustomerButton.text = "Select Customer"
+            binding.selectAddItemForFirstTimeButton.text = "Add Item"
+            binding.addItemButton.text = "+ Add Item"
+            binding.addPaymentButton.text = "+ Add Payment"
+            binding.NoTextAddedId.text = "No Items Added"
+
+            // Reset colors to default
+            binding.saveButton.setBackgroundColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.my_light_primary
+                )
+            )
+            binding.titleTextView.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    R.color.my_light_on_surface
+                )
+            )
+            binding.paymentStatusBadge.backgroundTintList =
+                ContextCompat.getColorStateList(requireContext(), R.color.status_unpaid)
+        }
+
+        // Update notes hint based on customer type
+        binding.notesInputLayout.hint =
+            if (isWholesaler) "Add notes for this purchase" else "Add notes for this invoice"
+
+        // Change payment status badge text for wholesalers
+        binding.paymentStatusBadge.text = if (isWholesaler) "TO PAY" else "UNPAID"
+
+        // Show customer/supplier details
         binding.noCustomerSelected.visibility = View.GONE
         binding.customerDetailsLayout.visibility = View.VISIBLE
         binding.customerSectionTitle.visibility = View.VISIBLE
         binding.editCustomerButton.visibility = View.VISIBLE
 
+        // Set customer/supplier name and contact info
         binding.customerName.text = "${customer.firstName} ${customer.lastName}"
         binding.customerPhone.text = customer.phoneNumber
 
-        // Use the formatter for better display of currency values
+        // Use formatter for better display of currency values
         val formatter = DecimalFormat("#,##,##0.00")
 
-        // First check if there's a current balance to display
+        // Adjust balance display based on customer type and balance type
         val balanceText = when {
             customer.currentBalance != 0.0 -> {
                 when {
+                    isWholesaler && customer.balanceType == "Debit" && customer.currentBalance > 0 ->
+                        "They Owe: ₹${formatter.format(customer.currentBalance)}"
+
+                    isWholesaler && customer.balanceType == "Credit" && customer.currentBalance > 0 ->
+                        "You Owe: ₹${formatter.format(customer.currentBalance)}"
+
                     customer.balanceType == "Credit" && customer.currentBalance > 0 ->
                         "To Receive: ₹${formatter.format(customer.currentBalance)}"
 
@@ -287,6 +369,12 @@ class InvoiceCreationFragment : Fragment() {
                 }
             }
             // Otherwise fall back to opening balance
+            isWholesaler && customer.balanceType == "Debit" && customer.openingBalance > 0 ->
+                "They Owe: ₹${formatter.format(customer.openingBalance)}"
+
+            isWholesaler && customer.balanceType == "Credit" && customer.openingBalance > 0 ->
+                "You Owe: ₹${formatter.format(customer.openingBalance)}"
+
             customer.balanceType == "Credit" && customer.openingBalance > 0 ->
                 "To Receive: ₹${formatter.format(customer.openingBalance)}"
 
@@ -297,12 +385,16 @@ class InvoiceCreationFragment : Fragment() {
         }
         binding.customerBalance.text = balanceText
 
+        // Set customer/supplier address
         val address = if (customer.streetAddress.isNotEmpty()) {
             "${customer.streetAddress}, ${customer.city}"
         } else {
             "${customer.city}, ${customer.state}"
         }
         binding.customerAddress.text = address
+
+        // Store customer type in Tag for later use in other methods
+        binding.customerCard.tag = if (isWholesaler) "wholesaler" else "consumer"
     }
 
     private fun selectCustomer() {
@@ -623,7 +715,8 @@ class InvoiceCreationFragment : Fragment() {
         val invoice = Invoice(
             invoiceNumber = generateInvoiceNumber(),
             customerId = salesViewModel.selectedCustomer.value?.id ?: "",
-            customerName = salesViewModel.selectedCustomer.value?.let { "${it.firstName} ${it.lastName}" } ?: "",
+            customerName = salesViewModel.selectedCustomer.value?.let { "${it.firstName} ${it.lastName}" }
+                ?: "",
             customerPhone = salesViewModel.selectedCustomer.value?.phoneNumber ?: "",
             customerAddress = salesViewModel.selectedCustomer.value?.let {
                 "${it.streetAddress}, ${it.city}, ${it.state}"
@@ -677,6 +770,7 @@ class InvoiceCreationFragment : Fragment() {
             }
         }
     }
+
     private fun sharePdfFile(pdfFile: File) {
         try {
             val uri = FileProvider.getUriForFile(

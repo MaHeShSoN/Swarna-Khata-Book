@@ -93,15 +93,28 @@ class InvoiceRepository(
                 val customer = customerDoc.toObject(Customer::class.java)
 
                 customer?.let {
+
+                    val isWholesaler = it.customerType.equals("Wholesaler", ignoreCase = true)
+
+
                     // Apply balance change based on customer type
-                    val finalBalanceChange = if (it.balanceType.uppercase() == "DEBIT") {
-                        -balanceChange  // Inverse for debit customers
+                    val finalBalanceChange = if (isWholesaler) {
+                        // For wholesalers (suppliers), the balance change is reversed
+                        // We're buying from them, so we owe them money (or reduce what they owe us)
+                        if (it.balanceType.uppercase() == "DEBIT") {
+                            balanceChange  // For debit wholesalers: positive means we owe them
+                        } else {
+                            -balanceChange // For credit wholesalers: negative means they owe us less
+                        }
                     } else {
-                        balanceChange   // Normal for credit customers
+                        // Standard consumer logic (existing code)
+                        if (it.balanceType.uppercase() == "DEBIT") {
+                            -balanceChange  // Inverse for debit customers
+                        } else {
+                            balanceChange   // Normal for credit customers
+                        }
                     }
-
                     val newBalance = it.currentBalance + finalBalanceChange
-
                     Log.d(TAG, "Customer balance update: customer=${it.firstName} ${it.lastName}, " +
                             "oldBalance=${it.currentBalance}, change=$finalBalanceChange, newBalance=$newBalance, type=${it.balanceType}")
 
@@ -205,8 +218,18 @@ class InvoiceRepository(
 
     // Separate method for inventory stock update
     private suspend fun updateInventoryStock(invoice: Invoice) {
+
+        // Get the customer to check if they're a wholesaler
+        val customerDoc = getUserCollection("customers")
+            .document(invoice.customerId)
+            .get()
+            .await()
+
+        val customer = customerDoc.toObject<Customer>()
+        val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
         invoice.items.forEach { invoiceItem ->
-            if (invoiceItem.itemDetails.stock > 0) {
+            if (invoiceItem.itemDetails.stock > 0 || isWholesaler) {
                 try {
                     val inventoryItemDoc = getUserCollection("inventory")
                         .document(invoiceItem.itemId)
@@ -216,7 +239,12 @@ class InvoiceRepository(
                     val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
 
                     currentItem?.let {
-                        val newStock = maxOf(0.0, it.stock - invoiceItem.quantity)
+                        val newStock = if (isWholesaler) {
+                            it.stock + invoiceItem.quantity  // Add to stock for wholesalers
+                        } else {
+                            maxOf(0.0, it.stock - invoiceItem.quantity)  // Regular logic for consumers
+                        }
+
                         getUserCollection("inventory")
                             .document(invoiceItem.itemId)
                             .update("stock", newStock)
@@ -263,7 +291,7 @@ class InvoiceRepository(
             // Log deletion attempt for debugging
             Log.d(TAG, "Attempting to delete invoice: $invoiceNumber")
 
-            // Get the invoice first to properly update customer balance
+            // Get the invoice first to properly update customer balance and inventory
             val invoiceDoc = getUserCollection("invoices")
                 .document(invoiceNumber)
                 .get()
@@ -275,24 +303,30 @@ class InvoiceRepository(
                 return Result.failure(Exception("Invoice not found"))
             }
 
-            // Log details about the invoice being deleted
-            Log.d(TAG, "Deleting invoice: $invoiceNumber, total: ${invoice.totalAmount}, paid: ${invoice.paidAmount}")
+            // Get customer to determine type (consumer vs wholesaler)
+            val customerDoc = getUserCollection("customers")
+                .document(invoice.customerId)
+                .get()
+                .await()
+
+            val customer = customerDoc.toObject<Customer>()
+            val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+            Log.d(TAG, "Deleting invoice: $invoiceNumber, customer type: ${if (isWholesaler) "Wholesaler" else "Consumer"}")
+
+            // Update inventory based on customer type
+            updateInventoryOnDeletion(invoice, isWholesaler)
+
+            // Update customer balance based on customer type and balance type
+            if (invoice.customerId.isNotEmpty() && customer != null) {
+                updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+            }
 
             // Delete the invoice document
             getUserCollection("invoices")
                 .document(invoiceNumber)
                 .delete()
                 .await()
-
-            // Update customer balance if needed
-            if (invoice.customerId.isNotEmpty()) {
-                try {
-                    updateCustomerBalanceOnDeletion(invoice)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error updating customer balance during deletion", e)
-                    // Continue with deletion even if balance update fails
-                }
-            }
 
             Log.d(TAG, "Successfully deleted invoice: $invoiceNumber")
             return Result.success(Unit)
@@ -302,29 +336,103 @@ class InvoiceRepository(
         }
     }
 
-    // Separate method to revert customer balance during invoice deletion
-    private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice) {
+    // Update inventory differently based on customer type
+    private suspend fun updateInventoryOnDeletion(invoice: Invoice, isWholesaler: Boolean) {
+        invoice.items.forEach { item ->
+            try {
+                val inventoryItemDoc = getUserCollection("inventory")
+                    .document(item.itemId)
+                    .get()
+                    .await()
+
+                val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
+
+                currentItem?.let {
+                    // For consumer: ADD back to inventory
+                    // For wholesaler: REMOVE from inventory (since we added when created)
+                    val newStock = if (isWholesaler) {
+                        // Wholesaler purchase gets removed from inventory
+                        maxOf(0.0, it.stock - item.quantity)
+                    } else {
+                        // Consumer sale gets added back to inventory
+                        it.stock + item.quantity
+                    }
+
+                    getUserCollection("inventory")
+                        .document(item.itemId)
+                        .update("stock", newStock)
+                        .await()
+
+                    Log.d(TAG, "Updated inventory for item ${item.itemId}: new stock = $newStock")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating inventory for item ${item.itemId}", e)
+            }
+        }
+    }
+    // Update customer balance based on customer type and balance type
+    private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice, customer: Customer, isWholesaler: Boolean) {
         try {
             val unpaidAmount = invoice.totalAmount - invoice.paidAmount
 
-            val customerDoc = getUserCollection("customers")
+            // The balance change depends on:
+            // 1. Customer type (consumer vs wholesaler)
+            // 2. Balance type (credit vs debit)
+
+            val finalBalanceChange = if (isWholesaler) {
+                // For wholesaler:
+                if (customer.balanceType.uppercase() == "DEBIT") {
+                    -unpaidAmount  // Decrease what we owe them
+                } else {
+                    unpaidAmount   // Increase what they owe us
+                }
+            } else {
+                // For consumer:
+                if (customer.balanceType.uppercase() == "DEBIT") {
+                    unpaidAmount  // Increase what we owe them
+                } else {
+                    -unpaidAmount // Decrease what they owe us
+                }
+            }
+
+            val newBalance = customer.currentBalance + finalBalanceChange
+
+            Log.d(TAG, "Updating balance on delete: customerType=${if (isWholesaler) "Wholesaler" else "Consumer"}, " +
+                    "balanceType=${customer.balanceType}, oldBalance=${customer.currentBalance}, " +
+                    "newBalance=$newBalance, change=$finalBalanceChange")
+
+            getUserCollection("customers")
                 .document(invoice.customerId)
-                .get()
+                .update("currentBalance", newBalance)
                 .await()
 
-            val customer = customerDoc.toObject<Customer>()
-
-            customer?.let {
-                val newBalance = it.currentBalance - unpaidAmount
-                getUserCollection("customers")
-                    .document(invoice.customerId)
-                    .update("currentBalance", newBalance)
-                    .await()
-            }
         } catch (e: Exception) {
             Log.e(TAG, "Error updating customer balance during invoice deletion", e)
         }
     }
+    // Separate method to revert customer balance during invoice deletion
+//    private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice) {
+//        try {
+//            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
+//
+//            val customerDoc = getUserCollection("customers")
+//                .document(invoice.customerId)
+//                .get()
+//                .await()
+//
+//            val customer = customerDoc.toObject<Customer>()
+//
+//            customer?.let {
+//                val newBalance = it.currentBalance - unpaidAmount
+//                getUserCollection("customers")
+//                    .document(invoice.customerId)
+//                    .update("currentBalance", newBalance)
+//                    .await()
+//            }
+//        } catch (e: Exception) {
+//            Log.e(TAG, "Error updating customer balance during invoice deletion", e)
+//        }
+//    }
 
     // Optimized paginated invoice fetching
     suspend fun fetchInvoicesPaginated(
