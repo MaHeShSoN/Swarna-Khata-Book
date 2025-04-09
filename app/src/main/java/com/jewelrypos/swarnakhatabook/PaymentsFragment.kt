@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -15,11 +16,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.PaymentWithContextAdapter
-import com.jewelrypos.swarnakhatabook.Adapters.PaymentsAdapter
-import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.Factorys.PaymentsViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
-import com.jewelrypos.swarnakhatabook.Repository.PaymentsRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel.PaymentWithContext
 import com.jewelrypos.swarnakhatabook.databinding.FragmentPaymentsBinding
@@ -67,6 +65,8 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
 
     private fun setupPeriodSpinner() {
         val periods = arrayOf("Today", "This Week", "This Month", "This Year", "All Time")
+
+        // Create adapter with appropriate styling
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_item,
@@ -78,13 +78,19 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
         // Default to "This Month"
         binding.periodSelector.setSelection(2)
 
-        binding.periodSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                // Filter payments based on selected period
-                paymentsViewModel.filterPaymentsByPeriod(periods[position])
-            }
+        // Set listener after adapter is set to avoid initial callback
+        binding.periodSelector.post {
+            binding.periodSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    // Show progress indicator
+                    binding.progressBar.visibility = View.VISIBLE
 
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+                    // Filter payments based on selected period
+                    paymentsViewModel.filterPaymentsByPeriod(periods[position])
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            }
         }
     }
 
@@ -98,33 +104,73 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
     }
 
     private fun setupObservers() {
+        // Observe payments list
         paymentsViewModel.filteredPayments.observe(viewLifecycleOwner) { payments ->
             paymentsAdapter.updatePayments(payments)
             updatePaymentMetrics(payments)
+
+            // Show empty state if needed
+            binding.emptyStateLayout.visibility = if (payments.isEmpty()) View.VISIBLE else View.GONE
+
+            // Hide progress indicator
+            binding.progressBar.visibility = View.GONE
         }
 
+        // Observe total amount
         paymentsViewModel.totalCollected.observe(viewLifecycleOwner) { totalCollected ->
             val formatter = DecimalFormat("#,##,##0.00")
             binding.totalCollectedValue.text = "₹${formatter.format(totalCollected)}"
         }
+
+        // Observe loading state
+        paymentsViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+
+        // Observe error messages
+        paymentsViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
+            if (!errorMessage.isNullOrEmpty()) {
+                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show()
+                binding.progressBar.visibility = View.GONE
+            }
+        }
     }
 
     override fun onPaymentClick(payment: PaymentWithContext) {
-        // Handle payment click
-        // For example, navigate to invoice details or show more information
-//        val action = PaymentsFragmentDirections.actionPaymentsFragmentToInvoiceDetailFragment(payment.invoiceNumber)
-//        findNavController().navigate(action)
+        // Navigate to invoice detail screen using the invoice number from the payment
+        if (!payment.invoiceNumber.isNullOrEmpty()) {
+            val action = PaymentsFragmentDirections.actionPaymentsFragmentToInvoiceDetailFragment(payment.invoiceNumber)
+            findNavController().navigate(action)
+        } else {
+            Toast.makeText(requireContext(), "Invoice information not available", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun updatePaymentMetrics(payments: List<PaymentWithContext>) {
-        // Update payment method breakdown
-        val paymentMethodBreakdown = payments.groupBy { it.payment.method }
+        // Group payments by method and sum the amounts
+        val paymentMethodBreakdown = payments.groupBy {
+            it.payment.method.lowercase() // Normalize method names to lowercase
+        }
             .mapValues { it.value.sumOf { paymentContext -> paymentContext.payment.amount } }
 
-        binding.cashPaymentValue.text = "₹${formatAmount(paymentMethodBreakdown["Cash"] ?: 0.0)}"
-        binding.upiPaymentValue.text = "₹${formatAmount(paymentMethodBreakdown["UPI"] ?: 0.0)}"
-        binding.cardPaymentValue.text = "₹${formatAmount(paymentMethodBreakdown["Card"] ?: 0.0)}"
-        binding.otherPaymentValue.text = "₹${formatAmount(paymentMethodBreakdown["Other"] ?: 0.0)}"
+        // Display amounts for each payment method, handling both upper and lowercase variants
+        binding.cashPaymentValue.text = "₹${formatAmount(
+            paymentMethodBreakdown["cash"] ?: paymentMethodBreakdown["Cash"] ?: 0.0
+        )}"
+        binding.upiPaymentValue.text = "₹${formatAmount(
+            paymentMethodBreakdown["upi"] ?: paymentMethodBreakdown["UPI"] ?: 0.0
+        )}"
+        binding.cardPaymentValue.text = "₹${formatAmount(
+            paymentMethodBreakdown["card"] ?: paymentMethodBreakdown["Card"] ?: 0.0
+        )}"
+
+        // Calculate "Other" as total of all methods not explicitly handled
+        val knownMethods = setOf("cash", "upi", "card", "Cash", "UPI", "Card")
+        val otherAmount = paymentMethodBreakdown
+            .filterKeys { it !in knownMethods }
+            .values.sum()
+
+        binding.otherPaymentValue.text = "₹${formatAmount(otherAmount)}"
     }
 
     private fun formatAmount(amount: Double): String {

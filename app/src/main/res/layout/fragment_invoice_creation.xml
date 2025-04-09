@@ -41,6 +41,55 @@
             app:layout_constraintTop_toTopOf="@id/titleTextView"
             tools:backgroundTint="@color/status_unpaid" />
 
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/invoiceDateCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
+            app:layout_constraintTop_toBottomOf="@id/titleTextView"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratmedium"
+                    android:text="Invoice Date:"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/invoiceDateText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:fontFamily="@font/montserratregular"
+                    android:text="Today"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
+
+                <ImageButton
+                    android:id="@+id/changeDateButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/material_symbols__date_range_rounded"
+                    android:contentDescription="Change date"
+                    app:tint="@color/my_light_primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
         <!-- Customer Section -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/customerCard"
@@ -50,7 +99,7 @@
             app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
-            app:layout_constraintTop_toBottomOf="@id/titleTextView"
+            app:layout_constraintTop_toBottomOf="@id/invoiceDateCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
 

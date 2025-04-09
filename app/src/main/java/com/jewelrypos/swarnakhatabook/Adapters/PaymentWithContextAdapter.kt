@@ -1,6 +1,5 @@
 package com.jewelrypos.swarnakhatabook.Adapters
 
-
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,7 +7,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel.PaymentWithContext
 import java.text.DecimalFormat
@@ -18,67 +16,67 @@ import java.util.Locale
 
 class PaymentWithContextAdapter(
     private var payments: List<PaymentWithContext>
-) : RecyclerView.Adapter<PaymentWithContextAdapter.PaymentWithContextViewHolder>() {
+) : RecyclerView.Adapter<PaymentWithContextAdapter.PaymentViewHolder>() {
 
     interface OnPaymentClickListener {
         fun onPaymentClick(payment: PaymentWithContext)
     }
 
-    private var clickListener: OnPaymentClickListener? = null
+    private var listener: OnPaymentClickListener? = null
 
     fun setOnPaymentClickListener(listener: OnPaymentClickListener) {
-        this.clickListener = listener
+        this.listener = listener
     }
 
-    class PaymentWithContextViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class PaymentViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val paymentIcon: ImageView = itemView.findViewById(R.id.paymentIcon)
         val invoiceNumberText: TextView = itemView.findViewById(R.id.invoiceNumberText)
         val customerNameText: TextView = itemView.findViewById(R.id.customerNameText)
         val paymentAmountText: TextView = itemView.findViewById(R.id.paymentAmountText)
         val paymentMethodText: TextView = itemView.findViewById(R.id.paymentMethodText)
         val paymentDateText: TextView = itemView.findViewById(R.id.paymentDateText)
-        val paymentIcon: ImageView = itemView.findViewById(R.id.paymentIcon)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PaymentWithContextViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PaymentViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_payment_with_context, parent, false)
-        return PaymentWithContextViewHolder(view)
+        return PaymentViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: PaymentWithContextViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: PaymentViewHolder, position: Int) {
         val paymentContext = payments[position]
         val payment = paymentContext.payment
+        val formatter = DecimalFormat("#,##,##0.00")
 
-        // Format amount
-        val amountFormatter = DecimalFormat("#,##,##0.00")
-        holder.paymentAmountText.text = "₹${amountFormatter.format(payment.amount)}"
+        // Set amount
+        holder.paymentAmountText.text = "₹${formatter.format(payment.amount)}"
 
-        // Set invoice number
-        holder.invoiceNumberText.text = paymentContext.invoiceNumber
-
-        // Set customer name
-        holder.customerNameText.text = paymentContext.customerName
-
-        // Set payment method
+        // Set method
         holder.paymentMethodText.text = payment.method
 
-        // Format date
+        // Format date with time
         val dateFormatter = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
         holder.paymentDateText.text = dateFormatter.format(Date(payment.date))
 
-        // Set payment method icon
+        // Set customer name and invoice number
+        holder.customerNameText.text = paymentContext.customerName ?: "Unknown Customer"
+        holder.invoiceNumberText.text = paymentContext.invoiceNumber ?: "No Invoice"
+
+        // Set icon based on payment method
         val iconResId = when (payment.method.lowercase()) {
             "cash" -> R.drawable.mdi__cash
-            "upi" -> R.drawable.material_symbols__upi_pay
             "card" -> R.drawable.ic_payment_card
+            "upi" -> R.drawable.material_symbols__upi_pay
             "bank transfer" -> R.drawable.mdi__bank
+            "gold exchange" -> R.drawable.uil__gold
+            "silver exchange" -> R.drawable.uil__gold
             else -> R.drawable.mdi__currency_inr
         }
         holder.paymentIcon.setImageResource(iconResId)
 
-        // Set click listener
+        // Set click listener for the whole item
         holder.itemView.setOnClickListener {
-            clickListener?.onPaymentClick(paymentContext)
+            listener?.onPaymentClick(paymentContext)
         }
     }
 
@@ -104,7 +102,14 @@ class PaymentWithContextAdapter(
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition] == newList[newItemPosition]
+            val oldPayment = oldList[oldItemPosition]
+            val newPayment = newList[newItemPosition]
+            return oldPayment.payment.id == newPayment.payment.id &&
+                    oldPayment.payment.amount == newPayment.payment.amount &&
+                    oldPayment.payment.method == newPayment.payment.method &&
+                    oldPayment.payment.date == newPayment.payment.date &&
+                    oldPayment.customerName == newPayment.customerName &&
+                    oldPayment.invoiceNumber == newPayment.invoiceNumber
         }
     }
 }

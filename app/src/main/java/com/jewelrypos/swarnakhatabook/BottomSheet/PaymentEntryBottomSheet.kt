@@ -5,6 +5,7 @@ import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +22,7 @@ import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetpaymententryBinding
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 // PaymentEntryBottomSheet.kt
@@ -216,7 +218,10 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         val upiApps = listOf("PhonePe", "Google Pay", "Paytm", "BHIM", "Amazon Pay", "Other")
         val adapter =
             ArrayAdapter(requireContext(), R.layout.dropdown_item, upiApps)
-        upiAppDropdown.setAdapter(adapter)
+        upiAppDropdown.apply {
+            setAdapter(adapter)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
     }
 
     private fun showBankTransferFields() {
@@ -235,14 +240,6 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             bankFields.findViewById<TextInputEditText>(R.id.accountNumberEditText)
         val bankNameDropdown = bankFields.findViewById<AutoCompleteTextView>(R.id.bankNameDropdown)
 
-        // Add date picker for transaction date
-        val transactionDateLayout = bankFields.findViewById<TextInputLayout>(R.id.transactionDateLayout)
-        val transactionDateEditText = bankFields.findViewById<TextInputEditText>(R.id.transactionDateEditText)
-
-        // Set up date picker
-        transactionDateEditText.setOnClickListener {
-            showDatePicker(transactionDateEditText)
-        }
 
 
 
@@ -302,7 +299,6 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
 
         datePickerDialog.show()
     }
-
 
 
     private fun showOldGoldFields() {
@@ -469,6 +465,16 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
+        // Add date picker field setup
+        val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        binding.paymentDateEditText.setText(dateFormat.format(Date()))
+
+        // Set up date picker on click
+        binding.paymentDateEditText.setOnClickListener {
+            showDatePicker(binding.paymentDateEditText)
+        }
+
+
         binding.cancelButton.setOnClickListener {
             dismiss()
         }
@@ -553,102 +559,27 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
     }
 
 
-//    private fun validatePayment(): Boolean {
-//        val amount = binding.amountEditText.text.toString().toDoubleOrNull()
-//        if (amount == null || amount <= 0) {
-//            binding.amountInputLayout.error = "Please enter a valid amount"
-//            return false
-//        }
-//
-//        if (amount > (invoiceTotal - amountPaid)) {
-//            binding.amountInputLayout.error = "Amount exceeds remaining balance"
-//            return false
-//        }
-//
-//        if (binding.paymentMethodDropdown.text.isNullOrEmpty()) {
-//            binding.paymentMethodLayout.error = "Please select a payment method"
-//            return false
-//        }
-//
-//        // Validate additional fields based on payment method
-//
-//        return true
-//    }
-
-//    private fun createPaymentFromForm(): Payment {
-//        val method = binding.paymentMethodDropdown.text.toString()
-//
-//        // Determine amount based on payment method
-//        val amount = when (method) {
-//            "Old Gold" -> {
-//                // Get the gold value from the value field
-//                val goldValueField = binding.additionalFieldsContainer
-//                    .findViewById<TextInputEditText>(R.id.goldValueEditText)
-//                goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//
-//            "Old Silver" -> {
-//                // Get the silver value from the value field
-//                val silverValueField = binding.additionalFieldsContainer
-//                    .findViewById<TextInputEditText>(R.id.silverValueEditText)
-//                silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//
-//            else -> {
-//                // For other payment methods, use the amount field
-//                binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//        }
-
-    //        return Payment(
-//            id = "", // Will be set by the Invoice fragment
-//            amount = amount,
-//            method = method,
-//            date = System.currentTimeMillis(),
-//            reference = binding.referenceEditText.text.toString(),
-//            notes = binding.notesEditText.text.toString()
-//        )
-//    }
-//    private fun createPaymentFromForm(): Payment {
-//        val method = binding.paymentMethodDropdown.text.toString()
-//
-//        // Determine amount based on payment method
-//        val amount = when (method) {
-//            "Old Gold" -> {
-//                // Get the gold value from the value field
-//                val goldValueField = binding.additionalFieldsContainer
-//                    .findViewById<TextInputEditText>(R.id.goldValueEditText)
-//                goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//
-//            "Old Silver" -> {
-//                // Get the silver value from the value field
-//                val silverValueField = binding.additionalFieldsContainer
-//                    .findViewById<TextInputEditText>(R.id.silverValueEditText)
-//                silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//
-//            else -> {
-//                // For other payment methods, use the amount field
-//                binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
-//            }
-//        }
-//
-//        return Payment(
-//            amount = amount,
-//            method = method,
-//            date = System.currentTimeMillis(),
-//            reference = binding.referenceEditText.text.toString(),
-//            notes = binding.notesEditText.text.toString()
-//        )
-//    }
-
     private fun createPaymentFromForm(): Payment {
         val method = binding.paymentMethodDropdown.text.toString()
+        var paymentDate = System.currentTimeMillis() // Default to current time
+        try {
+            val dateStr = binding.paymentDateEditText.text.toString()
+            val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            val date = dateFormat.parse(dateStr)
+            if (date != null) {
+                paymentDate = date.time // This should be a Long timestamp
+            }
+        } catch (e: Exception) {
+            // Use default current time if parsing fails
+            Log.e("PaymentEntry", "Error parsing date", e)
+        }
+
+
+
 
         // Create a map for method-specific details
         val details = mutableMapOf<String, Any>()
-        var paymentDate = System.currentTimeMillis()
+
         // Handle method-specific fields
         when (method) {
             "Bank Transfer" -> {
@@ -661,28 +592,11 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                     .findViewById<TextInputEditText>(R.id.accountNumberEditText)
                 val accountNumber = accountNumberField?.text?.toString() ?: ""
 
-                // Get transaction date and use it as the payment date
-                val transactionDateField = binding.additionalFieldsContainer
-                    .findViewById<TextInputEditText>(R.id.transactionDateEditText)
-                val transactionDateStr = transactionDateField?.text?.toString() ?: ""
-
-                if (transactionDateStr.isNotEmpty()) {
-                    // Parse the transaction date and use it for the payment date
-                    try {
-                        val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                        val date = dateFormat.parse(transactionDateStr)
-                        if (date != null) {
-                            paymentDate = date.time
-                        }
-                    } catch (e: Exception) {
-                        // If parsing fails, keep using current time
-                    }
-                }
 
                 // Add to details map
                 if (bankName.isNotEmpty()) details["bankName"] = bankName
                 if (accountNumber.isNotEmpty()) details["accountNumber"] = accountNumber
-                if (transactionDateStr.isNotEmpty()) details["transactionDateStr"] = transactionDateStr
+
             }
 
             "Card" -> {
@@ -707,9 +621,12 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                 val upiAppDropdown = binding.additionalFieldsContainer
                     .findViewById<AutoCompleteTextView>(R.id.upiAppDropdown)
                 val upiApp = upiAppDropdown?.text?.toString() ?: ""
+                val upiID = binding.additionalFieldsContainer
+                    .findViewById<TextInputEditText>(R.id.upiIdEditText).text.toString()
 
                 // Add to details map
                 if (upiApp.isNotEmpty()) details["upiApp"] = upiApp
+                if (upiID.isNotEmpty()) details["upiID"] = upiID
             }
 
             "Gold Exchange" -> {
@@ -758,11 +675,13 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                     .findViewById<TextInputEditText>(R.id.goldValueEditText)
                 goldValueField?.text.toString().toDoubleOrNull() ?: 0.0
             }
+
             "Silver Exchange" -> {
                 val silverValueField = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.silverValueEditText)
                 silverValueField?.text.toString().toDoubleOrNull() ?: 0.0
             }
+
             else -> {
                 binding.amountEditText.text.toString().toDoubleOrNull() ?: 0.0
             }
@@ -793,19 +712,21 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                 // UPI references are typically alphanumeric - ensure uppercase
                 reference.uppercase()
             }
+
             "Bank Transfer" -> {
                 // Bank transfer references (UTR numbers) are 22 characters for NEFT/RTGS
                 // Just trim whitespace and ensure uppercase
                 reference.uppercase()
             }
+
             "Card" -> {
                 // Card authorization codes are typically 6 characters
                 reference.uppercase()
             }
+
             else -> reference
         }
     }
-
 
 
     fun setInvoiceDetails(invoiceTotal: Double, amountPaid: Double) {

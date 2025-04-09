@@ -182,5 +182,9 @@
         android:id="@+id/paymentsFragment"
         android:name="com.jewelrypos.swarnakhatabook.PaymentsFragment"
         android:label="fragment_payments"
-        tools:layout="@layout/fragment_payments" />
+        tools:layout="@layout/fragment_payments" >
+        <action
+            android:id="@+id/action_paymentsFragment_to_invoiceDetailFragment"
+            app:destination="@id/invoiceDetailFragment" />
+    </fragment>
 </navigation>

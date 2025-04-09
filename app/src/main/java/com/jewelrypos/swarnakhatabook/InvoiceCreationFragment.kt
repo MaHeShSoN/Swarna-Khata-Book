@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
@@ -50,6 +51,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
@@ -58,6 +60,9 @@ class InvoiceCreationFragment : Fragment() {
 
     private var _binding: FragmentInvoiceCreationBinding? = null
     private val binding get() = _binding!!
+
+    private var selectedInvoiceDate = System.currentTimeMillis()
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
     private val salesViewModel: SalesViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
@@ -93,6 +98,7 @@ class InvoiceCreationFragment : Fragment() {
 
         initializeViews()
         setupListeners()
+        setupDatePicker()
         observePayments()
 
         // Check for a customer ID passed as an argument first
@@ -407,6 +413,45 @@ class InvoiceCreationFragment : Fragment() {
         customerListBottomSheet.show(parentFragmentManager, CustomerListBottomSheet.TAG)
     }
 
+    private fun setupDatePicker() {
+        // Initialize with current date
+        updateDateDisplay()
+
+        binding.changeDateButton.setOnClickListener {
+            showDatePickerDialog()
+        }
+    }
+
+    private fun updateDateDisplay() {
+        binding.invoiceDateText.text = dateFormat.format(Date(selectedInvoiceDate))
+    }
+
+    private fun showDatePickerDialog() {
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = selectedInvoiceDate
+
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, selectedYear, selectedMonth, selectedDay ->
+                calendar.set(selectedYear, selectedMonth, selectedDay)
+                selectedInvoiceDate = calendar.timeInMillis
+                updateDateDisplay()
+            },
+            year, month, day
+        )
+
+        // Set date range if needed
+        // For example, you might not want to allow future dates
+        val today = Calendar.getInstance()
+        datePickerDialog.datePicker.maxDate = today.timeInMillis
+
+        datePickerDialog.show()
+    }
+
     private fun selectItems() {
         val itemSelectionSheet = ItemSelectionBottomSheet.newInstance()
         itemSelectionSheet.setOnItemSelectedListener(object :
@@ -475,7 +520,8 @@ class InvoiceCreationFragment : Fragment() {
                     method = payment.method,
                     date = payment.date,
                     reference = payment.reference,
-                    notes = payment.notes
+                    notes = payment.notes,
+                    details = payment.details,
                 )
 
                 // Add to view model
@@ -618,7 +664,7 @@ class InvoiceCreationFragment : Fragment() {
                 customerName = "${customer.firstName} ${customer.lastName}",
                 customerPhone = customer.phoneNumber,
                 customerAddress = address,
-                invoiceDate = System.currentTimeMillis(),
+                invoiceDate = selectedInvoiceDate,
                 items = invoiceItems,
                 payments = payments,
                 totalAmount = totalAmount,

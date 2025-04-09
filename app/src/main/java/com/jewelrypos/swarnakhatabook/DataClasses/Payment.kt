@@ -10,8 +10,6 @@ data class Payment(
     val reference: String = "",
     val details: Map<String, Any> = mapOf(), // For storing method-specific details
     val notes: String = "",
-    val invoiceNumber: String? = null,
-    val customerName: String? = null
 ) {
     // Equality based on the unique ID
     override fun equals(other: Any?): Boolean {

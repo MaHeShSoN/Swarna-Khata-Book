@@ -46,15 +46,4 @@ class PaymentsRepository(
     }
 
     // Optional method to extract all payments from invoices
-    fun extractPaymentsFromInvoices(invoices: List<Invoice>): List<Payment> {
-        return invoices.flatMap { invoice ->
-            invoice.payments.map { payment ->
-                // Augment payment with additional context from the invoice
-                payment.copy(
-                    invoiceNumber = invoice.invoiceNumber,
-                    customerName = invoice.customerName
-                )
-            }
-        }
-    }
 }

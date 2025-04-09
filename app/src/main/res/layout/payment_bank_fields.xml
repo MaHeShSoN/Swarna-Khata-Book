@@ -40,26 +40,5 @@
             android:inputType="none" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Add this inside your payment_bank_fields.xml layout -->
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/transactionDateLayout"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:hint="Transaction Date"
-        app:endIconDrawable="@drawable/material_symbols__date_range_rounded"
-        app:endIconMode="custom"
-        app:boxStrokeColor="@color/my_light_primary"
-        app:hintTextColor="@color/my_light_secondary">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/transactionDateEditText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="none"
-            android:clickable="true"
-            android:focusable="false"
-            android:cursorVisible="false"
-            android:fontFamily="@font/montserratregular" />
-    </com.google.android.material.textfield.TextInputLayout></LinearLayout>
+</LinearLayout>

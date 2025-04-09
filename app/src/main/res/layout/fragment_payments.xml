@@ -21,6 +21,16 @@
             app:title="Payments"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
+        <!-- Progress indicator below the TopAppBar -->
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:paddingLeft="2dp"
+            android:paddingRight="2dp"
+            android:paddingTop="0dp"
+            android:visibility="gone"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
