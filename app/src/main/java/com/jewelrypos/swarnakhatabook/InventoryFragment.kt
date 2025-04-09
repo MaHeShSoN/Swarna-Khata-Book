@@ -258,9 +258,6 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
         navigateToItemDetail(item)
 
-
-        // Open ItemBottomSheetFragment with item data for editing
-//        showBottomSheetDialog(item)
     }
 
     // Inside your InventoryFragment class:

@@ -173,6 +173,17 @@
                         android:contentDescription="WhatsApp customer"
                         app:icon="@drawable/mdi__whatsapp"
                         app:iconTint="@color/my_light_primary"
+                        app:layout_constraintEnd_toStartOf="@id/infoButton"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/infoButton"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="Customer Info"
+                        app:icon="@drawable/material_symbols_warning_rounded"
+                        app:iconTint="@color/my_light_primary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 

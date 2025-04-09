@@ -3,16 +3,31 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
+import com.github.mikephil.charting.animation.Easing
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
+import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.NotificationViewModelFactory
@@ -30,6 +45,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentDashBoardBinding
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Locale
+
 
 class DashBoardFragment : Fragment() {
 
@@ -92,6 +108,7 @@ class DashBoardFragment : Fragment() {
 
         // Load data for dashboard
         loadDashboardData()
+        loadItemPerformanceData()
     }
 
     private fun setupToolbar() {
@@ -156,6 +173,145 @@ class DashBoardFragment : Fragment() {
 
         binding.viewAllCustomers.setOnClickListener {
             navigateToCustomersTab()
+        }
+    }
+
+    private fun setupItemPerformanceChart(invoices: List<Invoice>) {
+        // Check if invoices list is empty
+        if (invoices.isEmpty()) {
+            binding.itemPerformanceChart.visibility = View.GONE
+            return
+        }
+
+        try {
+            // Calculate sales performance for items
+            val itemSalesPerformance = invoices.flatMap { invoice ->
+                invoice.items.map { invoiceItem ->
+                    InvoiceSalesData(
+                        itemName = invoiceItem.itemDetails.displayName,
+                        quantity = invoiceItem.quantity,
+                        totalSales = invoiceItem.quantity * invoiceItem.price
+                    )
+                }
+            }
+
+            // Group and aggregate item sales
+            val aggregatedSales = itemSalesPerformance
+                .groupBy { it.itemName }
+                .mapValues { (_, sales) ->
+                    InvoiceSalesData(
+                        itemName = sales.first().itemName,
+                        quantity = sales.sumOf { it.quantity },
+                        totalSales = sales.sumOf { it.totalSales }
+                    )
+                }
+
+            // Sort and take top 5 items by sales
+            val topItems = aggregatedSales.values
+                .sortedByDescending { it.totalSales }
+                .take(5)
+
+            // Prepare chart entries
+            val entries = ArrayList<BarEntry>()
+            val labels = ArrayList<String>()
+
+            topItems.forEachIndexed { index, item ->
+                entries.add(BarEntry(index.toFloat(), item.totalSales.toFloat()))
+                labels.add(item.itemName)
+            }
+
+            val dataSet = BarDataSet(entries, "Top Selling Items").apply {
+                colors = listOf(
+                    ContextCompat.getColor(requireContext(), R.color.my_light_primary),
+                    ContextCompat.getColor(requireContext(), R.color.my_light_secondary),
+                    ContextCompat.getColor(requireContext(), R.color.status_partial)
+                )
+                valueTextColor = ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+                valueTextSize = 10f
+            }
+
+            val barData = BarData(dataSet)
+
+            binding.itemPerformanceChart.apply {
+                data = barData
+                setDrawBarShadow(false)
+                setDrawValueAboveBar(true)
+                setPinchZoom(false)
+                setDrawGridBackground(false)
+
+                // X-Axis customization
+                xAxis.apply {
+                    valueFormatter = IndexAxisValueFormatter(labels)
+                    position = XAxis.XAxisPosition.BOTTOM
+                    setDrawGridLines(false)
+                    granularity = 1f
+                    isGranularityEnabled = true
+                }
+
+                // Left axis
+                axisLeft.apply {
+                    setDrawGridLines(true)
+                    gridColor = ContextCompat.getColor(requireContext(), R.color.my_light_outline)
+                    textColor = ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+                }
+
+                // Remove right axis
+                axisRight.isEnabled = false
+
+                // Description
+                description.apply {
+                    text = "Top Selling Items"
+                    textColor = ContextCompat.getColor(requireContext(), R.color.my_light_secondary)
+                    textSize = 12f
+                }
+
+                // Add interaction
+                setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        e?.let { entry ->
+                            val item = topItems[entry.x.toInt()]
+                            showItemSalesDetailsDialog(item)
+                        }
+                    }
+
+                    override fun onNothingSelected() {
+                        // Handle when no value is selected
+                    }
+                })
+
+                // Animate and refresh
+                animateY(1500, Easing.EaseInOutQuad)
+                invalidate()
+            }
+        } catch (e: Exception) {
+            Log.e("DashboardFragment", "Error setting up sales performance chart", e)
+            binding.itemPerformanceChart.visibility = View.GONE
+        }
+    }
+
+    // Data class to hold sales information
+    data class InvoiceSalesData(
+        val itemName: String,
+        val quantity: Int,
+        val totalSales: Double
+    )
+
+    private fun showItemSalesDetailsDialog(item: InvoiceSalesData) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(item.itemName)
+            .setMessage("""
+            Total Sales: ₹${String.format("%.2f", item.totalSales)}
+            Quantity Sold: ${item.quantity}
+        """.trimIndent())
+            .setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+
+    private fun loadItemPerformanceData() {
+        salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
+            setupItemPerformanceChart(invoices)
+            // Other existing dashboard data loading logic
         }
     }
 
@@ -285,8 +441,9 @@ class DashBoardFragment : Fragment() {
         // Navigate to inventory tab first
         navigateToInventoryTab()
 
-        // Let the inventory fragment know that we want to add an item
-        // This would be implemented as a callback or event bus mechanism
+        val bottomSheetFragment = ItemBottomSheetFragment.newInstance()
+        bottomSheetFragment.show(parentFragmentManager, bottomSheetFragment.tag)
+
     }
 
     private fun navigateToPayments() {

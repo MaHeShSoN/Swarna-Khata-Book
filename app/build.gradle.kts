@@ -60,6 +60,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     implementation("androidx.room:room-runtime:2.6.1") // Room
     ksp("androidx.room:room-compiler:2.6.1") // Room annotation processor

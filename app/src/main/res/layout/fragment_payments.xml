@@ -20,6 +20,7 @@
             app:navigationIcon="@drawable/famicons__arrow_back"
             app:title="Payments"
             app:titleTextAppearance="@style/ToolbarTitle"
+            app:menu="@menu/payment_menu"
             app:titleTextColor="@color/white" />
         <!-- Progress indicator below the TopAppBar -->
         <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -78,7 +79,9 @@
                         <Spinner
                             android:id="@+id/periodSelector"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:spinnerMode="dropdown"
+                         />
                     </LinearLayout>
 
                     <TextView
@@ -93,7 +96,8 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Payment Breakdown Card -->
+
+            <!-- Payment Breakdown Card - Updated for better handling of large numbers -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -124,142 +128,164 @@
                         android:layout_marginTop="16dp"
                         android:orientation="horizontal">
 
+                        <!-- Cash -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
                             android:gravity="center"
                             android:orientation="vertical">
 
                             <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
                                 android:src="@drawable/mdi__cash"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
                                 android:text="Cash"
                                 android:textColor="@color/my_light_on_surface"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/cashPaymentValue"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="2dp"
                                 android:fontFamily="@font/montserratbold"
                                 android:text="₹0.00"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:gravity="center" />
                         </LinearLayout>
 
+                        <!-- UPI -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
                             android:gravity="center"
                             android:orientation="vertical">
 
                             <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
                                 android:src="@drawable/material_symbols__upi_pay"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
                                 android:text="UPI"
                                 android:textColor="@color/my_light_on_surface"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/upiPaymentValue"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="2dp"
                                 android:fontFamily="@font/montserratbold"
                                 android:text="₹0.00"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:gravity="center" />
                         </LinearLayout>
 
+                        <!-- Card -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
                             android:gravity="center"
                             android:orientation="vertical">
 
                             <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
                                 android:src="@drawable/ic_payment_card"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
                                 android:text="Card"
                                 android:textColor="@color/my_light_on_surface"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/cardPaymentValue"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="2dp"
                                 android:fontFamily="@font/montserratbold"
                                 android:text="₹0.00"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:gravity="center" />
                         </LinearLayout>
 
+                        <!-- Other -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginStart="4dp"
                             android:gravity="center"
                             android:orientation="vertical">
 
                             <ImageView
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
                                 android:src="@drawable/mdi__currency_inr"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
                                 android:text="Other"
                                 android:textColor="@color/my_light_on_surface"
-                                android:textSize="12sp" />
+                                android:textSize="11sp" />
 
                             <TextView
                                 android:id="@+id/otherPaymentValue"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
+                                android:layout_marginTop="2dp"
                                 android:fontFamily="@font/montserratbold"
                                 android:text="₹0.00"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:gravity="center" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
             <!-- Payment List -->
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

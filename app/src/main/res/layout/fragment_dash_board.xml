@@ -236,6 +236,14 @@
                             android:layout_height="wrap_content" />
                     </LinearLayout>
 
+
+                    <com.github.mikephil.charting.charts.BarChart
+                        android:id="@+id/itemPerformanceChart"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:layout_marginTop="16dp"/>
+
+
                     <!-- Sales Metrics -->
                     <LinearLayout
                         android:layout_width="match_parent"

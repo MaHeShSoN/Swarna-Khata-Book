@@ -198,7 +198,20 @@ class InventoryViewModel(
             }
         }
     }
-    fun getAllItemsForDropdown() = viewModelScope.launch {
-        repository.getAllInventoryItems()
+    fun getAllItemsForDropdown(): LiveData<List<JewelleryItem>> {
+        val liveData = MutableLiveData<List<JewelleryItem>>()
+
+        viewModelScope.launch {
+            repository.getAllInventoryItems().fold(
+                onSuccess = { items ->
+                    liveData.value = items
+                },
+                onFailure = {
+                    liveData.value = emptyList()
+                }
+            )
+        }
+
+        return liveData
     }
 }

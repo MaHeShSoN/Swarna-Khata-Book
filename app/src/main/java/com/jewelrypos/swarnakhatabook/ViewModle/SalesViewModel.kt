@@ -209,10 +209,6 @@ class SalesViewModel(
 
     // Payments methods
     fun addPayment(payment: Payment) {
-        val customer = _selectedCustomer.value
-        val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
-
-
         val currentPayments = _payments.value?.toMutableList() ?: mutableListOf()
         currentPayments.add(payment)
         _payments.value = currentPayments

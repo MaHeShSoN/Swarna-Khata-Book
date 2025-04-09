@@ -23,6 +23,10 @@ class PaymentsViewModel(
 
     private val _allInvoices = MutableLiveData<List<Invoice>>()
 
+    // Original unfiltered payments
+    private val _allPayments = MutableLiveData<List<PaymentWithContext>>()
+
+    // Filtered payments (by period and search)
     private val _filteredPayments = MutableLiveData<List<PaymentWithContext>>()
     val filteredPayments: LiveData<List<PaymentWithContext>> = _filteredPayments
 
@@ -35,6 +39,12 @@ class PaymentsViewModel(
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
 
+    // Current search query
+    private var currentSearchQuery = ""
+
+    // Current time period filter
+    private var currentPeriodFilter = "This Month"
+
     init {
         loadPayments()
     }
@@ -46,7 +56,7 @@ class PaymentsViewModel(
                         networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
     }
 
-    private fun loadPayments() {
+    fun loadPayments() {
         _isLoading.value = true
         viewModelScope.launch {
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
@@ -64,9 +74,10 @@ class PaymentsViewModel(
 
                         // Extract payments with context
                         val paymentsWithContext = extractPaymentsWithContext(invoices)
+                        _allPayments.value = paymentsWithContext
 
-                        // Default filter to this month
-                        filterPaymentsByPeriod("This Month", paymentsWithContext)
+                        // Apply filters based on current period and search query
+                        applyAllFilters()
 
                         _isLoading.value = false
                     },
@@ -95,14 +106,47 @@ class PaymentsViewModel(
         }
     }
 
-    fun filterPaymentsByPeriod(
-        period: String,
-        allPayments: List<PaymentWithContext>? = null
-    ) {
-        val paymentsToFilter = allPayments ?: _filteredPayments.value ?: emptyList()
-        val now = Calendar.getInstance()
+    // Set the search query and trigger filtering
+    fun setSearchQuery(query: String) {
+        currentSearchQuery = query.trim().lowercase()
+        applyAllFilters()
+    }
 
-        val filteredList = paymentsToFilter.filter { paymentContext ->
+    // Set the period filter and trigger filtering
+    fun setPeriodFilter(period: String) {
+        currentPeriodFilter = period
+        applyAllFilters()
+    }
+
+    // Apply both period and search filters
+    private fun applyAllFilters() {
+        val allPayments = _allPayments.value ?: emptyList()
+
+        // First filter by period
+        val periodFiltered = filterByPeriod(allPayments, currentPeriodFilter)
+
+        // Then filter by search query
+        val searchFiltered = if (currentSearchQuery.isEmpty()) {
+            periodFiltered
+        } else {
+            filterBySearchQuery(periodFiltered, currentSearchQuery)
+        }
+
+        // Update filtered payments
+        _filteredPayments.value = searchFiltered
+
+        // Update total collected
+        _totalCollected.value = searchFiltered.sumOf { it.payment.amount }
+    }
+
+    // Filter payments by period
+    private fun filterByPeriod(payments: List<PaymentWithContext>, period: String): List<PaymentWithContext> {
+        if (period == "All Time") {
+            return payments
+        }
+
+        val now = Calendar.getInstance()
+        return payments.filter { paymentContext ->
             val paymentDate = Calendar.getInstance().apply {
                 timeInMillis = paymentContext.payment.date
             }
@@ -112,12 +156,33 @@ class PaymentsViewModel(
                 "This Week" -> isSameWeek(now, paymentDate)
                 "This Month" -> isSameMonth(now, paymentDate)
                 "This Year" -> isSameYear(now, paymentDate)
-                else -> true // "All Time"
+                else -> true
             }
         }
+    }
 
-        _filteredPayments.value = filteredList
-        _totalCollected.value = filteredList.sumOf { it.payment.amount }
+    // Filter payments by search query
+    private fun filterBySearchQuery(payments: List<PaymentWithContext>, query: String): List<PaymentWithContext> {
+        return payments.filter { payment ->
+            // Search by multiple criteria
+            val matchesCustomerName = payment.customerName?.lowercase()?.contains(query) == true
+            val matchesInvoiceNumber = payment.invoiceNumber?.lowercase()?.contains(query) == true
+            val matchesMethod = payment.payment.method.lowercase().contains(query)
+            val matchesAmount = payment.payment.amount.toString().contains(query)
+            val matchesReference = payment.payment.reference.lowercase().contains(query)
+
+            // Match against payment details
+            var matchesDetails = false
+            for ((_, value) in payment.payment.details) {
+                if (value.toString().lowercase().contains(query)) {
+                    matchesDetails = true
+                    break
+                }
+            }
+
+            matchesCustomerName || matchesInvoiceNumber || matchesMethod ||
+                    matchesAmount || matchesReference || matchesDetails
+        }
     }
 
     // Date comparison helper methods

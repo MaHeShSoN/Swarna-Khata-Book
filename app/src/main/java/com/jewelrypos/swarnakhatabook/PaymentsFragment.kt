@@ -3,6 +3,8 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.text.InputType
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +24,6 @@ import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel.PaymentWithContext
 import com.jewelrypos.swarnakhatabook.databinding.FragmentPaymentsBinding
 import java.text.DecimalFormat
-import java.util.Calendar
 
 class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickListener {
 
@@ -55,11 +56,44 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
         setupPeriodSpinner()
         setupRecyclerView()
         setupObservers()
+        setupSearchView()
     }
 
     private fun setupToolbar() {
         binding.topAppBar.setNavigationOnClickListener {
             findNavController().navigateUp()
+        }
+    }
+
+    private fun setupSearchView() {
+        with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
+            queryHint = "Search Payments..."
+            inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            setOnQueryTextListener(object :
+                androidx.appcompat.widget.SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    query?.let {
+                        Log.d("PaymentsFragment", "Search submitted: $it")
+                        paymentsViewModel.setSearchQuery(it)
+                    }
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    newText?.let {
+                        paymentsViewModel.setSearchQuery(it)
+                    }
+                    return true
+                }
+            })
+            setOnCloseListener {
+                val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+                onActionViewCollapsed()
+                searchView.setQuery("", false)
+                searchView.clearFocus()
+                paymentsViewModel.setSearchQuery("")
+                true
+            }
         }
     }
 
@@ -86,7 +120,8 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
                     binding.progressBar.visibility = View.VISIBLE
 
                     // Filter payments based on selected period
-                    paymentsViewModel.filterPaymentsByPeriod(periods[position])
+                    val selectedPeriod = periods[position]
+                    paymentsViewModel.setPeriodFilter(selectedPeriod)
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -104,9 +139,12 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
     }
 
     private fun setupObservers() {
-        // Observe payments list
+        // Observe filtered payments list
         paymentsViewModel.filteredPayments.observe(viewLifecycleOwner) { payments ->
+            // Update adapter with filtered payments
             paymentsAdapter.updatePayments(payments)
+
+            // Update payment metrics
             updatePaymentMetrics(payments)
 
             // Show empty state if needed
@@ -153,28 +191,50 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
         }
             .mapValues { it.value.sumOf { paymentContext -> paymentContext.payment.amount } }
 
-        // Display amounts for each payment method, handling both upper and lowercase variants
-        binding.cashPaymentValue.text = "₹${formatAmount(
-            paymentMethodBreakdown["cash"] ?: paymentMethodBreakdown["Cash"] ?: 0.0
-        )}"
-        binding.upiPaymentValue.text = "₹${formatAmount(
-            paymentMethodBreakdown["upi"] ?: paymentMethodBreakdown["UPI"] ?: 0.0
-        )}"
-        binding.cardPaymentValue.text = "₹${formatAmount(
-            paymentMethodBreakdown["card"] ?: paymentMethodBreakdown["Card"] ?: 0.0
-        )}"
+        // Format large numbers in a more compact way for the payment method boxes
+        binding.cashPaymentValue.text = formatCompactAmount(
+            paymentMethodBreakdown["cash"] ?: 0.0
+        )
+
+        binding.upiPaymentValue.text = formatCompactAmount(
+            paymentMethodBreakdown["upi"] ?: 0.0
+        )
+
+        binding.cardPaymentValue.text = formatCompactAmount(
+            paymentMethodBreakdown["card"] ?: 0.0
+        )
 
         // Calculate "Other" as total of all methods not explicitly handled
-        val knownMethods = setOf("cash", "upi", "card", "Cash", "UPI", "Card")
+        val knownMethods = setOf("cash", "upi", "card")
         val otherAmount = paymentMethodBreakdown
             .filterKeys { it !in knownMethods }
             .values.sum()
 
-        binding.otherPaymentValue.text = "₹${formatAmount(otherAmount)}"
+        binding.otherPaymentValue.text = formatCompactAmount(otherAmount)
     }
 
-    private fun formatAmount(amount: Double): String {
-        return DecimalFormat("#,##,##0.00").format(amount)
+    // Helper method for compact currency formatting
+    private fun formatCompactAmount(amount: Double): String {
+        // For small amounts, show the full value
+        if (amount < 1000) {
+            return "₹${DecimalFormat("#,##0").format(amount)}"
+        }
+
+        // For thousands (K)
+        if (amount < 100000) {
+            val thousands = amount / 1000.0
+            return "₹${DecimalFormat("#,##0.#").format(thousands)}K"
+        }
+
+        // For lakhs (L)
+        if (amount < 10000000) {
+            val lakhs = amount / 100000.0
+            return "₹${DecimalFormat("#,##0.#").format(lakhs)}L"
+        }
+
+        // For crores (Cr)
+        val crores = amount / 10000000.0
+        return "₹${DecimalFormat("#,##0.#").format(crores)}Cr"
     }
 
     override fun onDestroyView() {

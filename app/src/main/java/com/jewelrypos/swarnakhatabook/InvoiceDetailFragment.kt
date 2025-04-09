@@ -441,6 +441,23 @@ class InvoiceDetailFragment : Fragment() {
         binding.shareButton.setOnClickListener {
             shareInvoice()
         }
+
+        binding.infoButton.setOnClickListener {
+            navigateToCustomerDetail()
+        }
+    }
+
+    private fun navigateToCustomerDetail() {
+        val customerId = viewModel.customer.value?.id
+
+        if (customerId != null) {
+            // Navigate to customer detail screen using the customerId
+            val action = InvoiceDetailFragmentDirections.actionInvoiceDetailFragmentToCustomerDetailFragment(customerId)
+            findNavController().navigate(action)
+        } else {
+            // If customer ID is not available, show a message
+            Toast.makeText(requireContext(), "Customer information not available", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showAddPaymentBottomSheet() {

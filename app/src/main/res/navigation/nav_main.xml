@@ -110,6 +110,9 @@
         <action
             android:id="@+id/action_invoiceDetailFragment_to_invoiceCreationFragment"
             app:destination="@id/invoiceCreationFragment" />
+        <action
+            android:id="@+id/action_invoiceDetailFragment_to_customerDetailFragment"
+            app:destination="@id/customerDetailFragment" />
     </fragment>
 
     <fragment
