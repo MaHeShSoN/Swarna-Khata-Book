@@ -344,7 +344,11 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     // Setup inventory dropdown
     private fun setupInventoryDropdown() {
         val adapter = DetailedInventoryItemAdapter(requireContext(), inventoryItems)
-        binding.itemNameDropdown.setAdapter(adapter)
+
+        binding.itemNameDropdown.apply {
+            setAdapter(adapter)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
 
         // Handle item selection
         binding.itemNameDropdown.setOnItemClickListener { _, _, position, _ ->

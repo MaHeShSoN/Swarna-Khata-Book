@@ -90,7 +90,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                 }
             })
             setOnCloseListener {
-                val seachVie = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+                val seachVie =
+                    binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
                 onActionViewCollapsed()
                 seachVie.setQuery("", false)
                 seachVie.clearFocus()
@@ -117,18 +118,22 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                     inventoryViewModel.filterByType("gold")
                     true
                 }
+
                 R.id.filter_silver -> {
                     inventoryViewModel.filterByType("silver")
                     true
                 }
+
                 R.id.filter_other -> {
                     inventoryViewModel.filterByType("other")
                     true
                 }
+
                 R.id.filter_all -> {
                     inventoryViewModel.filterByType(null)
                     true
                 }
+
                 else -> false
             }
         }
@@ -154,9 +159,17 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
             if (items.isEmpty() && isSearchActive) {
                 binding.emptySearchLayout.visibility = View.VISIBLE
                 binding.recyclerViewInventory.visibility = View.GONE
-            } else {
+                binding.emptyStateLayout.visibility = View.GONE
+            } else if (items.isEmpty()) {
+                binding.emptySearchLayout.visibility = View.GONE
+                binding.recyclerViewInventory.visibility = View.GONE
+                binding.emptyStateLayout.visibility = View.VISIBLE
+            }
+            else {
+                // Normal state with items
                 binding.emptySearchLayout.visibility = View.GONE
                 binding.recyclerViewInventory.visibility = View.VISIBLE
+                binding.emptyStateLayout.visibility = View.GONE
             }
         }
         inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->

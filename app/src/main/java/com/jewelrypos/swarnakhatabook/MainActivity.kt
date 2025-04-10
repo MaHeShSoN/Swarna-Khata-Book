@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -10,8 +11,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
@@ -25,12 +29,95 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         // Initialize SharedPreferences
         sharedPreferences = getSharedPreferences("jewelry_pos_settings", Context.MODE_PRIVATE)
+
+        // Check subscription status when app starts
+        checkSubscriptionStatus()
 
         setupBiometrics()
 
         initializeNotificationSystem()
+    }
+
+    private fun checkSubscriptionStatus() {
+        lifecycleScope.launch {
+            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+
+            // Check if the user is premium
+            val isPremium = subscriptionManager.isPremiumUser()
+
+            if (!isPremium) {
+                // Check if trial has expired
+                if (subscriptionManager.hasTrialExpired()) {
+                    // Trial expired - show alert and log out
+                    showTrialExpiredDialog()
+                } else {
+                    // Trial still active - show remaining days if less than 3
+                    val daysRemaining = subscriptionManager.getDaysRemaining()
+                    if (daysRemaining <= 3) {
+                        showTrialReminderDialog(daysRemaining)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showTrialExpiredDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Trial Period Expired")
+            .setMessage("Your 10-day trial period has expired. Please upgrade to continue using Swarna Khata Book.")
+            .setCancelable(false)
+            .setPositiveButton("Upgrade") { _, _ ->
+                // Navigate to upgrade screen
+                navigateToUpgradeScreen()
+            }
+            .setNegativeButton("Log Out") { _, _ ->
+                // Log out the user
+                logoutUser()
+            }
+            .show()
+    }
+
+    private fun showTrialReminderDialog(daysRemaining: Int) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Trial Period Ending Soon")
+            .setMessage("Your trial period will expire in $daysRemaining day${if (daysRemaining > 1) "s" else ""}. Upgrade now to continue using all features.")
+            .setPositiveButton("Upgrade") { _, _ ->
+                // Navigate to upgrade screen
+                navigateToUpgradeScreen()
+            }
+            .setNegativeButton("Remind Later") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun navigateToUpgradeScreen() {
+        // In a real app, this would navigate to your subscription/payment screen
+        Toast.makeText(this, "Navigate to upgrade screen", Toast.LENGTH_SHORT).show()
+
+        // For testing purposes only - this would be replaced with actual purchase flow
+        lifecycleScope.launch {
+            val success = SwarnaKhataBook.userSubscriptionManager.updatePremiumStatus(true)
+            if (success) {
+                Toast.makeText(this@MainActivity, "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun logoutUser() {
+        // Sign out from Firebase
+        FirebaseAuth.getInstance().signOut()
+
+        // Clear any app-specific data
+
+        // Redirect to the launcher or login screen
+        val intent = Intent(this, MainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     private fun initializeNotificationSystem() {

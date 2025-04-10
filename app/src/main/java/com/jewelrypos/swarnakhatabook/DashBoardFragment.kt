@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -26,6 +27,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
+import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
@@ -44,6 +46,7 @@ import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentDashBoardBinding
 import java.text.DecimalFormat
 import java.text.NumberFormat
+import java.util.Calendar
 import java.util.Locale
 
 
@@ -118,15 +121,46 @@ class DashBoardFragment : Fragment() {
                     loadDashboardData()
                     true
                 }
+
                 R.id.action_notifications -> {
                     navigateToNotifications()
                     true
                 }
+
                 else -> false
             }
         }
+        setupNotificationBadge()
     }
 
+    private fun setupNotificationBadge() {
+        // Get the menu item view
+        val menuItem = binding.topAppBar.menu.findItem(R.id.action_notifications) ?: return
+        val actionView = menuItem.actionView ?: return
+
+        // Find the badge text view within the action view
+        val badgeCountView = actionView.findViewById<TextView>(R.id.badgeCount)
+
+        // Set click listener for the entire action view
+        actionView.setOnClickListener {
+            navigateToNotifications()
+        }
+
+        // Observe unread notification count from view model
+        notificationViewModel.unreadCount.observe(viewLifecycleOwner) { count ->
+            if (count > 0) {
+                // Show badge with count
+                badgeCountView.visibility = View.VISIBLE
+                badgeCountView.text = if (count > 99) "99+" else count.toString()
+            } else {
+                // Hide badge when no unread notifications
+                badgeCountView.visibility = View.GONE
+            }
+        }
+
+        // Refresh the unread count
+        notificationViewModel.refreshUnreadCount()
+    }
     private fun setupPeriodSelector() {
         // Set up time period spinner
         val periods = arrayOf("Today", "This Week", "This Month", "All Time")
@@ -138,16 +172,22 @@ class DashBoardFragment : Fragment() {
         binding.periodSelector.setSelection(2) // Default to "This Month"
 
         // Add listener for period changes
-        binding.periodSelector.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                // Reload sales data with new period
-                loadSalesData(periods[position])
-            }
+        binding.periodSelector.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    // Reload sales data with new period
+                    loadSalesData(periods[position])
+                }
 
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
-                // Do nothing
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
+                    // Do nothing
+                }
             }
-        }
     }
 
     private fun setupQuickActions() {
@@ -184,7 +224,7 @@ class DashBoardFragment : Fragment() {
         }
 
         try {
-            // Calculate sales performance for items
+            // Calculate item sales performance by quantity
             val itemSalesPerformance = invoices.flatMap { invoice ->
                 invoice.items.map { invoiceItem ->
                     InvoiceSalesData(
@@ -195,7 +235,7 @@ class DashBoardFragment : Fragment() {
                 }
             }
 
-            // Group and aggregate item sales
+            // Group and aggregate item sales by quantity
             val aggregatedSales = itemSalesPerformance
                 .groupBy { it.itemName }
                 .mapValues { (_, sales) ->
@@ -206,9 +246,9 @@ class DashBoardFragment : Fragment() {
                     )
                 }
 
-            // Sort and take top 5 items by sales
+            // Sort and take top 5 items by quantity sold
             val topItems = aggregatedSales.values
-                .sortedByDescending { it.totalSales }
+                .sortedByDescending { it.quantity }
                 .take(5)
 
             // Prepare chart entries
@@ -216,17 +256,18 @@ class DashBoardFragment : Fragment() {
             val labels = ArrayList<String>()
 
             topItems.forEachIndexed { index, item ->
-                entries.add(BarEntry(index.toFloat(), item.totalSales.toFloat()))
+                entries.add(BarEntry(index.toFloat(), item.quantity.toFloat()))
                 labels.add(item.itemName)
             }
 
-            val dataSet = BarDataSet(entries, "Top Selling Items").apply {
+            val dataSet = BarDataSet(entries, "Top Selling Items (by Quantity)").apply {
                 colors = listOf(
                     ContextCompat.getColor(requireContext(), R.color.my_light_primary),
                     ContextCompat.getColor(requireContext(), R.color.my_light_secondary),
                     ContextCompat.getColor(requireContext(), R.color.status_partial)
                 )
-                valueTextColor = ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+                valueTextColor =
+                    ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
                 valueTextSize = 10f
             }
 
@@ -246,13 +287,15 @@ class DashBoardFragment : Fragment() {
                     setDrawGridLines(false)
                     granularity = 1f
                     isGranularityEnabled = true
+                    labelRotationAngle = -45f // Rotate labels for better readability
                 }
 
                 // Left axis
                 axisLeft.apply {
                     setDrawGridLines(true)
                     gridColor = ContextCompat.getColor(requireContext(), R.color.my_light_outline)
-                    textColor = ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+                    textColor =
+                        ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
                 }
 
                 // Remove right axis
@@ -260,7 +303,7 @@ class DashBoardFragment : Fragment() {
 
                 // Description
                 description.apply {
-                    text = "Top Selling Items"
+                    text = "Top Selling Items (Quantity)"
                     textColor = ContextCompat.getColor(requireContext(), R.color.my_light_secondary)
                     textSize = 12f
                 }
@@ -289,23 +332,25 @@ class DashBoardFragment : Fragment() {
         }
     }
 
+    private fun showItemSalesDetailsDialog(item: InvoiceSalesData) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(item.itemName)
+            .setMessage(
+                """
+            Quantity Sold: ${item.quantity}
+            Total Sales: ₹${String.format("%.2f", item.totalSales)}
+        """.trimIndent()
+            )
+            .setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
     // Data class to hold sales information
     data class InvoiceSalesData(
         val itemName: String,
         val quantity: Int,
         val totalSales: Double
     )
-
-    private fun showItemSalesDetailsDialog(item: InvoiceSalesData) {
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(item.itemName)
-            .setMessage("""
-            Total Sales: ₹${String.format("%.2f", item.totalSales)}
-            Quantity Sold: ${item.quantity}
-        """.trimIndent())
-            .setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
-            .show()
-    }
 
 
     private fun loadItemPerformanceData() {
@@ -321,6 +366,30 @@ class DashBoardFragment : Fragment() {
 
         loadCustomerData()
 
+        // Combine data from different ViewModels to calculate performance
+        salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
+            inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { inventoryItems ->
+                customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
+                    // Calculate and display business performance
+                    val performanceScore =
+                        calculateBusinessPerformance(invoices, customers, inventoryItems)
+
+                    // Update circular progress indicator
+//                    binding.businessPerformanceIndicator.apply {
+//                        progress = performanceScore.toInt()
+//                        setIndicatorColor(getPerformanceColor(performanceScore))
+//                    }
+
+                    // Update performance description
+//                    binding.performanceDescriptionText.text = when {
+//                        performanceScore < 33f -> "Needs Improvement"
+//                        performanceScore < 66f -> "Good Progress"
+//                        else -> "Excellent Performance"
+//                    }
+                }
+            }
+        }
+
         // Hide low stock recycler view container since we're not using it
         binding.lowStockRecyclerView.visibility = View.GONE
         binding.emptyLowStockState.visibility = View.GONE
@@ -328,7 +397,6 @@ class DashBoardFragment : Fragment() {
         // Hide recent invoices section
         binding.recentInvoicesRecyclerView.visibility = View.GONE
         binding.emptyRecentInvoicesState.visibility = View.GONE
-
     }
 
     private fun loadSalesData(period: String) {
@@ -344,11 +412,14 @@ class DashBoardFragment : Fragment() {
                     val dayStart = today - (today % 86400000) // Start of day in millis
                     invoices.filter { it.invoiceDate >= dayStart }
                 }
+
                 "This Week" -> {
                     val today = System.currentTimeMillis()
-                    val weekStart = today - ((today % 86400000) + ((System.currentTimeMillis() / 86400000) % 7) * 86400000)
+                    val weekStart =
+                        today - ((today % 86400000) + ((System.currentTimeMillis() / 86400000) % 7) * 86400000)
                     invoices.filter { it.invoiceDate >= weekStart }
                 }
+
                 "This Month" -> {
                     val calendar = java.util.Calendar.getInstance()
                     calendar.set(java.util.Calendar.DAY_OF_MONTH, 1)
@@ -359,6 +430,7 @@ class DashBoardFragment : Fragment() {
                     val monthStart = calendar.timeInMillis
                     invoices.filter { it.invoiceDate >= monthStart }
                 }
+
                 else -> invoices // "All Time"
             }
 
@@ -367,7 +439,7 @@ class DashBoardFragment : Fragment() {
         }
     }
 
-    private fun updateSalesMetrics(invoices: List<com.jewelrypos.swarnakhatabook.DataClasses.Invoice>) {
+    private fun updateSalesMetrics(invoices: List<Invoice>) {
         // Calculate total sales
         val totalSales = invoices.sumOf { it.totalAmount }
         binding.totalSalesValue.text = currencyFormatter.format(totalSales)
@@ -375,11 +447,13 @@ class DashBoardFragment : Fragment() {
         // Count of invoices
         binding.invoiceCountValue.text = invoices.size.toString()
 
-        // Calculate average sale
-        val averageSale = if (invoices.isNotEmpty()) totalSales / invoices.size else 0.0
-        binding.averageSaleValue.text = currencyFormatter.format(averageSale)
-    }
+        // Calculate truly outstanding balance (unpaid amount)
+        val outstandingBalance = invoices
+            .filter { it.totalAmount > it.paidAmount }
+            .sumOf { it.totalAmount - it.paidAmount }
 
+        binding.outstandingBalanceValue.text = currencyFormatter.format(outstandingBalance)
+    }
 
 
     private fun loadCustomerData() {
@@ -394,14 +468,14 @@ class DashBoardFragment : Fragment() {
                 .filter { it.balanceType == "Credit" } // Only include credit customers
                 .sumOf { it.currentBalance }
 
-            binding.outstandingBalanceValue.text = currencyFormatter.format(outstandingBalance)
 
             // Check for birthdays today
             val today = java.time.LocalDate.now()
             val birthdaysToday = customers.count { customer ->
                 if (customer.birthday.isNotEmpty()) {
                     try {
-                        val dateFormat = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+                        val dateFormat =
+                            java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
                         val birthday = dateFormat.parse(customer.birthday)
                         val cal = java.util.Calendar.getInstance()
                         cal.time = birthday
@@ -433,8 +507,12 @@ class DashBoardFragment : Fragment() {
         navigateToCustomersTab()
 
         // Then show the customer bottom sheet
-        val customerBottomSheet = com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.newInstance()
-        customerBottomSheet.show(parentFragmentManager, com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.TAG)
+        val customerBottomSheet =
+            com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.newInstance()
+        customerBottomSheet.show(
+            parentFragmentManager,
+            com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.TAG
+        )
     }
 
     private fun navigateToAddInventory() {
@@ -473,6 +551,109 @@ class DashBoardFragment : Fragment() {
             val navigator = MainScreenNavigator(parentFragment)
             navigator.navigateToCustomersTab()
         }
+    }
+
+    private fun calculateBusinessPerformance(
+        invoices: List<Invoice>,
+        customers: List<Customer>,
+        inventoryItems: List<JewelleryItem>
+    ): Float {
+        // Ensure we have data to work with
+        if (invoices.isEmpty() || customers.isEmpty() || inventoryItems.isEmpty()) {
+            return 0f
+        }
+
+        // 1. Revenue Growth (compare current month to previous)
+        val now = Calendar.getInstance()
+        val currentMonthInvoices = invoices.filter { invoice ->
+            val invoiceDate = Calendar.getInstance().apply { timeInMillis = invoice.invoiceDate }
+            invoiceDate.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
+                    invoiceDate.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+        }
+        val currentMonthRevenue = currentMonthInvoices.sumOf { it.totalAmount }
+        val previousMonthInvoices = invoices.filter { invoice ->
+            val invoiceDate = Calendar.getInstance().apply { timeInMillis = invoice.invoiceDate }
+            invoiceDate.get(Calendar.MONTH) == now.get(Calendar.MONTH) - 1 &&
+                    invoiceDate.get(Calendar.YEAR) == now.get(Calendar.YEAR)
+        }
+        val previousMonthRevenue = previousMonthInvoices.sumOf { it.totalAmount }
+
+        val revenueGrowthScore = if (previousMonthRevenue > 0) {
+            minOf(
+                ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue * 100).toFloat(),
+                100f
+            )
+        } else 0f
+
+        // 2. Customer Retention
+        val totalCustomers = customers.size
+        val repeatCustomers = customers.count { customer ->
+            invoices.count { it.customerId == customer.id } > 1
+        }
+        val retentionScore = (repeatCustomers.toFloat() / totalCustomers * 100).coerceAtMost(100f)
+
+        // 3. Inventory Turnover
+        val totalInventoryValue =
+            inventoryItems.sumOf { it.stock * (it.makingCharges + it.metalRate) }
+        val soldInventoryValue = invoices.flatMap { it.items }.sumOf {
+            it.itemDetails.stock * (it.itemDetails.makingCharges + it.itemDetails.metalRate)
+        }
+        val inventoryTurnoverScore =
+            minOf((soldInventoryValue / totalInventoryValue * 100).toFloat(), 100f)
+
+        // 4. Collection Efficiency
+        val totalInvoiceAmount = invoices.sumOf { it.totalAmount }
+        val paidInvoiceAmount = invoices.sumOf { invoice ->
+            invoice.payments.sumOf { it.amount }
+        }
+        val collectionEfficiencyScore =
+            minOf((paidInvoiceAmount / totalInvoiceAmount * 100).toFloat(), 100f)
+
+        // 5. Sales Volume
+        val currentMonthSalesVolume =
+            currentMonthInvoices.flatMap { it.items }.sumOf { it.quantity }
+        val averageSalesVolume = invoices.flatMap { it.items }.sumOf { it.quantity } /
+                (invoices.map { it.invoiceDate }.distinct().size.takeIf { it > 0 } ?: 1)
+        val salesVolumeScore =
+            minOf((currentMonthSalesVolume / averageSalesVolume * 100).toFloat(), 100f)
+
+        // 6. Weighted Average Calculation
+        val performanceScore = (
+                revenueGrowthScore * 0.25f +
+                        retentionScore * 0.15f +
+                        inventoryTurnoverScore * 0.15f +
+                        collectionEfficiencyScore * 0.15f +
+                        salesVolumeScore * 0.15f
+                ).coerceIn(0f, 100f)
+
+        Log.d(
+            "BusinessPerformance", """
+        Performance Breakdown:
+        - Revenue Growth: ${String.format("%.2f", revenueGrowthScore)}%
+        - Customer Retention: ${String.format("%.2f", retentionScore)}%
+        - Inventory Turnover: ${String.format("%.2f", inventoryTurnoverScore)}%
+        - Collection Efficiency: ${String.format("%.2f", collectionEfficiencyScore)}%
+        - Sales Volume: ${String.format("%.2f", salesVolumeScore)}%
+        
+        Final Performance Score: ${String.format("%.2f", performanceScore)}%
+    """.trimIndent()
+        )
+
+        return performanceScore
+    }
+
+    private fun getPerformanceColor(score: Float): Int {
+        return when {
+            score < 33f -> ContextCompat.getColor(requireContext(), R.color.status_unpaid)
+            score < 66f -> ContextCompat.getColor(requireContext(), R.color.status_partial)
+            else -> ContextCompat.getColor(requireContext(), R.color.my_light_primary)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh notification count when returning to this fragment
+        notificationViewModel.refreshUnreadCount()
     }
 
     override fun onDestroyView() {

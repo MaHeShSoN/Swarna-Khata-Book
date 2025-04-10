@@ -4,8 +4,15 @@ import android.app.Application
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 
 class SwarnaKhataBook : Application() {
+
+    companion object {
+        lateinit var userSubscriptionManager: UserSubscriptionManager
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
 
@@ -19,5 +26,10 @@ class SwarnaKhataBook : Application() {
             .build()
 
         FirebaseFirestore.getInstance().firestoreSettings = settings
+
+        userSubscriptionManager = UserSubscriptionManager(this)
+
+//        // Record first use if needed
+        userSubscriptionManager.recordFirstUseIfNeeded()
     }
 }

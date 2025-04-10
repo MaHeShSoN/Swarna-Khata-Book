@@ -88,6 +88,15 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_paymentsFragment"
             app:destination="@id/paymentsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_upgradeActivity"
+            app:destination="@id/upgradeActivity" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_subscriptionStatusFragment"
+            app:destination="@id/subscriptionStatusFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_subscriptionDebugActivity"
+            app:destination="@id/subscriptionDebugActivity" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -190,4 +199,18 @@
             android:id="@+id/action_paymentsFragment_to_invoiceDetailFragment"
             app:destination="@id/invoiceDetailFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/subscriptionStatusFragment"
+        android:name="com.jewelrypos.swarnakhatabook.SubscriptionStatusFragment"
+        android:label="fragment_subscription_status"
+        tools:layout="@layout/fragment_subscription_status" />
+    <activity
+        android:id="@+id/upgradeActivity"
+        android:name="com.jewelrypos.swarnakhatabook.UpgradeActivity"
+        android:label="activity_upgrade"
+        tools:layout="@layout/activity_upgrade" />
+    <activity
+        android:id="@+id/subscriptionDebugActivity"
+        android:name="com.jewelrypos.swarnakhatabook.SubscriptionDebugActivity"
+        android:label="SubscriptionDebugActivity" />
 </navigation>

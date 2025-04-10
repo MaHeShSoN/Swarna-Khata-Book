@@ -13,12 +13,16 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jewelrypos.swarnakhatabook.ViewModle.SplashViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentLauncherBinding
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
 class launcherFragment : Fragment() {
@@ -53,6 +57,73 @@ class launcherFragment : Fragment() {
             Context.MODE_PRIVATE
         )
 
+        // Check if user is authenticated, then check subscription
+        val auth = FirebaseAuth.getInstance()
+        if (auth.currentUser != null) {
+            checkSubscriptionStatus()
+        } else {
+            // Not logged in yet, proceed with normal flow
+            checkAppLockAndProceed()
+        }
+    }
+
+    private fun checkSubscriptionStatus() {
+        lifecycleScope.launch {
+            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+
+            // Check if trial has expired for non-premium users
+            if (!subscriptionManager.isPremiumUser() && subscriptionManager.hasTrialExpired()) {
+                showTrialExpiredDialog()
+            } else {
+                // Trial still valid or user is premium
+                checkAppLockAndProceed()
+            }
+        }
+    }
+
+    private fun showTrialExpiredDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Trial Period Expired")
+            .setMessage("Your 10-day trial period has expired. Please upgrade to continue using Swarna Khata Book.")
+            .setCancelable(false)
+            .setPositiveButton("Upgrade") { _, _ ->
+                // Navigate to upgrade screen
+                // For demonstration, we'll just show a toast
+                Toast.makeText(requireContext(), "Navigate to upgrade screen", Toast.LENGTH_LONG).show()
+
+                // For testing - simulate an upgrade
+                upgradeToPremium()
+            }
+            .setNegativeButton("Log Out") { _, _ ->
+                // Log out the user
+                logoutUser()
+            }
+            .show()
+    }
+
+    private fun upgradeToPremium() {
+        lifecycleScope.launch {
+            val success = SwarnaKhataBook.userSubscriptionManager.updatePremiumStatus(true)
+            if (success) {
+                Toast.makeText(requireContext(), "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
+                // Continue with normal app flow
+                checkAppLockAndProceed()
+            } else {
+                Toast.makeText(requireContext(), "Upgrade failed. Please try again.", Toast.LENGTH_SHORT).show()
+                logoutUser()
+            }
+        }
+    }
+
+    private fun logoutUser() {
+        // Sign out from Firebase
+        FirebaseAuth.getInstance().signOut()
+
+        // Navigate to login screen
+        findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
+    }
+
+    private fun checkAppLockAndProceed() {
         // Check if app lock is enabled
         val isAppLockEnabled = sharedPreferences.getBoolean("app_lock_enabled", false)
 
@@ -228,7 +299,7 @@ class launcherFragment : Fragment() {
             if (enteredPin == savedPin) {
                 // PIN is correct
                 dialog.dismiss()
-                findNavController().navigate(R.id.action_launcherFragment_to_mainScreenFragment)
+                startNormalFlow()
             } else {
                 // PIN is incorrect
                 pinEditText.error = "Incorrect PIN"

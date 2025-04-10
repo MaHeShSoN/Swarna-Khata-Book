@@ -115,7 +115,12 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private fun setupCustomerTypeDropdown() {
         val items = listOf("Consumer", "Wholesaler")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
-        binding.customerTypeDropdown.setAdapter(adapter)
+
+        binding.customerTypeDropdown.apply {
+            setAdapter(adapter)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
+
     }
 
     private fun setupCountryDropdown() {

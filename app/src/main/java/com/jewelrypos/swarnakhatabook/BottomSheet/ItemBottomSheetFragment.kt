@@ -158,11 +158,40 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         val adapter = ArrayAdapter(
             requireContext(),
             R.layout.dropdown_item,
-            itemNames
+            if (itemNames.isEmpty()) {
+                // If no items are available, add a suggestion message
+                listOf("No items available - Click + to add")
+            } else {
+                itemNames
+            }
         )
         binding.categoryDropdown.apply {
             setAdapter(adapter)
             setDropDownBackgroundResource(R.color.my_light_primary_container)
+
+            // If there are no items, set a hint text as helper
+            if (itemNames.isEmpty()) {
+                binding.categoryInputLayout.helperText = "Use the + button to add a category"
+                binding.goldImageButton1.alpha = 1.0f  // Make sure button is fully visible
+                // Optional: add a gentle pulse animation to draw attention to the button
+                binding.goldImageButton1.startAnimation(
+                    android.view.animation.AnimationUtils.loadAnimation(
+                        context,
+                        android.R.anim.fade_in
+                    )
+                )
+            } else {
+                binding.categoryInputLayout.helperText = null
+            }
+
+        }
+
+        binding.categoryDropdown.setOnItemClickListener { _, _, position, _ ->
+            if (itemNames.isEmpty() && position == 0) {
+                // If user clicks on the suggestion, automatically trigger the add button
+                binding.goldImageButton1.performClick()
+                binding.categoryDropdown.setText("")  // Clear the suggestion text
+            }
         }
     }
 

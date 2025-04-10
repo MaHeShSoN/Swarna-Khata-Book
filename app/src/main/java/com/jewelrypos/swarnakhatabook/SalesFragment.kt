@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -38,6 +39,7 @@ class SalesFragment : Fragment() {
     }
 
     private lateinit var adapter: InvoicesAdapter
+    private var isSearchActive = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -75,7 +77,8 @@ class SalesFragment : Fragment() {
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_search -> {
-                    // Handle search - you can implement search functionality later
+                    // Setup search functionality
+                    setupSearchView()
                     true
                 }
 
@@ -89,14 +92,44 @@ class SalesFragment : Fragment() {
         }
     }
 
+    private fun setupSearchView() {
+        with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
+            queryHint = "Search invoices..."
+            inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            isIconified = false
+
+            setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    query?.let {
+                        isSearchActive = true
+                        salesViewModel.searchInvoices(it)
+                    }
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    newText?.let {
+                        isSearchActive = it.isNotEmpty()
+                        salesViewModel.searchInvoices(it)
+                    }
+                    return true
+                }
+            })
+
+            setOnCloseListener {
+                isSearchActive = false
+                salesViewModel.searchInvoices("")
+                clearFocus()
+                true
+            }
+        }
+    }
+
     private fun setupRecyclerView() {
         adapter = InvoicesAdapter(emptyList())
 
         // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
-
-//            val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-//            parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)
 
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
 
@@ -110,8 +143,6 @@ class SalesFragment : Fragment() {
                 "Invoice: ${invoice.invoiceNumber}",
                 Toast.LENGTH_SHORT
             ).show()
-            // You could navigate to details using:
-            // findNavController().navigate(SalesFragmentDirections.actionSalesFragmentToInvoiceDetailsFragment(invoice.invoiceNumber))
         }
 
         binding.recyclerViewSales.apply {
@@ -140,15 +171,14 @@ class SalesFragment : Fragment() {
         }
     }
 
-
     private fun setupObservers() {
         salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
             adapter.updateInvoices(invoices)
             binding.swipeRefreshLayout.isRefreshing = false
             binding.progressBar.visibility = View.GONE
 
-            // Update empty state
-            updateEmptyState(invoices.isEmpty())
+            // Update UI based on search results or empty state
+            updateUIState(invoices.isEmpty())
         }
 
         salesViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
@@ -179,8 +209,11 @@ class SalesFragment : Fragment() {
         // Clear search button in empty search state
         binding.clearFilterButton.setOnClickListener {
             // Clear search and refresh data
+            val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+            searchView.setQuery("", false)
+            searchView.clearFocus()
+            isSearchActive = false
             salesViewModel.refreshInvoices()
-            binding.emptySearchLayout.visibility = View.GONE
         }
 
         // Add new item button in empty search state
@@ -189,13 +222,22 @@ class SalesFragment : Fragment() {
         }
     }
 
-    private fun updateEmptyState(isEmpty: Boolean) {
-        if (isEmpty) {
+    private fun updateUIState(isEmpty: Boolean) {
+        if (isEmpty && isSearchActive) {
+            // No search results
+            binding.emptySearchLayout.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.GONE
+            binding.recyclerViewSales.visibility = View.GONE
+        } else if (isEmpty) {
+            // No invoices at all
             binding.emptyStateLayout.visibility = View.VISIBLE
+            binding.emptySearchLayout.visibility = View.GONE
             binding.recyclerViewSales.visibility = View.GONE
         } else {
-            binding.emptyStateLayout.visibility = View.GONE
+            // Show recycler view with results
             binding.recyclerViewSales.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.GONE
+            binding.emptySearchLayout.visibility = View.GONE
         }
     }
 

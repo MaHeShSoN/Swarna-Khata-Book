@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -103,4 +103,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation ("androidx.biometric:biometric-ktx:1.4.0-alpha02")
+
+    implementation ("com.android.billingclient:billing:6.0.1")
+    implementation ("com.android.billingclient:billing-ktx:6.0.1")
 }
