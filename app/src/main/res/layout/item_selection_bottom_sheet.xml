@@ -349,7 +349,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Gold Rate (1 Gram)"
+                    android:hint="Metal Rate (1 Gram)"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"

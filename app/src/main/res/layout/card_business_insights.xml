@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/insights_title"
+            style="@style/TextAppearance.App.Subheading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Business Insights (This Week)"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Spinner
+            android:id="@+id/insights_period_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minHeight="0dp"
+            app:layout_constraintBottom_toBottomOf="@id/insights_title"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/insights_title"
+            />
+
+        <TextView
+            android:id="@+id/total_sales_label"
+            style="@style/TextAppearance.App.MetricLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Total Sales"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/insights_title" />
+
+        <TextView
+            android:id="@+id/total_sales_value"
+            style="@style/TextAppearance.App.MetricValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="@id/total_sales_label"
+            app:layout_constraintTop_toBottomOf="@id/total_sales_label"
+            tools:text="₹ 1,50,000" />
+
+        <TextView
+            android:id="@+id/total_sales_change"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintBottom_toBottomOf="@id/total_sales_value"
+            app:layout_constraintStart_toEndOf="@id/total_sales_value"
+            tools:text="(↑ 12% vs LW)"
+            tools:textColor="@color/status_completed" />
+
+        <TextView
+            android:id="@+id/gross_profit_label"
+            style="@style/TextAppearance.App.MetricLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gross Profit"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/total_sales_label" />
+
+        <TextView
+            android:id="@+id/gross_profit_value"
+            style="@style/TextAppearance.App.MetricValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toStartOf="@id/gross_profit_label"
+            app:layout_constraintTop_toBottomOf="@id/gross_profit_label"
+            tools:text="₹ 45,000" />
+
+        <TextView
+            android:id="@+id/gross_profit_change"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintBottom_toBottomOf="@id/gross_profit_value"
+            app:layout_constraintStart_toEndOf="@id/gross_profit_value"
+            tools:text="(↑ 8% vs LW)"
+            tools:textColor="@color/status_completed" />
+
+        <View
+            android:id="@+id/separator1"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/listDivider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/total_sales_value" />
+
+        <TextView
+            android:id="@+id/best_seller_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Best Seller:"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/separator1" />
+
+        <TextView
+            android:id="@+id/best_seller_value"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/best_seller_label"
+            app:layout_constraintTop_toTopOf="@id/best_seller_label"
+            tools:text="Gold Rings (by Value)" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/view_report_button"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="View Full Report"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/best_seller_value" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.card.MaterialCardView>

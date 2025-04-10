@@ -1,222 +1,222 @@
-package com.jewelrypos.swarnakhatabook
-
-import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.pdf.PdfDocument
-import android.net.Uri
-import android.os.Bundle
-import androidx.navigation.NavOptions
-import androidx.core.os.bundleOf
-import android.os.Environment
-import android.util.Log
-import android.view.LayoutInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
-import androidx.core.content.res.ResourcesCompat
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.navigation.findNavController
-import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.jewelrypos.swarnakhatabook.Adapters.PaymentsAdapter
-import com.jewelrypos.swarnakhatabook.BottomSheet.PaymentEntryBottomSheet
-import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
-import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
-import com.jewelrypos.swarnakhatabook.DataClasses.Payment
-import com.jewelrypos.swarnakhatabook.Events.EventBus
-import com.jewelrypos.swarnakhatabook.Factorys.InvoiceDetailViewModelFactory
-import com.jewelrypos.swarnakhatabook.ViewModle.InvoiceDetailViewModel
-import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceDetailBinding
-import java.io.File
-import java.io.FileOutputStream
-import java.text.DecimalFormat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.core.net.toUri
-import androidx.lifecycle.lifecycleScope
-import com.jewelrypos.swarnakhatabook.Adapters.EditableInvoiceItemAdapter
-import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
-import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
-import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+    package com.jewelrypos.swarnakhatabook
+    
+    import android.content.Context
+    import android.content.Intent
+    import android.graphics.Bitmap
+    import android.graphics.Canvas
+    import android.graphics.pdf.PdfDocument
+    import android.net.Uri
+    import android.os.Bundle
+    import androidx.navigation.NavOptions
+    import androidx.core.os.bundleOf
+    import android.os.Environment
+    import android.util.Log
+    import android.view.LayoutInflater
+    import android.view.MenuItem
+    import android.view.View
+    import android.view.ViewGroup
+    import android.view.inputmethod.InputMethodManager
+    import android.widget.TextView
+    import android.widget.Toast
+    import androidx.activity.OnBackPressedCallback
+    import androidx.appcompat.app.AlertDialog
+    import androidx.core.content.ContextCompat
+    import androidx.core.content.FileProvider
+    import androidx.core.content.res.ResourcesCompat
+    import androidx.fragment.app.Fragment
+    import androidx.fragment.app.viewModels
+    import androidx.navigation.findNavController
+    import androidx.navigation.fragment.findNavController
+    import androidx.navigation.fragment.navArgs
+    import androidx.recyclerview.widget.LinearLayoutManager
+    import com.google.android.material.dialog.MaterialAlertDialogBuilder
+    import com.jewelrypos.swarnakhatabook.Adapters.PaymentsAdapter
+    import com.jewelrypos.swarnakhatabook.BottomSheet.PaymentEntryBottomSheet
+    import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
+    import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
+    import com.jewelrypos.swarnakhatabook.DataClasses.Payment
+    import com.jewelrypos.swarnakhatabook.Events.EventBus
+    import com.jewelrypos.swarnakhatabook.Factorys.InvoiceDetailViewModelFactory
+    import com.jewelrypos.swarnakhatabook.ViewModle.InvoiceDetailViewModel
+    import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceDetailBinding
+    import java.io.File
+    import java.io.FileOutputStream
+    import java.text.DecimalFormat
+    import java.text.SimpleDateFormat
+    import java.util.Date
+    import java.util.Locale
+    import androidx.core.net.toUri
+    import androidx.lifecycle.lifecycleScope
+    import com.jewelrypos.swarnakhatabook.Adapters.EditableInvoiceItemAdapter
+    import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
+    import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+    import com.jewelrypos.swarnakhatabook.DataClasses.Shop
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
-import com.jewelrypos.swarnakhatabook.Repository.ShopManager
-import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import kotlinx.coroutines.launch
-
-class InvoiceDetailFragment : Fragment() {
-
-    private var _binding: FragmentInvoiceDetailBinding? = null
-    private val binding get() = _binding!!
-
-    private var isEditingNotes = false
-
-    private val args: InvoiceDetailFragmentArgs by navArgs()
-
-    private val viewModel: InvoiceDetailViewModel by viewModels {
-        InvoiceDetailViewModelFactory(requireActivity().application)
-    }
-
-    private lateinit var itemsAdapter: EditableInvoiceItemAdapter
-    private lateinit var paymentsAdapter: PaymentsAdapter
-
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentInvoiceDetailBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        setupToolbar()
-        setupRecyclerViews()
-        setupObservers()
-        setupClickListeners()
-        setupNotesEditing()
-        setupAddItemButton()
-
-        binding.topAppBar.overflowIcon =
-            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
-        // Load invoice data based on passed ID
-        viewModel.loadInvoice(args.invoiceId)
-
-        // Add the callback
-        requireActivity().onBackPressedDispatcher.addCallback(
-            viewLifecycleOwner,
-            backPressedCallback
-        )
-    }
-
-    private fun setupToolbar() {
-        binding.topAppBar.setNavigationOnClickListener {
-            findNavController().navigateUp()
+    import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+    import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
+    import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+    import kotlinx.coroutines.launch
+    
+    class InvoiceDetailFragment : Fragment() {
+    
+        private var _binding: FragmentInvoiceDetailBinding? = null
+        private val binding get() = _binding!!
+    
+        private var isEditingNotes = false
+    
+        private val args: InvoiceDetailFragmentArgs by navArgs()
+    
+        private val viewModel: InvoiceDetailViewModel by viewModels {
+            InvoiceDetailViewModelFactory(requireActivity().application)
         }
-
-        // Setup menu items
-        binding.topAppBar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_duplicate -> {
-                    confirmDuplicateInvoice()
-                    true
+    
+        private lateinit var itemsAdapter: EditableInvoiceItemAdapter
+        private lateinit var paymentsAdapter: PaymentsAdapter
+    
+        override fun onCreateView(
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View {
+            _binding = FragmentInvoiceDetailBinding.inflate(inflater, container, false)
+            return binding.root
+        }
+    
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            setupToolbar()
+            setupRecyclerViews()
+            setupObservers()
+            setupClickListeners()
+            setupNotesEditing()
+            setupAddItemButton()
+    
+            binding.topAppBar.overflowIcon =
+                ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
+            // Load invoice data based on passed ID
+            viewModel.loadInvoice(args.invoiceId)
+    
+            // Add the callback
+            requireActivity().onBackPressedDispatcher.addCallback(
+                viewLifecycleOwner,
+                backPressedCallback
+            )
+        }
+    
+        private fun setupToolbar() {
+            binding.topAppBar.setNavigationOnClickListener {
+                findNavController().navigateUp()
+            }
+    
+            // Setup menu items
+            binding.topAppBar.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_duplicate -> {
+                        confirmDuplicateInvoice()
+                        true
+                    }
+    
+                    R.id.action_share_whatsapp -> {
+                        shareInvoiceToWhatsApp()
+                        true
+                    }
+    
+                    R.id.action_save_pdf -> {
+                        generateAndSavePdf()
+                        true
+                    }
+    
+                    R.id.action_delete -> {
+                        confirmDeleteInvoice()
+                        true
+                    }
+    
+                    else -> false
                 }
-
-                R.id.action_share_whatsapp -> {
-                    shareInvoiceToWhatsApp()
-                    true
+            }
+        }
+    
+        private fun setupRecyclerViews() {
+            // Setup items recycler view with edit/delete functionality
+            itemsAdapter = EditableInvoiceItemAdapter(emptyList())
+            itemsAdapter.setOnItemActionListener(object :
+                EditableInvoiceItemAdapter.OnItemActionListener {
+                override fun onRemoveItem(item: InvoiceItem) {
+                    confirmDeleteItem(item)
                 }
-
-                R.id.action_save_pdf -> {
-                    generateAndSavePdf()
-                    true
+    
+                override fun onEditItem(item: InvoiceItem) {
+                    openItemEditor(item)
                 }
-
-                R.id.action_delete -> {
-                    confirmDeleteInvoice()
-                    true
+    
+                override fun onQuantityChanged(item: InvoiceItem, newQuantity: Int) {
+                    viewModel.updateItemQuantity(item, newQuantity)
                 }
-
-                else -> false
+            })
+    
+            binding.itemsRecyclerView.apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = itemsAdapter
+            }
+    
+            // Setup payments recycler view with delete functionality
+            paymentsAdapter = PaymentsAdapter(emptyList())
+            paymentsAdapter.setOnPaymentActionListener(object :
+                PaymentsAdapter.OnPaymentActionListener {
+                override fun onRemovePayment(payment: Payment) {
+                    confirmDeletePayment(payment)
+                }
+    
+                override fun onEditPayment(payment: Payment) {
+                    // Optional: Implement payment edit functionality
+                }
+            })
+    
+            binding.paymentsRecyclerView.apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = paymentsAdapter
             }
         }
-    }
-
-    private fun setupRecyclerViews() {
-        // Setup items recycler view with edit/delete functionality
-        itemsAdapter = EditableInvoiceItemAdapter(emptyList())
-        itemsAdapter.setOnItemActionListener(object :
-            EditableInvoiceItemAdapter.OnItemActionListener {
-            override fun onRemoveItem(item: InvoiceItem) {
-                confirmDeleteItem(item)
+    
+        private fun setupObservers() {
+            // Observe invoice changes
+            viewModel.invoice.observe(viewLifecycleOwner) { invoice ->
+                invoice?.let { updateInvoiceUI(it) }
             }
-
-            override fun onEditItem(item: InvoiceItem) {
-                openItemEditor(item)
+    
+            // Centralized error handling
+            viewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
+                errorMessage?.let {
+                    showErrorMessage(it)
+                }
             }
-
-            override fun onQuantityChanged(item: InvoiceItem, newQuantity: Int) {
-                viewModel.updateItemQuantity(item, newQuantity)
-            }
-        })
-
-        binding.itemsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = itemsAdapter
-        }
-
-        // Setup payments recycler view with delete functionality
-        paymentsAdapter = PaymentsAdapter(emptyList())
-        paymentsAdapter.setOnPaymentActionListener(object :
-            PaymentsAdapter.OnPaymentActionListener {
-            override fun onRemovePayment(payment: Payment) {
-                confirmDeletePayment(payment)
-            }
-
-            override fun onEditPayment(payment: Payment) {
-                // Optional: Implement payment edit functionality
-            }
-        })
-
-        binding.paymentsRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = paymentsAdapter
-        }
-    }
-
-    private fun setupObservers() {
-        // Observe invoice changes
-        viewModel.invoice.observe(viewLifecycleOwner) { invoice ->
-            invoice?.let { updateInvoiceUI(it) }
-        }
-
-        // Centralized error handling
-        viewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            errorMessage?.let {
-                showErrorMessage(it)
+    
+            // Loading state observer
+            viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+                updateLoadingState(isLoading)
             }
         }
-
-        // Loading state observer
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            updateLoadingState(isLoading)
-        }
-    }
-
-    private fun updateInvoiceUI(invoice: Invoice) {
+    
+        private fun updateInvoiceUI(invoice: Invoice) {
         Log.d(
             "InvoiceDetailFragment",
             "Updating UI with invoice: ${invoice.invoiceNumber}, items: ${invoice.items.size}"
         )
+    
+            // Update invoice header details
+            binding.invoiceNumber.text = invoice.invoiceNumber
+    
+            // Format invoice date
+            val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            binding.invoiceDate.text = dateFormatter.format(Date(invoice.invoiceDate))
+    
 
-        // Update invoice header details
-        binding.invoiceNumber.text = invoice.invoiceNumber
-
-        // Format invoice date
-        val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        binding.invoiceDate.text = dateFormatter.format(Date(invoice.invoiceDate))
-
-
-        // Update payment status
-        updatePaymentStatus(invoice)
-
-        // Update customer details
-        binding.customerName.text = invoice.customerName
-        binding.customerPhone.text = invoice.customerPhone
-        binding.customerAddress.text = invoice.customerAddress
+            // Update payment status
+            updatePaymentStatus(invoice)
+    
+            // Update customer details
+            binding.customerName.text = invoice.customerName
+            binding.customerPhone.text = invoice.customerPhone
+            binding.customerAddress.text = invoice.customerAddress
 
         // First fetch the customer to determine the type
         viewModel.customer.observe(viewLifecycleOwner) { customer ->
@@ -226,21 +226,21 @@ class InvoiceDetailFragment : Fragment() {
             updateUIForCustomerType(isWholesaler)
         }
 
-
-        // Update items list
-        itemsAdapter.updateItems(invoice.items)
-
-        // Update financial information
-        updateFinancialDetails(invoice)
-
+    
+            // Update items list
+            itemsAdapter.updateItems(invoice.items)
+    
+            // Update financial information
+            updateFinancialDetails(invoice)
+    
         // Update extra charges - make sure this happens after items are updated
-        updateExtraChargesDisplay(invoice)
-
-        // Update payments list
-        updatePaymentsList(invoice)
-
-        // Update notes
-        updateNotesDisplay(invoice)
+            updateExtraChargesDisplay(invoice)
+    
+            // Update payments list
+            updatePaymentsList(invoice)
+    
+            // Update notes
+            updateNotesDisplay(invoice)
 
         Log.d("InvoiceDetailFragment", "UI update complete")
     }
@@ -285,7 +285,7 @@ class InvoiceDetailFragment : Fragment() {
             // Reset to default colors
             binding.topAppBar.setBackgroundColor(
                 ContextCompat.getColor(
-                    requireContext(),
+                requireContext(),
                     R.color.my_light_primary
                 )
             )
@@ -296,151 +296,151 @@ class InvoiceDetailFragment : Fragment() {
                 )
             )
         }
-    }
-
-    private fun updatePaymentStatus(invoice: Invoice) {
+        }
+    
+        private fun updatePaymentStatus(invoice: Invoice) {
         val isWholesaler =
             viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
-        val balanceDue = invoice.totalAmount - invoice.paidAmount
+            val balanceDue = invoice.totalAmount - invoice.paidAmount
 
-        val paymentStatus = when {
+            val paymentStatus = when {
             balanceDue <= 0 -> if (isWholesaler) "PAID" else "PAID"
             invoice.paidAmount > 0 -> if (isWholesaler) "PARTIALLY PAID" else "PARTIAL"
             else -> if (isWholesaler) "TO PAY" else "UNPAID"
-        }
-        binding.paymentStatus.text = paymentStatus
-
-        // Set status background color
-        val statusColor = when (paymentStatus) {
-            "PAID" -> R.color.status_paid
+            }
+            binding.paymentStatus.text = paymentStatus
+    
+            // Set status background color
+            val statusColor = when (paymentStatus) {
+                "PAID" -> R.color.status_paid
             "PARTIAL", "PARTIALLY PAID" -> R.color.status_partial
             else -> if (isWholesaler) R.color.supplier_badge_color else R.color.status_unpaid
+            }
+            binding.paymentStatus.backgroundTintList =
+                ContextCompat.getColorStateList(requireContext(), statusColor)
         }
-        binding.paymentStatus.backgroundTintList =
-            ContextCompat.getColorStateList(requireContext(), statusColor)
-    }
-
-    private fun updateFinancialDetails(invoice: Invoice) {
-        val currencyFormatter = DecimalFormat("#,##,##0.00")
-        val subtotal = calculateSubtotal(invoice)
-        val extraCharges = calculateExtraCharges(invoice)
-        val tax = calculateTax(invoice)
-        val balanceDue = invoice.totalAmount - invoice.paidAmount
-
-        binding.subtotalValue.text = "₹${currencyFormatter.format(subtotal)}"
-
-        // If you have a UI element to display extra charges total:
-        // binding.extraChargesValue.text = "₹${currencyFormatter.format(extraCharges)}"
-
-        binding.taxValue.text = "₹${currencyFormatter.format(tax)}"
+    
+        private fun updateFinancialDetails(invoice: Invoice) {
+            val currencyFormatter = DecimalFormat("#,##,##0.00")
+            val subtotal = calculateSubtotal(invoice)
+            val extraCharges = calculateExtraCharges(invoice)
+            val tax = calculateTax(invoice)
+            val balanceDue = invoice.totalAmount - invoice.paidAmount
+    
+            binding.subtotalValue.text = "₹${currencyFormatter.format(subtotal)}"
+    
+            // If you have a UI element to display extra charges total:
+            // binding.extraChargesValue.text = "₹${currencyFormatter.format(extraCharges)}"
+    
+            binding.taxValue.text = "₹${currencyFormatter.format(tax)}"
         binding.totalValue.text = "₹${currencyFormatter.format(invoice.totalAmount)}"
-        binding.amountPaidValue.text = "₹${currencyFormatter.format(invoice.paidAmount)}"
-        binding.balanceDueValue.text = "₹${currencyFormatter.format(balanceDue)}"
-    }
-
-    private fun updatePaymentsList(invoice: Invoice) {
-        if (invoice.payments.isEmpty()) {
-            binding.noPaymentsText.visibility = View.VISIBLE
-            binding.paymentsRecyclerView.visibility = View.GONE
-        } else {
-            binding.noPaymentsText.visibility = View.GONE
-            binding.paymentsRecyclerView.visibility = View.VISIBLE
-            paymentsAdapter.updatePayments(invoice.payments)
+            binding.amountPaidValue.text = "₹${currencyFormatter.format(invoice.paidAmount)}"
+            binding.balanceDueValue.text = "₹${currencyFormatter.format(balanceDue)}"
         }
-    }
-
-    private fun updateNotesDisplay(invoice: Invoice) {
-        if (invoice.notes.isNullOrEmpty()) {
-            binding.emptyNotesText.visibility = View.VISIBLE
-            binding.notesContent.visibility = View.GONE
-        } else {
-            binding.emptyNotesText.visibility = View.GONE
-            binding.notesContent.visibility = View.VISIBLE
-            binding.notesContent.text = invoice.notes
-        }
-    }
-
-    private fun calculateExtraCharges(invoice: Invoice): Double {
-        return invoice.items.sumOf { item ->
-            item.itemDetails.listOfExtraCharges.sumOf { charge ->
-                charge.amount * item.quantity
+    
+        private fun updatePaymentsList(invoice: Invoice) {
+            if (invoice.payments.isEmpty()) {
+                binding.noPaymentsText.visibility = View.VISIBLE
+                binding.paymentsRecyclerView.visibility = View.GONE
+            } else {
+                binding.noPaymentsText.visibility = View.GONE
+                binding.paymentsRecyclerView.visibility = View.VISIBLE
+                paymentsAdapter.updatePayments(invoice.payments)
             }
         }
-    }
-
-    private fun calculateSubtotal(invoice: Invoice): Double {
-        return invoice.items.sumOf { it.price * it.quantity }
-    }
-
-
-    private fun calculateTax(invoice: Invoice): Double {
+    
+        private fun updateNotesDisplay(invoice: Invoice) {
+            if (invoice.notes.isNullOrEmpty()) {
+                binding.emptyNotesText.visibility = View.VISIBLE
+                binding.notesContent.visibility = View.GONE
+            } else {
+                binding.emptyNotesText.visibility = View.GONE
+                binding.notesContent.visibility = View.VISIBLE
+                binding.notesContent.text = invoice.notes
+            }
+        }
+    
+        private fun calculateExtraCharges(invoice: Invoice): Double {
+            return invoice.items.sumOf { item ->
+                item.itemDetails.listOfExtraCharges.sumOf { charge ->
+                    charge.amount * item.quantity
+                }
+            }
+        }
+    
+        private fun calculateSubtotal(invoice: Invoice): Double {
+            return invoice.items.sumOf { it.price * it.quantity }
+        }
+    
+    
+        private fun calculateTax(invoice: Invoice): Double {
         // Regular tax calculation
-        return invoice.items.sumOf { item ->
+                return invoice.items.sumOf { item ->
             val itemSubtotal = calculateSubtotal(invoice)
             val itemExtraCharges = calculateExtraCharges(invoice)
-            (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
-        }
-    }
-
-    private fun setupAddItemButton() {
-        binding.addItemsButton.setOnClickListener {
-            openItemSelector()
-        }
-    }
-
-
-    private fun openItemSelector() {
-        val bottomSheet = ItemSelectionBottomSheet.newInstance()
-
-        bottomSheet.setOnItemSelectedListener(object :
-            ItemSelectionBottomSheet.OnItemSelectedListener {
-            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
-                // Create new invoice item
-                val newInvoiceItem = InvoiceItem(
-                    itemId = newItem.id,
-                    quantity = 1,
-                    itemDetails = newItem,
-                    price = price
-                )
-
-                // Add to invoice
-                viewModel.addInvoiceItem(newInvoiceItem)
-                EventBus.postInvoiceAdded()
+                    (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
             }
-
-            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                // This shouldn't happen when adding a new item
+        }
+    
+        private fun setupAddItemButton() {
+            binding.addItemsButton.setOnClickListener {
+                openItemSelector()
             }
-        })
-
-        bottomSheet.show(parentFragmentManager, "ItemSelectorBottomSheet")
-    }
-
-    private fun setupClickListeners() {
-        // Add payment button
-        binding.addPaymentButton.setOnClickListener {
-            showAddPaymentBottomSheet()
         }
 
-        // Call customer button
-        binding.callCustomerButton.setOnClickListener {
-            callCustomer()
+    
+        private fun openItemSelector() {
+            val bottomSheet = ItemSelectionBottomSheet.newInstance()
+    
+            bottomSheet.setOnItemSelectedListener(object :
+                ItemSelectionBottomSheet.OnItemSelectedListener {
+                override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+                    // Create new invoice item
+                    val newInvoiceItem = InvoiceItem(
+                        itemId = newItem.id,
+                        quantity = 1,
+                        itemDetails = newItem,
+                        price = price
+                    )
+    
+                    // Add to invoice
+                    viewModel.addInvoiceItem(newInvoiceItem)
+                    EventBus.postInvoiceAdded()
+                }
+    
+                override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+                    // This shouldn't happen when adding a new item
+                }
+            })
+    
+            bottomSheet.show(parentFragmentManager, "ItemSelectorBottomSheet")
         }
-
-        // WhatsApp customer button
-        binding.whatsappCustomerButton.setOnClickListener {
-            messageCustomerOnWhatsApp()
-        }
-
-        // Print button
-        binding.printButton.setOnClickListener {
-            printInvoice()
-        }
-
-        // Share button
-        binding.shareButton.setOnClickListener {
-            shareInvoice()
-        }
+    
+        private fun setupClickListeners() {
+            // Add payment button
+            binding.addPaymentButton.setOnClickListener {
+                showAddPaymentBottomSheet()
+            }
+    
+            // Call customer button
+            binding.callCustomerButton.setOnClickListener {
+                callCustomer()
+            }
+    
+            // WhatsApp customer button
+            binding.whatsappCustomerButton.setOnClickListener {
+                messageCustomerOnWhatsApp()
+            }
+    
+            // Print button
+            binding.printButton.setOnClickListener {
+                printInvoice()
+            }
+    
+            // Share button
+            binding.shareButton.setOnClickListener {
+                shareInvoice()
+            }
 
         binding.infoButton.setOnClickListener {
             navigateToCustomerDetail()
@@ -458,27 +458,27 @@ class InvoiceDetailFragment : Fragment() {
             // If customer ID is not available, show a message
             Toast.makeText(requireContext(), "Customer information not available", Toast.LENGTH_SHORT).show()
         }
-    }
-
-    private fun showAddPaymentBottomSheet() {
-        val invoice = viewModel.invoice.value ?: return
+        }
+    
+        private fun showAddPaymentBottomSheet() {
+            val invoice = viewModel.invoice.value ?: return
         val isWholesaler =
             viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
 
-        val totalAmount = invoice.totalAmount
-        val paidAmount = invoice.paidAmount
-        val dueAmount = totalAmount - paidAmount
-
-        if (dueAmount <= 0) {
+            val totalAmount = invoice.totalAmount
+            val paidAmount = invoice.paidAmount
+            val dueAmount = totalAmount - paidAmount
+    
+            if (dueAmount <= 0) {
             val message = if (isWholesaler)
                 "Purchase is already fully paid"
             else
                 "Invoice is already fully paid"
             showErrorMessage(message)
-            return
-        }
-
-        val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
+                return
+            }
+    
+            val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
         if (isWholesaler) {
             paymentSheet.setTitle("Add Payment to Supplier")
             paymentSheet.setDescription(
@@ -493,17 +493,17 @@ class InvoiceDetailFragment : Fragment() {
             paymentSheet.setTitle("Add Payment")
             paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
         }
-        paymentSheet.setAmount(dueAmount)
-
-        paymentSheet.setOnPaymentAddedListener(object :
-            PaymentEntryBottomSheet.OnPaymentAddedListener {
-            override fun onPaymentAdded(payment: Payment) {
-                viewModel.addPaymentToInvoice(payment)
-            }
-        })
-        paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
-    }
-
+            paymentSheet.setAmount(dueAmount)
+    
+            paymentSheet.setOnPaymentAddedListener(object :
+                PaymentEntryBottomSheet.OnPaymentAddedListener {
+                override fun onPaymentAdded(payment: Payment) {
+                    viewModel.addPaymentToInvoice(payment)
+                }
+            })
+            paymentSheet.show(parentFragmentManager, "PaymentEntryBottomSheet")
+        }
+    
 
     /**
      * Calculate the total extra charges for a specific item
@@ -523,8 +523,8 @@ class InvoiceDetailFragment : Fragment() {
         return (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
     }
 
-
-    private fun openItemEditor(item: InvoiceItem) {
+    
+        private fun openItemEditor(item: InvoiceItem) {
         // Get the current invoice
         val invoice = viewModel.invoice.value ?: return
 
@@ -541,21 +541,21 @@ class InvoiceDetailFragment : Fragment() {
         val minimumAllowedTotal = Math.max(0.0, totalPaid - otherItemsTotal)
 
         // Create and configure the bottom sheet
-        val bottomSheet = ItemSelectionBottomSheet.newInstance()
-        bottomSheet.setItemForEdit(item.itemDetails)
-
-        bottomSheet.setOnItemSelectedListener(object :
-            ItemSelectionBottomSheet.OnItemSelectedListener {
-            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
-                // This shouldn't happen during editing
-            }
-
-            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-                Log.d(
-                    "InvoiceDetailFragment",
-                    "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
-                )
-
+            val bottomSheet = ItemSelectionBottomSheet.newInstance()
+            bottomSheet.setItemForEdit(item.itemDetails)
+    
+            bottomSheet.setOnItemSelectedListener(object :
+                ItemSelectionBottomSheet.OnItemSelectedListener {
+                override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+                    // This shouldn't happen during editing
+                }
+    
+                override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+                    Log.d(
+                        "InvoiceDetailFragment",
+                        "Item updated with ${updatedItem.listOfExtraCharges.size} extra charges"
+                    )
+    
                 // Calculate what the new total would be for this item
                 val newQuantity = item.quantity // Quantity remains the same
                 val newItemTotal = price * newQuantity
@@ -595,23 +595,23 @@ class InvoiceDetailFragment : Fragment() {
                 }
 
                 // Safe to proceed - create updated invoice item
-                val updatedInvoiceItem = InvoiceItem(
+                    val updatedInvoiceItem = InvoiceItem(
                     id = item.id,
                     itemId = item.itemId,
-                    quantity = item.quantity,
+                        quantity = item.quantity,
                     itemDetails = updatedItem,
-                    price = price
-                )
-
-                // Update in viewmodel
-                viewModel.updateInvoiceItem(updatedInvoiceItem)
-                EventBus.postInvoiceUpdated()
-            }
-        })
-
-        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
-    }
-
+                        price = price
+                    )
+    
+                    // Update in viewmodel
+                    viewModel.updateInvoiceItem(updatedInvoiceItem)
+                    EventBus.postInvoiceUpdated()
+                }
+            })
+    
+            bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
+        }
+    
 
 //    private fun openItemEditor(item: InvoiceItem) {
 //        val bottomSheet = ItemSelectionBottomSheet.newInstance()
@@ -648,73 +648,73 @@ class InvoiceDetailFragment : Fragment() {
 //        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
 //    }
 
-//    private fun openItemEditor(item: InvoiceItem) {
-//        val bottomSheet = ItemSelectionBottomSheet.newInstance()
-//        bottomSheet.setItemForEdit(item.itemDetails)
-//
-//        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
-//            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
-//                // This shouldn't happen during editing
-//            }
-//
-//            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
-//                // Create updated item
-//                val updatedInvoiceItem = InvoiceItem(
-//                    itemId = item.itemId,
-//                    quantity = item.quantity,
-//                    itemDetails = updatedItem,
-//                    price = price
-//                )
-//
-//                // Update in viewmodel
-//                viewModel.updateInvoiceItem(updatedInvoiceItem)
-//            }
-//        })
-//
-//        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
-//    }
-
-    private fun confirmDeleteItem(item: InvoiceItem) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Delete Item")
-            .setMessage("Are you sure you want to remove this item from the invoice?")
-            .setPositiveButton("Delete") { _, _ ->
-                viewModel.removeInvoiceItem(item)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun confirmDeletePayment(payment: Payment) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Delete Payment")
-            .setMessage(
-                "Are you sure you want to delete this payment of ₹${
-                    DecimalFormat("#,##,##0.00").format(
-                        payment.amount
-                    )
-                }?"
-            )
-            .setPositiveButton("Delete") { _, _ ->
-                viewModel.removePayment(payment)
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun confirmDuplicateInvoice() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Duplicate Invoice")
-            .setMessage("Are you sure you want to create a duplicate of this invoice?")
-            .setPositiveButton("Duplicate") { _, _ ->
-                viewModel.duplicateInvoice()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-
-    private fun confirmDeleteInvoice() {
+    //    private fun openItemEditor(item: InvoiceItem) {
+    //        val bottomSheet = ItemSelectionBottomSheet.newInstance()
+    //        bottomSheet.setItemForEdit(item.itemDetails)
+    //
+    //        bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
+    //            override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+    //                // This shouldn't happen during editing
+    //            }
+    //
+    //            override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+    //                // Create updated item
+    //                val updatedInvoiceItem = InvoiceItem(
+    //                    itemId = item.itemId,
+    //                    quantity = item.quantity,
+    //                    itemDetails = updatedItem,
+    //                    price = price
+    //                )
+    //
+    //                // Update in viewmodel
+    //                viewModel.updateInvoiceItem(updatedInvoiceItem)
+    //            }
+    //        })
+    //
+    //        bottomSheet.show(parentFragmentManager, "ItemEditorBottomSheet")
+    //    }
+    
+        private fun confirmDeleteItem(item: InvoiceItem) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Delete Item")
+                .setMessage("Are you sure you want to remove this item from the invoice?")
+                .setPositiveButton("Delete") { _, _ ->
+                    viewModel.removeInvoiceItem(item)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    
+        private fun confirmDeletePayment(payment: Payment) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Delete Payment")
+                .setMessage(
+                    "Are you sure you want to delete this payment of ₹${
+                        DecimalFormat("#,##,##0.00").format(
+                            payment.amount
+                        )
+                    }?"
+                )
+                .setPositiveButton("Delete") { _, _ ->
+                    viewModel.removePayment(payment)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    
+        private fun confirmDuplicateInvoice() {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Duplicate Invoice")
+                .setMessage("Are you sure you want to create a duplicate of this invoice?")
+                .setPositiveButton("Duplicate") { _, _ ->
+                    viewModel.duplicateInvoice()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    
+    
+        private fun confirmDeleteInvoice() {
         val isWholesaler =
             viewModel.customer.value?.customerType.equals("Wholesaler", ignoreCase = true)
 
@@ -723,57 +723,57 @@ class InvoiceDetailFragment : Fragment() {
             "Are you sure you want to delete this purchase order? This will remove items from your inventory and update supplier balance."
         else
             "Are you sure you want to delete this invoice? This will return items to your inventory and update customer balance."
-
-        AlertDialog.Builder(requireContext())
+    
+            AlertDialog.Builder(requireContext())
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("Delete") { _, _ ->
-                // Show loading indicator
-                binding.progressBar.visibility = View.VISIBLE
-
-                // Call deleteInvoice with a completion callback
-                viewModel.deleteInvoice { success ->
-                    // Make sure we're still attached to a context
-                    if (!isAdded) return@deleteInvoice
-
-                    requireActivity().runOnUiThread {
-                        // Check if binding is still valid
-                        val binding = _binding ?: return@runOnUiThread
-                        binding.progressBar.visibility = View.GONE
-
-                        if (success) {
-                            // Post the event for refreshing the invoice list
-                            EventBus.postInvoiceDeleted()
+                .setPositiveButton("Delete") { _, _ ->
+                    // Show loading indicator
+                    binding.progressBar.visibility = View.VISIBLE
+    
+                    // Call deleteInvoice with a completion callback
+                    viewModel.deleteInvoice { success ->
+                        // Make sure we're still attached to a context
+                        if (!isAdded) return@deleteInvoice
+    
+                        requireActivity().runOnUiThread {
+                            // Check if binding is still valid
+                            val binding = _binding ?: return@runOnUiThread
+                            binding.progressBar.visibility = View.GONE
+    
+                            if (success) {
+                                // Post the event for refreshing the invoice list
+                                EventBus.postInvoiceDeleted()
                             // Navigate back
-                            findNavController().navigateUp()
-                        } else {
-                            // Show error message if deletion failed
-                            Toast.makeText(
-                                requireContext(),
-                                "Failed to delete invoice",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                                        findNavController().navigateUp()
+                            } else {
+                                // Show error message if deletion failed
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Failed to delete invoice",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     }
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    // Utility methods for error and loading handling
-    private fun showErrorMessage(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-    }
-
-    private fun updateLoadingState(isLoading: Boolean) {
-        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-    }
-
-    // Placeholder methods for external actions
-    private fun callCustomer() {
-        val phone = viewModel.getCustomerPhone()
-        if (phone.isNotEmpty()) {
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    
+        // Utility methods for error and loading handling
+        private fun showErrorMessage(message: String) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    
+        private fun updateLoadingState(isLoading: Boolean) {
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+    
+        // Placeholder methods for external actions
+        private fun callCustomer() {
+            val phone = viewModel.getCustomerPhone()
+            if (phone.isNotEmpty()) {
             try {
                 // Create phone call intent
                 val intent = Intent(Intent.ACTION_DIAL)
@@ -785,10 +785,10 @@ class InvoiceDetailFragment : Fragment() {
                 showErrorMessage("Could not place call: ${e.message}")
                 Log.e("InvoiceDetailFragment", "Error placing call", e)
             }
-        } else {
-            showErrorMessage("No phone number available")
+            } else {
+                showErrorMessage("No phone number available")
+            }
         }
-    }
 
     private fun formatPhoneNumber(phone: String): String {
         // If phone doesn't start with +, assume it's an Indian number and add +91
@@ -801,10 +801,10 @@ class InvoiceDetailFragment : Fragment() {
             "+91$phone" // Default to India country code
         }
     }
-
-    private fun messageCustomerOnWhatsApp() {
-        val phone = viewModel.getCustomerPhone()
-        if (phone.isNotEmpty()) {
+    
+        private fun messageCustomerOnWhatsApp() {
+            val phone = viewModel.getCustomerPhone()
+            if (phone.isNotEmpty()) {
             try {
                 // Format phone number (remove any non-digit characters except +)
                 val formattedPhone = phone.replace(Regex("[^\\d+]"), "")
@@ -865,19 +865,19 @@ class InvoiceDetailFragment : Fragment() {
                 showErrorMessage("Could not open messaging app: ${e.message}")
                 Log.e("InvoiceDetailFragment", "Error opening messaging app", e)
             }
-        } else {
-            showErrorMessage("No phone number available")
+            } else {
+                showErrorMessage("No phone number available")
+            }
         }
-    }
-
-    private fun printInvoice() {
-        // Implement invoice printing
-    }
-
-    private fun shareInvoice() {
-        // Implement invoice sharing
-    }
-
+    
+        private fun printInvoice() {
+            // Implement invoice printing
+        }
+    
+        private fun shareInvoice() {
+            // Implement invoice sharing
+        }
+    
 
     // Add this method to InvoiceDetailFragment
     private fun generateAndSavePdf() {
@@ -956,7 +956,7 @@ class InvoiceDetailFragment : Fragment() {
     // Share invoice summary to WhatsApp
 // Share invoice summary to WhatsApp
 // Share invoice summary to WhatsApp
-    private fun shareInvoiceToWhatsApp() {
+        private fun shareInvoiceToWhatsApp() {
         val invoice = viewModel.invoice.value ?: return
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -1091,139 +1091,139 @@ class InvoiceDetailFragment : Fragment() {
                 Log.e("InvoiceDetailFragment", "Error sharing invoice", e)
             }
         }
-    }
-
-    // Setup notes editing
-    private fun setupNotesEditing() {
-        binding.editNotesButton.setOnClickListener {
-            if (isEditingNotes) {
-                // Save notes
-                val notes = binding.notesEditText.text.toString()
-                viewModel.updateInvoiceNotes(notes)
-                toggleNotesEditingMode(false)
-            } else {
-                // Enter edit mode
-                toggleNotesEditingMode(true)
+        }
+    
+        // Setup notes editing
+        private fun setupNotesEditing() {
+            binding.editNotesButton.setOnClickListener {
+                if (isEditingNotes) {
+                    // Save notes
+                    val notes = binding.notesEditText.text.toString()
+                    viewModel.updateInvoiceNotes(notes)
+                    toggleNotesEditingMode(false)
+                } else {
+                    // Enter edit mode
+                    toggleNotesEditingMode(true)
+                }
             }
         }
-    }
-
-    private fun toggleNotesEditingMode(isEditing: Boolean) {
-        isEditingNotes = isEditing
-
-        if (isEditing) {
-            // Show edit text, hide regular text view
-            binding.notesContent.visibility = View.GONE
-            binding.emptyNotesText.visibility = View.GONE
-            binding.notesEditLayout.visibility = View.VISIBLE
-            binding.notesEditText.setText(binding.notesContent.text)
-            binding.notesEditText.requestFocus()
-
-            // Show keyboard
-            val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showSoftInput(binding.notesEditText, InputMethodManager.SHOW_IMPLICIT)
-
-            // Change button text
-            binding.editNotesButton.setText(R.string.save_notes)
-        } else {
-            // Hide edit text, show regular text view
-            binding.notesContent.visibility = View.VISIBLE
-            binding.notesEditLayout.visibility = View.GONE
-
-            // Hide keyboard
-            val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.hideSoftInputFromWindow(binding.notesEditText.windowToken, 0)
-
-            // Change button text back
-            binding.editNotesButton.setText(R.string.edit_notes)
-        }
-    }
-
-    // Back press handling for notes editing
-    private val backPressedCallback = object : OnBackPressedCallback(true) {
-        override fun handleOnBackPressed() {
-            if (isEditingNotes) {
-                // If editing notes, ask to save changes
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Save Notes")
-                    .setMessage("Do you want to save your changes to the notes?")
-                    .setPositiveButton("Save") { _, _ ->
-                        val notes = binding.notesEditText.text.toString()
-                        viewModel.updateInvoiceNotes(notes)
-                        toggleNotesEditingMode(false)
-                        findNavController().navigateUp()
-                    }
-                    .setNegativeButton("Discard") { _, _ ->
-                        toggleNotesEditingMode(false)
-                        findNavController().navigateUp()
-                    }
-                    .setNeutralButton("Cancel", null)
-                    .show()
+    
+        private fun toggleNotesEditingMode(isEditing: Boolean) {
+            isEditingNotes = isEditing
+    
+            if (isEditing) {
+                // Show edit text, hide regular text view
+                binding.notesContent.visibility = View.GONE
+                binding.emptyNotesText.visibility = View.GONE
+                binding.notesEditLayout.visibility = View.VISIBLE
+                binding.notesEditText.setText(binding.notesContent.text)
+                binding.notesEditText.requestFocus()
+    
+                // Show keyboard
+                val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(binding.notesEditText, InputMethodManager.SHOW_IMPLICIT)
+    
+                // Change button text
+                binding.editNotesButton.setText(R.string.save_notes)
             } else {
-                // Normal back behavior
-                findNavController().navigateUp()
+                // Hide edit text, show regular text view
+                binding.notesContent.visibility = View.VISIBLE
+                binding.notesEditLayout.visibility = View.GONE
+    
+                // Hide keyboard
+                val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.hideSoftInputFromWindow(binding.notesEditText.windowToken, 0)
+    
+                // Change button text back
+                binding.editNotesButton.setText(R.string.edit_notes)
             }
         }
-    }
-
-
-    private fun updateExtraChargesDisplay(invoice: Invoice) {
-        // Clear existing extra charges
-        binding.extraChargesContainer.removeAllViews()
-
-        // Get all extra charges from all items
-        val allExtraCharges = mutableListOf<Pair<String, Double>>()
-
-        invoice.items.forEach { item ->
-            // Log for debugging
-            Log.d(
-                "InvoiceDetailFragment",
-                "Item: ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges"
-            )
-
-            item.itemDetails.listOfExtraCharges.forEach { charge ->
-                // Multiply each charge by the item quantity
-                allExtraCharges.add(Pair(charge.name, charge.amount * item.quantity))
-                // Log each charge for debugging
+    
+        // Back press handling for notes editing
+        private val backPressedCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (isEditingNotes) {
+                    // If editing notes, ask to save changes
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Save Notes")
+                        .setMessage("Do you want to save your changes to the notes?")
+                        .setPositiveButton("Save") { _, _ ->
+                            val notes = binding.notesEditText.text.toString()
+                            viewModel.updateInvoiceNotes(notes)
+                            toggleNotesEditingMode(false)
+                            findNavController().navigateUp()
+                        }
+                        .setNegativeButton("Discard") { _, _ ->
+                            toggleNotesEditingMode(false)
+                            findNavController().navigateUp()
+                        }
+                        .setNeutralButton("Cancel", null)
+                        .show()
+                } else {
+                    // Normal back behavior
+                    findNavController().navigateUp()
+                }
+            }
+        }
+    
+    
+        private fun updateExtraChargesDisplay(invoice: Invoice) {
+            // Clear existing extra charges
+            binding.extraChargesContainer.removeAllViews()
+    
+            // Get all extra charges from all items
+            val allExtraCharges = mutableListOf<Pair<String, Double>>()
+    
+            invoice.items.forEach { item ->
+                // Log for debugging
                 Log.d(
                     "InvoiceDetailFragment",
-                    "Adding charge: ${charge.name} = ${charge.amount * item.quantity}"
+                    "Item: ${item.itemDetails.displayName} has ${item.itemDetails.listOfExtraCharges.size} extra charges"
                 )
+    
+                item.itemDetails.listOfExtraCharges.forEach { charge ->
+                    // Multiply each charge by the item quantity
+                    allExtraCharges.add(Pair(charge.name, charge.amount * item.quantity))
+                    // Log each charge for debugging
+                    Log.d(
+                        "InvoiceDetailFragment",
+                        "Adding charge: ${charge.name} = ${charge.amount * item.quantity}"
+                    )
+                }
+            }
+    
+            // If there are no extra charges, hide the container
+            if (allExtraCharges.isEmpty()) {
+                binding.extraChargesLayout.visibility = View.GONE
+                Log.d("InvoiceDetailFragment", "No extra charges found, hiding container")
+                return
+            }
+    
+            // Show the container
+            binding.extraChargesLayout.visibility = View.VISIBLE
+            Log.d("InvoiceDetailFragment", "Showing ${allExtraCharges.size} extra charges")
+    
+        // Create a view for each extra charge when creating a new signed app bundle we need to fill key store ,when uploding on google play store ,should google give us the keystore
+            for (charge in allExtraCharges) {
+                val chargeView = layoutInflater.inflate(
+                    R.layout.item_extra_charge_layout,
+                    binding.extraChargesContainer,
+                    false
+                )
+    
+                val chargeName = chargeView.findViewById<TextView>(R.id.extraChargeNameText)
+                val chargeAmount = chargeView.findViewById<TextView>(R.id.extraChargeAmountText)
+    
+                chargeName.text = charge.first
+                chargeAmount.text = "₹${DecimalFormat("#,##,##0.00").format(charge.second)}"
+    
+                binding.extraChargesContainer.addView(chargeView)
             }
         }
-
-        // If there are no extra charges, hide the container
-        if (allExtraCharges.isEmpty()) {
-            binding.extraChargesLayout.visibility = View.GONE
-            Log.d("InvoiceDetailFragment", "No extra charges found, hiding container")
-            return
-        }
-
-        // Show the container
-        binding.extraChargesLayout.visibility = View.VISIBLE
-        Log.d("InvoiceDetailFragment", "Showing ${allExtraCharges.size} extra charges")
-
-        // Create a view for each extra charge when creating a new signed app bundle we need to fill key store ,when uploding on google play store ,should google give us the keystore
-        for (charge in allExtraCharges) {
-            val chargeView = layoutInflater.inflate(
-                R.layout.item_extra_charge_layout,
-                binding.extraChargesContainer,
-                false
-            )
-
-            val chargeName = chargeView.findViewById<TextView>(R.id.extraChargeNameText)
-            val chargeAmount = chargeView.findViewById<TextView>(R.id.extraChargeAmountText)
-
-            chargeName.text = charge.first
-            chargeAmount.text = "₹${DecimalFormat("#,##,##0.00").format(charge.second)}"
-
-            binding.extraChargesContainer.addView(chargeView)
+    
+    
+        override fun onDestroyView() {
+            super.onDestroyView()
+            _binding = null
         }
     }
-
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
-    }
-}

@@ -390,57 +390,197 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
+                    <!-- Header -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:text="Business Insights"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
+
+                    <!-- Popular Categories Section -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        android:orientation="horizontal">
+                        android:orientation="vertical">
 
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Business Insights"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="18sp" />
-
-                        <TextView
-                            android:id="@+id/viewAllCustomers"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:background="?attr/selectableItemBackground"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:fontFamily="@font/montserratmedium"
-                            android:padding="4dp"
-                            android:text="View All Clients"
-                            android:textColor="@color/my_light_primary"
+                            android:layout_marginBottom="8dp"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Popular Categories"
+                            android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
+
+                        <!-- Category 1 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/category1Name"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="12sp"
+                                    tools:text="Necklaces" />
+
+                                <TextView
+                                    android:id="@+id/category1Percentage"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_primary"
+                                    android:textSize="12sp"
+                                    tools:text="45%" />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/category1Progress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                app:trackCornerRadius="2dp"
+                                app:trackThickness="4dp" />
+                        </LinearLayout>
+
+                        <!-- Category 2 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="4dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/category2Name"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="12sp"
+                                    tools:text="Rings" />
+
+                                <TextView
+                                    android:id="@+id/category2Percentage"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_primary"
+                                    android:textSize="12sp"
+                                    tools:text="30%" />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/category2Progress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                app:trackCornerRadius="2dp"
+                                app:trackThickness="4dp" />
+                        </LinearLayout>
+
+                        <!-- Category 3 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/category3Name"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="12sp"
+                                    tools:text="Bangles" />
+
+                                <TextView
+                                    android:id="@+id/category3Percentage"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textColor="@color/my_light_primary"
+                                    android:textSize="12sp"
+                                    tools:text="25%" />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/category3Progress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                app:trackCornerRadius="2dp"
+                                app:trackThickness="4dp" />
+                        </LinearLayout>
                     </LinearLayout>
 
-
-                    <!-- Customer Metrics -->
+                    <!-- Peak Business Days Chart -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
+                        android:layout_marginBottom="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Peak Business Days"
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="14sp" />
+
+                        <com.github.mikephil.charting.charts.BarChart
+                            android:id="@+id/peakDaysChart"
+                            android:layout_width="match_parent"
+                            android:layout_height="120dp" />
+                    </LinearLayout>
+
+                    <!-- Customer and Sales Metrics Grid -->
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:rowCount="2">
 
                         <!-- Total Customers -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
+                            android:layout_columnWeight="1"
+                            android:layout_margin="8dp"
+                            android:orientation="vertical">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Total Clients"
+                                android:text="Total Customers"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -449,57 +589,121 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratbold"
-                                android:text="0"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="16sp" />
+                                android:textSize="16sp"
+                                tools:text="150" />
                         </LinearLayout>
 
-                        <!-- Today's Birthdays -->
+                        <!-- New Customers -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
+                            android:layout_columnWeight="1"
+                            android:layout_margin="8dp"
+                            android:orientation="vertical">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Birthdays Today"
+                                android:text="New Customers"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/newCustomersValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratbold"
+                                    android:textColor="@color/my_light_primary"
+                                    android:textSize="16sp"
+                                    tools:text="12" />
+
+                                <TextView
+                                    android:id="@+id/newCustomersChange"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:textSize="12sp"
+                                    tools:text="+20%"
+                                    tools:textColor="@color/status_paid" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Sales Growth -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="8dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Sales Growth"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/salesGrowthValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratbold"
+                                    android:textSize="16sp"
+                                    tools:text="+15%"
+                                    tools:textColor="@color/status_paid" />
+
+                                <ImageView
+                                    android:id="@+id/salesGrowthIndicator"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginStart="4dp"
+                                    tools:src="@drawable/ic_arrow_upward" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <!-- Average Purchase Interval -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_columnWeight="1"
+                            android:layout_margin="8dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:text="Avg. Purchase Interval"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
                             <TextView
-                                android:id="@+id/birthdaysTodayValue"
+                                android:id="@+id/avgPurchaseIntervalValue"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratbold"
-                                android:text="0"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="16sp" />
+                                android:textSize="16sp"
+                                tools:text="45 days" />
                         </LinearLayout>
 
-                        <!-- Outstanding Balance -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="Outstanding"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                        </LinearLayout>
-                    </LinearLayout>
+                    </GridLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>

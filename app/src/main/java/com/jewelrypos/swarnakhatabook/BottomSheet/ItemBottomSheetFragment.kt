@@ -136,6 +136,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             setDropDownBackgroundResource(R.color.my_light_primary_container)
         }
 
+
+
     }
 
     private fun populateDropdown(items: List<MetalItem>) {

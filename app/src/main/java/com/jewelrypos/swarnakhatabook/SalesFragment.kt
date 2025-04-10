@@ -71,6 +71,14 @@ class SalesFragment : Fragment() {
             }
         }
 
+        EventBus.invoiceUpdatedEvent.observe(viewLifecycleOwner) { updated ->
+            if (updated) {
+                // Refresh the invoices list
+                salesViewModel.refreshInvoices()
+            }
+        }
+
+
     }
 
     private fun setupToolbar() {
@@ -94,11 +102,12 @@ class SalesFragment : Fragment() {
 
     private fun setupSearchView() {
         with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
-            queryHint = "Search invoices..."
+            queryHint = "Search invoice number, customer..."
             inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
             isIconified = false
 
-            setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+            setOnQueryTextListener(object :
+                androidx.appcompat.widget.SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     query?.let {
                         isSearchActive = true
@@ -209,11 +218,12 @@ class SalesFragment : Fragment() {
         // Clear search button in empty search state
         binding.clearFilterButton.setOnClickListener {
             // Clear search and refresh data
-            val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+            val searchView =
+                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
             searchView.setQuery("", false)
             searchView.clearFocus()
             isSearchActive = false
-            salesViewModel.refreshInvoices()
+            salesViewModel.searchInvoices("")
         }
 
         // Add new item button in empty search state

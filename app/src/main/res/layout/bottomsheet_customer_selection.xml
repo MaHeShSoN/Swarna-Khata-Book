@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="+ Add New Client"
+        android:text="Add New Client"
         android:textColor="@color/my_light_primary"
         app:icon="@drawable/material_symbols__add_rounded"
         app:iconTint="@color/my_light_primary"

@@ -211,9 +211,9 @@ class DashBoardFragment : Fragment() {
             navigateToPayments()
         }
 
-        binding.viewAllCustomers.setOnClickListener {
-            navigateToCustomersTab()
-        }
+//        binding.viewAllCustomers.setOnClickListener {
+//            navigateToCustomersTab()
+//        }
     }
 
     private fun setupItemPerformanceChart(invoices: List<Invoice>) {
@@ -363,32 +363,7 @@ class DashBoardFragment : Fragment() {
     private fun loadDashboardData() {
         // Load data for each section of the dashboard
         loadSalesData(binding.periodSelector.selectedItem.toString())
-
-        loadCustomerData()
-
-        // Combine data from different ViewModels to calculate performance
-        salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
-            inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { inventoryItems ->
-                customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
-                    // Calculate and display business performance
-                    val performanceScore =
-                        calculateBusinessPerformance(invoices, customers, inventoryItems)
-
-                    // Update circular progress indicator
-//                    binding.businessPerformanceIndicator.apply {
-//                        progress = performanceScore.toInt()
-//                        setIndicatorColor(getPerformanceColor(performanceScore))
-//                    }
-
-                    // Update performance description
-//                    binding.performanceDescriptionText.text = when {
-//                        performanceScore < 33f -> "Needs Improvement"
-//                        performanceScore < 66f -> "Good Progress"
-//                        else -> "Excellent Performance"
-//                    }
-                }
-            }
-        }
+        loadBusinessInsights()
 
         // Hide low stock recycler view container since we're not using it
         binding.lowStockRecyclerView.visibility = View.GONE
@@ -397,6 +372,255 @@ class DashBoardFragment : Fragment() {
         // Hide recent invoices section
         binding.recentInvoicesRecyclerView.visibility = View.GONE
         binding.emptyRecentInvoicesState.visibility = View.GONE
+    }
+
+    private fun loadBusinessInsights() {
+        salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
+            if (invoices.isEmpty()) return@observe
+
+            // Calculate popular categories
+            updatePopularCategories(invoices)
+
+            // Calculate peak business days
+            updatePeakBusinessDays(invoices)
+
+            // Calculate customer metrics
+            updateCustomerMetrics(invoices)
+
+            // Calculate sales growth
+            updateSalesGrowth(invoices)
+
+            // Calculate average purchase interval
+            updateAveragePurchaseInterval(invoices)
+        }
+    }
+
+    private fun updatePopularCategories(invoices: List<Invoice>) {
+        // Group items by category and calculate total quantity sold
+        val categorySales = invoices.flatMap { invoice ->
+            invoice.items.map { item ->
+                item.itemDetails.category to item.quantity
+            }
+        }.groupBy({ it.first }, { it.second })
+            .mapValues { it.value.sum() }
+            .toList()
+            .sortedByDescending { it.second }
+            .take(3)
+
+        // Calculate percentages
+        val totalSales = categorySales.sumOf { it.second }
+        val categoryPercentages = categorySales.map {
+            it.first to (it.second.toFloat() / totalSales * 100)
+        }
+
+        // Update UI for each category
+        categoryPercentages.getOrNull(0)?.let { (category, percentage) ->
+            binding.category1Name.text = category
+            binding.category1Percentage.text = String.format("%.1f%%", percentage)
+            binding.category1Progress.progress = percentage.toInt()
+        }
+
+        categoryPercentages.getOrNull(1)?.let { (category, percentage) ->
+            binding.category2Name.text = category
+            binding.category2Percentage.text = String.format("%.1f%%", percentage)
+            binding.category2Progress.progress = percentage.toInt()
+        }
+
+        categoryPercentages.getOrNull(2)?.let { (category, percentage) ->
+            binding.category3Name.text = category
+            binding.category3Percentage.text = String.format("%.1f%%", percentage)
+            binding.category3Progress.progress = percentage.toInt()
+        }
+    }
+
+    private fun updatePeakBusinessDays(invoices: List<Invoice>) {
+        // Group invoices by day of week
+        val dayOfWeekCounts = invoices.groupBy { invoice ->
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = invoice.invoiceDate
+            }
+            calendar.get(Calendar.DAY_OF_WEEK)
+        }.mapValues { it.value.size }
+
+        // Prepare data for the chart
+        val entries = (Calendar.SUNDAY..Calendar.SATURDAY).map { day ->
+            BarEntry(
+                (day - Calendar.SUNDAY).toFloat(),
+                dayOfWeekCounts[day]?.toFloat() ?: 0f
+            )
+        }
+
+        val dataSet = BarDataSet(entries, "Sales by Day").apply {
+            color = ContextCompat.getColor(requireContext(), R.color.my_light_primary)
+            valueTextColor = ContextCompat.getColor(requireContext(), R.color.my_light_on_surface)
+            valueTextSize = 10f
+        }
+
+        val daysOfWeek = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+        binding.peakDaysChart.apply {
+            data = BarData(dataSet)
+            xAxis.apply {
+                valueFormatter = IndexAxisValueFormatter(daysOfWeek)
+                position = XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                granularity = 1f
+            }
+            axisLeft.apply {
+                setDrawGridLines(true)
+                axisMinimum = 0f
+            }
+            axisRight.isEnabled = false
+            description.isEnabled = false
+            legend.isEnabled = false
+
+            animateY(1000)
+            invalidate()
+        }
+    }
+
+    private fun updateCustomerMetrics(invoices: List<Invoice>) {
+        customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
+            // Update total customers
+            binding.totalCustomersValue.text = customers.size.toString()
+
+            // Calculate new customers this month
+            val calendar = Calendar.getInstance()
+            val currentMonth = calendar.get(Calendar.MONTH)
+            val currentYear = calendar.get(Calendar.YEAR)
+
+            val newCustomersThisMonth = customers.count { customer ->
+                val customerCal = Calendar.getInstance().apply {
+                    timeInMillis = customer.createdAt
+                }
+                customerCal.get(Calendar.MONTH) == currentMonth &&
+                        customerCal.get(Calendar.YEAR) == currentYear
+            }
+
+            // Calculate new customers last month for comparison
+            calendar.add(Calendar.MONTH, -1)
+            val lastMonth = calendar.get(Calendar.MONTH)
+            val lastMonthYear = calendar.get(Calendar.YEAR)
+
+            val newCustomersLastMonth = customers.count { customer ->
+                val customerCal = Calendar.getInstance().apply {
+                    timeInMillis = customer.createdAt
+                }
+                customerCal.get(Calendar.MONTH) == lastMonth &&
+                        customerCal.get(Calendar.YEAR) == lastMonthYear
+            }
+
+            // Update UI
+            binding.newCustomersValue.text = newCustomersThisMonth.toString()
+
+            // Calculate and show percentage change
+            if (newCustomersLastMonth > 0) {
+                val percentageChange = ((newCustomersThisMonth - newCustomersLastMonth).toFloat() / newCustomersLastMonth * 100)
+                val changeText = String.format("%+.1f%%", percentageChange)
+                binding.newCustomersChange.apply {
+                    text = changeText
+                    setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            if (percentageChange >= 0) R.color.status_paid else R.color.status_unpaid
+                        )
+                    )
+                }
+            } else {
+                binding.newCustomersChange.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun updateSalesGrowth(invoices: List<Invoice>) {
+        // Calculate current month's sales
+        val calendar = Calendar.getInstance()
+        val currentMonth = calendar.get(Calendar.MONTH)
+        val currentYear = calendar.get(Calendar.YEAR)
+
+        val currentMonthSales = invoices.filter { invoice ->
+            val invoiceCal = Calendar.getInstance().apply {
+                timeInMillis = invoice.invoiceDate
+            }
+            invoiceCal.get(Calendar.MONTH) == currentMonth &&
+                    invoiceCal.get(Calendar.YEAR) == currentYear
+        }.sumOf { it.totalAmount }
+
+        // Calculate last month's sales
+        calendar.add(Calendar.MONTH, -1)
+        val lastMonth = calendar.get(Calendar.MONTH)
+        val lastMonthYear = calendar.get(Calendar.YEAR)
+
+        val lastMonthSales = invoices.filter { invoice ->
+            val invoiceCal = Calendar.getInstance().apply {
+                timeInMillis = invoice.invoiceDate
+            }
+            invoiceCal.get(Calendar.MONTH) == lastMonth &&
+                    invoiceCal.get(Calendar.YEAR) == lastMonthYear
+        }.sumOf { it.totalAmount }
+
+        // Calculate growth percentage
+        if (lastMonthSales > 0) {
+            val growthPercentage = ((currentMonthSales - lastMonthSales) / lastMonthSales * 100)
+            val isPositiveGrowth = growthPercentage >= 0
+
+            // Update UI
+            binding.salesGrowthValue.apply {
+                text = String.format("%+.1f%%", growthPercentage)
+                setTextColor(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        if (isPositiveGrowth) R.color.status_paid else R.color.status_unpaid
+                    )
+                )
+            }
+
+            binding.salesGrowthIndicator.apply {
+                setImageResource(
+                    if (isPositiveGrowth) R.drawable.si__arrow_upward_fill else R.drawable.si__arrow_downward_fill
+                )
+                setColorFilter(
+                    ContextCompat.getColor(
+                        requireContext(),
+                        if (isPositiveGrowth) R.color.status_paid else R.color.status_unpaid
+                    )
+                )
+            }
+        } else {
+            binding.salesGrowthValue.text = "N/A"
+            binding.salesGrowthIndicator.visibility = View.GONE
+        }
+    }
+
+    private fun updateAveragePurchaseInterval(invoices: List<Invoice>) {
+        // Group invoices by customer
+        val customerPurchases = invoices.groupBy { it.customerId }
+
+        // Calculate average interval for each customer
+        val intervals = customerPurchases.mapNotNull { (_, purchases) ->
+            if (purchases.size < 2) return@mapNotNull null
+
+            // Sort purchases by date
+            val sortedPurchases = purchases.sortedBy { it.invoiceDate }
+
+            // Calculate average interval
+            val totalInterval = sortedPurchases.zipWithNext { a, b ->
+                b.invoiceDate - a.invoiceDate
+            }.sum()
+
+            totalInterval / (sortedPurchases.size - 1)
+        }
+
+        // Calculate overall average interval
+        if (intervals.isNotEmpty()) {
+            val averageInterval = intervals.average()
+            val days = (averageInterval / (24 * 60 * 60 * 1000)).toInt()
+
+            binding.avgPurchaseIntervalValue.text =
+                if (days > 30) "${days / 30} months" else "$days days"
+        } else {
+            binding.avgPurchaseIntervalValue.text = "N/A"
+        }
     }
 
     private fun loadSalesData(period: String) {
@@ -492,7 +716,6 @@ class DashBoardFragment : Fragment() {
                     false
                 }
             }
-            binding.birthdaysTodayValue.text = birthdaysToday.toString()
         }
     }
 

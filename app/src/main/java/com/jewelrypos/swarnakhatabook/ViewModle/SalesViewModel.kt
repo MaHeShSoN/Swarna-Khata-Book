@@ -16,6 +16,9 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SalesViewModel(
     private val repository: InvoiceRepository,
@@ -34,10 +37,7 @@ class SalesViewModel(
     private val _payments = MutableLiveData<List<Payment>>(emptyList())
     val payments: LiveData<List<Payment>> = _payments
 
-    // All invoices before filtering
-    private val _allInvoices = mutableListOf<Invoice>()
-
-    // Filtered invoices list that's exposed to the UI
+    // Invoices list
     private val _invoices = MutableLiveData<List<Invoice>>()
     val invoices: LiveData<List<Invoice>> = _invoices
 
@@ -51,6 +51,8 @@ class SalesViewModel(
 
     private val _customerInvoices = MutableLiveData<List<Invoice>>()
     val customerInvoices: LiveData<List<Invoice>> = _customerInvoices
+
+    private val _allInvoices = mutableListOf<Invoice>()
 
     // Current search query
     private var currentSearchQuery = ""
@@ -71,18 +73,24 @@ class SalesViewModel(
 
     private fun loadFirstPage() {
         _isLoading.value = true
-        _allInvoices.clear()
         viewModelScope.launch {
             // Choose source based on connectivity
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
 
             repository.fetchInvoicesPaginated(false, source).fold(
-                onSuccess = {
-                    _allInvoices.addAll(it)
-                    // Apply current search filter if any
-                    applySearchFilter()
+                onSuccess = { invoices ->
+                    _allInvoices.clear()
+                    _allInvoices.addAll(invoices)
+
+                    // Apply any current search filter
+                    if (currentSearchQuery.isNotEmpty()) {
+                        _invoices.value = filterInvoices(currentSearchQuery)
+                    } else {
+                        _invoices.value = invoices
+                    }
+
                     _isLoading.value = false
-                    Log.d("SalesViewModel", "First page loaded: ${it.size} invoices")
+                    Log.d("SalesViewModel", "First page loaded: ${invoices.size} invoices")
                 },
                 onFailure = {
                     _errorMessage.value = it.message
@@ -103,9 +111,17 @@ class SalesViewModel(
 
             repository.fetchInvoicesPaginated(true, source).fold(
                 onSuccess = { newInvoices ->
+                    // Add to all invoices list
                     _allInvoices.addAll(newInvoices)
-                    // Apply search filter to the updated list
-                    applySearchFilter()
+
+                    // Apply current search filter
+                    if (currentSearchQuery.isNotEmpty()) {
+                        _invoices.value = filterInvoices(currentSearchQuery)
+                    } else {
+                        val currentList = _invoices.value ?: emptyList()
+                        _invoices.value = currentList + newInvoices
+                    }
+
                     _isLoading.value = false
                     Log.d("SalesViewModel", "Next page loaded: ${newInvoices.size} invoices")
                 },
@@ -118,46 +134,40 @@ class SalesViewModel(
         }
     }
 
+    fun searchInvoices(query: String) {
+        currentSearchQuery = query.trim().lowercase()
+
+        if (currentSearchQuery.isEmpty()) {
+            // Show all invoices
+            _invoices.value = _allInvoices.toList()
+            Log.d("SalesViewModel", "Search cleared, showing all ${_allInvoices.size} invoices")
+        } else {
+            // Filter based on query
+            _invoices.value = filterInvoices(currentSearchQuery)
+            Log.d("SalesViewModel", "Filtered to ${_invoices.value?.size} invoices matching '$currentSearchQuery'")
+        }
+    }
+
+    private fun filterInvoices(query: String): List<Invoice> {
+        return _allInvoices.filter { invoice ->
+            invoice.invoiceNumber.lowercase().contains(query) ||
+                    invoice.customerName.lowercase().contains(query) ||
+                    invoice.customerPhone.lowercase().contains(query) ||
+                    invoice.notes.lowercase().contains(query) ||
+                    // Convert date to string and search in it
+                    SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                        .format(Date(invoice.invoiceDate))
+                        .lowercase()
+                        .contains(query)
+        }
+    }
+
     fun refreshInvoices() {
+        currentSearchQuery = ""
         _isLoading.value = true
         viewModelScope.launch {
             loadFirstPage()
         }
-    }
-
-    // New method to search invoices
-    fun searchInvoices(query: String) {
-        currentSearchQuery = query.trim().lowercase()
-        applySearchFilter()
-    }
-
-    // Helper method to apply the search filter to all invoices
-    private fun applySearchFilter() {
-        if (currentSearchQuery.isEmpty()) {
-            // No search filter, show all invoices
-            _invoices.value = _allInvoices.toList()
-            return
-        }
-
-        // Apply search filter
-        val filteredList = _allInvoices.filter { invoice ->
-            // Search in invoice number
-            invoice.invoiceNumber.lowercase().contains(currentSearchQuery) ||
-                    // Search in customer name
-                    invoice.customerName.lowercase().contains(currentSearchQuery) ||
-                    // Search in customer phone
-                    invoice.customerPhone.lowercase().contains(currentSearchQuery) ||
-                    // Search in notes
-                    invoice.notes.lowercase().contains(currentSearchQuery) ||
-                    // Search in invoice items
-                    invoice.items.any {
-                        it.itemDetails.displayName.lowercase().contains(currentSearchQuery) ||
-                                it.itemDetails.jewelryCode.lowercase().contains(currentSearchQuery)
-                    }
-        }
-
-        _invoices.value = filteredList
-        Log.d("SalesViewModel", "Search applied. Results: ${filteredList.size}")
     }
 
     // Add a selected item
@@ -252,6 +262,10 @@ class SalesViewModel(
 
     // Payments methods
     fun addPayment(payment: Payment) {
+        val customer = _selectedCustomer.value
+        val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+
         val currentPayments = _payments.value?.toMutableList() ?: mutableListOf()
         currentPayments.add(payment)
         _payments.value = currentPayments
@@ -395,4 +409,9 @@ class SalesViewModel(
             }
         }
     }
+
+
+
+
+
 }
