@@ -14,9 +14,11 @@ import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification
 import kotlinx.coroutines.tasks.await
-import java.util.UUID
-import kotlin.math.roundToInt
+import java.util.Date
 
+/**
+ * Repository for handling notification data and operations
+ */
 class NotificationRepository(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
@@ -81,13 +83,18 @@ class NotificationRepository(
             val notifications = snapshot.documents.mapNotNull { doc ->
                 try {
                     // First try to convert to the new model directly
-                    doc.toObject(AppNotification::class.java)
+                    doc.toObject(AppNotification::class.java)?.copy(id = doc.id)
                 } catch (e: Exception) {
                     // If that fails, try the old model and convert
-                    val oldModel = doc.toObject(PaymentNotification::class.java)
-                    if (oldModel != null) {
-                        convertToAppNotification(oldModel, doc.id)
-                    } else {
+                    try {
+                        val oldModel = doc.toObject(PaymentNotification::class.java)
+                        if (oldModel != null) {
+                            convertToAppNotification(oldModel, doc.id)
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error converting notification", e)
                         null
                     }
                 }
@@ -99,6 +106,7 @@ class NotificationRepository(
             if (source == Source.CACHE) {
                 return getNotifications(loadNextPage, Source.SERVER)
             }
+            Log.e(TAG, "Error getting notifications", e)
             Result.failure(e)
         }
     }
@@ -202,12 +210,8 @@ class NotificationRepository(
                 .collection("notifications")
                 .document()
 
-            // If ID is empty, use the document ID
-            val notificationToSave = if (notification.id.isEmpty()) {
-                notification.copy(id = notificationRef.id)
-            } else {
-                notification
-            }
+            // Always use the Firestore document ID for the notification ID
+            val notificationToSave = notification.copy(id = notificationRef.id)
 
             notificationRef.set(notificationToSave).await()
             Result.success(notificationRef.id)
@@ -289,6 +293,7 @@ class NotificationRepository(
 
     /**
      * Helper to convert from the old notification model to the new one
+     * Safely handles null fields
      */
     private fun convertToAppNotification(
         notification: PaymentNotification,
@@ -310,6 +315,56 @@ class NotificationRepository(
             readAt = notification.readAt,
             actionTaken = notification.actionTaken
         )
+    }
+
+    /**
+     * Gets a list of active notifications for a group (used for grouping summary)
+     */
+    suspend fun getActiveNotificationsInGroup(groupKey: String): Result<List<AppNotification>> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            val query = when (groupKey) {
+                "group_payments" -> {
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("notifications")
+                        .whereIn("type", listOf(NotificationType.PAYMENT_DUE.name, NotificationType.PAYMENT_OVERDUE.name))
+                        .whereEqualTo("status", NotificationStatus.UNREAD.name)
+                }
+                "group_inventory" -> {
+                    // For inventory notifications (assuming some have a special field/value)
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("notifications")
+                        .whereEqualTo("type", NotificationType.GENERAL.name)
+                        .whereNotEqualTo("relatedItemId", null)
+                        .whereEqualTo("status", NotificationStatus.UNREAD.name)
+                }
+                "group_customers" -> {
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("notifications")
+                        .whereIn("type", listOf(NotificationType.BIRTHDAY.name, NotificationType.ANNIVERSARY.name))
+                        .whereEqualTo("status", NotificationStatus.UNREAD.name)
+                }
+                else -> {
+                    // Default query for any other group
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("notifications")
+                        .whereEqualTo("status", NotificationStatus.UNREAD.name)
+                }
+            }
+
+            val snapshot = query.get().await()
+            val notifications = snapshot.toObjects(AppNotification::class.java)
+
+            Result.success(notifications)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting active notifications in group", e)
+            Result.failure(e)
+        }
     }
 
     // Helper to get current user's phone number for document path
