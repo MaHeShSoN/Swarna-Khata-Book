@@ -65,8 +65,7 @@ class InvoiceRepository(
             null
         }
 
-        // Calculate how this affects the customer's balance - THIS IS THE KEY FIX
-        // We need to compare the unpaid amounts (total - paid) before and after
+        // Calculate how this affects the customer's balance
         val unpaidAmountBefore = existingInvoice?.let { it.totalAmount - it.paidAmount } ?: 0.0
         val unpaidAmountAfter = invoice.totalAmount - invoice.paidAmount
         val balanceChange = unpaidAmountAfter - unpaidAmountBefore
@@ -93,9 +92,7 @@ class InvoiceRepository(
                 val customer = customerDoc.toObject(Customer::class.java)
 
                 customer?.let {
-
                     val isWholesaler = it.customerType.equals("Wholesaler", ignoreCase = true)
-
 
                     // Apply balance change based on customer type
                     val finalBalanceChange = if (isWholesaler) {
@@ -131,9 +128,14 @@ class InvoiceRepository(
             Log.d(TAG, "No balance change needed: change=$balanceChange, customerId=${invoice.customerId}")
         }
 
-        // 3. Update inventory stock if needed
-        if (existingInvoice != null) {
-            updateInventoryStock(existingInvoice)
+        // 3. Update inventory stock for new invoices
+        // This is the key change - check if this is a new invoice (existingInvoice is null)
+        // and update stock
+        if (existingInvoice == null) {
+            updateInventoryStock(invoiceWithId)
+        } else {
+            // For existing invoices, we need to handle the differences in items
+            handleInventoryStockChanges(existingInvoice, invoiceWithId)
         }
 
         Result.success(Unit)
@@ -141,6 +143,88 @@ class InvoiceRepository(
         Log.e(TAG, "Error saving invoice", e)
         Result.failure(e)
     }
+
+    private suspend fun handleInventoryStockChanges(oldInvoice: Invoice, newInvoice: Invoice) {
+        try {
+            // Get the customer to check if they're a wholesaler
+            val customerDoc = getUserCollection("customers")
+                .document(newInvoice.customerId)
+                .get()
+                .await()
+
+            val customer = customerDoc.toObject<Customer>()
+            val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+            // Create maps of item IDs to quantities for easy comparison
+            val oldItemQuantities = oldInvoice.items.associate { it.itemId to it.quantity }
+            val newItemQuantities = newInvoice.items.associate { it.itemId to it.quantity }
+
+            // First, handle items that are in both invoices (quantity changes)
+            val commonItemIds = oldItemQuantities.keys.intersect(newItemQuantities.keys)
+            for (itemId in commonItemIds) {
+                val oldQuantity = oldItemQuantities[itemId] ?: 0
+                val newQuantity = newItemQuantities[itemId] ?: 0
+                val quantityDifference = newQuantity - oldQuantity
+
+                if (quantityDifference != 0) {
+                    updateItemStockForInvoiceChange(itemId, quantityDifference, isWholesaler)
+                }
+            }
+
+            // Handle removed items (restore to inventory for consumers, remove for wholesalers)
+            val removedItemIds = oldItemQuantities.keys.minus(newItemQuantities.keys)
+            for (itemId in removedItemIds) {
+                val quantity = oldItemQuantities[itemId] ?: 0
+                // For removed items: add back to inventory (consumer) or remove (wholesaler)
+                updateItemStockForInvoiceChange(itemId, -quantity, isWholesaler)
+            }
+
+            // Handle added items (remove from inventory for consumers, add for wholesalers)
+            val addedItemIds = newItemQuantities.keys.minus(oldItemQuantities.keys)
+            for (itemId in addedItemIds) {
+                val quantity = newItemQuantities[itemId] ?: 0
+                // For added items: remove from inventory (consumer) or add (wholesaler)
+                updateItemStockForInvoiceChange(itemId, quantity, isWholesaler)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating inventory for invoice changes", e)
+        }
+    }
+
+
+    private suspend fun updateItemStockForInvoiceChange(itemId: String, quantityChange: Int, isWholesaler: Boolean) {
+        if (quantityChange == 0) return
+
+        try {
+            val inventoryItemDoc = getUserCollection("inventory")
+                .document(itemId)
+                .get()
+                .await()
+
+            val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
+
+            currentItem?.let {
+                // For consumers: positive change means remove more from inventory
+                // For wholesalers: positive change means add more to inventory
+                val effectiveChange = if (isWholesaler) quantityChange else -quantityChange
+
+                val newStock = maxOf(0.0, it.stock + effectiveChange)
+
+                Log.d(TAG, "Updating stock for item $itemId: " +
+                        "old=${it.stock}, change=$effectiveChange, new=$newStock, " +
+                        "customerType=${if (isWholesaler) "Wholesaler" else "Consumer"}")
+
+                getUserCollection("inventory")
+                    .document(itemId)
+                    .update("stock", newStock)
+                    .await()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating stock for item $itemId", e)
+        }
+    }
+
+
 
     // Helper method to update inventory stock in a transaction
     private fun updateInventoryStockInTransaction(

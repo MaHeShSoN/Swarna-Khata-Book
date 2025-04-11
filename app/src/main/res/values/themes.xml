@@ -13,7 +13,29 @@
 
     <style name="Theme.SwarnaKhataBook" parent="Base.Theme.SwarnaKhataBook" />
 
+    <style name="Widget.App.Chip.Filter.Warning" parent="Widget.App.Chip.Filter">
+        <item name="chipBackgroundColor">@color/status_unpaid_light</item>
+        <item name="chipStrokeColor">@color/status_unpaid</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+        <item name="chipIconTint">@color/status_unpaid</item>
+    </style>
 
+
+    <style name="Widget.App.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/chip_background</item>
+        <item name="chipStrokeColor">@color/my_light_primary</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipCornerRadius">16dp</item>
+        <item name="android:textColor">@color/chip_text</item>
+        <item name="checkedIconTint">@color/my_light_primary</item>
+        <item name="chipIconTint">@color/my_light_primary</item>
+        <item name="rippleColor">@color/my_light_primary_container</item>
+        <item name="android:textAppearance">@style/TextAppearance.App.Caption</item>
+        <item name="chipMinHeight">36dp</item>
+        <item name="chipEndPadding">12dp</item>
+        <item name="chipStartPadding">12dp</item>
+        <item name="android:elevation">2dp</item>
+    </style>
     <style name="CustomPopupMenu" parent="Widget.MaterialComponents.PopupMenu">
         <item name="android:popupBackground">@color/cream_background</item>
         <item name="android:textColor">@color/my_light_on_primary</item>

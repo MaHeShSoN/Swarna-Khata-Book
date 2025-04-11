@@ -61,7 +61,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setUpRecyclerView()
         // Call setupMenu() before observers to ensure searchView is initialized
         setupSearchView()
-        setupFilterMenu()
+        setupFilterChips()
         setUpObserver()
         setupSwipeRefresh()
         setupEmptyStateButtons()
@@ -140,6 +140,47 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         popup.show()
     }
 
+    private fun setupFilterChips() {
+        // Gold chip
+        binding.chipGold.setOnCheckedChangeListener { _, isChecked ->
+            inventoryViewModel.toggleFilter("GOLD", isChecked)
+        }
+
+        // Silver chip
+        binding.chipSilver.setOnCheckedChangeListener { _, isChecked ->
+            inventoryViewModel.toggleFilter("SILVER", isChecked)
+        }
+
+        // Other chip
+        binding.chipOther.setOnCheckedChangeListener { _, isChecked ->
+            inventoryViewModel.toggleFilter("OTHER", isChecked)
+        }
+
+        // Low Stock chip
+        binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
+            inventoryViewModel.toggleFilter("LOW_STOCK", isChecked)
+        }
+
+        // Observe active filters to sync UI state with ViewModel
+        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
+            // Update chip states without triggering listeners
+            binding.chipGold.setOnCheckedChangeListener(null)
+            binding.chipSilver.setOnCheckedChangeListener(null)
+            binding.chipOther.setOnCheckedChangeListener(null)
+            binding.chipLowStock.setOnCheckedChangeListener(null)
+
+            // Set correct checked states
+            binding.chipGold.isChecked = activeFilters.contains("GOLD")
+            binding.chipSilver.isChecked = activeFilters.contains("SILVER")
+            binding.chipOther.isChecked = activeFilters.contains("OTHER")
+            binding.chipLowStock.isChecked = activeFilters.contains("LOW_STOCK")
+
+            // Restore listeners
+            setupFilterChips()
+
+        }
+    }
+
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             inventoryViewModel.refreshData() // Call a refresh function in your ViewModel
@@ -201,6 +242,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
             searchVie.clearFocus()
             searchVie.setQuery("", false)
             inventoryViewModel.searchItems("")
+            // Clear all filters
+            inventoryViewModel.clearAllFilters()
         }
 
         // Add new item button

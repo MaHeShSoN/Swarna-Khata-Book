@@ -136,8 +136,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             setDropDownBackgroundResource(R.color.my_light_primary_container)
         }
 
-
-
     }
 
     private fun populateDropdown(items: List<MetalItem>) {
@@ -573,6 +571,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         return dialog
     }
+
     private fun setupFullHeight(bottomSheet: View) {
         val layoutParams = bottomSheet.layoutParams
         layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT

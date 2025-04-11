@@ -38,6 +38,10 @@ class InventoryViewModel(
 
     private var currentFilter: String? = null
 
+    private val _activeFilters = MutableLiveData<Set<String>>(setOf())
+    val activeFilters: LiveData<Set<String>> = _activeFilters
+    private val LOW_STOCK_THRESHOLD = 5.0
+
     // Add a method to filter items by type
     fun filterByType(type: String?) {
         currentFilter = type
@@ -47,6 +51,32 @@ class InventoryViewModel(
 
     init {
         loadFirstPage()
+    }
+
+    fun toggleFilter(filterType: String, isActive: Boolean) {
+        // Get current filters
+        val currentFilters = _activeFilters.value?.toMutableSet() ?: mutableSetOf()
+
+        // Update filter set based on action
+        if (isActive) {
+            currentFilters.add(filterType)
+        } else {
+            currentFilters.remove(filterType)
+        }
+
+        // Update LiveData
+        _activeFilters.value = currentFilters
+
+        // Apply filters
+        applyFiltersAndSearch()
+
+        Log.d("InventoryViewModel", "Filters updated: $currentFilters")
+    }
+
+    fun clearAllFilters() {
+        _activeFilters.value = setOf()
+        applyFiltersAndSearch()
+        Log.d("InventoryViewModel", "All filters cleared")
     }
 
     // Method to filter items based on search query
@@ -73,12 +103,28 @@ class InventoryViewModel(
 
     private fun applyFiltersAndSearch() {
         var filteredList = _allJewelleryItems.toList()
+        val activeFilters = _activeFilters.value ?: setOf()
 
-        // Apply type filter if set
-        if (!currentFilter.isNullOrEmpty()) {
-            filteredList = filteredList.filter {
-                it.itemType.lowercase() == currentFilter?.lowercase()
+        // Check if we have category filters (gold, silver, other)
+        val categoryFilters = activeFilters.intersect(setOf("GOLD", "SILVER", "OTHER"))
+
+        // If we have category filters, apply them
+        if (categoryFilters.isNotEmpty()) {
+            filteredList = filteredList.filter { item ->
+                categoryFilters.contains(item.itemType.uppercase())
             }
+            Log.d(
+                "InventoryViewModel",
+                "Applied category filters: $categoryFilters, items: ${filteredList.size}"
+            )
+        }
+
+        // Apply low stock filter if active
+        if (activeFilters.contains("LOW_STOCK")) {
+            filteredList = filteredList.filter { item ->
+                item.stock <= LOW_STOCK_THRESHOLD
+            }
+            Log.d("InventoryViewModel", "Applied low stock filter, items: ${filteredList.size}")
         }
 
         // Apply search query if set
@@ -91,18 +137,27 @@ class InventoryViewModel(
                         item.location.lowercase().contains(currentSearchQuery) ||
                         item.purity.lowercase().contains(currentSearchQuery)
             }
+            Log.d(
+                "InventoryViewModel",
+                "Applied search: '$currentSearchQuery', items: ${filteredList.size}"
+            )
         }
 
         _jewelleryItems.value = filteredList
-        Log.d("InventoryViewModel", "Filtered to ${filteredList.size} items")
-    }
 
+        // Log detailed filter information for debugging
+        Log.d(
+            "InventoryViewModel", "Filter summary: total=${_allJewelleryItems.size}, " +
+                    "filtered=${filteredList.size}, filters=$activeFilters, search='$currentSearchQuery'"
+        )
+    }
 
 
     fun searchItems(query: String) {
         currentSearchQuery = query.trim().lowercase()
         applyFiltersAndSearch()
     }
+
     fun refreshData() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -191,13 +246,14 @@ class InventoryViewModel(
                 repository.updateJewelleryItem(item)
                 refreshData() // Refresh to show updated data
             } catch (e: Exception) {
-                Log.d("updateJewelleryItem",e.message.toString())
+                Log.d("updateJewelleryItem", e.message.toString())
                 _errorMessage.value = "Failed to update item: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
     fun getAllItemsForDropdown(): LiveData<List<JewelleryItem>> {
         val liveData = MutableLiveData<List<JewelleryItem>>()
 

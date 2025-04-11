@@ -14,9 +14,12 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
+import com.jewelrypos.swarnakhatabook.Enums.DateFilterType
+import com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -57,8 +60,177 @@ class SalesViewModel(
     // Current search query
     private var currentSearchQuery = ""
 
+    private var currentDateFilter = DateFilterType.ALL_TIME
+
+    private var currentStatusFilter = PaymentStatusFilter.ALL
+
+
     init {
         loadFirstPage()
+    }
+
+    fun getCurrentDateFilter(): DateFilterType = currentDateFilter
+    fun getCurrentStatusFilter(): PaymentStatusFilter = currentStatusFilter
+
+
+    private fun applyFilters() {
+        val filtered = _allInvoices
+            .filter { invoice -> matchesDateFilter(invoice) }
+            .filter { invoice -> matchesStatusFilter(invoice) }
+            .filter { invoice -> matchesSearchQuery(invoice, currentSearchQuery) }
+
+        _invoices.value = filtered
+    }
+
+    private fun matchesStatusFilter(invoice: Invoice): Boolean {
+        if (currentStatusFilter == PaymentStatusFilter.ALL) return true
+
+        val balanceDue = invoice.totalAmount - invoice.paidAmount
+        return when (currentStatusFilter) {
+            PaymentStatusFilter.PAID -> balanceDue <= 0
+            PaymentStatusFilter.PARTIAL -> balanceDue > 0 && invoice.paidAmount > 0
+            PaymentStatusFilter.UNPAID -> invoice.paidAmount <= 0 && invoice.totalAmount > 0
+            else -> true
+        }
+    }
+
+    fun setPaymentStatusFilter(filterType: PaymentStatusFilter) {
+        if (currentStatusFilter != filterType) {
+            currentStatusFilter = filterType
+            Log.d("SalesViewModel", "Payment status filter changed to: $filterType")
+
+            // Apply all filters
+            applyFilters()
+        }
+    }
+
+    private fun matchesDateFilter(invoice: Invoice): Boolean {
+        val invoiceDate = invoice.invoiceDate
+        val now = System.currentTimeMillis()
+        val calendar = Calendar.getInstance()
+
+        return when (currentDateFilter) {
+            DateFilterType.ALL_TIME -> true
+            DateFilterType.TODAY -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfDay = calendar.timeInMillis
+
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endOfDay = calendar.timeInMillis
+
+                invoiceDate in startOfDay..endOfDay
+            }
+
+            DateFilterType.YESTERDAY -> {
+                calendar.timeInMillis = now
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfYesterday = calendar.timeInMillis
+
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endOfYesterday = calendar.timeInMillis
+
+                invoiceDate in startOfYesterday..endOfYesterday
+            }
+
+            DateFilterType.THIS_WEEK -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfWeek = calendar.timeInMillis
+
+                calendar.add(Calendar.WEEK_OF_YEAR, 1)
+                calendar.add(Calendar.MILLISECOND, -1)
+                val endOfWeek = calendar.timeInMillis
+
+                invoiceDate in startOfWeek..endOfWeek
+            }
+
+            DateFilterType.THIS_MONTH -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfMonth = calendar.timeInMillis
+
+                calendar.add(Calendar.MONTH, 1)
+                calendar.add(Calendar.MILLISECOND, -1)
+                val endOfMonth = calendar.timeInMillis
+
+                invoiceDate in startOfMonth..endOfMonth
+            }
+
+            DateFilterType.LAST_MONTH -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.add(Calendar.MONTH, -1)
+                val startOfLastMonth = calendar.timeInMillis
+
+                calendar.add(Calendar.MONTH, 1)
+                calendar.add(Calendar.MILLISECOND, -1)
+                val endOfLastMonth = calendar.timeInMillis
+
+                invoiceDate in startOfLastMonth..endOfLastMonth
+            }
+
+            DateFilterType.THIS_QUARTER -> {
+                calendar.timeInMillis = now
+                val month = calendar.get(Calendar.MONTH)
+                val currentQuarter = month / 3
+
+                calendar.set(Calendar.MONTH, currentQuarter * 3)
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfQuarter = calendar.timeInMillis
+
+                calendar.add(Calendar.MONTH, 3)
+                calendar.add(Calendar.MILLISECOND, -1)
+                val endOfQuarter = calendar.timeInMillis
+
+                invoiceDate in startOfQuarter..endOfQuarter
+            }
+
+            DateFilterType.THIS_YEAR -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfYear = calendar.timeInMillis
+
+                calendar.add(Calendar.YEAR, 1)
+                calendar.add(Calendar.MILLISECOND, -1)
+                val endOfYear = calendar.timeInMillis
+
+                invoiceDate in startOfYear..endOfYear
+            }
+        }
     }
 
 
@@ -136,34 +308,49 @@ class SalesViewModel(
 
     fun searchInvoices(query: String) {
         currentSearchQuery = query.trim().lowercase()
-
-        if (currentSearchQuery.isEmpty()) {
-            // Show all invoices
-            _invoices.value = _allInvoices.toList()
-            Log.d("SalesViewModel", "Search cleared, showing all ${_allInvoices.size} invoices")
-        } else {
-            // Filter based on query
-            _invoices.value = filterInvoices(currentSearchQuery)
-            Log.d("SalesViewModel", "Filtered to ${_invoices.value?.size} invoices matching '$currentSearchQuery'")
-        }
+        applyFilters()
     }
+
 
     private fun filterInvoices(query: String): List<Invoice> {
-        return _allInvoices.filter { invoice ->
-            invoice.invoiceNumber.lowercase().contains(query) ||
-                    invoice.customerName.lowercase().contains(query) ||
-                    invoice.customerPhone.lowercase().contains(query) ||
-                    invoice.notes.lowercase().contains(query) ||
-                    // Convert date to string and search in it
-                    SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                        .format(Date(invoice.invoiceDate))
-                        .lowercase()
-                        .contains(query)
+        currentSearchQuery = query.trim().lowercase()
+        return _allInvoices
+            .filter { invoice -> matchesDateFilter(invoice) }
+            .filter { invoice -> matchesSearchQuery(invoice, query) }
+    }
+
+    private fun matchesSearchQuery(invoice: Invoice, query: String): Boolean {
+        if (query.isEmpty()) return true
+
+        return invoice.invoiceNumber.lowercase().contains(query) ||
+                invoice.customerName.lowercase().contains(query) ||
+                invoice.customerPhone.lowercase().contains(query) ||
+                invoice.notes.lowercase().contains(query) ||
+                // Convert date to string and search in it
+                SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                    .format(Date(invoice.invoiceDate))
+                    .lowercase()
+                    .contains(query)
+    }
+
+    // Add new method to set date filter
+    fun setDateFilter(filterType: DateFilterType) {
+        if (currentDateFilter != filterType) {
+            currentDateFilter = filterType
+            Log.d("SalesViewModel", "Date filter changed to: $filterType")
+
+            // Apply both date and search filters
+            applyFilters()
         }
     }
 
-    fun refreshInvoices() {
-        currentSearchQuery = ""
+    fun refreshInvoices(resetFilters: Boolean = false) {
+        if (resetFilters) {
+            currentDateFilter = DateFilterType.ALL_TIME
+            currentStatusFilter = PaymentStatusFilter.ALL
+            currentSearchQuery = ""
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             loadFirstPage()
@@ -295,6 +482,7 @@ class SalesViewModel(
 
         return charges
     }
+
     fun updateItems(newItems: List<SelectedItemWithPrice>) {
         // Clear current items
         _selectedItems.value?.forEach { item ->
@@ -347,8 +535,10 @@ class SalesViewModel(
             _isLoading.value = true
             try {
                 // Log the saving attempt for debugging
-                Log.d("SalesViewModel", "Saving invoice: ${invoice.invoiceNumber}, " +
-                        "items: ${invoice.items.size}, payments: ${invoice.payments.size}")
+                Log.d(
+                    "SalesViewModel", "Saving invoice: ${invoice.invoiceNumber}, " +
+                            "items: ${invoice.items.size}, payments: ${invoice.payments.size}"
+                )
 
                 // Try to save the invoice
                 repository.saveInvoice(invoice).fold(
@@ -359,7 +549,10 @@ class SalesViewModel(
                         clearCurrentInvoice()
                         _isLoading.value = false
                         callback(true)
-                        Log.d("SalesViewModel", "Invoice saved successfully: ${invoice.invoiceNumber}")
+                        Log.d(
+                            "SalesViewModel",
+                            "Invoice saved successfully: ${invoice.invoiceNumber}"
+                        )
                     },
                     onFailure = { error ->
                         _errorMessage.value = "Failed to save invoice: ${error.message}"
@@ -409,9 +602,6 @@ class SalesViewModel(
             }
         }
     }
-
-
-
 
 
 }

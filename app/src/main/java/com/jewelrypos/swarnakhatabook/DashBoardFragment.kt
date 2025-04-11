@@ -64,14 +64,6 @@ class DashBoardFragment : Fragment() {
         SalesViewModelFactory(repository, connectivityManager)
     }
 
-    private val inventoryViewModel: InventoryViewModel by viewModels {
-        val firestore = FirebaseFirestore.getInstance()
-        val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth)
-        val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        InventoryViewModelFactory(repository, connectivityManager)
-    }
 
     private val customerViewModel: CustomerViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
@@ -680,45 +672,6 @@ class DashBoardFragment : Fragment() {
     }
 
 
-    private fun loadCustomerData() {
-        customerViewModel.refreshData()
-
-        customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
-            // Count total customers
-            binding.totalCustomersValue.text = customers.size.toString()
-
-            // Calculate total outstanding balance
-            val outstandingBalance = customers
-                .filter { it.balanceType == "Credit" } // Only include credit customers
-                .sumOf { it.currentBalance }
-
-
-            // Check for birthdays today
-            val today = java.time.LocalDate.now()
-            val birthdaysToday = customers.count { customer ->
-                if (customer.birthday.isNotEmpty()) {
-                    try {
-                        val dateFormat =
-                            java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
-                        val birthday = dateFormat.parse(customer.birthday)
-                        val cal = java.util.Calendar.getInstance()
-                        cal.time = birthday
-
-                        // Check if month and day match today
-                        val birthdayMonth = cal.get(java.util.Calendar.MONTH)
-                        val birthdayDay = cal.get(java.util.Calendar.DAY_OF_MONTH)
-
-                        birthdayMonth == today.monthValue - 1 && birthdayDay == today.dayOfMonth
-                    } catch (e: Exception) {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
-        }
-    }
-
     // Navigation methods
     private fun navigateToCreateInvoice() {
         requireActivity().findNavController(R.id.nav_host_fragment)
@@ -776,102 +729,6 @@ class DashBoardFragment : Fragment() {
         }
     }
 
-    private fun calculateBusinessPerformance(
-        invoices: List<Invoice>,
-        customers: List<Customer>,
-        inventoryItems: List<JewelleryItem>
-    ): Float {
-        // Ensure we have data to work with
-        if (invoices.isEmpty() || customers.isEmpty() || inventoryItems.isEmpty()) {
-            return 0f
-        }
-
-        // 1. Revenue Growth (compare current month to previous)
-        val now = Calendar.getInstance()
-        val currentMonthInvoices = invoices.filter { invoice ->
-            val invoiceDate = Calendar.getInstance().apply { timeInMillis = invoice.invoiceDate }
-            invoiceDate.get(Calendar.MONTH) == now.get(Calendar.MONTH) &&
-                    invoiceDate.get(Calendar.YEAR) == now.get(Calendar.YEAR)
-        }
-        val currentMonthRevenue = currentMonthInvoices.sumOf { it.totalAmount }
-        val previousMonthInvoices = invoices.filter { invoice ->
-            val invoiceDate = Calendar.getInstance().apply { timeInMillis = invoice.invoiceDate }
-            invoiceDate.get(Calendar.MONTH) == now.get(Calendar.MONTH) - 1 &&
-                    invoiceDate.get(Calendar.YEAR) == now.get(Calendar.YEAR)
-        }
-        val previousMonthRevenue = previousMonthInvoices.sumOf { it.totalAmount }
-
-        val revenueGrowthScore = if (previousMonthRevenue > 0) {
-            minOf(
-                ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue * 100).toFloat(),
-                100f
-            )
-        } else 0f
-
-        // 2. Customer Retention
-        val totalCustomers = customers.size
-        val repeatCustomers = customers.count { customer ->
-            invoices.count { it.customerId == customer.id } > 1
-        }
-        val retentionScore = (repeatCustomers.toFloat() / totalCustomers * 100).coerceAtMost(100f)
-
-        // 3. Inventory Turnover
-        val totalInventoryValue =
-            inventoryItems.sumOf { it.stock * (it.makingCharges + it.metalRate) }
-        val soldInventoryValue = invoices.flatMap { it.items }.sumOf {
-            it.itemDetails.stock * (it.itemDetails.makingCharges + it.itemDetails.metalRate)
-        }
-        val inventoryTurnoverScore =
-            minOf((soldInventoryValue / totalInventoryValue * 100).toFloat(), 100f)
-
-        // 4. Collection Efficiency
-        val totalInvoiceAmount = invoices.sumOf { it.totalAmount }
-        val paidInvoiceAmount = invoices.sumOf { invoice ->
-            invoice.payments.sumOf { it.amount }
-        }
-        val collectionEfficiencyScore =
-            minOf((paidInvoiceAmount / totalInvoiceAmount * 100).toFloat(), 100f)
-
-        // 5. Sales Volume
-        val currentMonthSalesVolume =
-            currentMonthInvoices.flatMap { it.items }.sumOf { it.quantity }
-        val averageSalesVolume = invoices.flatMap { it.items }.sumOf { it.quantity } /
-                (invoices.map { it.invoiceDate }.distinct().size.takeIf { it > 0 } ?: 1)
-        val salesVolumeScore =
-            minOf((currentMonthSalesVolume / averageSalesVolume * 100).toFloat(), 100f)
-
-        // 6. Weighted Average Calculation
-        val performanceScore = (
-                revenueGrowthScore * 0.25f +
-                        retentionScore * 0.15f +
-                        inventoryTurnoverScore * 0.15f +
-                        collectionEfficiencyScore * 0.15f +
-                        salesVolumeScore * 0.15f
-                ).coerceIn(0f, 100f)
-
-        Log.d(
-            "BusinessPerformance", """
-        Performance Breakdown:
-        - Revenue Growth: ${String.format("%.2f", revenueGrowthScore)}%
-        - Customer Retention: ${String.format("%.2f", retentionScore)}%
-        - Inventory Turnover: ${String.format("%.2f", inventoryTurnoverScore)}%
-        - Collection Efficiency: ${String.format("%.2f", collectionEfficiencyScore)}%
-        - Sales Volume: ${String.format("%.2f", salesVolumeScore)}%
-        
-        Final Performance Score: ${String.format("%.2f", performanceScore)}%
-    """.trimIndent()
-        )
-
-        return performanceScore
-    }
-
-    private fun getPerformanceColor(score: Float): Int {
-        return when {
-            score < 33f -> ContextCompat.getColor(requireContext(), R.color.status_unpaid)
-            score < 66f -> ContextCompat.getColor(requireContext(), R.color.status_partial)
-            else -> ContextCompat.getColor(requireContext(), R.color.my_light_primary)
-        }
-    }
 
     override fun onResume() {
         super.onResume()
