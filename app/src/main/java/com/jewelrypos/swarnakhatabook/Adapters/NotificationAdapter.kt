@@ -11,10 +11,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.Enums.NotificationPriority
 import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
-import com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification
 import com.jewelrypos.swarnakhatabook.R
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
@@ -22,13 +22,13 @@ import java.util.Date
 import java.util.Locale
 
 class NotificationAdapter(
-    private var notifications: List<PaymentNotification>
+    private var notifications: List<AppNotification>
 ) : RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder>() {
 
     interface OnNotificationActionListener {
-        fun onNotificationClick(notification: PaymentNotification)
-        fun onActionButtonClick(notification: PaymentNotification)
-        fun onDismissButtonClick(notification: PaymentNotification)
+        fun onNotificationClick(notification: AppNotification)
+        fun onActionButtonClick(notification: AppNotification)
+        fun onDismissButtonClick(notification: AppNotification)
     }
 
     private var listener: OnNotificationActionListener? = null
@@ -93,11 +93,16 @@ class NotificationAdapter(
         // Only show details for credit limit notifications
         if (notification.type == NotificationType.CREDIT_LIMIT) {
             holder.detailsContainer.visibility = View.VISIBLE
-            holder.currentBalanceValue.text = "₹${formatter.format(notification.currentBalance)}"
-            holder.creditLimitValue.text = "₹${formatter.format(notification.creditLimit)}"
+            notification.currentBalance?.let {
+                holder.currentBalanceValue.text = "₹${formatter.format(it)}"
+            }
+            notification.creditLimit?.let {
+                holder.creditLimitValue.text = "₹${formatter.format(it)}"
+            }
 
             // Calculate usage percentage
-            val usagePercentage = if (notification.creditLimit > 0) {
+            val usagePercentage = if (notification.creditLimit != null && notification.creditLimit > 0
+                && notification.currentBalance != null) {
                 ((notification.currentBalance / notification.creditLimit) * 100).toInt()
             } else {
                 0
@@ -120,7 +125,9 @@ class NotificationAdapter(
             NotificationType.CREDIT_LIMIT -> "View Customer"
             NotificationType.PAYMENT_DUE, NotificationType.PAYMENT_OVERDUE -> "Add Payment"
             NotificationType.BIRTHDAY, NotificationType.ANNIVERSARY -> "Send Wishes"
-            NotificationType.GENERAL -> "View"
+            NotificationType.GENERAL -> {
+                if (notification.relatedItemId != null) "View Item" else "View"
+            }
         }
         holder.actionButton.text = actionText
 
@@ -155,7 +162,7 @@ class NotificationAdapter(
 
     override fun getItemCount() = notifications.size
 
-    fun updateNotifications(newNotifications: List<PaymentNotification>) {
+    fun updateNotifications(newNotifications: List<AppNotification>) {
         val diffCallback = NotificationDiffCallback(notifications, newNotifications)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
@@ -164,8 +171,8 @@ class NotificationAdapter(
     }
 
     private class NotificationDiffCallback(
-        private val oldList: List<PaymentNotification>,
-        private val newList: List<PaymentNotification>
+        private val oldList: List<AppNotification>,
+        private val newList: List<AppNotification>
     ) : DiffUtil.Callback() {
         override fun getOldListSize() = oldList.size
         override fun getNewListSize() = newList.size

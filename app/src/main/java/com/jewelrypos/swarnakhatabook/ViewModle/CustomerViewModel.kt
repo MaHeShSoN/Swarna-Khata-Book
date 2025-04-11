@@ -10,162 +10,158 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CustomerViewModel(
     private val repository: CustomerRepository,
     private val connectivityManager: ConnectivityManager
 ) : ViewModel() {
 
+    // --- Constants for Filters ---
+    companion object {
+        const val FILTER_CONSUMER = "Consumer"
+        const val FILTER_WHOLESALER = "Wholesaler"
+        // Add constants for payment status if used elsewhere
+        const val PAYMENT_TO_PAY = "Debit"
+        const val PAYMENT_TO_RECEIVE = "Credit"
+    }
+
     // Original list of all customers
     private val _allCustomers = mutableListOf<Customer>()
 
-    // Filtered list based on search query
+    // Filtered list based on search query and filters
     private val _customers = MutableLiveData<List<Customer>>()
     val customers: LiveData<List<Customer>> = _customers
 
-    private val _errorMessage = MutableLiveData<String>()
-    val errorMessage: LiveData<String> = _errorMessage
+    private val _errorMessage = MutableLiveData<String?>() // Use nullable String
+    val errorMessage: LiveData<String?> = _errorMessage
 
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _activeFilter = MutableLiveData<String?>()
-    val activeFilter: LiveData<String?> = _activeFilter
+    // --- Filter States ---
+    private val _activeCustomerType = MutableLiveData<String?>()
+    val activeCustomerType: LiveData<String?> = _activeCustomerType
+
+
+    // Combined indicator for UI
+    private val _isFilterActive = MutableLiveData<Boolean>(false)
+
 
     // Search query
     private var currentSearchQuery = ""
 
-    // Current filter
-    private var currentFilter: String? = null
-
-
-    // Add these properties to CustomerViewModel
-    private val _activeCustomerType = MutableLiveData<String?>()
-    val activeCustomerType: LiveData<String?> = _activeCustomerType
-
-    private val _activeSortOrder = MutableLiveData<String?>("ASC")
-    val activeSortOrder: LiveData<String?> = _activeSortOrder
-
-    private val _activePaymentStatus = MutableLiveData<String?>()
-    val activePaymentStatus: LiveData<String?> = _activePaymentStatus
-
 
     init {
         loadFirstPage()
+        // Observe filter changes to update the combined active indicator
+        _activeCustomerType.observeForever { updateFilterActiveState() }
+    }
+
+    private fun updateFilterActiveState() {
+        val isActive = _activeCustomerType.value != null
+              // Consider non-default sort as active filter
+        _isFilterActive.value = isActive
     }
 
 
-    // Method to apply all filters at once
-    fun applyFilters(customerType: String?, sortOrder: String?, paymentStatus: String?) {
-        _activeCustomerType.value = customerType
-        if (sortOrder != null) _activeSortOrder.value = sortOrder
-        _activePaymentStatus.value = paymentStatus
-
-        // Update the _activeFilter value for the UI indicator
-        _activeFilter.value = if (customerType != null || paymentStatus != null) {
-            "Active" // Just a marker that some filter is active
-        } else {
-            null
+    /**
+     * Applies a set of filters and triggers the background filtering process.
+     * This function is now the main entry point for applying any filter change.
+     */
+    fun applyFilters(
+        customerType: String? = _activeCustomerType.value, // Default to current value
+    ) {
+        var changed = false
+        if (_activeCustomerType.value != customerType) {
+            _activeCustomerType.value = customerType
+            changed = true
         }
 
-        // Apply the filters
-        applyFiltersAndSearch()
+        if (changed) {
+            updateFilterActiveState() // Update combined state
+            applyFiltersAndSearch() // Trigger filtering
+        }
     }
 
-    // Modify the applyFiltersAndSearch method to include sorting and payment status
+    /**
+     * Clears all applied filters and resets sorting to default (ASC).
+     */
+    fun clearAllFilters() {
+        var changed = false
+        if (_activeCustomerType.value != null) {
+            _activeCustomerType.value = null
+            changed = true
+        }
+
+        if (changed) {
+            updateFilterActiveState()
+            applyFiltersAndSearch()
+            Log.d("CustomerViewModel", "All filters cleared")
+        }
+    }
+
+
+    /**
+     * Applies active filters and search query asynchronously.
+     */
     private fun applyFiltersAndSearch() {
-        var filteredList = _allCustomers.toList()
+        viewModelScope.launch {
+            _isLoading.value = true
 
-        // Apply type filter if set
-        if (!_activeCustomerType.value.isNullOrEmpty()) {
-            filteredList = filteredList.filter {
-                it.customerType.equals(_activeCustomerType.value, ignoreCase = true)
+            val filteredList = withContext(Dispatchers.Default) {
+                var tempList = _allCustomers.toList() // Work on a copy
+
+                // 1. Apply Customer Type Filter
+                _activeCustomerType.value?.let { typeFilter ->
+                    tempList = tempList.filter { customer ->
+                        customer.customerType.equals(typeFilter, ignoreCase = true)
+                    }
+                }
+
+
+                // 3. Apply Search Query
+                if (currentSearchQuery.isNotEmpty()) {
+                    tempList = tempList.filter { customer ->
+                        customer.firstName.contains(currentSearchQuery, ignoreCase = true) ||
+                                customer.lastName.contains(currentSearchQuery, ignoreCase = true) ||
+                                customer.phoneNumber.contains(currentSearchQuery, ignoreCase = true) ||
+                                (customer.email?.contains(currentSearchQuery, ignoreCase = true) == true) || // Null safe email check
+                                (customer.businessName?.contains(currentSearchQuery, ignoreCase = true) == true) || // Null safe business name check
+                                "${customer.firstName} ${customer.lastName}".contains(currentSearchQuery, ignoreCase = true)
+                    }
+                }
+
+                tempList // Return filtered and sorted list
             }
-        }
 
-        // Apply payment status filter if set
-        if (!_activePaymentStatus.value.isNullOrEmpty()) {
-            filteredList = filteredList.filter {
-                it.balanceType.equals(_activePaymentStatus.value, ignoreCase = true)
-            }
+            // Update LiveData on the main thread
+            _customers.value = filteredList
+            _isLoading.value = false
+            Log.d("CustomerViewModel", "Filtered/Sorted to ${filteredList.size} customers. Filters: Type=${_activeCustomerType.value}, Search='$currentSearchQuery'")
         }
-
-        // Apply search query if set
-        if (currentSearchQuery.isNotEmpty()) {
-            filteredList = filteredList.filter { customer ->
-                customer.firstName.contains(currentSearchQuery, ignoreCase = true) ||
-                        customer.lastName.contains(currentSearchQuery, ignoreCase = true) ||
-                        customer.phoneNumber.contains(currentSearchQuery, ignoreCase = true) ||
-                        customer.email.contains(currentSearchQuery, ignoreCase = true) ||
-                        customer.businessName.contains(currentSearchQuery, ignoreCase = true) ||
-                        "${customer.firstName} ${customer.lastName}".contains(currentSearchQuery, ignoreCase = true)
-            }
-        }
-
-        // Apply sorting
-        filteredList = if (_activeSortOrder.value == "ASC") {
-            filteredList.sortedBy { "${it.firstName} ${it.lastName}" }
-        } else {
-            filteredList.sortedByDescending { "${it.firstName} ${it.lastName}" }
-        }
-
-        _customers.value = filteredList
-        Log.d("CustomerViewModel", "Filtered to ${filteredList.size} customers")
     }
 
-
-
-
-    // Filter customers by type (Consumer, Wholesaler)
-    fun filterByType(type: String?) {
-        currentFilter = type
-        _activeFilter.value = type
-        applyFiltersAndSearch()
-    }
-
-//    private fun applyFiltersAndSearch() {
-//        var filteredList = _allCustomers.toList()
-//
-//        // Apply type filter if set
-//        if (!currentFilter.isNullOrEmpty()) {
-//            filteredList = filteredList.filter {
-//                it.customerType.equals(currentFilter, ignoreCase = true)
-//            }
-//        }
-//
-//        // Apply search query if set
-//        if (currentSearchQuery.isNotEmpty()) {
-//            filteredList = filteredList.filter { customer ->
-//                customer.firstName.contains(currentSearchQuery, ignoreCase = true) ||
-//                        customer.lastName.contains(currentSearchQuery, ignoreCase = true) ||
-//                        customer.phoneNumber.contains(currentSearchQuery, ignoreCase = true) ||
-//                        customer.email.contains(currentSearchQuery, ignoreCase = true) ||
-//                        customer.businessName.contains(currentSearchQuery, ignoreCase = true) ||
-//                        "${customer.firstName} ${customer.lastName}".contains(currentSearchQuery, ignoreCase = true)
-//            }
-//        }
-//
-//        _customers.value = filteredList
-//        Log.d("CustomerViewModel", "Filtered to ${filteredList.size} customers")
-//    }
 
     fun searchCustomers(query: String) {
-        currentSearchQuery = query.trim().lowercase()
-        applyFiltersAndSearch()
+        val newQuery = query.trim().lowercase()
+        if (currentSearchQuery != newQuery) {
+            currentSearchQuery = newQuery
+            applyFiltersAndSearch() // Apply all filters including the new search term
+        }
     }
 
     fun refreshData() {
         viewModelScope.launch {
             _isLoading.value = true
-            loadFirstPage() // Don't clear data first, let loadFirstPage do it
+            loadFirstPage()
         }
     }
 
-    // Check if device is online
     private fun isOnline(): Boolean {
-        val networkCapabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         return networkCapabilities != null &&
                 (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                         networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
@@ -173,23 +169,19 @@ class CustomerViewModel(
 
     private fun loadFirstPage() {
         _isLoading.value = true
-        _allCustomers.clear()
         viewModelScope.launch {
-            // Choose source based on connectivity
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
-
-            repository.fetchCustomersPaginated(false, source).fold(
-                onSuccess = {
-                    _allCustomers.addAll(it)
-                    // Apply current search filter
-                    searchCustomers(currentSearchQuery)
-                    _isLoading.value = false
-                    Log.d("CustomerViewModel", "First page loaded: ${it.size} customers")
+            repository.fetchCustomersPaginated(loadNextPage = false, source = source).fold(
+                onSuccess = { fetchedCustomers ->
+                    _allCustomers.clear()
+                    _allCustomers.addAll(fetchedCustomers)
+                    applyFiltersAndSearch() // Apply filters after loading
+                    // isLoading set to false inside applyFiltersAndSearch
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
+                onFailure = { error ->
+                    _errorMessage.value = error.message
                     _isLoading.value = false
-                    Log.d("CustomerViewModel", "Error loading first page: ${it.message}")
+                    Log.d("CustomerViewModel", "Error loading first page: ${error.message}")
                 }
             )
         }
@@ -200,21 +192,21 @@ class CustomerViewModel(
 
         _isLoading.value = true
         viewModelScope.launch {
-            // Choose source based on connectivity
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
-
-            repository.fetchCustomersPaginated(true, source).fold(
+            repository.fetchCustomersPaginated(loadNextPage = true, source = source).fold(
                 onSuccess = { newCustomers ->
-                    _allCustomers.addAll(newCustomers)
-                    // Apply current search filter
-                    searchCustomers(currentSearchQuery)
-                    _isLoading.value = false
-                    Log.d("CustomerViewModel", "Next page loaded: ${newCustomers.size} customers")
+                    if (newCustomers.isNotEmpty()) {
+                        _allCustomers.addAll(newCustomers)
+                        applyFiltersAndSearch() // Apply filters after loading more
+                    } else {
+                        _isLoading.value = false // No more data, stop loading
+                    }
+                    // isLoading set to false inside applyFiltersAndSearch
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
+                onFailure = { error ->
+                    _errorMessage.value = error.message
                     _isLoading.value = false
-                    Log.d("CustomerViewModel", "Error loading next page: ${it.message}")
+                    Log.d("CustomerViewModel", "Error loading next page: ${error.message}")
                 }
             )
         }
@@ -227,17 +219,15 @@ class CustomerViewModel(
             repository.addCustomer(customer).fold(
                 onSuccess = { newCustomer ->
                     resultLiveData.value = Result.success(newCustomer)
-                    loadFirstPage() // Refresh to show updated data
-                    Log.d("CustomerViewModel", "Customer added successfully with ID: ${newCustomer.id}")
+                    refreshData() // Refresh data after adding
                 },
                 onFailure = { error ->
                     resultLiveData.value = Result.failure(error)
                     _errorMessage.value = error.message
                     _isLoading.value = false
-                    Log.d("CustomerViewModel", "Error adding customer: ${error.message}")
                 }
             )
-            _isLoading.value = false
+            // isLoading set to false inside refreshData -> loadFirstPage -> applyFiltersAndSearch
         }
         return resultLiveData
     }
@@ -247,21 +237,20 @@ class CustomerViewModel(
             _isLoading.value = true
             repository.updateCustomer(customer).fold(
                 onSuccess = {
-                    refreshData() // Refresh to show updated data
-                    Log.d("CustomerViewModel", "Customer updated successfully")
+                    refreshData()
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
+                onFailure = { error ->
+                    _errorMessage.value = error.message
                     _isLoading.value = false
-                    Log.d("CustomerViewModel", "Error updating customer: ${it.message}")
                 }
             )
+            // isLoading set to false inside refreshData -> loadFirstPage -> applyFiltersAndSearch
         }
     }
+
     fun getCustomerById(customerId: String): LiveData<Result<Customer>> {
         val resultLiveData = MutableLiveData<Result<Customer>>()
         _isLoading.value = true
-
         viewModelScope.launch {
             repository.getCustomerById(customerId).fold(
                 onSuccess = { customer ->
@@ -274,16 +263,12 @@ class CustomerViewModel(
             )
             _isLoading.value = false
         }
-
         return resultLiveData
     }
 
-
-    // Add to CustomerViewModel.kt
     fun getCustomerInvoiceCount(customerId: String): LiveData<Result<Int>> {
         val resultLiveData = MutableLiveData<Result<Int>>()
         _isLoading.value = true
-
         viewModelScope.launch {
             repository.getCustomerInvoiceCount(customerId).fold(
                 onSuccess = { count ->
@@ -296,30 +281,37 @@ class CustomerViewModel(
             )
             _isLoading.value = false
         }
-
         return resultLiveData
     }
 
     fun deleteCustomer(customerId: String): LiveData<Result<Unit>> {
         val resultLiveData = MutableLiveData<Result<Unit>>()
         _isLoading.value = true
-
         viewModelScope.launch {
             repository.deleteCustomer(customerId).fold(
                 onSuccess = {
                     resultLiveData.value = Result.success(Unit)
-                    refreshData() // Refresh the customer list
+                    refreshData()
                 },
                 onFailure = { error ->
                     resultLiveData.value = Result.failure(error)
                     _errorMessage.value = error.message
+                    _isLoading.value = false
                 }
             )
-            _isLoading.value = false
+            // isLoading set to false inside refreshData -> loadFirstPage -> applyFiltersAndSearch
         }
-
         return resultLiveData
     }
 
+    // Clear error message
+    fun clearErrorMessage() {
+        _errorMessage.value = null
+    }
 
+    override fun onCleared() {
+        super.onCleared()
+        // Remove observers to prevent memory leaks
+        _activeCustomerType.removeObserver { }
+    }
 }

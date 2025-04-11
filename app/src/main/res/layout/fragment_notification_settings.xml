@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    tools:context=".NotificationSettingsFragment">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/my_light_primary"
+            app:navigationIcon="@drawable/famicons__arrow_back"
+            app:title="Notification Settings"
+            app:titleTextAppearance="@style/ToolbarTitle"
+            app:titleTextColor="@color/white" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/appBarLayout">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/montserratmedium"
+                android:text="Notification Preferences"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Choose which notifications you want to receive"
+                android:textColor="@color/my_light_on_background"
+                android:textSize="14sp" />
+
+            <!-- Payment Notifications -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratsemibold"
+                android:text="Payment Notifications"
+                android:textColor="@color/my_light_primary"
+                android:textSize="16sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchPaymentDue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Payment Due Reminders"
+                android:textColor="@color/my_light_on_surface" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchPaymentOverdue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Payment Overdue Alerts"
+                android:textColor="@color/my_light_on_surface" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchCreditLimit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Credit Limit Warnings"
+                android:textColor="@color/my_light_on_surface" />
+
+            <!-- Inventory Notifications -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratsemibold"
+                android:text="Inventory Notifications"
+                android:textColor="@color/my_light_primary"
+                android:textSize="16sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchLowStock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Low Stock Alerts"
+                android:textColor="@color/my_light_on_surface" />
+
+            <!-- Business Insights -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratsemibold"
+                android:text="Business Insights"
+                android:textColor="@color/my_light_primary"
+                android:textSize="16sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchBusinessInsights"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Monthly Business Overview"
+                android:textColor="@color/my_light_on_surface" />
+
+            <!-- Customer Events -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratsemibold"
+                android:text="Customer Events"
+                android:textColor="@color/my_light_primary"
+                android:textSize="16sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchBirthday"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Customer Birthday Reminders"
+                android:textColor="@color/my_light_on_surface" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchAnniversary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Customer Anniversary Reminders"
+                android:textColor="@color/my_light_on_surface" />
+
+            <!-- Information text -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratregular"
+                android:text="Note: Changes to notification settings may take a few minutes to apply."
+                android:textColor="@color/my_light_on_background"
+                android:textSize="14sp"
+                android:textStyle="italic" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

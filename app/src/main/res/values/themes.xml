@@ -17,7 +17,9 @@
         <item name="chipBackgroundColor">@color/status_unpaid_light</item>
         <item name="chipStrokeColor">@color/status_unpaid</item>
         <item name="android:textColor">@color/my_light_on_surface</item>
-        <item name="chipIconTint">@color/status_unpaid</item>
+        <item name="checkedIconTint">@color/red</item>
+        <item name="rippleColor">@color/my_light_secondary</item>
+        <item name="chipIconTint">@color/red</item>
     </style>
 
 
@@ -29,7 +31,7 @@
         <item name="android:textColor">@color/chip_text</item>
         <item name="checkedIconTint">@color/my_light_primary</item>
         <item name="chipIconTint">@color/my_light_primary</item>
-        <item name="rippleColor">@color/my_light_primary_container</item>
+        <item name="rippleColor">@color/my_light_secondary</item>
         <item name="android:textAppearance">@style/TextAppearance.App.Caption</item>
         <item name="chipMinHeight">36dp</item>
         <item name="chipEndPadding">12dp</item>

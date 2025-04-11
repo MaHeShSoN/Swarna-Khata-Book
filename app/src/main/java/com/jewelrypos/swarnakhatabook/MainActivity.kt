@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -12,6 +13,9 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination
+import androidx.navigation.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
@@ -39,7 +43,70 @@ class MainActivity : AppCompatActivity() {
         setupBiometrics()
 
         initializeNotificationSystem()
+
+        handleNotificationNavigation(intent)
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleNotificationNavigation(intent)
+    }
+
+    private fun handleNotificationNavigation(intent: Intent) {
+        try {
+            val navigateTo = intent.getStringExtra("navigate_to") ?: return
+
+            val navController = findNavController(R.id.nav_host_fragment)
+
+            // Make sure we're on the main screen before attempting deeper navigation
+            if (navController.currentDestination?.id != R.id.mainScreenFragment) {
+                // Navigate to mainScreenFragment first
+                navController.navigate(R.id.mainScreenFragment)
+            }
+
+            // Add a listener to detect when main screen is loaded
+            navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
+                override fun onDestinationChanged(controller: NavController, destination: NavDestination, arguments: Bundle?) {
+                    if (destination.id == R.id.mainScreenFragment) {
+                        // Now perform the specific navigation based on notification type
+                        when (navigateTo) {
+                            "invoice_detail" -> {
+                                val invoiceId = intent.getStringExtra("invoiceId") ?: return
+                                val bundle = Bundle().apply {
+                                    putString("invoiceId", invoiceId)
+                                }
+                                controller.navigate(R.id.action_mainScreenFragment_to_invoiceDetailFragment, bundle)
+                            }
+                            "customer_detail" -> {
+                                val customerId = intent.getStringExtra("customerId") ?: return
+                                val bundle = Bundle().apply {
+                                    putString("customerId", customerId)
+                                }
+                                controller.navigate(R.id.action_mainScreenFragment_to_customerDetailFragment, bundle)
+                            }
+                            "item_detail" -> {
+                                val itemId = intent.getStringExtra("itemId") ?: return
+                                val bundle = Bundle().apply {
+                                    putString("itemId", itemId)
+                                }
+                                controller.navigate(R.id.action_mainScreenFragment_to_itemDetailFragment, bundle)
+                            }
+                            "notification_list" -> {
+                                controller.navigate(R.id.action_mainScreenFragment_to_notificationFragment)
+                            }
+                        }
+
+                        // Remove the listener after navigation is complete
+                        controller.removeOnDestinationChangedListener(this)
+                    }
+                }
+            })
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error handling notification navigation", e)
+        }
+    }
+
+
 
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {

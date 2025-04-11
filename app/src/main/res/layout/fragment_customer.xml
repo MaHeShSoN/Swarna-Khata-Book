@@ -72,28 +72,29 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:chipSpacingHorizontal="8dp"
-            app:singleSelection="false">
+            app:singleLine="true"
+            app:singleSelection="true">
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipConsumer"
                 style="@style/Widget.App.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:checkable="true"
                 android:elevation="2dp"
                 android:text="Consumer"
-                app:chipIcon="@drawable/uil__gold" />
+                />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipWholeseller"
                 style="@style/Widget.App.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:checkable="true"
                 android:elevation="2dp"
-                android:text="Wholeseller" />
-
-
+                android:text="Wholeseller"
+               />
         </com.google.android.material.chip.ChipGroup>
-
 
     </HorizontalScrollView>
 

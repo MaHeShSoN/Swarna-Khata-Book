@@ -97,6 +97,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_subscriptionDebugActivity"
             app:destination="@id/subscriptionDebugActivity" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_notificationSettingsFragment"
+            app:destination="@id/notificationSettingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -155,6 +158,9 @@
         <action
             android:id="@+id/action_notificationFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment" />
+        <action
+            android:id="@+id/action_notificationFragment_to_notificationSettingsFragment"
+            app:destination="@id/notificationSettingsFragment" />
     </fragment>
 
     <fragment
@@ -213,4 +219,9 @@
         android:id="@+id/subscriptionDebugActivity"
         android:name="com.jewelrypos.swarnakhatabook.SubscriptionDebugActivity"
         android:label="SubscriptionDebugActivity" />
+    <fragment
+        android:id="@+id/notificationSettingsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.NotificationSettingsFragment"
+        android:label="fragment_notification_settings"
+        tools:layout="@layout/fragment_notification_settings" />
 </navigation>

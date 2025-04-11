@@ -1,10 +1,12 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.app.Application
+import android.os.Build
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
 import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
+import com.jewelrypos.swarnakhatabook.Services.FirebaseNotificationService
 
 class SwarnaKhataBook : Application() {
 
@@ -31,5 +33,11 @@ class SwarnaKhataBook : Application() {
 
 //        // Record first use if needed
         userSubscriptionManager.recordFirstUseIfNeeded()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            FirebaseNotificationService().createNotificationChannels()
+        }
+
+
     }
 }

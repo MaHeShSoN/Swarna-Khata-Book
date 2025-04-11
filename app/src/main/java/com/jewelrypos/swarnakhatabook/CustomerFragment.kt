@@ -4,10 +4,10 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -15,6 +15,7 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.CustomerAdapter
@@ -33,7 +34,6 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     private val binding get() = _binding!!
 
     private val customerViewModel: CustomerViewModel by viewModels {
-        // Create the repository and pass it to the factory
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = CustomerRepository(firestore, auth)
@@ -42,12 +42,18 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         CustomerViewModelFactory(repository, connectivityManager)
     }
     private lateinit var adapter: CustomerAdapter
+    private var isSearchActive = false // Keep track of search state
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentCustomerBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
         binding.addCustomerFab.setOnClickListener {
             addCustomerButton()
@@ -55,154 +61,82 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
 
         setupRecyclerView()
         setupSearchView()
-        setupFilterMenu()
+        setupFilterChips() // Add this line
         setupObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
-
-        return binding.root
     }
 
+
     private fun setupSearchView() {
-        with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
+        val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+        with(searchView) {
             queryHint = "Search customers..."
             inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
             setOnQueryTextListener(object :
                 androidx.appcompat.widget.SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     query?.let {
+                        isSearchActive = it.isNotEmpty()
                         customerViewModel.searchCustomers(it)
                     }
                     return true
                 }
 
                 override fun onQueryTextChange(newText: String?): Boolean {
-                    newText?.let { customerViewModel.searchCustomers(it) }
+                    isSearchActive = !newText.isNullOrEmpty()
+                    customerViewModel.searchCustomers(newText ?: "")
                     return true
                 }
             })
             setOnCloseListener {
-                val searchView =
-                    binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-                onActionViewCollapsed()
-                searchView.setQuery("", false)
-                searchView.clearFocus()
+                isSearchActive = false
                 customerViewModel.searchCustomers("")
+                clearFocus()
+                onActionViewCollapsed()
                 true
             }
-        }
-    }
-
-    private fun setupFilterMenu() {
-        binding.topAppBar.menu.findItem(R.id.action_filter).setOnMenuItemClickListener { menuItem ->
-//            showFilterPopup(menuItem.actionView ?: binding.topAppBar)
-            showFilterDialog()
-            true
-        }
-    }
-
-    private fun showFilterDialog() {
-
-
-
-        // Create the dialog using ThemedM3Dialog (your custom dialog class)
-        val filterDialog = ThemedM3Dialog(requireContext())
-            .setTitle("Filter Customers")
-            .setLayout(R.layout.dialog_customer_filter)
-            .setPositiveButton("Apply") { dialog, dialogView ->
-                // Handle Apply button click
-                applyFilters(dialogView)
-                dialog.dismiss()
-            }
-            .setNegativeButton("Cancel") { dialog ->
-                dialog.dismiss()
-            }
-            .setNeutralButton("Clear Filters"){ dialog, dialogView ->
-                clearFilters(dialogView)
-                dialog.dismiss()
-            }
-
-
-        // Get the dialog view before showing
-        val dialogView = filterDialog.getDialogView()
-
-        // Pre-select the current filter options (if any)
-        setupCurrentFilters(dialogView)
-
-        // Show the dialog
-        filterDialog.show()
-    }
-
-    private fun setupCurrentFilters(dialogView: View?) {
-        dialogView?.let { view ->
-            // Get reference to radio groups
-            val customerTypeGroup = view.findViewById<RadioGroup>(R.id.customerTypeGroup)
-            val sortOrderGroup = view.findViewById<RadioGroup>(R.id.sortOrderGroup)
-            val paymentStatusGroup = view.findViewById<RadioGroup>(R.id.paymentStatusGroup)
-
-            // Set selected options based on current filters in ViewModel
-            when (customerViewModel.activeCustomerType.value) {
-                "Wholesaler" -> customerTypeGroup.check(R.id.rbWholeseller)
-                "Consumer" -> customerTypeGroup.check(R.id.rbConsumer)
-                else -> customerTypeGroup.clearCheck()
-            }
-
-            // Set sort order selection
-            when (customerViewModel.activeSortOrder.value) {
-                "ASC" -> sortOrderGroup.check(R.id.rbAscending)
-                "DESC" -> sortOrderGroup.check(R.id.rbDescending)
-                else -> sortOrderGroup.check(R.id.rbAscending) // Default to ascending
-            }
-
-            // Set payment status selection
-            when (customerViewModel.activePaymentStatus.value) {
-                "Debit" -> paymentStatusGroup.check(R.id.rbToPay)
-                "Credit" -> paymentStatusGroup.check(R.id.rbToReceive)
-                else -> paymentStatusGroup.clearCheck()
+            val closeButton = findViewById<View>(androidx.appcompat.R.id.search_close_btn)
+            closeButton?.setOnClickListener {
+                setQuery("", false)
+                onActionViewCollapsed()
+                isSearchActive = false
+                customerViewModel.searchCustomers("")
+                clearFocus()
             }
         }
     }
 
-    private fun applyFilters(dialogView: View?) {
-        dialogView?.let { view ->
-            // Get selected customer type
-            val customerTypeGroup = view.findViewById<RadioGroup>(R.id.customerTypeGroup)
-            val customerType = when (customerTypeGroup.checkedRadioButtonId) {
-                R.id.rbWholeseller -> "Wholesaler"
-                R.id.rbConsumer -> "Consumer"
-                else -> null
+    // --- Add this function ---
+    private fun setupFilterChips() {
+        binding.filterChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            // Since singleSelection=true, checkedIds will contain at most one ID
+            val selectedType = when (checkedIds.firstOrNull()) {
+                R.id.chipConsumer -> CustomerViewModel.FILTER_CONSUMER
+                R.id.chipWholeseller -> CustomerViewModel.FILTER_WHOLESALER
+                else -> null // No type chip is selected
             }
-
-            // Get selected sort order
-            val sortOrderGroup = view.findViewById<RadioGroup>(R.id.sortOrderGroup)
-            val sortOrder = when (sortOrderGroup.checkedRadioButtonId) {
-                R.id.rbAscending -> "ASC"
-                R.id.rbDescending -> "DESC"
-                else -> "ASC" // Default
-            }
-
-            // Get selected payment status
-            val paymentStatusGroup = view.findViewById<RadioGroup>(R.id.paymentStatusGroup)
-            val paymentStatus = when (paymentStatusGroup.checkedRadioButtonId) {
-                R.id.rbToPay -> "Debit"
-                R.id.rbToReceive -> "Credit"
-                else -> null
-            }
-
-            // Apply filters through ViewModel
-            customerViewModel.applyFilters(customerType, sortOrder, paymentStatus)
+            // Apply the filter using the main applyFilters function
+            customerViewModel.applyFilters(customerType = selectedType)
         }
     }
+    // -----------------------
 
-    private fun clearFilters(dialogView: View?) {
-        dialogView?.let { view ->
-            // Clear all selections
-            view.findViewById<RadioGroup>(R.id.customerTypeGroup).clearCheck()
-            view.findViewById<RadioGroup>(R.id.sortOrderGroup).check(R.id.rbAscending) // Default
-            view.findViewById<RadioGroup>(R.id.paymentStatusGroup).clearCheck()
-        }
-        customerViewModel.applyFilters(null,"ASC",null)
+    // --- Add this function ---
+    private fun syncChipStates(activeType: String?) {
+        // Temporarily remove listener to prevent loop
+        binding.filterChipGroup.setOnCheckedStateChangeListener(null)
+
+        binding.chipConsumer.isChecked = activeType == CustomerViewModel.FILTER_CONSUMER
+        binding.chipWholeseller.isChecked = activeType == CustomerViewModel.FILTER_WHOLESALER
+
+        // Re-attach listener
+        setupFilterChips()
     }
+    // -----------------------
+
+
+
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
             customerViewModel.refreshData()
@@ -213,58 +147,61 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
             binding.swipeRefreshLayout.isRefreshing = false
             adapter.updateList(customers)
-            val searchView =
-                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-            val isSearchActive = searchView.query?.isNotEmpty() == true
-
-            if (customers.isEmpty() && isSearchActive) {
-                binding.emptySearchLayout.visibility = View.VISIBLE
-                binding.recyclerViewCustomers.visibility = View.GONE
-            } else if (customers.isEmpty()) {
-                binding.emptyStateLayout.visibility = View.VISIBLE
-                binding.recyclerViewCustomers.visibility = View.GONE
-                binding.emptySearchLayout.visibility = View.GONE
-            } else {
-                binding.emptySearchLayout.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.GONE
-                binding.recyclerViewCustomers.visibility = View.VISIBLE
-            }
+            updateUIState(customers.isEmpty()) // Update empty state based on filtered list
         }
 
         customerViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            if (errorMessage != null) {
+            if (!errorMessage.isNullOrEmpty()) { // Check if message is not null or empty
                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                customerViewModel.clearErrorMessage() // Clear error after showing
             }
             binding.swipeRefreshLayout.isRefreshing = false
         }
 
         customerViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-
-        customerViewModel.activeFilter.observe(viewLifecycleOwner) { filterType ->
-            val filterMenuItem = binding.topAppBar.menu.findItem(R.id.action_filter)
-            if (filterType != null) {
-                filterMenuItem.setIcon(R.drawable.ic_filter_active)
-            } else {
-                filterMenuItem.setIcon(R.drawable.ic_filter)
+            if (!binding.swipeRefreshLayout.isRefreshing) { // Don't show linear progress if swipe refresh is active
+                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             }
         }
+
+        // Observe activeCustomerType to sync chip states
+        customerViewModel.activeCustomerType.observe(viewLifecycleOwner) { activeType ->
+            syncChipStates(activeType)
+        }
+
+        // Observe the combined filter active state
+
     }
+
+    private fun updateUIState(isEmpty: Boolean) {
+
+        if (isEmpty && (isSearchActive)) {
+            binding.emptySearchLayout.visibility = View.VISIBLE
+            binding.recyclerViewCustomers.visibility = View.GONE
+            binding.emptyStateLayout.visibility = View.GONE
+        } else if (isEmpty) {
+            binding.emptyStateLayout.visibility = View.VISIBLE
+            binding.recyclerViewCustomers.visibility = View.GONE
+            binding.emptySearchLayout.visibility = View.GONE
+        } else {
+            binding.recyclerViewCustomers.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.GONE
+            binding.emptySearchLayout.visibility = View.GONE
+        }
+    }
+
 
     private fun setupEmptyStateButtons() {
         binding.addNewCustomerEmptyButton.setOnClickListener {
             addCustomerButton()
         }
-
         binding.clearFilterButton.setOnClickListener {
-            val searchView =
-                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-            searchView.clearFocus()
+            val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
             searchView.setQuery("", false)
-            customerViewModel.searchCustomers("")
+            searchView.isIconified = true
+            searchView.onActionViewCollapsed();
+            customerViewModel.clearAllFilters() // Use the ViewModel's clear function
         }
-
         binding.addNewCustomerButton.setOnClickListener {
             addCustomerButton()
         }
@@ -279,17 +216,16 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val visibleItemCount = layoutManager.childCount
                 val totalItemCount = layoutManager.itemCount
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                // Load more when user is near the end of the list
-                if (!customerViewModel.isLoading.value!! &&
+                if (customerViewModel.isLoading.value == false &&
+                    totalItemCount > 0 &&
                     (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 &&
-                    firstVisibleItemPosition >= 0
-                ) {
+                    firstVisibleItemPosition >= 0)
+                {
                     customerViewModel.loadNextPage()
                 }
             }
@@ -297,8 +233,6 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     private fun addCustomerButton() {
-        // Clear any active search when adding new customers for better context
-        customerViewModel.searchCustomers("")
         showCustomerBottomSheet()
     }
 
@@ -312,6 +246,7 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         bottomSheet.show(parentFragmentManager, CustomerBottomSheetFragment.TAG)
     }
 
+    // --- CustomerOperationListener Implementation ---
     override fun onCustomerAdded(customer: Customer) {
         customerViewModel.addCustomer(customer)
     }
@@ -320,14 +255,11 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         customerViewModel.updateCustomer(customer)
     }
 
+    // --- CustomerAdapter.OnCustomerClickListener Implementation ---
     override fun onCustomerClick(customer: Customer) {
-        // Navigate to the customer details screen
         val navController = requireActivity().findNavController(R.id.nav_host_fragment)
         val action = MainScreenFragmentDirections.actionMainScreenFragmentToCustomerDetailFragment(customer.id)
         navController.navigate(action)
-
-
-//        showCustomerBottomSheet(customer)
     }
 
     override fun onDestroyView() {

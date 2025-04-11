@@ -1,11 +1,14 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
+import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.NotificationPreferences
 import com.jewelrypos.swarnakhatabook.Enums.NotificationPriority
 import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
@@ -23,13 +26,10 @@ class NotificationRepository(
     private var lastDocumentSnapshot: DocumentSnapshot? = null
     private var isLastPage = false
 
-    // Get current user's phone number for document path
-    private fun getCurrentUserPhoneNumber(): String {
-        val currentUser = auth.currentUser ?: throw UserNotAuthenticatedException("User not authenticated.")
-        return currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
+    // Add a TAG for logging
+    companion object {
+        private const val TAG = "NotificationRepo"
     }
-
 
     /**
      * Gets a paginated list of notifications
@@ -37,7 +37,7 @@ class NotificationRepository(
     suspend fun getNotifications(
         loadNextPage: Boolean = false,
         source: Source = Source.DEFAULT
-    ): Result<List<PaymentNotification>> {
+    ): Result<List<AppNotification>> {
         return try {
             val phoneNumber = getCurrentUserPhoneNumber()
 
@@ -77,7 +77,22 @@ class NotificationRepository(
                 lastDocumentSnapshot = snapshot.documents.last()
             }
 
-            val notifications = snapshot.toObjects(PaymentNotification::class.java)
+            // Handle backward compatibility - try to convert from old PaymentNotification format
+            val notifications = snapshot.documents.mapNotNull { doc ->
+                try {
+                    // First try to convert to the new model directly
+                    doc.toObject(AppNotification::class.java)
+                } catch (e: Exception) {
+                    // If that fails, try the old model and convert
+                    val oldModel = doc.toObject(PaymentNotification::class.java)
+                    if (oldModel != null) {
+                        convertToAppNotification(oldModel, doc.id)
+                    } else {
+                        null
+                    }
+                }
+            }
+
             Result.success(notifications)
         } catch (e: Exception) {
             // If using cache and got an error, try from server
@@ -104,6 +119,7 @@ class NotificationRepository(
 
         Result.success(count)
     } catch (e: Exception) {
+        Log.e(TAG, "Error getting unread count", e)
         Result.failure(e)
     }
 
@@ -127,6 +143,7 @@ class NotificationRepository(
 
         Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "Error marking notification as read", e)
         Result.failure(e)
     }
 
@@ -145,6 +162,7 @@ class NotificationRepository(
 
         Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "Error marking action taken", e)
         Result.failure(e)
     }
 
@@ -163,6 +181,145 @@ class NotificationRepository(
 
         Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "Error deleting notification", e)
         Result.failure(e)
     }
+
+    /**
+     * Creates a new notification
+     */
+    suspend fun createNotification(notification: AppNotification): Result<String> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            // Check if we should send this notification based on user preferences
+            if (!shouldSendNotification(notification.type)) {
+                return Result.success("Notification disabled by user preferences")
+            }
+
+            val notificationRef = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("notifications")
+                .document()
+
+            // If ID is empty, use the document ID
+            val notificationToSave = if (notification.id.isEmpty()) {
+                notification.copy(id = notificationRef.id)
+            } else {
+                notification
+            }
+
+            notificationRef.set(notificationToSave).await()
+            Result.success(notificationRef.id)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating notification", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Gets notification preferences for the current user
+     */
+    suspend fun getNotificationPreferences(): Result<NotificationPreferences> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        val prefsDoc = firestore.collection("users")
+            .document(phoneNumber)
+            .collection("settings")
+            .document("notifications")
+            .get()
+            .await()
+
+        if (prefsDoc.exists()) {
+            val prefs = prefsDoc.toObject(NotificationPreferences::class.java)
+                ?: NotificationPreferences()
+            Result.success(prefs)
+        } else {
+            // Default to all enabled if not set
+            Result.success(NotificationPreferences())
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error getting notification preferences", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Updates notification preferences for the current user
+     */
+    suspend fun updateNotificationPreferences(preferences: NotificationPreferences): Result<Unit> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("settings")
+            .document("notifications")
+            .set(preferences)
+            .await()
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Log.e(TAG, "Error updating notification preferences", e)
+        Result.failure(e)
+    }
+
+    /**
+     * Check if a notification of specific type should be sent based on user preferences
+     */
+    suspend fun shouldSendNotification(type: NotificationType): Boolean {
+        return try {
+            val prefs = getNotificationPreferences().getOrNull() ?: return true
+
+            when (type) {
+                NotificationType.PAYMENT_DUE -> prefs.paymentDue
+                NotificationType.PAYMENT_OVERDUE -> prefs.paymentOverdue
+                NotificationType.CREDIT_LIMIT -> prefs.creditLimit
+                NotificationType.BIRTHDAY -> prefs.customerBirthday
+                NotificationType.ANNIVERSARY -> prefs.customerAnniversary
+                NotificationType.GENERAL -> {
+                    // For GENERAL type, we need to check the context
+                    // Default to business insights preference
+                    prefs.businessInsights
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking notification preferences", e)
+            true // Default to sending if there's an error
+        }
+    }
+
+    /**
+     * Helper to convert from the old notification model to the new one
+     */
+    private fun convertToAppNotification(
+        notification: PaymentNotification,
+        id: String
+    ): AppNotification {
+        return AppNotification(
+            id = notification.id.ifEmpty { id },
+            customerId = notification.customerId,
+            customerName = notification.customerName,
+            title = notification.title,
+            message = notification.message,
+            type = notification.type,
+            status = notification.status,
+            priority = notification.priority,
+            amount = notification.amount,
+            creditLimit = notification.creditLimit,
+            currentBalance = notification.currentBalance,
+            createdAt = notification.createdAt,
+            readAt = notification.readAt,
+            actionTaken = notification.actionTaken
+        )
+    }
+
+    // Helper to get current user's phone number for document path
+    private fun getCurrentUserPhoneNumber(): String {
+        val currentUser = auth.currentUser ?: throw UserNotAuthenticatedException("User not authenticated.")
+        return currentUser.phoneNumber?.replace("+", "")
+            ?: throw PhoneNumberInvalidException("User phone number not available.")
+    }
+
+    // Exception classes
+    class UserNotAuthenticatedException(message: String) : Exception(message)
+    class PhoneNumberInvalidException(message: String) : Exception(message)
 }
