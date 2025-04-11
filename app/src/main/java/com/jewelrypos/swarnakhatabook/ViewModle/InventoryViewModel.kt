@@ -10,7 +10,11 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class InventoryViewModel(
     private val repository: InventoryRepository,
@@ -20,7 +24,7 @@ class InventoryViewModel(
     // Original list of all items
     private val _allJewelleryItems = mutableListOf<JewelleryItem>()
 
-    // Filtered list based on search query
+    // Filtered list based on filters and search query
     private val _jewelleryItems = MutableLiveData<List<JewelleryItem>>()
     val jewelleryItems: LiveData<List<JewelleryItem>> = _jewelleryItems
 
@@ -30,171 +34,151 @@ class InventoryViewModel(
     private val _isLoading = MutableLiveData<Boolean>(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _activeFilter = MutableLiveData<String?>()
-    val activeFilter: LiveData<String?> = _activeFilter
+    // --- Filter State ---
+    private val _activeFilters = MutableLiveData<Set<String>>(emptySet())
+    val activeFilters: LiveData<Set<String>> = _activeFilters
 
-    // Search query
+    // --- Search State ---
+    var searchJob: Job? = null // Made public for cancellation in Fragment's onDestroyView
     private var currentSearchQuery = ""
 
-    private var currentFilter: String? = null
-
-    private val _activeFilters = MutableLiveData<Set<String>>(setOf())
-    val activeFilters: LiveData<Set<String>> = _activeFilters
-    private val LOW_STOCK_THRESHOLD = 5.0
-
-    // Add a method to filter items by type
-    fun filterByType(type: String?) {
-        currentFilter = type
-        _activeFilter.value = type
-        applyFiltersAndSearch()
+    // --- Constants ---
+    companion object {
+        private const val LOW_STOCK_THRESHOLD = 5.0
+        private const val FILTER_GOLD = "GOLD"
+        private const val FILTER_SILVER = "SILVER"
+        private const val FILTER_OTHER = "OTHER"
+        private const val FILTER_LOW_STOCK = "LOW_STOCK"
+        private val TYPE_FILTERS = setOf(FILTER_GOLD, FILTER_SILVER, FILTER_OTHER)
     }
+
 
     init {
         loadFirstPage()
     }
 
+    /**
+     * Toggles a specific filter type. Handles mutual exclusivity for type filters.
+     */
     fun toggleFilter(filterType: String, isActive: Boolean) {
-        // Get current filters
         val currentFilters = _activeFilters.value?.toMutableSet() ?: mutableSetOf()
 
-        // Update filter set based on action
         if (isActive) {
+            // If activating a TYPE filter, remove other TYPE filters first
+            if (TYPE_FILTERS.contains(filterType)) {
+                currentFilters.removeAll(TYPE_FILTERS)
+            }
+            // Add the new filter
             currentFilters.add(filterType)
         } else {
+            // Simply remove the filter if deactivated
             currentFilters.remove(filterType)
         }
 
-        // Update LiveData
-        _activeFilters.value = currentFilters
-
-        // Apply filters
-        applyFiltersAndSearch()
-
-        Log.d("InventoryViewModel", "Filters updated: $currentFilters")
+        // Update the LiveData only if the set has actually changed
+        if (_activeFilters.value != currentFilters) {
+            _activeFilters.value = currentFilters
+            applyFiltersAndSearch() // Apply filters whenever the active set changes
+        }
     }
 
+
+    /**
+     * Clears all active filters.
+     */
     fun clearAllFilters() {
-        _activeFilters.value = setOf()
-        applyFiltersAndSearch()
-        Log.d("InventoryViewModel", "All filters cleared")
+        if (_activeFilters.value?.isNotEmpty() == true) {
+            _activeFilters.value = emptySet()
+            applyFiltersAndSearch()
+        }
     }
 
-    // Method to filter items based on search query
-//    fun searchItems(query: String) {
-//        currentSearchQuery = query.trim().lowercase()
-//        Log.d("InventoryViewModel", "Searching with query: '$currentSearchQuery'")
-//        if (currentSearchQuery.isEmpty()) {
-//            // Show all items
-//            _jewelleryItems.value = _allJewelleryItems.toList()
-//            Log.d("InventoryViewModel", "Showing all ${_allJewelleryItems.size} items")
-//        } else {
-//            // Filter based on query
-//            _jewelleryItems.value = _allJewelleryItems.filter { item ->
-//                item.displayName.lowercase().contains(currentSearchQuery) ||
-//                        item.jewelryCode.lowercase().contains(currentSearchQuery) ||
-//                        item.category.lowercase().contains(currentSearchQuery) ||
-//                        item.itemType.lowercase().contains(currentSearchQuery) ||
-//                        item.location.lowercase().contains(currentSearchQuery) ||
-//                        item.purity.lowercase().contains(currentSearchQuery)
-//            }
-//        }
-//    }
-
-
-    private fun applyFiltersAndSearch() {
-        var filteredList = _allJewelleryItems.toList()
-        val activeFilters = _activeFilters.value ?: setOf()
-
-        // Check if we have category filters (gold, silver, other)
-        val categoryFilters = activeFilters.intersect(setOf("GOLD", "SILVER", "OTHER"))
-
-        // If we have category filters, apply them
-        if (categoryFilters.isNotEmpty()) {
-            filteredList = filteredList.filter { item ->
-                categoryFilters.contains(item.itemType.uppercase())
-            }
-            Log.d(
-                "InventoryViewModel",
-                "Applied category filters: $categoryFilters, items: ${filteredList.size}"
-            )
-        }
-
-        // Apply low stock filter if active
-        if (activeFilters.contains("LOW_STOCK")) {
-            filteredList = filteredList.filter { item ->
-                item.stock <= LOW_STOCK_THRESHOLD
-            }
-            Log.d("InventoryViewModel", "Applied low stock filter, items: ${filteredList.size}")
-        }
-
-        // Apply search query if set
-        if (currentSearchQuery.isNotEmpty()) {
-            filteredList = filteredList.filter { item ->
-                item.displayName.lowercase().contains(currentSearchQuery) ||
-                        item.jewelryCode.lowercase().contains(currentSearchQuery) ||
-                        item.category.lowercase().contains(currentSearchQuery) ||
-                        item.itemType.lowercase().contains(currentSearchQuery) ||
-                        item.location.lowercase().contains(currentSearchQuery) ||
-                        item.purity.lowercase().contains(currentSearchQuery)
-            }
-            Log.d(
-                "InventoryViewModel",
-                "Applied search: '$currentSearchQuery', items: ${filteredList.size}"
-            )
-        }
-
-        _jewelleryItems.value = filteredList
-
-        // Log detailed filter information for debugging
-        Log.d(
-            "InventoryViewModel", "Filter summary: total=${_allJewelleryItems.size}, " +
-                    "filtered=${filteredList.size}, filters=$activeFilters, search='$currentSearchQuery'"
-        )
-    }
-
-
+    /**
+     * Applies the current search query, debouncing the call.
+     */
     fun searchItems(query: String) {
-        currentSearchQuery = query.trim().lowercase()
-        applyFiltersAndSearch()
+        val newQuery = query.trim().lowercase()
+        if(currentSearchQuery == newQuery) return
+
+        currentSearchQuery = newQuery
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(300)
+            applyFiltersAndSearch()
+        }
     }
 
-    fun refreshData() {
+    /**
+     * Applies all active filters (type, low stock) and the search query
+     * to the master list (_allJewelleryItems) asynchronously.
+     */
+    private fun applyFiltersAndSearch() {
         viewModelScope.launch {
             _isLoading.value = true
-            loadFirstPage() // Don't clear data first, let loadFirstPage do it
+
+            val filteredList = withContext(Dispatchers.Default) {
+                var tempList = _allJewelleryItems.toList()
+                val activeFiltersSet = _activeFilters.value ?: emptySet()
+
+                // 1. Apply Type Filters (only one of GOLD, SILVER, OTHER can be active now)
+                val activeTypeFilter = activeFiltersSet.intersect(TYPE_FILTERS).firstOrNull()
+                if (activeTypeFilter != null) {
+                    tempList = tempList.filter { item ->
+                        item.itemType.equals(activeTypeFilter, ignoreCase = true)
+                    }
+                }
+
+                // 2. Apply Low Stock Filter (independent)
+                if (activeFiltersSet.contains(FILTER_LOW_STOCK)) {
+                    tempList = tempList.filter { item ->
+                        item.stock <= LOW_STOCK_THRESHOLD
+                    }
+                }
+
+                // 3. Apply Search Query Filter
+                if (currentSearchQuery.isNotEmpty()) {
+                    tempList = tempList.filter { item ->
+                        item.displayName.contains(currentSearchQuery, ignoreCase = true) ||
+                                item.jewelryCode.contains(currentSearchQuery, ignoreCase = true) ||
+                                item.category.contains(currentSearchQuery, ignoreCase = true) ||
+                                item.itemType.contains(currentSearchQuery, ignoreCase = true) ||
+                                item.location.contains(currentSearchQuery, ignoreCase = true) ||
+                                item.purity.contains(currentSearchQuery, ignoreCase = true)
+                    }
+                }
+                tempList
+            }
+
+            _jewelleryItems.value = filteredList
+            _isLoading.value = false
+            Log.d("InventoryViewModel", "Applied filters: ${_activeFilters.value} & search: '$currentSearchQuery'. Result count: ${filteredList.size}")
         }
     }
 
-    // Check if device is online
-    private fun isOnline(): Boolean {
-        val networkCapabilities =
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        return networkCapabilities != null &&
-                (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+
+    // --- Data Loading & Refresh ---
+
+    fun refreshData() {
+        loadFirstPage()
     }
 
     private fun loadFirstPage() {
         _isLoading.value = true
-        _allJewelleryItems.clear()
         viewModelScope.launch {
-            // Choose source based on connectivity
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
-
-            repository.fetchJewelleryItemsPaginated(false, source).fold(
-                onSuccess = {
-                    _allJewelleryItems.addAll(it)
-                    // Apply current search filter
-                    searchItems(currentSearchQuery)
-                    _isLoading.value = false
-                    Log.d("invFrag", "First page loaded: ${it.size} items")
+            repository.fetchJewelleryItemsPaginated(loadNextPage = false, source = source).fold(
+                onSuccess = { fetchedItems ->
+                    _allJewelleryItems.clear()
+                    _allJewelleryItems.addAll(fetchedItems)
+                    applyFiltersAndSearch() // Apply filters after loading
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
-                    _isLoading.value = false
-                    Log.d("invFrag", "Error loading first page: ${it.message}")
+                onFailure = { error ->
+                    _errorMessage.value = "Error loading inventory: ${error.message}"
+                    _isLoading.value = false // Ensure loading stops on failure
+                    Log.e("InventoryViewModel", "Error loading first page", error)
                 }
             )
+            // isLoading is set to false inside applyFiltersAndSearch
         }
     }
 
@@ -203,52 +187,51 @@ class InventoryViewModel(
 
         _isLoading.value = true
         viewModelScope.launch {
-            // Choose source based on connectivity, same as in loadFirstPage
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
-
-            repository.fetchJewelleryItemsPaginated(true, source).fold(
+            repository.fetchJewelleryItemsPaginated(loadNextPage = true, source = source).fold(
                 onSuccess = { newItems ->
-                    _allJewelleryItems.addAll(newItems)
-                    // Apply current search filter
-                    searchItems(currentSearchQuery)
-                    _isLoading.value = false
-                    Log.d("invFrag", "Next page loaded: ${newItems.size} items")
+                    if (newItems.isNotEmpty()) {
+                        _allJewelleryItems.addAll(newItems)
+                        applyFiltersAndSearch() // Apply filters including the new items
+                    } else {
+                        _isLoading.value = false // No more items, stop loading
+                    }
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
+                onFailure = { error ->
+                    _errorMessage.value = "Error loading next page: ${error.message}"
                     _isLoading.value = false
-                    Log.d("invFrag", "Error loading next page: ${it.message}")
+                    Log.e("InventoryViewModel", "Error loading next page", error)
                 }
             )
+            // isLoading is set to false inside applyFiltersAndSearch
         }
     }
+
+    // --- Item Modification ---
 
     fun addJewelleryItem(jewelleryItem: JewelleryItem) {
         viewModelScope.launch {
+            _isLoading.value = true
             repository.addJewelleryItem(jewelleryItem).fold(
                 onSuccess = {
-                    loadFirstPage()
-                    Log.d("invFrag", "Item added successfully")
+                    refreshData() // Reload data after adding
                 },
-                onFailure = {
-                    _errorMessage.value = it.message
-                    Log.d("invFrag", "Error adding item: ${it.message}")
+                onFailure = { error ->
+                    _errorMessage.value = "Error adding item: ${error.message}"
+                    _isLoading.value = false
                 }
             )
         }
     }
-
 
     fun updateJewelleryItem(item: JewelleryItem) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
                 repository.updateJewelleryItem(item)
-                refreshData() // Refresh to show updated data
+                refreshData() // Reload data after updating
             } catch (e: Exception) {
-                Log.d("updateJewelleryItem", e.message.toString())
                 _errorMessage.value = "Failed to update item: ${e.message}"
-            } finally {
                 _isLoading.value = false
             }
         }
@@ -256,7 +239,6 @@ class InventoryViewModel(
 
     fun getAllItemsForDropdown(): LiveData<List<JewelleryItem>> {
         val liveData = MutableLiveData<List<JewelleryItem>>()
-
         viewModelScope.launch {
             repository.getAllInventoryItems().fold(
                 onSuccess = { items ->
@@ -267,7 +249,15 @@ class InventoryViewModel(
                 }
             )
         }
-
         return liveData
+    }
+
+    // --- Helper Functions ---
+
+    private fun isOnline(): Boolean {
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        return networkCapabilities != null &&
+                (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
     }
 }

@@ -244,6 +244,3 @@ class InventoryRepository(
         return phoneNumber
     }
 }
-
-class UserNotAuthenticatedException(message: String) : Exception(message)
-class PhoneNumberInvalidException(message: String) : Exception(message)

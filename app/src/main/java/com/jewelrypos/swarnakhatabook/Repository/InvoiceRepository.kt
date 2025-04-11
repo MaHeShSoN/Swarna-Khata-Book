@@ -4,15 +4,22 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.toObject
-import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.Customer // Assuming needed
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
-import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem // Assuming needed
+import kotlinx.coroutines.Dispatchers // Import Dispatchers
+import kotlinx.coroutines.withContext // Import withContext
 import kotlinx.coroutines.tasks.await
+import kotlin.math.max // For maxOf
+
+// Define custom exceptions if not already defined elsewhere
+class UserNotAuthenticatedException(message: String) : Exception(message)
+class PhoneNumberInvalidException(message: String) : Exception(message)
+
 
 class InvoiceRepository(
     private val firestore: FirebaseFirestore,
@@ -29,562 +36,390 @@ class InvoiceRepository(
     private var isLastPage = false
 
     // Helper method to get authenticated user's phone number
+    // This doesn't need Dispatchers.IO as it's synchronous CPU work
     private fun getCurrentUserPhoneNumber(): String {
-        return auth.currentUser?.phoneNumber?.replace("+", "")
+        val currentUser = auth.currentUser
+            ?: throw UserNotAuthenticatedException("User not authenticated.")
+        return currentUser.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
     }
 
-    // Centralized method for getting Firestore collections
+    // Centralized method for getting Firestore collection references
+    // This doesn't need Dispatchers.IO as it just builds a reference
     private fun getUserCollection(collectionName: String) = firestore.collection("users")
         .document(getCurrentUserPhoneNumber())
         .collection(collectionName)
 
-    // Enhanced save invoice method with improved error handling and concurrency
-// Fixed save invoice method with proper payment handling for balance updates
-    suspend fun saveInvoice(invoice: Invoice): Result<Unit> = try {
-        // Prepare invoice with ID
-        val invoiceWithId = if (invoice.id.isEmpty()) {
-            invoice.copy(id = invoice.invoiceNumber)
-        } else {
-            invoice
-        }
 
-        // Get the existing invoice to calculate the balance difference (for updates)
-        val existingInvoice = if (invoiceWithId.id.isNotEmpty()) {
-            try {
-                getUserCollection("invoices")
-                    .document(invoiceWithId.id)
-                    .get()
-                    .await()
-                    .toObject(Invoice::class.java)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not retrieve existing invoice: ${e.message}")
-                null
+    /**
+     * Saves or updates an invoice, ensuring Firestore operations run on the IO dispatcher.
+     * Also updates customer balance and inventory stock accordingly.
+     */
+    suspend fun saveInvoice(invoice: Invoice): Result<Unit> = withContext(Dispatchers.IO) {
+        // All code within this block executes on the IO dispatcher
+        try {
+            // Prepare invoice with ID
+            val invoiceWithId = if (invoice.id.isEmpty()) {
+                invoice.copy(id = invoice.invoiceNumber) // Use invoiceNumber as ID if ID is missing
+            } else {
+                invoice
             }
-        } else {
-            null
-        }
 
-        // Calculate how this affects the customer's balance
-        val unpaidAmountBefore = existingInvoice?.let { it.totalAmount - it.paidAmount } ?: 0.0
-        val unpaidAmountAfter = invoice.totalAmount - invoice.paidAmount
-        val balanceChange = unpaidAmountAfter - unpaidAmountBefore
-
-        Log.d(TAG, "Invoice save calculation: id=${invoice.invoiceNumber}, " +
-                "totalBefore=${existingInvoice?.totalAmount ?: 0.0}, paidBefore=${existingInvoice?.paidAmount ?: 0.0}, " +
-                "totalAfter=${invoice.totalAmount}, paidAfter=${invoice.paidAmount}, " +
-                "unpaidBefore=$unpaidAmountBefore, unpaidAfter=$unpaidAmountAfter, balanceChange=$balanceChange")
-
-        // 1. Save the invoice first
-        getUserCollection("invoices")
-            .document(invoiceWithId.id)
-            .set(invoiceWithId)
-            .await()
-
-        // 2. Update customer balance if needed
-        if (balanceChange != 0.0 && invoice.customerId.isNotEmpty()) {
-            try {
-                val customerDoc = getUserCollection("customers")
-                    .document(invoice.customerId)
-                    .get()
-                    .await()
-
-                val customer = customerDoc.toObject(Customer::class.java)
-
-                customer?.let {
-                    val isWholesaler = it.customerType.equals("Wholesaler", ignoreCase = true)
-
-                    // Apply balance change based on customer type
-                    val finalBalanceChange = if (isWholesaler) {
-                        // For wholesalers (suppliers), the balance change is reversed
-                        // We're buying from them, so we owe them money (or reduce what they owe us)
-                        if (it.balanceType.uppercase() == "DEBIT") {
-                            balanceChange  // For debit wholesalers: positive means we owe them
-                        } else {
-                            -balanceChange // For credit wholesalers: negative means they owe us less
-                        }
-                    } else {
-                        // Standard consumer logic (existing code)
-                        if (it.balanceType.uppercase() == "DEBIT") {
-                            -balanceChange  // Inverse for debit customers
-                        } else {
-                            balanceChange   // Normal for credit customers
-                        }
-                    }
-                    val newBalance = it.currentBalance + finalBalanceChange
-                    Log.d(TAG, "Customer balance update: customer=${it.firstName} ${it.lastName}, " +
-                            "oldBalance=${it.currentBalance}, change=$finalBalanceChange, newBalance=$newBalance, type=${it.balanceType}")
-
-                    getUserCollection("customers")
-                        .document(invoice.customerId)
-                        .update("currentBalance", newBalance)
+            // Get existing invoice (if any) for comparison
+            val existingInvoice = if (invoiceWithId.id.isNotEmpty()) {
+                try {
+                    getUserCollection("invoices")
+                        .document(invoiceWithId.id)
+                        .get()
                         .await()
+                        .toObject(Invoice::class.java)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not retrieve existing invoice for update check: ${e.message}")
+                    null /* Handle gracefully, treat as new if fetch fails */
                 }
-            } catch (e: Exception) {
-                // Log but don't fail the whole operation
-                Log.e(TAG, "Error updating customer balance", e)
+            } else { null }
+
+            // Calculate balance change based on difference in unpaid amounts
+            val unpaidAmountBefore = existingInvoice?.let { it.totalAmount - it.paidAmount } ?: 0.0
+            val unpaidAmountAfter = invoiceWithId.totalAmount - invoiceWithId.paidAmount
+            val balanceChange = unpaidAmountAfter - unpaidAmountBefore
+
+            // --- Perform updates sequentially ---
+
+            // 1. Save/Update the invoice document itself
+            getUserCollection("invoices")
+                .document(invoiceWithId.id)
+                .set(invoiceWithId) // set() overwrites or creates
+                .await()
+            Log.d(TAG, "Invoice document saved/updated: ${invoiceWithId.id}")
+
+            // 2. Update customer balance (if necessary and customer exists)
+            if (balanceChange != 0.0 && invoiceWithId.customerId.isNotEmpty()) {
+                // Encapsulate balance update logic - this call is already within withContext(Dispatchers.IO)
+                updateCustomerBalanceForSave(invoiceWithId.customerId, balanceChange)
+            } else {
+                Log.d(TAG, "No balance change needed or customer ID missing: change=$balanceChange, customerId=${invoiceWithId.customerId}")
             }
-        } else {
-            Log.d(TAG, "No balance change needed: change=$balanceChange, customerId=${invoice.customerId}")
-        }
 
-        // 3. Update inventory stock for new invoices
-        // This is the key change - check if this is a new invoice (existingInvoice is null)
-        // and update stock
-        if (existingInvoice == null) {
-            updateInventoryStock(invoiceWithId)
-        } else {
-            // For existing invoices, we need to handle the differences in items
-            handleInventoryStockChanges(existingInvoice, invoiceWithId)
-        }
+            // 3. Update inventory stock (handle new vs existing invoice)
+            // These calls are already within withContext(Dispatchers.IO)
+            if (existingInvoice == null) {
+                // This is a new invoice, update stock based on items sold/purchased
+                updateInventoryStockForNewInvoice(invoiceWithId)
+            } else {
+                // This is an existing invoice being updated, handle stock differences
+                handleInventoryStockChanges(existingInvoice, invoiceWithId)
+            }
 
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Log.e(TAG, "Error saving invoice", e)
-        Result.failure(e)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving invoice ${invoice.invoiceNumber}", e)
+            Result.failure(e)
+        }
     }
 
+    /**
+     * Helper to update customer balance during saveInvoice.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
+    private suspend fun updateCustomerBalanceForSave(customerId: String, balanceChange: Double) {
+        try {
+            val customerDoc = getUserCollection("customers").document(customerId).get().await()
+            val customer = customerDoc.toObject(Customer::class.java)
+
+            customer?.let {
+                val finalBalanceChange = calculateFinalBalanceChange(it, balanceChange)
+                val newBalance = it.currentBalance + finalBalanceChange
+                getUserCollection("customers").document(customerId).update("currentBalance", newBalance).await()
+                Log.d(TAG, "Customer balance updated for $customerId: newBalance=$newBalance (change=$finalBalanceChange)")
+            } ?: Log.w(TAG, "Customer $customerId not found for balance update during save.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update customer balance for $customerId during save", e)
+            // Decide if this error should propagate or just be logged
+            // throw e // Uncomment to make the saveInvoice fail if balance update fails
+        }
+    }
+
+
+    /**
+     * Handles calculating and applying stock changes when an existing invoice is updated.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
     private suspend fun handleInventoryStockChanges(oldInvoice: Invoice, newInvoice: Invoice) {
         try {
-            // Get the customer to check if they're a wholesaler
-            val customerDoc = getUserCollection("customers")
-                .document(newInvoice.customerId)
-                .get()
-                .await()
-
+            // Determine if the customer is a wholesaler (affects stock direction)
+            val customerDoc = getUserCollection("customers").document(newInvoice.customerId).get().await()
             val customer = customerDoc.toObject<Customer>()
             val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
 
-            // Create maps of item IDs to quantities for easy comparison
+            // Create maps for efficient lookup
             val oldItemQuantities = oldInvoice.items.associate { it.itemId to it.quantity }
             val newItemQuantities = newInvoice.items.associate { it.itemId to it.quantity }
 
-            // First, handle items that are in both invoices (quantity changes)
-            val commonItemIds = oldItemQuantities.keys.intersect(newItemQuantities.keys)
-            for (itemId in commonItemIds) {
+            // Combine all unique item IDs from both old and new invoices
+            val allItemIds = oldItemQuantities.keys + newItemQuantities.keys
+
+            // Process each unique item ID
+            for (itemId in allItemIds) {
                 val oldQuantity = oldItemQuantities[itemId] ?: 0
                 val newQuantity = newItemQuantities[itemId] ?: 0
-                val quantityDifference = newQuantity - oldQuantity
+                val quantityDifference = newQuantity - oldQuantity // Positive means more items added/increased qty
 
                 if (quantityDifference != 0) {
+                    // Apply the stock change for this specific item
                     updateItemStockForInvoiceChange(itemId, quantityDifference, isWholesaler)
                 }
             }
-
-            // Handle removed items (restore to inventory for consumers, remove for wholesalers)
-            val removedItemIds = oldItemQuantities.keys.minus(newItemQuantities.keys)
-            for (itemId in removedItemIds) {
-                val quantity = oldItemQuantities[itemId] ?: 0
-                // For removed items: add back to inventory (consumer) or remove (wholesaler)
-                updateItemStockForInvoiceChange(itemId, -quantity, isWholesaler)
-            }
-
-            // Handle added items (remove from inventory for consumers, add for wholesalers)
-            val addedItemIds = newItemQuantities.keys.minus(oldItemQuantities.keys)
-            for (itemId in addedItemIds) {
-                val quantity = newItemQuantities[itemId] ?: 0
-                // For added items: remove from inventory (consumer) or add (wholesaler)
-                updateItemStockForInvoiceChange(itemId, quantity, isWholesaler)
-            }
+            Log.d(TAG, "Finished handling inventory stock changes for updated invoice ${newInvoice.id}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating inventory for invoice changes", e)
+            Log.e(TAG, "Error handling inventory stock changes for invoice ${newInvoice.id}", e)
+            // Decide on error handling: log, throw, etc.
         }
     }
 
-
+    /**
+     * Updates the stock for a single item based on quantity change and customer type.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
     private suspend fun updateItemStockForInvoiceChange(itemId: String, quantityChange: Int, isWholesaler: Boolean) {
-        if (quantityChange == 0) return
+        if (quantityChange == 0 || itemId.isBlank()) return // No change or invalid item ID
 
         try {
-            val inventoryItemDoc = getUserCollection("inventory")
-                .document(itemId)
-                .get()
-                .await()
-
+            val inventoryRef = getUserCollection("inventory").document(itemId)
+            val inventoryItemDoc = inventoryRef.get().await()
             val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
 
             currentItem?.let {
-                // For consumers: positive change means remove more from inventory
-                // For wholesalers: positive change means add more to inventory
-                val effectiveChange = if (isWholesaler) quantityChange else -quantityChange
+                // Determine the actual change to apply to the stock value
+                // If wholesaler: positive quantityChange means ADD to stock (buying from them)
+                // If consumer: positive quantityChange means REMOVE from stock (selling to them)
+                val effectiveStockChange = if (isWholesaler) quantityChange.toDouble() else -quantityChange.toDouble()
+                val newStock = maxOf(0.0, it.stock + effectiveStockChange) // Ensure stock doesn't go negative
 
-                val newStock = maxOf(0.0, it.stock + effectiveChange)
-
-                Log.d(TAG, "Updating stock for item $itemId: " +
-                        "old=${it.stock}, change=$effectiveChange, new=$newStock, " +
-                        "customerType=${if (isWholesaler) "Wholesaler" else "Consumer"}")
-
-                getUserCollection("inventory")
-                    .document(itemId)
-                    .update("stock", newStock)
-                    .await()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating stock for item $itemId", e)
-        }
-    }
-
-
-
-    // Helper method to update inventory stock in a transaction
-    private fun updateInventoryStockInTransaction(
-        transaction: com.google.firebase.firestore.Transaction,
-        newInvoice: Invoice,
-        oldInvoice: Invoice?
-    ) {
-        // Only process items that have stock management
-        newInvoice.items.forEach { invoiceItem ->
-            if (invoiceItem.itemDetails.stock > 0) {
-                // Check if item existed in old invoice
-                val oldItemQuantity = oldInvoice?.items?.find { it.itemId == invoiceItem.itemId }?.quantity ?: 0
-                val quantityDifference = invoiceItem.quantity - oldItemQuantity
-
-                // Only update stock if there's a change in quantity
-                if (quantityDifference != 0) {
-                    val inventoryRef = getUserCollection("inventory").document(invoiceItem.itemId)
-
-                    try {
-                        val itemSnapshot = transaction.get(inventoryRef)
-                        if (itemSnapshot.exists()) {
-                            val currentItem = itemSnapshot.toObject(JewelleryItem::class.java)
-                            currentItem?.let {
-                                val newStock = maxOf(0.0, it.stock - quantityDifference)
-                                transaction.update(inventoryRef, "stock", newStock)
-                                Log.d(TAG, "Transaction updating stock for ${it.displayName}: $newStock")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error in stock transaction for item ${invoiceItem.itemId}", e)
-                        // Continue with other items even if one fails
-                    }
+                // Only update if stock value actually changes
+                if (newStock != it.stock) {
+                    inventoryRef.update("stock", newStock).await()
+                    Log.d(TAG, "Stock updated for item $itemId: old=${it.stock}, change=$effectiveStockChange, new=$newStock (Wholesaler: $isWholesaler)")
+                } else {
+                    Log.d(TAG, "Stock for item $itemId unchanged: old=${it.stock}, change=$effectiveStockChange, new=$newStock")
                 }
-            }
-        }
-    }
-
-    // Update customer balance by the difference amount
-    private suspend fun updateCustomerBalanceWithDifference(customerId: String, balanceChange: Double) {
-        if (balanceChange == 0.0) return // No change needed - early exit for optimization
-
-        try {
-            val customerDoc = getUserCollection("customers")
-                .document(customerId)
-                .get()
-                .await()
-
-            val customer = customerDoc.toObject<Customer>()
-
-            customer?.let {
-                // The balance change effect depends on the customer's balance type
-                val finalBalanceChange = when (it.balanceType.uppercase()) {
-                    "CREDIT" -> balanceChange  // For Credit customers: positive means they owe more
-                    "DEBIT" -> -balanceChange  // For Debit customers: negative means they owe more
-                    else -> balanceChange      // Default to Credit behavior
-                }
-
-                val newBalance = it.currentBalance + finalBalanceChange
-
-                Log.d(TAG, "Customer balance update: customerId=$customerId, type=${it.balanceType}, " +
-                        "oldBalance=${it.currentBalance}, newBalance=$newBalance, change=$finalBalanceChange")
-
-                getUserCollection("customers")
-                    .document(customerId)
-                    .update("currentBalance", newBalance)
-                    .await()
-            } ?: run {
-                Log.e(TAG, "Customer not found for balance update: $customerId")
-            }
+            } ?: Log.w(TAG, "Inventory item $itemId not found for stock update.")
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating customer balance", e)
-            throw e  // Re-throw to allow the calling code to handle the error
+            Log.e(TAG, "Error updating stock for item $itemId during invoice change", e)
+            // Decide on error handling
         }
     }
 
-    // Separate method for inventory stock update
-    private suspend fun updateInventoryStock(invoice: Invoice) {
-
-        // Get the customer to check if they're a wholesaler
-        val customerDoc = getUserCollection("customers")
-            .document(invoice.customerId)
-            .get()
-            .await()
-
-        val customer = customerDoc.toObject<Customer>()
-        val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
-
-        invoice.items.forEach { invoiceItem ->
-            if (invoiceItem.itemDetails.stock > 0 || isWholesaler) {
-                try {
-                    val inventoryItemDoc = getUserCollection("inventory")
-                        .document(invoiceItem.itemId)
-                        .get()
-                        .await()
-
-                    val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
-
-                    currentItem?.let {
-                        val newStock = if (isWholesaler) {
-                            it.stock + invoiceItem.quantity  // Add to stock for wholesalers
-                        } else {
-                            maxOf(0.0, it.stock - invoiceItem.quantity)  // Regular logic for consumers
-                        }
-
-                        getUserCollection("inventory")
-                            .document(invoiceItem.itemId)
-                            .update("stock", newStock)
-                            .await()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error updating stock for item ${invoiceItem.itemId}", e)
-                }
-            }
-        }
-    }
-
-    // Separate method for customer balance update
-    private suspend fun updateCustomerBalance(invoice: Invoice) {
+    /**
+     * Updates inventory stock when a completely new invoice is created.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
+    private suspend fun updateInventoryStockForNewInvoice(invoice: Invoice) {
         try {
-            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
-
-            val customerDoc = getUserCollection("customers")
-                .document(invoice.customerId)
-                .get()
-                .await()
-
-            val customer = customerDoc.toObject<Customer>()
-
-            customer?.let {
-                val newBalance = it.currentBalance + unpaidAmount
-                getUserCollection("customers")
-                    .document(invoice.customerId)
-                    .update("currentBalance", newBalance)
-                    .await()
-
-                Log.d(TAG, "Updated customer balance: $newBalance")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating customer balance", e)
-        }
-    }
-
-    // Enhanced delete invoice method
-    // In InvoiceRepository.kt:
-
-    suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> {
-        try {
-            // Log deletion attempt for debugging
-            Log.d(TAG, "Attempting to delete invoice: $invoiceNumber")
-
-            // Get the invoice first to properly update customer balance and inventory
-            val invoiceDoc = getUserCollection("invoices")
-                .document(invoiceNumber)
-                .get()
-                .await()
-
-            val invoice = invoiceDoc.toObject<Invoice>()
-            if (invoice == null) {
-                Log.w(TAG, "Invoice not found: $invoiceNumber")
-                return Result.failure(Exception("Invoice not found"))
-            }
-
-            // Get customer to determine type (consumer vs wholesaler)
-            val customerDoc = getUserCollection("customers")
-                .document(invoice.customerId)
-                .get()
-                .await()
-
+            // Determine if the customer is a wholesaler
+            val customerDoc = getUserCollection("customers").document(invoice.customerId).get().await()
             val customer = customerDoc.toObject<Customer>()
             val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
 
-            Log.d(TAG, "Deleting invoice: $invoiceNumber, customer type: ${if (isWholesaler) "Wholesaler" else "Consumer"}")
+            Log.d(TAG, "Updating inventory for NEW invoice ${invoice.id} (Wholesaler: $isWholesaler)")
 
-            // Update inventory based on customer type
+            // Iterate through items and update stock individually
+            invoice.items.forEach { invoiceItem ->
+                // Apply the change for each item (negative quantity for consumers, positive for wholesalers)
+                updateItemStockForInvoiceChange(invoiceItem.itemId, invoiceItem.quantity, isWholesaler)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error determining customer type or updating stock for new invoice ${invoice.id}", e)
+            // Decide on error handling
+        }
+    }
+
+
+    /**
+     * Deletes an invoice, ensuring Firestore operations run on the IO dispatcher.
+     * Also reverts customer balance and inventory stock changes.
+     */
+    suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Attempting to delete invoice: $invoiceNumber")
+
+            // 1. Get the invoice to be deleted
+            val invoiceRef = getUserCollection("invoices").document(invoiceNumber)
+            val invoiceDoc = invoiceRef.get().await()
+            val invoice = invoiceDoc.toObject<Invoice>()
+                ?: return@withContext Result.failure(Exception("Invoice $invoiceNumber not found")) // Exit early if not found
+
+            // 2. Get customer details for type checking
+            val customerDoc = getUserCollection("customers").document(invoice.customerId).get().await()
+            val customer = customerDoc.toObject<Customer>()
+            val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+            Log.d(TAG, "Deleting invoice $invoiceNumber, Customer Type: ${customer?.customerType ?: "Unknown"}")
+
+
+            // 3. Revert inventory changes based on the deleted invoice items
+            // This call is already within withContext(Dispatchers.IO)
             updateInventoryOnDeletion(invoice, isWholesaler)
 
-            // Update customer balance based on customer type and balance type
+            // 4. Revert customer balance change (if customer exists)
             if (invoice.customerId.isNotEmpty() && customer != null) {
+                // This call is already within withContext(Dispatchers.IO)
                 updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+            } else {
+                Log.w(TAG, "Customer not found or ID missing for balance reversion on delete: ${invoice.customerId}")
             }
 
-            // Delete the invoice document
-            getUserCollection("invoices")
-                .document(invoiceNumber)
-                .delete()
-                .await()
+            // 5. Delete the actual invoice document
+            invoiceRef.delete().await()
 
             Log.d(TAG, "Successfully deleted invoice: $invoiceNumber")
-            return Result.success(Unit)
+            Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting invoice: ${e.message}", e)
-            return Result.failure(e)
+            Log.e(TAG, "Error deleting invoice $invoiceNumber", e)
+            Result.failure(e)
         }
     }
 
-    // Update inventory differently based on customer type
+    /**
+     * Reverts inventory stock changes when an invoice is deleted.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
     private suspend fun updateInventoryOnDeletion(invoice: Invoice, isWholesaler: Boolean) {
+        Log.d(TAG, "Reverting inventory for deleted invoice ${invoice.id} (Wholesaler: $isWholesaler)")
+        // Reverting means applying the *opposite* quantity change
         invoice.items.forEach { item ->
-            try {
-                val inventoryItemDoc = getUserCollection("inventory")
-                    .document(item.itemId)
-                    .get()
-                    .await()
-
-                val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
-
-                currentItem?.let {
-                    // For consumer: ADD back to inventory
-                    // For wholesaler: REMOVE from inventory (since we added when created)
-                    val newStock = if (isWholesaler) {
-                        // Wholesaler purchase gets removed from inventory
-                        maxOf(0.0, it.stock - item.quantity)
-                    } else {
-                        // Consumer sale gets added back to inventory
-                        it.stock + item.quantity
-                    }
-
-                    getUserCollection("inventory")
-                        .document(item.itemId)
-                        .update("stock", newStock)
-                        .await()
-
-                    Log.d(TAG, "Updated inventory for item ${item.itemId}: new stock = $newStock")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating inventory for item ${item.itemId}", e)
-            }
+            // Pass the negative of the item quantity to reverse the stock change
+            updateItemStockForInvoiceChange(item.itemId, -item.quantity, isWholesaler)
         }
     }
-    // Update customer balance based on customer type and balance type
+
+    /**
+     * Reverts customer balance changes when an invoice is deleted.
+     * Assumes it's called within a withContext(Dispatchers.IO) block.
+     */
     private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice, customer: Customer, isWholesaler: Boolean) {
         try {
             val unpaidAmount = invoice.totalAmount - invoice.paidAmount
+            // To revert the balance change, we apply the negative of the original change
+            val originalBalanceChange = calculateFinalBalanceChange(customer, unpaidAmount)
+            val balanceReversion = -originalBalanceChange
 
-            // The balance change depends on:
-            // 1. Customer type (consumer vs wholesaler)
-            // 2. Balance type (credit vs debit)
+            val newBalance = customer.currentBalance + balanceReversion
 
-            val finalBalanceChange = if (isWholesaler) {
-                // For wholesaler:
-                if (customer.balanceType.uppercase() == "DEBIT") {
-                    -unpaidAmount  // Decrease what we owe them
-                } else {
-                    unpaidAmount   // Increase what they owe us
-                }
-            } else {
-                // For consumer:
-                if (customer.balanceType.uppercase() == "DEBIT") {
-                    unpaidAmount  // Increase what we owe them
-                } else {
-                    -unpaidAmount // Decrease what they owe us
-                }
-            }
-
-            val newBalance = customer.currentBalance + finalBalanceChange
-
-            Log.d(TAG, "Updating balance on delete: customerType=${if (isWholesaler) "Wholesaler" else "Consumer"}, " +
-                    "balanceType=${customer.balanceType}, oldBalance=${customer.currentBalance}, " +
-                    "newBalance=$newBalance, change=$finalBalanceChange")
-
-            getUserCollection("customers")
-                .document(invoice.customerId)
-                .update("currentBalance", newBalance)
-                .await()
+            getUserCollection("customers").document(invoice.customerId).update("currentBalance", newBalance).await()
+            Log.d(TAG, "Reverted customer balance for ${invoice.customerId}: newBalance=$newBalance (reversion=$balanceReversion)")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating customer balance during invoice deletion", e)
+            Log.e(TAG, "Error reverting customer balance for ${invoice.customerId} during invoice deletion", e)
+            // Decide on error handling
         }
     }
-    // Separate method to revert customer balance during invoice deletion
-//    private suspend fun updateCustomerBalanceOnDeletion(invoice: Invoice) {
-//        try {
-//            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
-//
-//            val customerDoc = getUserCollection("customers")
-//                .document(invoice.customerId)
-//                .get()
-//                .await()
-//
-//            val customer = customerDoc.toObject<Customer>()
-//
-//            customer?.let {
-//                val newBalance = it.currentBalance - unpaidAmount
-//                getUserCollection("customers")
-//                    .document(invoice.customerId)
-//                    .update("currentBalance", newBalance)
-//                    .await()
-//            }
-//        } catch (e: Exception) {
-//            Log.e(TAG, "Error updating customer balance during invoice deletion", e)
-//        }
-//    }
 
-    // Optimized paginated invoice fetching
+    /**
+     * Fetches invoices with pagination, ensuring Firestore operations run on the IO dispatcher.
+     */
     suspend fun fetchInvoicesPaginated(
         loadNextPage: Boolean = false,
         source: Source = Source.DEFAULT
-    ): Result<List<Invoice>> {
-        // Reset pagination if not loading next page
+    ): Result<List<Invoice>> = withContext(Dispatchers.IO) {
+        // Reset pagination state if needed
         if (!loadNextPage) {
             lastDocumentSnapshot = null
             isLastPage = false
+            Log.d(TAG, "Pagination reset for fetching first page.")
         }
-
-        // Return empty list if we've reached the last page
         if (isLastPage) {
-            return Result.success(emptyList())
+            Log.d(TAG, "Already on the last page, returning empty list.")
+            return@withContext Result.success(emptyList())
         }
 
-        return try {
-            // Build query with pagination
+        try {
+            // Build query
             var query = getUserCollection("invoices")
-                .orderBy("invoiceDate", Query.Direction.DESCENDING)
+                .orderBy("invoiceDate", Query.Direction.DESCENDING) // Order by date descending
                 .limit(PAGE_SIZE.toLong())
 
-            // Add start after clause if we have a previous page
+            // Apply cursor for next page
             if (loadNextPage && lastDocumentSnapshot != null) {
                 query = query.startAfter(lastDocumentSnapshot!!)
+                Log.d(TAG, "Fetching next page starting after document: ${lastDocumentSnapshot?.id}")
+            } else {
+                Log.d(TAG, "Fetching first page or restarting pagination.")
             }
 
-            // Get data with the specified source
+            // Fetch data from specified source (Cache or Server/Default)
+            Log.d(TAG, "Executing fetch query with source: $source")
             val snapshot = query.get(source).await()
 
-            // Update pagination state
+            // Update pagination state based on results
             isLastPage = snapshot.documents.size < PAGE_SIZE
-
-            // Save the last document for next page query
             if (snapshot.documents.isNotEmpty()) {
                 lastDocumentSnapshot = snapshot.documents.last()
             }
+            Log.d(TAG, "Fetched ${snapshot.documents.size} invoices. Is last page: $isLastPage")
+
 
             val invoices = snapshot.toObjects(Invoice::class.java)
             Result.success(invoices)
         } catch (e: Exception) {
-            // If using cache and got an error, try from server
-            if (source == Source.CACHE) {
-                fetchInvoicesPaginated(loadNextPage, Source.SERVER)
+            // Handle specific cache unavailability error by retrying from server
+            if (source == Source.CACHE && e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.UNAVAILABLE) {
+                Log.w(TAG, "Cache unavailable for pagination, retrying from server...")
+                fetchInvoicesPaginated(loadNextPage, Source.SERVER) // Recursive call with Server source
             } else {
-                Log.e(TAG, "Error fetching invoices", e)
+                // Log and fail for other errors
+                Log.e(TAG, "Error fetching invoices paginated (source: $source)", e)
                 Result.failure(e)
             }
         }
     }
 
-    // Get invoice by number with improved error handling
-    suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> = try {
-        val document = getUserCollection("invoices")
-            .document(invoiceNumber)
-            .get()
-            .await()
-
-        if (document.exists()) {
-            document.toObject<Invoice>()
-                ?.let { Result.success(it) }
-                ?: Result.failure(Exception("Failed to convert document to Invoice"))
-        } else {
-            Result.failure(Exception("Invoice not found"))
+    /**
+     * Gets a single invoice by its number (ID), running on the IO dispatcher.
+     */
+    suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> = withContext(Dispatchers.IO) {
+        if (invoiceNumber.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Invoice number cannot be blank"))
         }
-    } catch (e: Exception) {
-        Log.e(TAG, "Error getting invoice by number", e)
-        Result.failure(e)
+        try {
+            val document = getUserCollection("invoices")
+                .document(invoiceNumber)
+                .get()
+                .await()
+
+            if (document.exists()) {
+                document.toObject<Invoice>()
+                    ?.let { Result.success(it) } // Successfully converted
+                    ?: Result.failure(Exception("Failed to convert document to Invoice object for $invoiceNumber"))
+            } else {
+                Result.failure(Exception("Invoice $invoiceNumber not found"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting invoice by number $invoiceNumber", e)
+            Result.failure(e)
+        }
     }
+
+
+    // --- Helper Methods ---
+
+    /**
+     * Calculates the final balance change to apply based on customer type and balance type.
+     * This is pure calculation, does not need Dispatchers.IO itself.
+     */
+    private fun calculateFinalBalanceChange(customer: Customer, balanceChange: Double): Double {
+        val isWholesaler = customer.customerType.equals("Wholesaler", ignoreCase = true)
+        // Determine effect based on customer type and their balance convention
+        return if (isWholesaler) {
+            // For Wholesaler (Supplier):
+            // If their balance is Debit (we owe them), positive change means we owe more.
+            // If their balance is Credit (they owe us), positive change means they owe us less.
+            if (customer.balanceType.uppercase() == "DEBIT") balanceChange else -balanceChange
+        } else {
+            // For Consumer:
+            // If their balance is Debit (we owe them - unusual?), positive change means we owe less.
+            // If their balance is Credit (they owe us), positive change means they owe more.
+            if (customer.balanceType.uppercase() == "DEBIT") -balanceChange else balanceChange
+        }
+    }
+
 }

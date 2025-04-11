@@ -207,7 +207,7 @@
     <!-- Small Text/Caption -->
     <style name="TextAppearance.App.Caption" parent="TextAppearance.MaterialComponents.Caption">
         <item name="fontFamily">@font/montserratlight</item>
-        <item name="android:fontFamily">@font/montserratlight</item>
+        <item name="android:fontFamily">@font/montserratregular</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textColor">@color/my_light_secondary</item>
     </style>

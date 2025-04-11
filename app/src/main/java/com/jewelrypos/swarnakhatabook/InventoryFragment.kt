@@ -8,7 +8,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,18 +21,16 @@ import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
-import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
+import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel // Ensure correct import
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInventoryBinding
 
 class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListener,
     JewelleryAdapter.OnItemClickListener {
 
-
     private var _binding: FragmentInventoryBinding? = null
     private val binding get() = _binding!!
 
     private val inventoryViewModel: InventoryViewModel by viewModels {
-        // Create the repository and pass it to the factory
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = InventoryRepository(firestore, auth)
@@ -42,296 +39,298 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         InventoryViewModelFactory(repository, connectivityManager)
     }
     private lateinit var adapter: JewelleryAdapter
+    private var isSearchActive = false // Track search state
 
-    // Add this as a class property
-
+    // Define filter type constants matching ViewModel
+    companion object {
+        private const val FILTER_GOLD = "GOLD"
+        private const val FILTER_SILVER = "SILVER"
+        private const val FILTER_OTHER = "OTHER"
+        private const val FILTER_LOW_STOCK = "LOW_STOCK"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentInventoryBinding.inflate(inflater, container, false)
 
         binding.addItemFab.setOnClickListener {
             addItemButton()
         }
 
-
-
         setUpRecyclerView()
-        // Call setupMenu() before observers to ensure searchView is initialized
         setupSearchView()
-        setupFilterChips()
-        setUpObserver()
+        setupFilterChips() // Setup chip listeners
+        setupObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
-        // Inflate the layout for this fragment
+
         return binding.root
     }
 
+    private fun setupObservers() {
+        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
+            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing UI
+            adapter.updateList(items) // Update the adapter with filtered/searched list
+            updateUIState(items.isEmpty()) // Update empty state based on the filtered list
+        }
+
+        inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
+            if (!errorMessage.isNullOrEmpty()) { // Check if message is not null or empty
+                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+            }
+            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing UI on error
+        }
+
+        inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            // Show progress bar only if not already refreshing via swipe
+            if (!binding.swipeRefreshLayout.isRefreshing) {
+                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            }
+        }
+
+        // Observe active filters to update chip UI state
+        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
+            syncChipStates(activeFilters) // Call helper to update chip visuals
+        }
+    }
 
     private fun setupSearchView() {
-        with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
+        val searchView =
+            binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+        with(searchView) {
             queryHint = "Search Jewellery Items..."
             inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
             setOnQueryTextListener(object :
                 androidx.appcompat.widget.SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
+                    // Submitting usually implies the user is done typing
                     query?.let {
-                        Log.d("InventoryViewModel", "Search submitted: $it")
+                        isSearchActive = it.isNotEmpty()
                         inventoryViewModel.searchItems(it)
                     }
                     return true
                 }
 
                 override fun onQueryTextChange(newText: String?): Boolean {
-                    newText?.let { inventoryViewModel.searchItems(it) }
+                    // Trigger search with debounce in ViewModel
+                    isSearchActive = !newText.isNullOrEmpty()
+                    inventoryViewModel.searchItems(newText ?: "")
                     return true
                 }
             })
+
+            // Handle clearing the search
             setOnCloseListener {
-                val seachVie =
-                    binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-                onActionViewCollapsed()
-                seachVie.setQuery("", false)
-                seachVie.clearFocus()
-                inventoryViewModel.searchItems("")
+                isSearchActive = false
+                inventoryViewModel.searchItems("") // Trigger filter with empty query
+                clearFocus()
+                onActionViewCollapsed() // Collapse the search view
                 true
             }
-        }
-    }
-
-    private fun setupFilterMenu() {
-        binding.topAppBar.menu.findItem(R.id.action_filter).setOnMenuItemClickListener { menuItem ->
-            showFilterPopup(binding.topAppBar) // Use the toolbar itself as the anchor
-            true
-        }
-    }
-
-    private fun showFilterPopup(view: View) {
-        val popup = PopupMenu(requireContext(), view) // Use the actionView as the anchor
-        popup.menuInflater.inflate(R.menu.filter_menu, popup.menu)
-        //popup.gravity = android.view.Gravity.TOP or android.view.Gravity.START //remove or double check that it is correct.
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.filter_gold -> {
-                    inventoryViewModel.filterByType("gold")
-                    true
-                }
-
-                R.id.filter_silver -> {
-                    inventoryViewModel.filterByType("silver")
-                    true
-                }
-
-                R.id.filter_other -> {
-                    inventoryViewModel.filterByType("other")
-                    true
-                }
-
-                R.id.filter_all -> {
-                    inventoryViewModel.filterByType(null)
-                    true
-                }
-
-                else -> false
+            // Optional: Handle closing the search view by clicking the 'X' icon inside it
+            val closeButton = findViewById<View>(androidx.appcompat.R.id.search_close_btn)
+            closeButton?.setOnClickListener {
+                setQuery("", false) // Clear the query
+                onActionViewCollapsed() // Collapse the search view
+                isSearchActive = false
+                inventoryViewModel.searchItems("") // Trigger filter with empty query
+                clearFocus()
             }
         }
-        popup.show()
     }
 
     private fun setupFilterChips() {
-        // Gold chip
+        // --- Important: Use a helper function to attach listeners ---
+        // This prevents issues when observing activeFilters LiveData later
+        attachChipListeners()
+    }
+
+    private fun attachChipListeners() {
         binding.chipGold.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter("GOLD", isChecked)
+            inventoryViewModel.toggleFilter(FILTER_GOLD, isChecked)
         }
-
-        // Silver chip
         binding.chipSilver.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter("SILVER", isChecked)
+            inventoryViewModel.toggleFilter(FILTER_SILVER, isChecked)
         }
-
-        // Other chip
         binding.chipOther.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter("OTHER", isChecked)
+            inventoryViewModel.toggleFilter(FILTER_OTHER, isChecked)
         }
-
-        // Low Stock chip
         binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter("LOW_STOCK", isChecked)
-        }
-
-        // Observe active filters to sync UI state with ViewModel
-        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
-            // Update chip states without triggering listeners
-            binding.chipGold.setOnCheckedChangeListener(null)
-            binding.chipSilver.setOnCheckedChangeListener(null)
-            binding.chipOther.setOnCheckedChangeListener(null)
-            binding.chipLowStock.setOnCheckedChangeListener(null)
-
-            // Set correct checked states
-            binding.chipGold.isChecked = activeFilters.contains("GOLD")
-            binding.chipSilver.isChecked = activeFilters.contains("SILVER")
-            binding.chipOther.isChecked = activeFilters.contains("OTHER")
-            binding.chipLowStock.isChecked = activeFilters.contains("LOW_STOCK")
-
-            // Restore listeners
-            setupFilterChips()
-
+            inventoryViewModel.toggleFilter(FILTER_LOW_STOCK, isChecked)
         }
     }
 
+    private fun syncChipStates(activeFilters: Set<String>) {
+        // --- Detach listeners temporarily to prevent feedback loops ---
+        binding.chipGold.setOnCheckedChangeListener(null)
+        binding.chipSilver.setOnCheckedChangeListener(null)
+        binding.chipOther.setOnCheckedChangeListener(null)
+        binding.chipLowStock.setOnCheckedChangeListener(null)
+
+        // --- Set checked states based on ViewModel ---
+        binding.chipGold.isChecked = activeFilters.contains(FILTER_GOLD)
+        binding.chipSilver.isChecked = activeFilters.contains(FILTER_SILVER)
+        binding.chipOther.isChecked = activeFilters.contains(FILTER_OTHER)
+        binding.chipLowStock.isChecked = activeFilters.contains(FILTER_LOW_STOCK)
+
+        // --- Re-attach listeners ---
+        attachChipListeners()
+    }
+
+
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
-            inventoryViewModel.refreshData() // Call a refresh function in your ViewModel
+            inventoryViewModel.refreshData()
         }
     }
 
     private fun setUpObserver() {
-
         inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
-            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing
-            adapter.updateList(items)
-            val searchVie =
-                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-            val isSearchActive = searchVie.query?.isNotEmpty() == true
-
-
-            if (items.isEmpty() && isSearchActive) {
-                binding.emptySearchLayout.visibility = View.VISIBLE
-                binding.recyclerViewInventory.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.GONE
-            } else if (items.isEmpty()) {
-                binding.emptySearchLayout.visibility = View.GONE
-                binding.recyclerViewInventory.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.VISIBLE
-            }
-            else {
-                // Normal state with items
-                binding.emptySearchLayout.visibility = View.GONE
-                binding.recyclerViewInventory.visibility = View.VISIBLE
-                binding.emptyStateLayout.visibility = View.GONE
-            }
+            binding.swipeRefreshLayout.isRefreshing = false
+            adapter.updateList(items) // Update the adapter with filtered/searched list
+            updateUIState(items.isEmpty()) // Update empty state based on the filtered list
         }
+
         inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            if (errorMessage != null) {
+            if (!errorMessage.isNullOrEmpty()) {
                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
             }
-            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing
+            binding.swipeRefreshLayout.isRefreshing = false
         }
+
         inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-        inventoryViewModel.activeFilter.observe(viewLifecycleOwner) { filterType ->
-            // Update UI to show active filter
-            val filterMenuItem = binding.topAppBar.menu.findItem(R.id.action_filter)
-            if (filterType != null) {
-                filterMenuItem.setIcon(R.drawable.ic_filter_active) // Use a different icon when filter is active
-            } else {
-                filterMenuItem.setIcon(R.drawable.ic_filter)
+            // Show progress bar only if not refreshing via swipe
+            if (!binding.swipeRefreshLayout.isRefreshing) {
+                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             }
+        }
+
+        // Observe active filters to update chip UI
+        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
+            syncChipStates(activeFilters)
+        }
+    }
+
+    private fun updateUIState(isEmpty: Boolean) {
+        val hasActiveFilters = inventoryViewModel.activeFilters.value?.isNotEmpty() == true
+
+        if (isEmpty && (isSearchActive || hasActiveFilters)) {
+            // No results matching search or filters
+            binding.emptySearchLayout.visibility = View.VISIBLE
+            binding.recyclerViewInventory.visibility = View.GONE
+            binding.emptyStateLayout.visibility = View.GONE
+        } else if (isEmpty) {
+            // No items in inventory at all
+            binding.emptyStateLayout.visibility = View.VISIBLE
+            binding.recyclerViewInventory.visibility = View.GONE
+            binding.emptySearchLayout.visibility = View.GONE
+        } else {
+            // Show recycler view with items
+            binding.recyclerViewInventory.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.GONE
+            binding.emptySearchLayout.visibility = View.GONE
         }
     }
 
 
     private fun setupEmptyStateButtons() {
-        // Clear filter button
-        binding.clearFilterButton.setOnClickListener {
-            val searchVie =
-                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-            searchVie.clearFocus()
-            searchVie.setQuery("", false)
-            inventoryViewModel.searchItems("")
-            // Clear all filters
-            inventoryViewModel.clearAllFilters()
+        // Add item button in the main empty state
+        binding.addNewInventoryItemEmptyButton.setOnClickListener {
+            addItemButton()
         }
 
-        // Add new item button
+        // Clear filters/search button in the empty search state
+        binding.clearFilterButton.setOnClickListener {
+            // Clear search view
+            val searchView =
+                binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+            searchView.setQuery("", false) // Clear query
+            searchView.isIconified = true // Collapse the view
+            searchView.onActionViewCollapsed(); // Ensure it fully collapses
+
+
+            // Clear filters in ViewModel
+            inventoryViewModel.clearAllFilters() // This should also trigger applyFiltersAndSearch
+        }
+
+        // Add item button in the empty search state
         binding.addNewItemButton.setOnClickListener {
-            // Open the add item bottom sheet
-            showBottomSheetDialog()
+            addItemButton()
         }
     }
 
-
     private fun setUpRecyclerView() {
-
         val recyclerView: RecyclerView = binding.recyclerViewInventory
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        adapter = JewelleryAdapter(emptyList(), this) // Initialize with an empty list
+        // Pass 'this' as the click listener
+        adapter = JewelleryAdapter(emptyList(), this)
         recyclerView.adapter = adapter
-
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
-
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val visibleItemCount = layoutManager.childCount
                 val totalItemCount = layoutManager.itemCount
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
                 // Load more when user is near the end of the list
-                if (!inventoryViewModel.isLoading.value!! &&
-                    (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 12 && // Load earlier
+                if (inventoryViewModel.isLoading.value == false &&
+                    totalItemCount > 0 && // Ensure list is not empty
+                    (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 && // Trigger near end
                     firstVisibleItemPosition >= 0
                 ) {
                     inventoryViewModel.loadNextPage()
                 }
-
             }
         })
-
     }
 
     private fun addItemButton() {
-        // Clear any active search when adding new items for better context
-        inventoryViewModel.searchItems("")
-        //make a bottom sheet that appear and show inputs
-        showBottomSheetDialog()
+        showBottomSheetDialog() // Reusing the function
     }
 
     private fun navigateToItemDetail(item: JewelleryItem) {
         val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-
-        // Using the generated NavDirections class
         val action =
             MainScreenFragmentDirections.actionMainScreenFragmentToItemDetailFragment(itemId = item.id)
         parentNavController.navigate(action)
     }
 
+    // --- ItemBottomSheetFragment.OnItemAddedListener Implementation ---
     override fun onItemAdded(item: JewelleryItem) {
         inventoryViewModel.addJewelleryItem(item)
+        // Optionally show a success message
+        Toast.makeText(requireContext(), "Item added successfully", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showBottomSheetDialog() {
-        val bottomSheetFragment = ItemBottomSheetFragment.newInstance()
-        bottomSheetFragment.setOnItemAddedListener(this)
-        bottomSheetFragment.show(parentFragmentManager, bottomSheetFragment.tag)
+    override fun onItemUpdated(item: JewelleryItem) {
+        inventoryViewModel.updateJewelleryItem(item)
+        // Optionally show a success message
+        Toast.makeText(requireContext(), "Item updated successfully", Toast.LENGTH_SHORT).show()
     }
 
+    // --- JewelleryAdapter.OnItemClickListener Implementation ---
     override fun onItemClick(item: JewelleryItem) {
-
         navigateToItemDetail(item)
-
     }
 
-    // Inside your InventoryFragment class:
+    // --- Helper to show BottomSheet ---
     private fun showBottomSheetDialog(item: JewelleryItem? = null) {
         val bottomSheetFragment = ItemBottomSheetFragment.newInstance()
         bottomSheetFragment.setOnItemAddedListener(this)
-
-        // If item is not null, we're in edit mode
-        if (item != null) {
-            bottomSheetFragment.setItemForEdit(item)
-        }
-
-        bottomSheetFragment.show(parentFragmentManager, bottomSheetFragment.tag)
+        item?.let { bottomSheetFragment.setItemForEdit(it) } // Pass item for editing if provided
+        // Ensure you use childFragmentManager if calling from within another fragment
+        bottomSheetFragment.show(childFragmentManager, "ItemBottomSheet")
     }
 
-    // Add method for handling updates
-    override fun onItemUpdated(item: JewelleryItem) {
-        inventoryViewModel.updateJewelleryItem(item)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Cancel any ongoing search job to prevent leaks
+        inventoryViewModel.searchItems("") // Clear search on destroy
+        inventoryViewModel.searchJob?.cancel()
+        _binding = null
     }
-
 }

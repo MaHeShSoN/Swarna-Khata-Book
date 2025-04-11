@@ -211,7 +211,7 @@ class SalesFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = InvoicesAdapter(emptyList())
+        adapter = InvoicesAdapter()
 
         // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
@@ -258,12 +258,18 @@ class SalesFragment : Fragment() {
 
     private fun setupObservers() {
         salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
-            adapter.updateInvoices(invoices)
+            // Use submitList provided by ListAdapter
+            adapter.submitList(invoices)
+
+            // Reset refreshing state and progress bar visibility
             binding.swipeRefreshLayout.isRefreshing = false
             binding.progressBar.visibility = View.GONE
+
             // Synchronize UI with ViewModel filter state
             syncFiltersWithViewModel()
+
             // Update UI based on search results or empty state
+            // Make sure to check if the submitted list is empty
             updateUIState(invoices.isEmpty())
         }
 

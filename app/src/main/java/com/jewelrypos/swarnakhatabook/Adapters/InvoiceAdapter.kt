@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter // Import ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
@@ -15,13 +16,15 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-class InvoicesAdapter(
-    private var invoices: List<Invoice>
-) : RecyclerView.Adapter<InvoicesAdapter.InvoiceViewHolder>() {
 
+// Extend ListAdapter<Invoice, InvoicesAdapter.InvoiceViewHolder>
+// Pass the DiffUtil.ItemCallback object to the constructor
+class InvoicesAdapter : ListAdapter<Invoice, InvoicesAdapter.InvoiceViewHolder>(InvoiceDiffCallback) {
+
+    // Click listener remains the same
     var onItemClickListener: ((Invoice) -> Unit)? = null
 
-
+    // ViewHolder remains the same
     class InvoiceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val invoiceNumber: TextView = itemView.findViewById(R.id.invoiceNumber)
         val paymentStatus: TextView = itemView.findViewById(R.id.paymentStatus)
@@ -33,21 +36,24 @@ class InvoicesAdapter(
         val card: MaterialCardView = itemView.findViewById(R.id.invoiceCard)
     }
 
+    // onCreateViewHolder remains the same
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): InvoiceViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_invoice, parent, false)
         return InvoiceViewHolder(view)
     }
 
+    // onBindViewHolder now uses getItem(position)
     override fun onBindViewHolder(holder: InvoiceViewHolder, position: Int) {
-        val invoice = invoices[position]
+        // Use getItem(position) provided by ListAdapter
+        val invoice = getItem(position)
 
         holder.invoiceNumber.text = invoice.invoiceNumber
         holder.customerName.text = invoice.customerName
         holder.itemsCount.text = "${invoice.items.size} items"
 
         // Format invoice date
-        val formatter1 = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val formatter1 = SimpleDateFormat("dd MMM yy", Locale.getDefault()) // Consistent date format
         holder.invoiceDate.text = formatter1.format(Date(invoice.invoiceDate))
 
         // Format currency
@@ -58,48 +64,43 @@ class InvoicesAdapter(
         holder.balanceAmount.text = "₹${formatter.format(balanceDue)}"
 
         // Set payment status text and background color
-        val paymentStatus = if (balanceDue <= 0) "Paid" else if (invoice.paidAmount > 0) "Partial" else "Unpaid"
-        holder.paymentStatus.text = paymentStatus
+        val paymentStatusText = if (balanceDue <= 0) "Paid" else if (invoice.paidAmount > 0) "Partial" else "Unpaid"
+        holder.paymentStatus.text = paymentStatusText
 
-        val statusColor = when (paymentStatus.lowercase()) {
+        val statusColor = when (paymentStatusText.lowercase()) {
             "paid" -> ContextCompat.getColor(holder.itemView.context, R.color.status_paid)
             "partial" -> ContextCompat.getColor(holder.itemView.context, R.color.status_partial)
             "unpaid" -> ContextCompat.getColor(holder.itemView.context, R.color.status_unpaid)
-            else -> ContextCompat.getColor(holder.itemView.context, R.color.my_light_primary)
+            else -> ContextCompat.getColor(holder.itemView.context, R.color.my_light_primary) // Fallback color
         }
         holder.paymentStatus.backgroundTintList = ColorStateList.valueOf(statusColor)
 
         // Set click listener
         holder.card.setOnClickListener {
+            // Pass the specific invoice object obtained from getItem(position)
             onItemClickListener?.invoke(invoice)
         }
     }
 
-    override fun getItemCount() = invoices.size
+    // No need to override getItemCount() - ListAdapter handles it.
 
-// Continuing the InvoicesAdapter.kt implementation...
+    // Remove the updateInvoices function - use submitList() from the Fragment/Activity instead.
 
-    fun updateInvoices(newInvoices: List<Invoice>) {
-        val diffCallback = InvoiceDiffCallback(invoices, newInvoices)
-        val diffResult = DiffUtil.calculateDiff(diffCallback)
+    // Define the DiffUtil.ItemCallback as a companion object or top-level object
+    // This compares items to efficiently update the RecyclerView
+    companion object {
+        private val InvoiceDiffCallback = object : DiffUtil.ItemCallback<Invoice>() {
+            override fun areItemsTheSame(oldItem: Invoice, newItem: Invoice): Boolean {
+                // Check if items represent the same entity (e.g., by unique ID)
+                return oldItem.id == newItem.id // Assuming Invoice has a unique 'id' field
+            }
 
-        invoices = newInvoices
-        diffResult.dispatchUpdatesTo(this)
-    }
-
-    class InvoiceDiffCallback(
-        private val oldList: List<Invoice>,
-        private val newList: List<Invoice>
-    ) : DiffUtil.Callback() {
-        override fun getOldListSize() = oldList.size
-        override fun getNewListSize() = newList.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].id == newList[newItemPosition].id
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition] == newList[newItemPosition]
+            override fun areContentsTheSame(oldItem: Invoice, newItem: Invoice): Boolean {
+                // Check if the item contents have changed
+                return oldItem == newItem // Relies on Invoice being a data class or implementing equals()
+            }
         }
     }
+
+    // Remove the old inner InvoiceDiffCallback class
 }

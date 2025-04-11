@@ -144,7 +144,7 @@ class CustomerInvoicesFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = InvoicesAdapter(emptyList())
+        adapter = InvoicesAdapter()
 
         // In CustomerInvoicesFragment.kt
         adapter.onItemClickListener = { invoice ->
@@ -178,7 +178,7 @@ class CustomerInvoicesFragment : Fragment() {
             binding.swipeRefreshLayout.isRefreshing = false
             binding.progressBar.visibility = View.GONE
 
-            adapter.updateInvoices(invoices)
+            adapter.submitList(invoices)
 
             // Update empty state
             if (invoices.isEmpty()) {
