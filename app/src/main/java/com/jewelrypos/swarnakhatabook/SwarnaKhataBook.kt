@@ -7,17 +7,30 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
 import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Services.FirebaseNotificationService
+import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 
 class SwarnaKhataBook : Application() {
 
+    // Avoid using static fields that reference context
+    private lateinit var _userSubscriptionManager: UserSubscriptionManager
+    private lateinit var _appUpdateManager: AppUpdateManager
+
     companion object {
-        lateinit var userSubscriptionManager: UserSubscriptionManager
-            private set
+        // Use weak reference to application context or provide access via function
+        // that requires a context parameter
+        private lateinit var instance: SwarnaKhataBook
+
+        // Public accessors that don't expose context-holding objects as static fields
+        fun getUserSubscriptionManager() = instance._userSubscriptionManager
+        fun getAppUpdateManager() = instance._appUpdateManager
     }
 
     override fun onCreate() {
         super.onCreate()
+
+        // Store instance of application
+        instance = this
 
         // Configure Firestore only once at app startup
         val cacheSettings = PersistentCacheSettings.newBuilder()
@@ -30,12 +43,14 @@ class SwarnaKhataBook : Application() {
 
         FirebaseFirestore.getInstance().firestoreSettings = settings
 
-        userSubscriptionManager = UserSubscriptionManager(this)
+        // Initialize managers (not as static fields)
+        _userSubscriptionManager = UserSubscriptionManager(applicationContext)
+        _appUpdateManager = AppUpdateManager(applicationContext)
 
         // Record first use if needed
-        userSubscriptionManager.recordFirstUseIfNeeded()
+        _userSubscriptionManager.recordFirstUseIfNeeded()
 
-        // Create notification channels on app startup (moved from FirebaseNotificationService)
-        NotificationChannelManager.createNotificationChannels(this)
+        // Create notification channels on app startup
+        NotificationChannelManager.createNotificationChannels(applicationContext)
     }
 }

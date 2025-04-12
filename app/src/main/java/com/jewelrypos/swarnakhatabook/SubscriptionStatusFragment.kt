@@ -48,7 +48,7 @@ class SubscriptionStatusFragment : Fragment() {
 
     private fun loadSubscriptionStatus() {
         lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
             // Get subscription status
             val isPremium = subscriptionManager.isPremiumUser()
@@ -127,7 +127,7 @@ class SubscriptionStatusFragment : Fragment() {
 
     private fun setupButtons() {
         lifecycleScope.launch {
-            val isPremium = SwarnaKhataBook.userSubscriptionManager.isPremiumUser()
+            val isPremium = SwarnaKhataBook.getUserSubscriptionManager().isPremiumUser()
 
             // Move this outside the coroutine because it doesn't use suspend functions
             requireActivity().runOnUiThread {
@@ -141,8 +141,8 @@ class SubscriptionStatusFragment : Fragment() {
                     binding.resetTrialButton.setOnClickListener {
                         // Launch a new coroutine for the suspend functions
                         lifecycleScope.launch {
-                            SwarnaKhataBook.userSubscriptionManager.resetTrial()
-                            SwarnaKhataBook.userSubscriptionManager.updatePremiumStatus(false)
+                            SwarnaKhataBook.getUserSubscriptionManager().resetTrial()
+                            SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(false)
                             loadSubscriptionStatus()
                         }
                     }

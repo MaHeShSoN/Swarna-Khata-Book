@@ -259,65 +259,6 @@
                     </com.google.android.material.card.MaterialCardView>
 
                     <!-- Security Questions Option -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cardSecurityQuestions"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        app:cardBackgroundColor="@color/my_light_surface"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="0dp"
-                        app:rippleColor="@color/my_light_primary_container"
-                        app:strokeColor="@color/my_light_outline"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center_vertical"
-                                android:src="@drawable/mingcute__question_line"
-                                app:tint="@color/my_light_primary" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="16dp"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:text="Security Questions"
-                                    android:textColor="@color/my_light_on_surface_variant"
-                                    android:textSize="16sp" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratregular"
-                                    android:text="Set up recovery security questions"
-                                    android:textColor="@color/my_light_on_surface_variant"
-                                    android:textSize="14sp" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center_vertical"
-                                android:src="@drawable/material_symbols__arrow_forward_ios_rounded"
-                                app:tint="@color/my_light_on_surface_variant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

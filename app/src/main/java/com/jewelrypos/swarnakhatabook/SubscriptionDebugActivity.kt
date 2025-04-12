@@ -37,7 +37,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
 
     private fun refreshStatus() {
         lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
             // Get current status
             val isPremium = subscriptionManager.isPremiumUser()
@@ -65,7 +65,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
         // Set Premium Status
         binding.btnSetPremium.setOnClickListener {
             lifecycleScope.launch {
-                val success = SwarnaKhataBook.userSubscriptionManager
+                val success = SwarnaKhataBook.getUserSubscriptionManager()
                     .updatePremiumStatus(true)
 
                 if (success) {
@@ -83,7 +83,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
         // Set Free Status
         binding.btnSetFree.setOnClickListener {
             lifecycleScope.launch {
-                val success = SwarnaKhataBook.userSubscriptionManager
+                val success = SwarnaKhataBook.getUserSubscriptionManager()
                     .updatePremiumStatus(false)
 
                 if (success) {
@@ -100,7 +100,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
 
         // Reset Trial
         binding.btnResetTrial.setOnClickListener {
-            SwarnaKhataBook.userSubscriptionManager.resetTrial()
+            SwarnaKhataBook.getUserSubscriptionManager().resetTrial()
             Toast.makeText(this@SubscriptionDebugActivity,
                 "Trial period reset", Toast.LENGTH_SHORT).show()
             refreshStatus()
@@ -108,7 +108,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
 
         // Set Trial to 1 Day
         binding.btnExpireSoon.setOnClickListener {
-            SwarnaKhataBook.userSubscriptionManager.setTrialPeriod(1)
+            SwarnaKhataBook.getUserSubscriptionManager().setTrialPeriod(1)
             Toast.makeText(this@SubscriptionDebugActivity,
                 "Trial period set to 1 day", Toast.LENGTH_SHORT).show()
             refreshStatus()
@@ -118,7 +118,7 @@ class SubscriptionDebugActivity : AppCompatActivity() {
         binding.btnUpdateTrialLength.setOnClickListener {
             val trialLength = binding.trialLengthInput.text.toString().toIntOrNull()
             if (trialLength != null && trialLength > 0) {
-                SwarnaKhataBook.userSubscriptionManager.setTrialPeriod(trialLength)
+                SwarnaKhataBook.getUserSubscriptionManager().setTrialPeriod(trialLength)
                 Toast.makeText(this@SubscriptionDebugActivity,
                     "Trial period set to $trialLength days", Toast.LENGTH_SHORT).show()
             } else {

@@ -100,6 +100,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_notificationSettingsFragment"
             app:destination="@id/notificationSettingsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_updateSettingsFragment"
+            app:destination="@id/updateSettingsFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -224,4 +227,9 @@
         android:name="com.jewelrypos.swarnakhatabook.NotificationSettingsFragment"
         android:label="fragment_notification_settings"
         tools:layout="@layout/fragment_notification_settings" />
+    <fragment
+        android:id="@+id/updateSettingsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.UpdateSettingsFragment"
+        android:label="fragment_update_settings"
+        tools:layout="@layout/fragment_update_settings" />
 </navigation>

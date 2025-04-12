@@ -22,6 +22,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
+import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
@@ -52,10 +53,11 @@ class launcherFragment : Fragment() {
         viewModel = ViewModelProvider(this, factory)[SplashViewModel::class.java]
 
         // Initialize SharedPreferences
-        sharedPreferences = requireActivity().getSharedPreferences(
-            "jewelry_pos_settings",
-            Context.MODE_PRIVATE
-        )
+//        sharedPreferences = requireActivity().getSharedPreferences(
+//            "jewelry_pos_settings",
+//            Context.MODE_PRIVATE
+//        )
+        sharedPreferences = SecurePreferences.getInstance(requireContext())
 
         // Check if user is authenticated, then check subscription
         val auth = FirebaseAuth.getInstance()
@@ -69,7 +71,7 @@ class launcherFragment : Fragment() {
 
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
             // Check if trial has expired for non-premium users
             if (!subscriptionManager.isPremiumUser() && subscriptionManager.hasTrialExpired()) {
@@ -103,7 +105,7 @@ class launcherFragment : Fragment() {
 
     private fun upgradeToPremium() {
         lifecycleScope.launch {
-            val success = SwarnaKhataBook.userSubscriptionManager.updatePremiumStatus(true)
+            val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
             if (success) {
                 Toast.makeText(requireContext(), "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
                 // Continue with normal app flow

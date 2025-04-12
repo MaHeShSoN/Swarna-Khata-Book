@@ -6,22 +6,31 @@ import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
+import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
+import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
+import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
+import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
@@ -32,6 +41,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private var wasInBackground = false
+    private lateinit var appUpdateHelper: AppUpdateHelper
+
 
     // Request permission launcher for notifications (Android 13+)
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -54,11 +65,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         // Initialize SharedPreferences
-        sharedPreferences = getSharedPreferences("jewelry_pos_settings", Context.MODE_PRIVATE)
-
+//        sharedPreferences = getSharedPreferences("jewelry_pos_settings", Context.MODE_PRIVATE)
+        sharedPreferences = SecurePreferences.getInstance(this)
         // Request notification permission if needed (for Android 13+)
         requestNotificationPermission()
 
+
+        initializeAppUpdateHelper()
         // Check subscription status when app starts
         checkSubscriptionStatus()
 
@@ -67,6 +80,17 @@ class MainActivity : AppCompatActivity() {
         initializeNotificationSystem()
 
         handleNotificationNavigation(intent)
+    }
+
+    /**
+     * Initialize the app update helper and check for updates
+     */
+    private fun initializeAppUpdateHelper() {
+        appUpdateHelper = AppUpdateHelper(this)
+        appUpdateHelper.attachToActivity(this)
+
+        // Check for updates on app start
+        appUpdateHelper.checkForUpdates()
     }
 
     /**
@@ -96,8 +120,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Add a listener to detect when main screen is loaded
-            navController.addOnDestinationChangedListener(object : NavController.OnDestinationChangedListener {
-                override fun onDestinationChanged(controller: NavController, destination: NavDestination, arguments: Bundle?) {
+            navController.addOnDestinationChangedListener(object :
+                NavController.OnDestinationChangedListener {
+                override fun onDestinationChanged(
+                    controller: NavController,
+                    destination: NavDestination,
+                    arguments: Bundle?
+                ) {
                     if (destination.id == R.id.mainScreenFragment) {
                         // Now perform the specific navigation based on notification type
                         when (navigateTo) {
@@ -109,9 +138,13 @@ class MainActivity : AppCompatActivity() {
 
                                 // Check if action is available before navigating
                                 if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_invoiceDetailFragment) != null) {
-                                    controller.navigate(R.id.action_mainScreenFragment_to_invoiceDetailFragment, bundle)
+                                    controller.navigate(
+                                        R.id.action_mainScreenFragment_to_invoiceDetailFragment,
+                                        bundle
+                                    )
                                 }
                             }
+
                             "customer_detail" -> {
                                 val customerId = intent.getStringExtra("customerId") ?: return
                                 val bundle = Bundle().apply {
@@ -120,9 +153,13 @@ class MainActivity : AppCompatActivity() {
 
                                 // Check if action is available before navigating
                                 if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_customerDetailFragment) != null) {
-                                    controller.navigate(R.id.action_mainScreenFragment_to_customerDetailFragment, bundle)
+                                    controller.navigate(
+                                        R.id.action_mainScreenFragment_to_customerDetailFragment,
+                                        bundle
+                                    )
                                 }
                             }
+
                             "item_detail" -> {
                                 val itemId = intent.getStringExtra("itemId") ?: return
                                 val bundle = Bundle().apply {
@@ -131,9 +168,13 @@ class MainActivity : AppCompatActivity() {
 
                                 // Check if action is available before navigating
                                 if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_itemDetailFragment) != null) {
-                                    controller.navigate(R.id.action_mainScreenFragment_to_itemDetailFragment, bundle)
+                                    controller.navigate(
+                                        R.id.action_mainScreenFragment_to_itemDetailFragment,
+                                        bundle
+                                    )
                                 }
                             }
+
                             "notification_list" -> {
                                 // Check if action is available before navigating
                                 if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_notificationFragment) != null) {
@@ -154,7 +195,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
             // Check if the user is premium
             val isPremium = subscriptionManager.isPremiumUser()
@@ -211,7 +252,7 @@ class MainActivity : AppCompatActivity() {
 
         // For testing purposes only - this would be replaced with actual purchase flow
         lifecycleScope.launch {
-            val success = SwarnaKhataBook.userSubscriptionManager.updatePremiumStatus(true)
+            val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
             if (success) {
                 Toast.makeText(this@MainActivity, "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
             }
@@ -256,6 +297,19 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
         // Set flag to indicate app is going to background
         wasInBackground = true
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 123) { // App update request code
+            if (resultCode != RESULT_OK) {
+                // Update flow failed or was cancelled
+                Log.e("MainActivity", "Update flow failed or cancelled: $resultCode")
+
+                // You could check if this was a mandatory update and show a message or retry
+                // For now, just log it
+            }
+        }
     }
 
     private fun setupBiometrics() {
@@ -321,40 +375,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPinFallbackDialog() {
+        // First check PIN security status
+        val securityStatus = PinSecurityManager.checkStatus(this)
+
+        when (securityStatus) {
+            is PinSecurityStatus.Locked -> {
+                // Show lockout dialog
+                val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+                AlertDialog.Builder(this)
+                    .setTitle("Too Many Failed Attempts")
+                    .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
+                    .setPositiveButton("OK") { _, _ -> finish() }
+                    .setCancelable(false)
+                    .show()
+                return
+            }
+
+            else -> {
+                // Continue with PIN dialog
+            }
+        }
+
         val builder = AlertDialog.Builder(this)
         val inflater = layoutInflater
         val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
         val pinEditText = dialogView.findViewById<EditText>(R.id.pinEditText)
 
+        // Add warning for limited attempts
+        if (securityStatus is PinSecurityStatus.Limited) {
+            val messageTextView = dialogView.findViewById<TextInputLayout>(R.id.pin)
+            messageTextView.helperText  = "You have ${securityStatus.remainingAttempts} attempts remaining"
+            messageTextView.setHelperTextColor(getColorStateList(R.color.red))
+            messageTextView.visibility = View.VISIBLE
+        }
+
         builder.setView(dialogView)
             .setTitle("Enter PIN")
             .setMessage("Please enter your PIN to continue")
-            .setPositiveButton("Unlock") { _, _ ->
-                // Empty, will be set below to avoid automatic dismissal
-            }
-            .setNegativeButton("Cancel") { _, _ ->
-                // User canceled, close the app
-                finish()
-            }
+            .setPositiveButton("Unlock", null) // Set below
+            .setNegativeButton("Cancel") { _, _ -> finish() }
             .setCancelable(false)
 
         val dialog = builder.create()
         dialog.show()
 
-        // Override the positive button click to validate PIN
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val enteredPin = pinEditText.text.toString()
-            val savedPin =
-                sharedPreferences.getString("app_lock_pin", "1234") // Default PIN is 1234
+            val savedPin = sharedPreferences.getString("app_lock_pin", null)
 
-            if (enteredPin == savedPin) {
+            if (savedPin != null && enteredPin == savedPin) {
                 // PIN is correct
                 dialog.dismiss()
+                PinSecurityManager.resetAttempts(this)
                 wasInBackground = false
             } else {
                 // PIN is incorrect
-                pinEditText.error = "Incorrect PIN"
-                pinEditText.text.clear()
+                val updatedSecurityStatus = PinSecurityManager.recordFailedAttempt(this)
+
+                if (updatedSecurityStatus is PinSecurityStatus.Locked) {
+                    dialog.dismiss()
+                    // Show lockout dialog
+                    val minutes = (updatedSecurityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+                    AlertDialog.Builder(this)
+                        .setTitle("Too Many Failed Attempts")
+                        .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
+                        .setPositiveButton("OK") { _, _ -> finish() }
+                        .setCancelable(false)
+                        .show()
+                } else if (updatedSecurityStatus is PinSecurityStatus.Limited) {
+                    pinEditText.error =
+                        "Incorrect PIN (${updatedSecurityStatus.remainingAttempts} attempts remaining)"
+                    pinEditText.text.clear()
+                }
             }
         }
     }

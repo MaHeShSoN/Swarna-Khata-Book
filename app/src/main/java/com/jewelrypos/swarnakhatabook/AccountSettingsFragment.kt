@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,8 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentAccountSettingsBinding
 import java.util.concurrent.Executor
@@ -155,9 +158,9 @@ class AccountSettingsFragment : Fragment() {
         }
 
         // Change Security Questions
-        binding.cardSecurityQuestions.setOnClickListener {
-            showSecurityQuestionsDialog()
-        }
+//        binding.cardSecurityQuestions.setOnClickListener {
+//            showSecurityQuestionsDialog()
+//        }
 
         // Delete All Data button
         binding.buttonDeleteAllData.setOnClickListener {
@@ -220,19 +223,22 @@ class AccountSettingsFragment : Fragment() {
         val currentPinEditText = dialogView.findViewById<TextInputEditText>(R.id.currentPinEditText)
         val newPinEditText = dialogView.findViewById<TextInputEditText>(R.id.newPinEditText)
         val confirmPinEditText = dialogView.findViewById<TextInputEditText>(R.id.confirmPinEditText)
-
-        // Get current PIN
-        val currentPin = sharedPreferences.getString("app_lock_pin", "1234") // Default is 1234
         val currentPinLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPinLayout)
 
-        // Hide current PIN field if no PIN is set yet (still using default)
-        if (currentPin == "1234" && !sharedPreferences.contains("app_lock_pin")) {
+        // Check if PIN exists
+        val hasPinSet = sharedPreferences.contains("app_lock_pin")
+
+        // Hide current PIN field if no PIN is set yet
+        if (!hasPinSet) {
             currentPinLayout.visibility = View.GONE
+            builder.setTitle("Set PIN")
+            builder.setMessage("Please create a PIN for app security")
+        } else {
+            builder.setTitle("Change PIN")
+            builder.setMessage("Enter your current PIN and then set a new one")
         }
 
         builder.setView(dialogView)
-            .setTitle("Set PIN")
-            .setMessage("This PIN will be used as a backup if biometric authentication is unavailable")
             .setPositiveButton("Save", null) // Will be set below
             .setNegativeButton("Cancel") { dialog, _ ->
                 dialog.dismiss()
@@ -250,9 +256,12 @@ class AccountSettingsFragment : Fragment() {
             var isValid = true
 
             // Validate current PIN if required
-            if (currentPinLayout.visibility == View.VISIBLE && enteredCurrentPin != currentPin) {
-                currentPinEditText.error = "Current PIN is incorrect"
-                isValid = false
+            if (hasPinSet && currentPinLayout.visibility == View.VISIBLE) {
+                val savedPin = sharedPreferences.getString("app_lock_pin", "")
+                if (enteredCurrentPin != savedPin) {
+                    currentPinEditText.error = "Current PIN is incorrect"
+                    isValid = false
+                }
             }
 
             // Validate new PIN
@@ -351,7 +360,7 @@ class AccountSettingsFragment : Fragment() {
     }
 
     private fun deleteFirestoreData(userId: String, loadingDialog: AlertDialog) {
-        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val firestore = FirebaseFirestore.getInstance()
         val userDoc = firestore.collection("users").document(userId)
 
         // Define collections to delete
@@ -383,31 +392,39 @@ class AccountSettingsFragment : Fragment() {
                         batch.commit()
                             .addOnSuccessListener {
                                 completedCollections++
-                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
                             }
                             .addOnFailureListener {
                                 hasError = true
                                 completedCollections++
-                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
                             }
                     } else {
                         // No documents in this collection
                         completedCollections++
-                        checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                        checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
                     }
                 }
                 .addOnFailureListener {
                     hasError = true
                     completedCollections++
-                    checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError)
+                    checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
                 }
         }
     }
 
-    private fun checkDeletionProgress(completed: Int, total: Int, loadingDialog: AlertDialog, hasError: Boolean) {
+    private fun checkDeletionProgress(completed: Int, total: Int, loadingDialog: AlertDialog, hasError: Boolean, userDoc: DocumentReference) {
         if (completed >= total) {
-            // All collections processed
-            clearLocalDataAndRedirect(loadingDialog, hasError)
+            // All collections processed, now delete the user document itself
+            userDoc.delete()
+                .addOnSuccessListener {
+                    // Successfully deleted user document
+                    clearLocalDataAndRedirect(loadingDialog, hasError)
+                }
+                .addOnFailureListener { e ->
+                    Log.e("AccountSettings", "Error deleting user document", e)
+                    clearLocalDataAndRedirect(loadingDialog, true)
+                }
         }
     }
 
@@ -416,7 +433,8 @@ class AccountSettingsFragment : Fragment() {
         val allPrefs = listOf(
             "jewelry_pos_settings",
             "shop_preferences",
-            "jewelry_pos_pdf_settings"
+            "jewelry_pos_pdf_settings",
+            "secure_jewelry_pos_settings" // Add the encrypted preferences
         )
 
         for (prefName in allPrefs) {
@@ -424,14 +442,13 @@ class AccountSettingsFragment : Fragment() {
             prefs.edit().clear().apply()
         }
 
-        // Clear any local Room database
+        // Clear specific databases used by the app
         try {
-            val databases = requireContext().databaseList()
-            for (dbName in databases) {
-                requireContext().deleteDatabase(dbName)
-            }
+            // Replace these with your actual database names
+            requireContext().deleteDatabase("jewelry_app_database.db")
+            requireContext().deleteDatabase("jewelry_pos_cache.db")
         } catch (e: Exception) {
-            // Ignore database deletion errors
+            Log.e("AccountSettings", "Error deleting databases", e)
         }
 
         // Clear shop data

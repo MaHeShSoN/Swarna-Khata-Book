@@ -70,7 +70,7 @@ class UpgradeActivity : AppCompatActivity() {
                 kotlinx.coroutines.delay(1500)
 
                 // Update premium status
-                val subscriptionManager = SwarnaKhataBook.userSubscriptionManager
+                val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
                 val success = subscriptionManager.updatePremiumStatus(true)
 
                 if (success) {
