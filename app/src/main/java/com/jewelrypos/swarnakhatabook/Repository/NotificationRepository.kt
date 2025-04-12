@@ -14,6 +14,7 @@ import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
 import java.util.Date
 
 /**
@@ -31,6 +32,9 @@ class NotificationRepository(
     // Add a TAG for logging
     companion object {
         private const val TAG = "NotificationRepo"
+
+        // Define a time threshold for duplicate notification prevention (24 hours)
+        private const val DUPLICATE_CHECK_HOURS = 24
     }
 
     /**
@@ -194,7 +198,8 @@ class NotificationRepository(
     }
 
     /**
-     * Creates a new notification
+     * Creates a new notification with duplicate prevention
+     * @return Result with the notification ID if successful, or a message if the notification was skipped
      */
     suspend fun createNotification(notification: AppNotification): Result<String> {
         return try {
@@ -203,6 +208,12 @@ class NotificationRepository(
             // Check if we should send this notification based on user preferences
             if (!shouldSendNotification(notification.type)) {
                 return Result.success("Notification disabled by user preferences")
+            }
+
+            // Check for existing similar notification to prevent duplicates
+            if (isDuplicateNotification(phoneNumber, notification)) {
+                Log.d(TAG, "Skipping duplicate notification: ${notification.title}")
+                return Result.success("Duplicate notification skipped")
             }
 
             val notificationRef = firestore.collection("users")
@@ -218,6 +229,66 @@ class NotificationRepository(
         } catch (e: Exception) {
             Log.e(TAG, "Error creating notification", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Check if a similar notification already exists to prevent duplicates
+     */
+    private suspend fun isDuplicateNotification(phoneNumber: String, notification: AppNotification): Boolean {
+        try {
+            // Calculate the time threshold for duplicate checking
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.HOUR, -DUPLICATE_CHECK_HOURS)
+            val timestamp = com.google.firebase.Timestamp(Date(calendar.timeInMillis))
+
+            // Base query checking type and recency
+            var query = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("notifications")
+                .whereEqualTo("type", notification.type.name)
+                .whereGreaterThan("createdAt", timestamp)
+
+            // Add more specific filters based on notification type
+            when (notification.type) {
+                NotificationType.PAYMENT_DUE, NotificationType.PAYMENT_OVERDUE -> {
+                    // For payment notifications, check specific invoice
+                    if (notification.relatedInvoiceId != null) {
+                        query = query.whereEqualTo("relatedInvoiceId", notification.relatedInvoiceId)
+                    } else if (notification.customerId.isNotEmpty()) {
+                        // Or at least the same customer
+                        query = query.whereEqualTo("customerId", notification.customerId)
+                    }
+                }
+                NotificationType.CREDIT_LIMIT -> {
+                    // For credit limit warnings, check the same customer
+                    if (notification.customerId.isNotEmpty()) {
+                        query = query.whereEqualTo("customerId", notification.customerId)
+                    }
+                }
+                NotificationType.BIRTHDAY, NotificationType.ANNIVERSARY -> {
+                    // For birthdays/anniversaries, check the same customer
+                    if (notification.customerId.isNotEmpty()) {
+                        query = query.whereEqualTo("customerId", notification.customerId)
+                    }
+                }
+                NotificationType.GENERAL -> {
+                    // For general notifications, check by relatedItemId if it exists
+                    if (notification.relatedItemId != null) {
+                        query = query.whereEqualTo("relatedItemId", notification.relatedItemId)
+                    } else if (notification.customerId.isNotEmpty() && notification.customerId != "SYSTEM") {
+                        // Or custom ID for system notifications
+                        query = query.whereEqualTo("customerId", notification.customerId)
+                    }
+                }
+            }
+
+            // Execute the query
+            val querySnapshot = query.get().await()
+            return !querySnapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking for duplicate notification", e)
+            return false // If we can't check, assume it's not a duplicate to be safe
         }
     }
 
@@ -373,6 +444,9 @@ class NotificationRepository(
         return currentUser.phoneNumber?.replace("+", "")
             ?: throw PhoneNumberInvalidException("User phone number not available.")
     }
+
+
+
 
     // Exception classes
     class UserNotAuthenticatedException(message: String) : Exception(message)

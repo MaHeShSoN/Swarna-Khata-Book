@@ -2,6 +2,227 @@
     <!-- Base application theme. -->
     <style name="Base.Theme.SwarnaKhataBook" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/my_dark_primary</item>
+        <item name="colorSecondary">@color/my_dark_secondary</item>
+        <item name="colorPrimaryVariant">@color/my_dark_primary</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorPrimaryContainer">@color/dark_background</item>
+        <item name="android:colorBackground">@color/dark_background</item>
+    </style>
+
+    <style name="Theme.SwarnaKhataBook" parent="Base.Theme.SwarnaKhataBook" />
+
+    <style name="Widget.App.Chip.Filter.Warning" parent="Widget.App.Chip.Filter">
+        <item name="chipBackgroundColor">@color/dark_status_unpaid_light</item>
+        <item name="chipStrokeColor">@color/dark_status_unpaid</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+        <item name="checkedIconTint">@color/dark_red</item>
+        <item name="rippleColor">@color/my_dark_secondary</item>
+        <item name="chipIconTint">@color/dark_red</item>
+    </style>
+
+    <style name="Widget.App.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/dark_chip_background</item>
+        <item name="chipStrokeColor">@color/my_dark_primary</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="chipCornerRadius">16dp</item>
+        <item name="android:textColor">@color/dark_chip_text</item>
+        <item name="checkedIconTint">@color/my_dark_primary</item>
+        <item name="chipIconTint">@color/my_dark_primary</item>
+        <item name="rippleColor">@color/my_dark_secondary</item>
+        <item name="android:textAppearance">@style/TextAppearance.App.Caption</item>
+        <item name="chipMinHeight">36dp</item>
+        <item name="chipEndPadding">12dp</item>
+        <item name="chipStartPadding">12dp</item>
+        <item name="android:elevation">2dp</item>
+    </style>
+
+    <style name="CustomPopupMenu" parent="Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@color/dark_background</item>
+        <item name="android:textColor">@color/my_dark_on_primary</item>
+        <item name="android:backgroundTint">@color/dark_background</item>
+        <item name="android:colorBackground">@color/dark_background</item>
+        <item name="android:dropDownHorizontalOffset">0dp</item>
+        <item name="android:dropDownVerticalOffset">0dp</item>
+        <item name="elevation">8dp</item>
+    </style>
+
+    <style name="BottomNavigationTheme" parent="Theme.AppCompat.DayNight">
+        <item name="colorPrimary">@color/my_dark_primary</item>
+        <item name="fontFamily">@font/ralewaymedium</item>
+        <item name="android:textColorSecondary">@color/black</item>
+        <item name="android:textSize">12sp</item>
+        <item name="background">@color/my_dark_primary</item>
+    </style>
+
+    <style name="ItemActiveIndicator">
+        <item name="android:color">@color/my_dark_primary_container</item>
+    </style>
+
+    <style name="TextAppearance.Material3.ActionBar.Title" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:textColor">@color/black</item>
+        <item name="android:fontFamily">@font/playfairregular</item>
+    </style>
+
+    <style name="ToolbarTitle" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/black</item>
+    </style>
+
+    <style name="Widget.App.TextInputLayout.GoldForm" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/my_dark_surface</item>
+        <item name="boxStrokeColor">@color/my_dark_primary</item>
+        <item name="hintTextColor">@color/my_dark_secondary</item>
+        <item name="startIconTint">@color/my_dark_primary</item>
+        <item name="endIconTint">@color/my_dark_secondary</item>
+        <item name="errorIconTint">@color/my_dark_error</item>
+        <item name="errorTextColor">@color/my_dark_error</item>
+        <item name="boxCornerRadiusBottomEnd">4dp</item>
+        <item name="boxCornerRadiusBottomStart">4dp</item>
+        <item name="boxCornerRadiusTopEnd">4dp</item>
+        <item name="boxCornerRadiusTopStart">4dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.App.SmallComponent</item>
+    </style>
+
+    <style name="Widget.App.Button.Gold" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/my_dark_primary</item>
+        <item name="android:textColor">@color/my_dark_on_primary</item>
+        <item name="iconTint">@color/my_dark_on_primary</item>
+        <item name="rippleColor">@color/my_dark_secondary</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:elevation">2dp</item>
+    </style>
+
+    <style name="Widget.App.Button.OutlinedGold" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/my_dark_primary</item>
+        <item name="android:textColor">@color/my_dark_primary</item>
+        <item name="iconTint">@color/my_dark_primary</item>
+        <item name="rippleColor">@color/my_dark_primary_container</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
+    <style name="GoldThemeDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorPrimary">@color/my_dark_primary</item>
+        <item name="colorSecondary">@color/my_dark_secondary</item>
+        <item name="colorTertiary">@color/my_dark_tertiary</item>
+        <item name="colorSurface">@color/my_dark_surface</item>
+        <item name="colorOnPrimary">@color/my_dark_on_primary</item>
+        <item name="colorOnSecondary">@color/my_dark_on_secondary</item>
+        <item name="colorOnSurface">@color/my_dark_on_surface</item>
+        <item name="colorOnBackground">@color/my_dark_on_background</item>
+        <item name="colorError">@color/my_dark_error</item>
+        <item name="android:background">@drawable/dialog_rounded_background_dark</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/GoldThemeDialogTitle</item>
+        <item name="buttonBarPositiveButtonStyle">@style/GoldThemePositiveButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/GoldThemeNegativeButton</item>
+    </style>
+
+    <style name="GoldThemeDialogTitle" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:textColor">@color/my_dark_primary</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="GoldThemePositiveButton" parent="Widget.Material3.Button">
+        <item name="android:textColor">@color/my_dark_on_primary</item>
+        <item name="backgroundTint">@color/my_dark_primary</item>
+    </style>
+
+    <style name="GoldThemeNegativeButton" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/my_dark_secondary</item>
+    </style>
+
+    <!-- Typography styles inherit from light theme but with updated colors -->
+    <!-- Display Typography -->
+    <style name="TextAppearance.App.Display" parent="TextAppearance.MaterialComponents.Headline3">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">32sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <!-- Headings -->
+    <style name="TextAppearance.App.H1" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.H2" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.App.H3" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <!-- Subheadings -->
+    <style name="TextAppearance.App.Subheading" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="fontFamily">@font/montserratsemibold</item>
+        <item name="android:fontFamily">@font/montserratsemibold</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <!-- Body Text -->
+    <style name="TextAppearance.App.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserratregular</item>
+        <item name="android:fontFamily">@font/montserratregular</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/my_dark_on_background</item>
+    </style>
+
+    <!-- Small Text/Caption -->
+    <style name="TextAppearance.App.Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="fontFamily">@font/montserratlight</item>
+        <item name="android:fontFamily">@font/montserratregular</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/my_dark_secondary</item>
+    </style>
+
+    <!-- Metrics/Data Labels -->
+    <style name="TextAppearance.App.MetricLabel" parent="TextAppearance.MaterialComponents.Overline">
+        <item name="fontFamily">@font/montserratmedium</item>
+        <item name="android:fontFamily">@font/montserratmedium</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textColor">@color/my_dark_secondary</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Metrics/Data Values -->
+    <style name="TextAppearance.App.MetricValue" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="fontFamily">@font/montserratsemibold</item>
+        <item name="android:fontFamily">@font/montserratsemibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/my_dark_on_surface</item>
+    </style>
+
+    <!-- Buttons -->
+    <style name="TextAppearance.App.Button" parent="TextAppearance.MaterialComponents.Button">
+        <item name="fontFamily">@font/montserratmedium</item>
+        <item name="android:fontFamily">@font/montserratmedium</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">true</item>
+    </style>
+
+    <!-- Special Pricing/Value Elements -->
+    <style name="TextAppearance.App.SpecialValue" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/librebaskervillebold</item>
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/my_dark_primary</item>
     </style>
 </resources>

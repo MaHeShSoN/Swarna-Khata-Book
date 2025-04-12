@@ -98,22 +98,26 @@ class SalesViewModel(
             _isLoading.value = true
 
             // Perform the potentially long-running filter operation on a background thread
-            val filteredList = withContext(Dispatchers.Default) { // Use Default dispatcher for CPU-bound work
-                // Take immutable copies of state used for filtering inside the background context
-                val allInvoicesCopy = _allInvoices.toList()
-                val dateFilter = currentDateFilter
-                val statusFilter = currentStatusFilter
-                val query = currentSearchQuery
+            val filteredList =
+                withContext(Dispatchers.Default) { // Use Default dispatcher for CPU-bound work
+                    // Take immutable copies of state used for filtering inside the background context
+                    val allInvoicesCopy = _allInvoices.toList()
+                    val dateFilter = currentDateFilter
+                    val statusFilter = currentStatusFilter
+                    val query = currentSearchQuery
 
-                Log.d("SalesViewModel", "Starting background filter: items=${allInvoicesCopy.size}, date=$dateFilter, status=$statusFilter, search='$query'")
+                    Log.d(
+                        "SalesViewModel",
+                        "Starting background filter: items=${allInvoicesCopy.size}, date=$dateFilter, status=$statusFilter, search='$query'"
+                    )
 
-                // Apply filters sequentially using the copied state
-                allInvoicesCopy
-                    .filter { invoice -> matchesDateFilter(invoice, dateFilter) }
-                    .filter { invoice -> matchesStatusFilter(invoice, statusFilter) }
-                    .filter { invoice -> matchesSearchQuery(invoice, query) }
-                // The result of the filter chain is the return value of withContext
-            } // Automatically switches back to the main thread after this block
+                    // Apply filters sequentially using the copied state
+                    allInvoicesCopy
+                        .filter { invoice -> matchesDateFilter(invoice, dateFilter) }
+                        .filter { invoice -> matchesStatusFilter(invoice, statusFilter) }
+                        .filter { invoice -> matchesSearchQuery(invoice, query) }
+                    // The result of the filter chain is the return value of withContext
+                } // Automatically switches back to the main thread after this block
 
             // Update the LiveData with the filtered results (happens safely on the main thread)
             _invoices.value = filteredList
@@ -137,26 +141,43 @@ class SalesViewModel(
             DateFilterType.ALL_TIME -> true
             DateFilterType.TODAY -> {
                 calendar.timeInMillis = now
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfDay = calendar.timeInMillis
-                calendar.set(Calendar.HOUR_OF_DAY, 23); calendar.set(Calendar.MINUTE, 59); calendar.set(Calendar.SECOND, 59); calendar.set(Calendar.MILLISECOND, 999)
+                calendar.set(Calendar.HOUR_OF_DAY, 23); calendar.set(
+                    Calendar.MINUTE,
+                    59
+                ); calendar.set(Calendar.SECOND, 59); calendar.set(Calendar.MILLISECOND, 999)
                 val endOfDay = calendar.timeInMillis
                 invoiceDate in startOfDay..endOfDay
             }
+
             DateFilterType.YESTERDAY -> {
                 calendar.timeInMillis = now
                 calendar.add(Calendar.DAY_OF_YEAR, -1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfYesterday = calendar.timeInMillis
-                calendar.set(Calendar.HOUR_OF_DAY, 23); calendar.set(Calendar.MINUTE, 59); calendar.set(Calendar.SECOND, 59); calendar.set(Calendar.MILLISECOND, 999)
+                calendar.set(Calendar.HOUR_OF_DAY, 23); calendar.set(
+                    Calendar.MINUTE,
+                    59
+                ); calendar.set(Calendar.SECOND, 59); calendar.set(Calendar.MILLISECOND, 999)
                 val endOfYesterday = calendar.timeInMillis
                 invoiceDate in startOfYesterday..endOfYesterday
             }
+
             DateFilterType.THIS_WEEK -> {
                 calendar.timeInMillis = now
                 // Adjust to the start of the week based on locale
                 calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfWeek = calendar.timeInMillis
                 // Go to the start of the next week and subtract one millisecond
                 calendar.add(Calendar.WEEK_OF_YEAR, 1)
@@ -164,10 +185,14 @@ class SalesViewModel(
                 val endOfWeek = calendar.timeInMillis
                 invoiceDate in startOfWeek..endOfWeek
             }
+
             DateFilterType.THIS_MONTH -> {
                 calendar.timeInMillis = now
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfMonth = calendar.timeInMillis
                 // Go to the start of the next month and subtract one millisecond
                 calendar.add(Calendar.MONTH, 1)
@@ -175,11 +200,15 @@ class SalesViewModel(
                 val endOfMonth = calendar.timeInMillis
                 invoiceDate in startOfMonth..endOfMonth
             }
+
             DateFilterType.LAST_MONTH -> {
                 calendar.timeInMillis = now
                 // Go to the start of the current month
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 // End of last month is one millisecond before start of current month
                 val endOfLastMonth = calendar.timeInMillis - 1
                 // Go back one month to get the start of last month
@@ -187,13 +216,17 @@ class SalesViewModel(
                 val startOfLastMonth = calendar.timeInMillis
                 invoiceDate in startOfLastMonth..endOfLastMonth
             }
+
             DateFilterType.THIS_QUARTER -> {
                 calendar.timeInMillis = now
                 val currentMonth = calendar.get(Calendar.MONTH) // 0-11
                 val firstMonthOfQuarter = (currentMonth / 3) * 3
                 calendar.set(Calendar.MONTH, firstMonthOfQuarter)
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfQuarter = calendar.timeInMillis
                 // Go to the start of the next quarter and subtract one millisecond
                 calendar.add(Calendar.MONTH, 3)
@@ -201,10 +234,14 @@ class SalesViewModel(
                 val endOfQuarter = calendar.timeInMillis
                 invoiceDate in startOfQuarter..endOfQuarter
             }
+
             DateFilterType.THIS_YEAR -> {
                 calendar.timeInMillis = now
                 calendar.set(Calendar.DAY_OF_YEAR, 1)
-                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(Calendar.MINUTE, 0); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
+                calendar.set(Calendar.HOUR_OF_DAY, 0); calendar.set(
+                    Calendar.MINUTE,
+                    0
+                ); calendar.set(Calendar.SECOND, 0); calendar.set(Calendar.MILLISECOND, 0)
                 val startOfYear = calendar.timeInMillis
                 // Go to the start of the next year and subtract one millisecond
                 calendar.add(Calendar.YEAR, 1)
@@ -340,7 +377,10 @@ class SalesViewModel(
                 onSuccess = { newInvoices ->
                     if (newInvoices.isNotEmpty()) {
                         _allInvoices.addAll(newInvoices)
-                        Log.d("SalesViewModel", "Next page loaded: ${newInvoices.size} invoices. Total now: ${_allInvoices.size}")
+                        Log.d(
+                            "SalesViewModel",
+                            "Next page loaded: ${newInvoices.size} invoices. Total now: ${_allInvoices.size}"
+                        )
                         // Apply current filters asynchronously. applyFilters will handle isLoading state.
                         applyFilters()
                     } else {
@@ -391,7 +431,10 @@ class SalesViewModel(
             // Item exists, update quantity
             val existingItem = currentItems[existingItemIndex]
             // Ensure quantity increases correctly
-            currentItems[existingItemIndex] = existingItem.copy(quantity = existingItem.quantity + 1, price = price) // Update price too if needed
+            currentItems[existingItemIndex] = existingItem.copy(
+                quantity = existingItem.quantity + 1,
+                price = price
+            ) // Update price too if needed
             Log.d("SalesViewModel", "Incremented quantity for item: ${item.id}")
         } else {
             // Add new item
@@ -425,7 +468,10 @@ class SalesViewModel(
             // Update the item at the found index with the new quantity
             currentItems[itemIndex] = currentItems[itemIndex].copy(quantity = newQuantity)
             _selectedItems.value = currentItems
-            Log.d("SalesViewModel", "Updated quantity for item ${itemToUpdate.item.id} to $newQuantity")
+            Log.d(
+                "SalesViewModel",
+                "Updated quantity for item ${itemToUpdate.item.id} to $newQuantity"
+            )
         }
     }
 
@@ -449,7 +495,10 @@ class SalesViewModel(
             Log.d("SalesViewModel", "Updated selected item details for: ${updatedJewelleryItem.id}")
             true
         } else {
-            Log.w("SalesViewModel", "Attempted to update non-existent selected item: ${updatedJewelleryItem.id}")
+            Log.w(
+                "SalesViewModel",
+                "Attempted to update non-existent selected item: ${updatedJewelleryItem.id}"
+            )
             false
         }
     }
@@ -474,9 +523,12 @@ class SalesViewModel(
 
     fun removePayment(paymentToRemove: Payment) {
         val currentPayments = _payments.value?.toMutableList() ?: return
-        if(currentPayments.remove(paymentToRemove)) {
+        if (currentPayments.remove(paymentToRemove)) {
             _payments.value = currentPayments
-            Log.d("SalesViewModel", "Removed payment: ${paymentToRemove.amount} via ${paymentToRemove.method}")
+            Log.d(
+                "SalesViewModel",
+                "Removed payment: ${paymentToRemove.amount} via ${paymentToRemove.method}"
+            )
         }
     }
 
@@ -594,28 +646,36 @@ class SalesViewModel(
                 allInvoicesCopy.filter { it.customerId == customerId }
             }
             _customerInvoices.value = filtered
-            // _isCustomerInvoiceLoading.value = false
-            Log.d("SalesViewModel", "Loaded ${filtered.size} invoices for customer $customerId (client-side filter)")
+//             _isCustomerInvoiceLoading.value = false
+            Log.d(
+                "SalesViewModel",
+                "Loaded ${filtered.size} invoices for customer $customerId (client-side filter)"
+            )
 
             // --- OR --- (If you must fetch specifically, but inefficiently)
-            /*
             _isLoading.value = true // Use main loading indicator for now
             repository.fetchInvoicesPaginated(loadNextPage = false).fold( // Fetches ALL again
                 onSuccess = { allInvoices ->
-                    val filtered = withContext(Dispatchers.Default){
-                         allInvoices.filter { it.customerId == customerId }
+                    val filtered = withContext(Dispatchers.Default) {
+                        allInvoices.filter { it.customerId == customerId }
                     }
                     _customerInvoices.value = filtered
                     _isLoading.value = false
-                    Log.d("SalesViewModel", "Fetched and filtered ${filtered.size} invoices for customer $customerId")
+                    Log.d(
+                        "SalesViewModel",
+                        "Fetched and filtered ${filtered.size} invoices for customer $customerId"
+                    )
                 },
                 onFailure = { error ->
                     _errorMessage.value = error.message ?: "Failed to load customer invoices"
                     _isLoading.value = false
-                    Log.e("SalesViewModel", "Error loading customer invoices for $customerId", error)
+                    Log.e(
+                        "SalesViewModel",
+                        "Error loading customer invoices for $customerId",
+                        error
+                    )
                 }
             )
-            */
         }
     }
 
@@ -625,7 +685,8 @@ class SalesViewModel(
      * Checks if the device has an active internet connection.
      */
     private fun isOnline(): Boolean {
-        val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
+        val capabilities =
+            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         return capabilities != null && (
                 capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                         capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||

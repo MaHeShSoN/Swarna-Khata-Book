@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choose how you want to share this invoice:"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="16sp"
+        android:layout_marginBottom="24dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnShareImage"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share as Image"
+        android:textColor="@color/white"
+        app:icon="@drawable/material_symbols_light__image"
+        app:iconTint="@color/white"
+        android:backgroundTint="@color/my_light_primary"
+        android:layout_marginBottom="12dp"/>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSharePdf"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Share as PDF"
+        android:textColor="@color/white"
+        app:icon="@drawable/teenyicons__pdf_solid"
+        app:iconTint="@color/white"
+        android:backgroundTint="@color/my_light_primary"/>
+
+</LinearLayout>

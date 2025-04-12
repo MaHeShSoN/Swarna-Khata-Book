@@ -1,17 +1,12 @@
 package com.jewelrypos.swarnakhatabook.Services
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.core.content.ContextCompat
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.navigation.NavDeepLinkBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -20,16 +15,17 @@ import com.jewelrypos.swarnakhatabook.MainActivity
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.Repository.NotificationRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
+import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import java.util.UUID
 
 /**
  * Service to handle Firebase Cloud Messaging
- * Manages both notification and data messages, creates notification channels,
- * and handles notification grouping
+ * Manages both notification and data messages and handles notification grouping
  */
 class FirebaseNotificationService : FirebaseMessagingService() {
 
@@ -69,76 +65,19 @@ class FirebaseNotificationService : FirebaseMessagingService() {
     }
 
     /**
-     * Create notification channels for Android O and above
-     */
-    fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            // High priority alerts
-            val alertsChannel = NotificationChannel(
-                "alerts_channel",
-                "Important Alerts",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Critical notifications like low stock and payment overdue"
-                enableLights(true)
-                enableVibration(true)
-            }
-
-            // Business insights
-            val insightsChannel = NotificationChannel(
-                "insights_channel",
-                "Business Insights",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Monthly reports and business analytics"
-            }
-
-            // Reminders
-            val remindersChannel = NotificationChannel(
-                "reminders_channel",
-                "Reminders",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Customer birthdays and other reminders"
-            }
-
-            notificationManager.createNotificationChannels(
-                listOf(
-                    alertsChannel, insightsChannel, remindersChannel
-                )
-            )
-        }
-    }
-
-    /**
      * Send a notification with a RemoteMessage.Notification object
      */
     private fun sendNotification(notification: RemoteMessage.Notification, data: Map<String, String> = mapOf()) {
         try {
             // Choose channel based on notification type
-            val channelId = when(data["type"]) {
-                "PAYMENT_OVERDUE", "CREDIT_LIMIT", "LOW_STOCK" -> "alerts_channel"
-                "BUSINESS_OVERVIEW" -> "insights_channel"
-                "BIRTHDAY", "ANNIVERSARY" -> "reminders_channel"
-                else -> "insights_channel"
-            }
+            val type = data["type"] ?: "GENERAL"
+            val channelId = NotificationChannelManager.getChannelForType(type)
 
             // Generate specific notification ID
-            val notificationId = generateNotificationId(data)
+            val notificationId = generateUniqueNotificationId(data)
 
-
-
-            // Create intent based on notification type
-            val type = data["type"] ?: "GENERAL"
-            val intent = createIntentForNotification(type, data)
-
-            val pendingIntent = PendingIntent.getActivity(
-                this, notificationId, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            // Create intent using deep linking
+            val pendingIntent = createDeepLinkPendingIntent(type, data)
 
             // Determine if notification belongs to a group
             val groupKey = getGroupKeyForType(type)
@@ -165,17 +104,11 @@ class FirebaseNotificationService : FirebaseMessagingService() {
             // Add any additional actions based on type
             addActionsToNotification(notificationBuilder, type, data)
 
-
-
             // Get notification manager
             val notificationManager = NotificationManagerCompat.from(this)
 
-            // Show the notification with permission check
-            if (checkNotificationPermission()) {
-                notificationManager.notify(notificationId, notificationBuilder.build())
-            } else {
-                Log.w(TAG, "Notification not shown: POST_NOTIFICATIONS permission not granted")
-            }
+            // Show the notification with permission check - SAFELY
+            showNotificationSafely(notificationManager, notificationId, notificationBuilder.build())
 
             // If part of a group, check if we need a summary notification
             if (groupKey != null) {
@@ -193,9 +126,9 @@ class FirebaseNotificationService : FirebaseMessagingService() {
      */
     private fun handleDataMessage(data: Map<String, String>) {
         try {
-
             // Create notification manager using the compat version
             val notificationManager = NotificationManagerCompat.from(this)
+
             // Extract notification data from the message
             val notificationType = data["type"] ?: "GENERAL"
             val title = data["title"] ?: "New Notification"
@@ -210,17 +143,13 @@ class FirebaseNotificationService : FirebaseMessagingService() {
             )
 
             // Generate a unique ID for this notification
-            val notificationId = generateNotificationId(data)
+            val notificationId = generateUniqueNotificationId(data)
 
             // Get group key for potential grouping
             val groupKey = getGroupKeyForType(notificationType)
 
-            // Show the notification with permission check
-            if (checkNotificationPermission()) {
-                notificationManager.notify(notificationId, notificationBuilder.build())
-            } else {
-                Log.w(TAG, "Notification not shown: POST_NOTIFICATIONS permission not granted")
-            }
+            // Show the notification with permission check - SAFELY
+            showNotificationSafely(notificationManager, notificationId, notificationBuilder.build())
 
             // If part of a group, check if we need a summary notification
             if (groupKey != null) {
@@ -243,21 +172,10 @@ class FirebaseNotificationService : FirebaseMessagingService() {
         data: Map<String, String>
     ): NotificationCompat.Builder {
         // Choose channel based on notification type
-        val channelId = when (type) {
-            "PAYMENT_OVERDUE", "CREDIT_LIMIT", "LOW_STOCK" -> "alerts_channel"
-            "BUSINESS_OVERVIEW" -> "insights_channel"
-            "BIRTHDAY", "ANNIVERSARY" -> "reminders_channel"
-            else -> "insights_channel"
-        }
+        val channelId = NotificationChannelManager.getChannelForType(type)
 
-        // Create intent based on notification type
-        val intent = createIntentForNotification(type, data)
-        val notificationId = generateNotificationId(data)
-
-        val pendingIntent = PendingIntent.getActivity(
-            this, notificationId, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        // Create deep link pending intent
+        val pendingIntent = createDeepLinkPendingIntent(type, data)
 
         // Determine if notification belongs to a group
         val groupKey = getGroupKeyForType(type)
@@ -288,6 +206,151 @@ class FirebaseNotificationService : FirebaseMessagingService() {
     }
 
     /**
+     * Create a pending intent using NavDeepLinkBuilder for proper deep linking
+     */
+    private fun createDeepLinkPendingIntent(type: String, data: Map<String, String>): PendingIntent {
+        // Default pending intent that opens the notification list
+        var pendingIntent: PendingIntent = createSimpleIntent()
+
+        try {
+            // Create specific deep links based on notification type
+            when (type) {
+                "PAYMENT_DUE", "PAYMENT_OVERDUE", "payment_action" -> {
+                    val invoiceId = data["invoiceId"]
+                    if (!invoiceId.isNullOrEmpty()) {
+                        pendingIntent = createInvoiceDetailIntent(invoiceId)
+                    }
+                }
+
+                "CREDIT_LIMIT", "customer_detail" -> {
+                    val customerId = data["customerId"]
+                    if (!customerId.isNullOrEmpty()) {
+                        pendingIntent = createCustomerDetailIntent(customerId)
+                    }
+                }
+
+                "LOW_STOCK", "item_detail" -> {
+                    val itemId = data["itemId"]
+                    if (!itemId.isNullOrEmpty()) {
+                        pendingIntent = createItemDetailIntent(itemId)
+                    }
+                }
+
+                "BIRTHDAY", "ANNIVERSARY" -> {
+                    val customerId = data["customerId"]
+                    if (!customerId.isNullOrEmpty()) {
+                        pendingIntent = createCustomerDetailIntent(customerId)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating deep link pending intent", e)
+        }
+
+        return pendingIntent
+    }
+
+    /**
+     * Create a simple intent for notification list
+     */
+    private fun createSimpleIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            putExtra("navigate_to", "notification_list")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Create intent for invoice detail
+     */
+    private fun createInvoiceDetailIntent(invoiceId: String): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            putExtra("navigate_to", "invoice_detail")
+            putExtra("invoiceId", invoiceId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            invoiceId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Create intent for customer detail
+     */
+    private fun createCustomerDetailIntent(customerId: String): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            putExtra("navigate_to", "customer_detail")
+            putExtra("customerId", customerId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            customerId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Create intent for item detail
+     */
+    private fun createItemDetailIntent(itemId: String): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            putExtra("navigate_to", "item_detail")
+            putExtra("itemId", itemId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            itemId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
+     * Create intent for payments screen
+     */
+    private fun createPaymentsIntent(invoiceId: String?, customerId: String?): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            putExtra("navigate_to", "payment_screen")
+            if (invoiceId != null) putExtra("invoiceId", invoiceId)
+            if (customerId != null) putExtra("customerId", customerId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+
+        return PendingIntent.getActivity(
+            this,
+            (invoiceId ?: customerId ?: "payments").hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    /**
      * Add action buttons to a notification based on type
      */
     private fun addActionsToNotification(
@@ -295,48 +358,52 @@ class FirebaseNotificationService : FirebaseMessagingService() {
         type: String,
         data: Map<String, String>
     ) {
-        when (type) {
-            "PAYMENT_DUE", "PAYMENT_OVERDUE" -> {
-                // Add a "Pay Now" action
-                val payIntent = createIntentForNotification("payment_action", data)
-                val payPendingIntent = PendingIntent.getActivity(
-                    this, 1, payIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    R.drawable.mdi__currency_inr,
-                    "Pay Now",
-                    payPendingIntent
-                )
-            }
+        try {
+            when (type) {
+                "PAYMENT_DUE", "PAYMENT_OVERDUE" -> {
+                    // Add a "Pay Now" action
+                    val payIntent = createPaymentsIntent(
+                        data["invoiceId"],
+                        data["customerId"]
+                    )
 
-            "LOW_STOCK" -> {
-                // Add a "View Item" action
-                val restockIntent = createIntentForNotification("item_detail", data)
-                val restockPendingIntent = PendingIntent.getActivity(
-                    this, 2, restockIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    R.drawable.material_symbols_warning_rounded,
-                    "View Item",
-                    restockPendingIntent
-                )
-            }
+                    builder.addAction(
+                        R.drawable.mdi__currency_inr,
+                        "Pay Now",
+                        payIntent
+                    )
+                }
 
-            "CREDIT_LIMIT" -> {
-                // Add a "View Customer" action
-                val customerIntent = createIntentForNotification("customer_detail", data)
-                val customerPendingIntent = PendingIntent.getActivity(
-                    this, 3, customerIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                builder.addAction(
-                    R.drawable.material_symbols_warning_rounded,
-                    "View Customer",
-                    customerPendingIntent
-                )
+                "LOW_STOCK" -> {
+                    // Add a "View Item" action
+                    val itemId = data["itemId"]
+                    if (!itemId.isNullOrEmpty()) {
+                        val restockIntent = createItemDetailIntent(itemId)
+
+                        builder.addAction(
+                            R.drawable.material_symbols_warning_rounded,
+                            "View Item",
+                            restockIntent
+                        )
+                    }
+                }
+
+                "CREDIT_LIMIT" -> {
+                    // Add a "View Customer" action
+                    val customerId = data["customerId"]
+                    if (!customerId.isNullOrEmpty()) {
+                        val customerIntent = createCustomerDetailIntent(customerId)
+
+                        builder.addAction(
+                            R.drawable.material_symbols_warning_rounded,
+                            "View Customer",
+                            customerIntent
+                        )
+                    }
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding actions to notification", e)
         }
     }
 
@@ -366,7 +433,7 @@ class FirebaseNotificationService : FirebaseMessagingService() {
 
                 // Only create summary if there are multiple notifications
                 if (count > 1) {
-                    createGroupSummaryNotification(groupKey, count)
+                    createGroupSummaryNotification(groupKey, count, notifications)
                 }
             }
         } catch (e: Exception) {
@@ -375,24 +442,40 @@ class FirebaseNotificationService : FirebaseMessagingService() {
     }
 
     /**
-     * Create a summary notification for a group
+     * Create a summary notification for a group with more informative content
      */
-    private fun createGroupSummaryNotification(groupKey: String, notificationCount: Int) {
+    private fun createGroupSummaryNotification(
+        groupKey: String,
+        notificationCount: Int,
+        notifications: List<com.jewelrypos.swarnakhatabook.DataClasses.AppNotification>? = null
+    ) {
         val title: String
         val message: String
 
         when (groupKey) {
             GROUP_KEY_PAYMENTS -> {
                 title = "Payment Notifications"
-                message = "$notificationCount payment notifications"
+                message = buildDetailedSummary(
+                    "$notificationCount payment notifications",
+                    notifications,
+                    "payment"
+                )
             }
             GROUP_KEY_INVENTORY -> {
                 title = "Inventory Alerts"
-                message = "$notificationCount inventory alerts"
+                message = buildDetailedSummary(
+                    "$notificationCount inventory alerts",
+                    notifications,
+                    "inventory"
+                )
             }
             GROUP_KEY_CUSTOMERS -> {
                 title = "Customer Events"
-                message = "$notificationCount customer events"
+                message = buildDetailedSummary(
+                    "$notificationCount customer events",
+                    notifications,
+                    "customer"
+                )
             }
             else -> {
                 title = "Notifications"
@@ -400,29 +483,34 @@ class FirebaseNotificationService : FirebaseMessagingService() {
             }
         }
 
-        // Create the summary notification
+        // Create intent for notification list
         val intent = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
             putExtra("navigate_to", "notification_list")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
         val pendingIntent = PendingIntent.getActivity(
-            this, 100 + groupKey.hashCode(), intent,
+            this,
+            groupKey.hashCode(),
+            intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         // Determine channel for summary
         val channelId = when (groupKey) {
-            GROUP_KEY_PAYMENTS -> "alerts_channel"
-            GROUP_KEY_INVENTORY -> "alerts_channel"
-            GROUP_KEY_CUSTOMERS -> "reminders_channel"
-            else -> "insights_channel"
+            GROUP_KEY_PAYMENTS -> NotificationChannelManager.CHANNEL_ALERTS
+            GROUP_KEY_INVENTORY -> NotificationChannelManager.CHANNEL_ALERTS
+            GROUP_KEY_CUSTOMERS -> NotificationChannelManager.CHANNEL_REMINDERS
+            else -> NotificationChannelManager.CHANNEL_INSIGHTS
         }
 
         val summaryNotification = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(message)
             .setSmallIcon(R.drawable.mingcute__notification_fill)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setGroup(groupKey)
             .setGroupSummary(true)
             .setAutoCancel(true)
@@ -432,63 +520,98 @@ class FirebaseNotificationService : FirebaseMessagingService() {
         // Get notification manager
         val notificationManager = NotificationManagerCompat.from(this)
 
-        // Show the notification with permission check
-        if (checkNotificationPermission()) {
-            notificationManager.notify(groupKey.hashCode(), summaryNotification)
+        // Show the notification with permission check - SAFELY
+        showNotificationSafely(notificationManager, groupKey.hashCode(), summaryNotification)
+    }
+
+    /**
+     * Safely show a notification with proper permission checking
+     */
+    private fun showNotificationSafely(
+        notificationManager: NotificationManagerCompat,
+        notificationId: Int,
+        notification: android.app.Notification
+    ) {
+        // Check permission before showing notification
+        if (NotificationPermissionHelper.hasNotificationPermission(this)) {
+            try {
+                notificationManager.notify(notificationId, notification)
+            } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException when showing notification", e)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error showing notification", e)
+            }
         } else {
-            Log.w(TAG, "Summary notification not shown: POST_NOTIFICATIONS permission not granted")
+            Log.w(TAG, "Notification not shown: POST_NOTIFICATIONS permission not granted")
         }
     }
 
     /**
-     * Create an intent with appropriate navigation for a notification type
+     * Build a more detailed summary with specific items
      */
-    private fun createIntentForNotification(type: String, data: Map<String, String>): Intent {
-        // Create base intent with flags for proper navigation
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    private fun buildDetailedSummary(
+        defaultSummary: String,
+        notifications: List<com.jewelrypos.swarnakhatabook.DataClasses.AppNotification>?,
+        type: String
+    ): String {
+        if (notifications.isNullOrEmpty() || notifications.size <= 1) {
+            return defaultSummary
         }
 
-        // Add navigation based on notification type
+        val builder = StringBuilder(defaultSummary)
+        builder.append("\n\n")
+
+        // Limit to 3 items in the summary
+        val limitedList = notifications.take(3)
+
         when (type) {
-            "PAYMENT_DUE", "PAYMENT_OVERDUE", "payment_action" -> {
-                intent.putExtra("navigate_to", "invoice_detail")
-                intent.putExtra("invoiceId", data["invoiceId"])
+            "payment" -> {
+                limitedList.forEach { notification ->
+                    if (notification.customerName.isNotEmpty()) {
+                        builder.append("• ${notification.customerName}: ₹${notification.amount ?: 0}\n")
+                    } else {
+                        builder.append("• ${notification.title}\n")
+                    }
+                }
             }
-
-            "CREDIT_LIMIT", "customer_detail" -> {
-                intent.putExtra("navigate_to", "customer_detail")
-                intent.putExtra("customerId", data["customerId"])
+            "inventory" -> {
+                limitedList.forEach { notification ->
+                    builder.append("• ${notification.title.replace("Low Stock: ", "")}\n")
+                }
             }
-
-            "LOW_STOCK", "item_detail" -> {
-                intent.putExtra("navigate_to", "item_detail")
-                intent.putExtra("itemId", data["itemId"])
-            }
-
-            "BIRTHDAY", "ANNIVERSARY" -> {
-                intent.putExtra("navigate_to", "customer_detail")
-                intent.putExtra("customerId", data["customerId"])
-            }
-
-            else -> {
-                intent.putExtra("navigate_to", "notification_list")
+            "customer" -> {
+                limitedList.forEach { notification ->
+                    builder.append("• ${notification.customerName}: ${notification.type.name}\n")
+                }
             }
         }
 
-        return intent
+        // If there are more items, add an ellipsis
+        if (notifications.size > 3) {
+            builder.append("• And ${notifications.size - 3} more...")
+        }
+
+        return builder.toString()
     }
 
     /**
-     * Generate a unique notification ID based on notification data
+     * Generate a truly unique notification ID based on notification data
+     * Uses combination of notification type, entity ID, and UUID to avoid collisions
      */
-    private fun generateNotificationId(data: Map<String, String>): Int {
-        return when {
-            data.containsKey("invoiceId") -> "invoice_${data["invoiceId"]}".hashCode()
-            data.containsKey("itemId") -> "item_${data["itemId"]}".hashCode()
-            data.containsKey("customerId") -> "customer_${data["customerId"]}".hashCode()
-            else -> System.currentTimeMillis().toInt()
+    private fun generateUniqueNotificationId(data: Map<String, String>): Int {
+        val baseIdValue = when {
+            data.containsKey("invoiceId") -> "invoice-${data["invoiceId"]}"
+            data.containsKey("itemId") -> "item-${data["itemId"]}"
+            data.containsKey("customerId") -> "customer-${data["customerId"]}"
+            else -> "notification-${UUID.randomUUID()}"
         }
+
+        // Include notification type for additional uniqueness
+        val type = data["type"] ?: "GENERAL"
+        val finalIdValue = "$type-$baseIdValue"
+
+        // Get positive hash code
+        return Math.abs(finalIdValue.hashCode())
     }
 
     /**
@@ -533,20 +656,6 @@ class FirebaseNotificationService : FirebaseMessagingService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating FCM token", e)
             }
-        }
-    }
-    /**
-     * Check if we have notification permission
-     */
-    private fun checkNotificationPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            // Permission is automatically granted on SDK < 33
-            true
         }
     }
 }

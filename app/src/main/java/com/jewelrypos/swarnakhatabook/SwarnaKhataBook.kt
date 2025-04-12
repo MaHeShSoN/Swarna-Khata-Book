@@ -7,6 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.PersistentCacheSettings
 import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Services.FirebaseNotificationService
+import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 
 class SwarnaKhataBook : Application() {
 
@@ -31,13 +32,10 @@ class SwarnaKhataBook : Application() {
 
         userSubscriptionManager = UserSubscriptionManager(this)
 
-//        // Record first use if needed
+        // Record first use if needed
         userSubscriptionManager.recordFirstUseIfNeeded()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            FirebaseNotificationService().createNotificationChannels()
-        }
-
-
+        // Create notification channels on app startup (moved from FirebaseNotificationService)
+        NotificationChannelManager.createNotificationChannels(this)
     }
 }

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -18,6 +19,8 @@ import androidx.navigation.NavDestination
 import androidx.navigation.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
+import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
+import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
@@ -30,12 +33,31 @@ class MainActivity : AppCompatActivity() {
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private var wasInBackground = false
 
+    // Request permission launcher for notifications (Android 13+)
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Log.d("MainActivity", "Notification permission granted")
+        } else {
+            Log.d("MainActivity", "Notification permission denied")
+            Toast.makeText(
+                this,
+                "Notification permission denied. You may miss important alerts.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // Initialize SharedPreferences
         sharedPreferences = getSharedPreferences("jewelry_pos_settings", Context.MODE_PRIVATE)
+
+        // Request notification permission if needed (for Android 13+)
+        requestNotificationPermission()
 
         // Check subscription status when app starts
         checkSubscriptionStatus()
@@ -45,6 +67,15 @@ class MainActivity : AppCompatActivity() {
         initializeNotificationSystem()
 
         handleNotificationNavigation(intent)
+    }
+
+    /**
+     * Request notification permission for Android 13+
+     */
+    private fun requestNotificationPermission() {
+        if (!NotificationPermissionHelper.hasNotificationPermission(this)) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -75,24 +106,39 @@ class MainActivity : AppCompatActivity() {
                                 val bundle = Bundle().apply {
                                     putString("invoiceId", invoiceId)
                                 }
-                                controller.navigate(R.id.action_mainScreenFragment_to_invoiceDetailFragment, bundle)
+
+                                // Check if action is available before navigating
+                                if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_invoiceDetailFragment) != null) {
+                                    controller.navigate(R.id.action_mainScreenFragment_to_invoiceDetailFragment, bundle)
+                                }
                             }
                             "customer_detail" -> {
                                 val customerId = intent.getStringExtra("customerId") ?: return
                                 val bundle = Bundle().apply {
                                     putString("customerId", customerId)
                                 }
-                                controller.navigate(R.id.action_mainScreenFragment_to_customerDetailFragment, bundle)
+
+                                // Check if action is available before navigating
+                                if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_customerDetailFragment) != null) {
+                                    controller.navigate(R.id.action_mainScreenFragment_to_customerDetailFragment, bundle)
+                                }
                             }
                             "item_detail" -> {
                                 val itemId = intent.getStringExtra("itemId") ?: return
                                 val bundle = Bundle().apply {
                                     putString("itemId", itemId)
                                 }
-                                controller.navigate(R.id.action_mainScreenFragment_to_itemDetailFragment, bundle)
+
+                                // Check if action is available before navigating
+                                if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_itemDetailFragment) != null) {
+                                    controller.navigate(R.id.action_mainScreenFragment_to_itemDetailFragment, bundle)
+                                }
                             }
                             "notification_list" -> {
-                                controller.navigate(R.id.action_mainScreenFragment_to_notificationFragment)
+                                // Check if action is available before navigating
+                                if (controller.currentDestination?.getAction(R.id.action_mainScreenFragment_to_notificationFragment) != null) {
+                                    controller.navigate(R.id.action_mainScreenFragment_to_notificationFragment)
+                                }
                             }
                         }
 
@@ -105,8 +151,6 @@ class MainActivity : AppCompatActivity() {
             Log.e("MainActivity", "Error handling notification navigation", e)
         }
     }
-
-
 
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {

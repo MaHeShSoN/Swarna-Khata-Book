@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.text.InputType
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +18,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel // Ensure correct import
@@ -63,11 +63,44 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setupSearchView()
         setupFilterChips() // Setup chip listeners
         setupObservers()
+        setupEventBusObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
 
+
+
         return binding.root
     }
+
+
+    private fun setupEventBusObservers() {
+        // Observe inventory update events
+        EventBus.inventoryUpdatedEvent.observe(viewLifecycleOwner) { updated ->
+            if (updated) {
+                // Refresh data and clear filters when an inventory update event is received
+                inventoryViewModel.refreshDataAndClearFilters()
+                // Reset the event to avoid handling it multiple times
+                EventBus.resetInventoryUpdatedEvent()
+
+                // Show a brief message to the user
+                Toast.makeText(context, "Inventory has been updated", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Observe inventory delete events
+        EventBus.inventoryDeletedEvent.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                // Refresh data and clear filters when an inventory delete event is received
+                inventoryViewModel.refreshDataAndClearFilters()
+                // Reset the event to avoid handling it multiple times
+                EventBus.resetInventoryDeletedEvent()
+
+                // Show a brief message to the user
+                Toast.makeText(context, "An item has been removed from inventory", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
 
     private fun setupObservers() {
         inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->

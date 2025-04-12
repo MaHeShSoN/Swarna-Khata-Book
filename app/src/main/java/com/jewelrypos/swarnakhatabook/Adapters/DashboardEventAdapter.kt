@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification
+import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.R
 import java.text.SimpleDateFormat
@@ -16,13 +16,14 @@ import java.util.Locale
 
 /**
  * Adapter for upcoming events on the dashboard
+ * Updated to use AppNotification instead of PaymentNotification
  */
 class DashboardEventAdapter(
-    private var events: List<PaymentNotification>
+    private var events: List<AppNotification>
 ) : RecyclerView.Adapter<DashboardEventAdapter.EventViewHolder>() {
 
     interface OnEventClickListener {
-        fun onEventClick(notification: PaymentNotification)
+        fun onEventClick(notification: AppNotification)
     }
 
     private var listener: OnEventClickListener? = null
@@ -93,7 +94,7 @@ class DashboardEventAdapter(
 
     override fun getItemCount() = events.size
 
-    fun updateEvents(newEvents: List<PaymentNotification>) {
+    fun updateEvents(newEvents: List<AppNotification>) {
         val diffCallback = EventDiffCallback(events, newEvents)
         val diffResult = DiffUtil.calculateDiff(diffCallback)
 
@@ -102,8 +103,8 @@ class DashboardEventAdapter(
     }
 
     private class EventDiffCallback(
-        private val oldList: List<PaymentNotification>,
-        private val newList: List<PaymentNotification>
+        private val oldList: List<AppNotification>,
+        private val newList: List<AppNotification>
     ) : DiffUtil.Callback() {
         override fun getOldListSize() = oldList.size
         override fun getNewListSize() = newList.size

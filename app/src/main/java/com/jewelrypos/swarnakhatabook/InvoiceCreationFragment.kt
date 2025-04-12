@@ -261,10 +261,6 @@ class InvoiceCreationFragment : Fragment() {
         binding.saveButton.setOnClickListener {
             saveInvoice()
         }
-
-        binding.printButton.setOnClickListener {
-            generateAndSavePdf()
-        }
     }
 
     private fun updateCustomerSection(customer: Customer) {
@@ -753,68 +749,6 @@ class InvoiceCreationFragment : Fragment() {
         }
 
         return true
-    }
-
-    // Add this method to InvoiceCreationFragment
-    private fun generateAndSavePdf() {
-        // Ensure we have an invoice to generate PDF for
-        val invoice = Invoice(
-            invoiceNumber = generateInvoiceNumber(),
-            customerId = salesViewModel.selectedCustomer.value?.id ?: "",
-            customerName = salesViewModel.selectedCustomer.value?.let { "${it.firstName} ${it.lastName}" }
-                ?: "",
-            customerPhone = salesViewModel.selectedCustomer.value?.phoneNumber ?: "",
-            customerAddress = salesViewModel.selectedCustomer.value?.let {
-                "${it.streetAddress}, ${it.city}, ${it.state}"
-            } ?: "",
-            invoiceDate = System.currentTimeMillis(),
-            items = itemsAdapter.getItems().map { selected ->
-                InvoiceItem(
-                    itemId = selected.item.id,
-                    quantity = selected.quantity,
-                    itemDetails = selected.item,
-                    price = selected.price
-                )
-            },
-            payments = paymentsAdapter.getPayments(),
-            totalAmount = salesViewModel.calculateTotal(),
-            paidAmount = salesViewModel.calculateTotalPaid(),
-            notes = binding.notesEditText.text.toString()
-        )
-
-        // Get shop information
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val shop = ShopManager.getShopDetails(requireContext())
-
-                if (shop == null) {
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-
-                PDFBoxResourceLoader.init(requireContext())
-
-                // Generate PDF
-                val pdfGenerator = InvoicePdfGenerator(requireContext())
-
-                // Load PDF settings and apply them
-                val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
-                pdfGenerator.applySettings(pdfSettings)
-
-                val pdfFile = pdfGenerator.generateInvoicePdf(
-                    invoice,
-                    shop,
-                    "Invoice_${invoice.invoiceNumber}"
-                )
-
-                // Share or open the PDF
-                sharePdfFile(pdfFile)
-
-            } catch (e: Exception) {
-                Log.e("PDFGeneration", "Error generating PDF", e)
-                Toast.makeText(context, "Failed to generate PDF", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun sharePdfFile(pdfFile: File) {

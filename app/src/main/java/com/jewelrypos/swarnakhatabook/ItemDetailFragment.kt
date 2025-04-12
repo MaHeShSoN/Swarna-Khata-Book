@@ -19,6 +19,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
 import com.jewelrypos.swarnakhatabook.DataClasses.ItemUsageStats
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.ItemDetailViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.ItemDetailViewModel
@@ -306,6 +307,7 @@ class ItemDetailFragment : Fragment() {
                 Toast.makeText(context, "Stock updated successfully", Toast.LENGTH_SHORT).show()
                 binding.stockAdjustmentValue.text = "0"
                 binding.applyStockButton.visibility = View.GONE
+                EventBus.postInvoiceUpdated()
             } else {
                 Toast.makeText(context, "Failed to update stock", Toast.LENGTH_SHORT).show()
             }
@@ -325,6 +327,7 @@ class ItemDetailFragment : Fragment() {
                 override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
                     viewModel.updateItem(updatedItem) { success ->
                         if (success) {
+                            EventBus.postInventoryUpdated()
                             Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT).show()
@@ -370,6 +373,7 @@ class ItemDetailFragment : Fragment() {
     private fun deleteItem() {
         viewModel.deleteItem { success ->
             if (success) {
+                EventBus.postInventoryDeleted()
                 Toast.makeText(context, "Item deleted successfully", Toast.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             } else {

@@ -10,6 +10,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.NotificationPreferences
 import com.jewelrypos.swarnakhatabook.Enums.NotificationPriority
 import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
@@ -19,7 +20,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 /**
  * Worker class that generates notifications based on business logic
@@ -44,34 +44,63 @@ class NotificationWorker(
             val currentUser = auth.currentUser ?: return Result.failure()
             val phoneNumber = currentUser.phoneNumber?.replace("+", "") ?: return Result.failure()
 
-            // Handle monthly business overview
-            try {
-                if (isFirstDayOfMonth()) {
+            // Get notification preferences once at the beginning
+            val notificationPreferences = repository.getNotificationPreferences().getOrNull() ?: NotificationPreferences()
+            var anySuccessfulCheck = false
+            var anyFailedCheck = false
+
+            // Check for monthly business overview
+            if (isFirstDayOfMonth() && notificationPreferences.businessInsights) {
+                try {
+                    Log.d(TAG, "Checking monthly business overview")
                     sendMonthlyBusinessOverviewNotification(phoneNumber)
+                    anySuccessfulCheck = true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending business overview notification", e)
+                    anyFailedCheck = true
+                    // Continue with other checks
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending business overview notification", e)
-                // Continue with other checks
             }
 
             // Check for low stock items
-            try {
-                sendLowStockAlerts(phoneNumber)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error sending low stock alerts", e)
-                // Continue with other checks
+            if (notificationPreferences.lowStock) {
+                try {
+                    Log.d(TAG, "Checking low stock items")
+                    val lowStockSuccess = sendLowStockAlerts(phoneNumber, notificationPreferences)
+                    if (lowStockSuccess) anySuccessfulCheck = true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sending low stock alerts", e)
+                    anyFailedCheck = true
+                    // Continue with other checks
+                }
             }
 
-            // Check for customer special dates
-            try {
-                checkCustomerSpecialDates(phoneNumber)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error checking customer special dates", e)
-                // Continue with other checks
+            // Check for customer special dates (birthdays, anniversaries)
+            val shouldCheckBirthdays = notificationPreferences.customerBirthday
+            val shouldCheckAnniversaries = notificationPreferences.customerAnniversary
+
+            if (shouldCheckBirthdays || shouldCheckAnniversaries) {
+                try {
+                    Log.d(TAG, "Checking customer special dates")
+                    val specialDatesSuccess = checkCustomerSpecialDates(
+                        phoneNumber,
+                        shouldCheckBirthdays,
+                        shouldCheckAnniversaries
+                    )
+                    if (specialDatesSuccess) anySuccessfulCheck = true
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error checking customer special dates", e)
+                    anyFailedCheck = true
+                    // Continue with other checks
+                }
             }
 
-            // Return success even if some checks failed
-            return Result.success()
+            // Return appropriate result based on checks
+            return when {
+                anySuccessfulCheck && !anyFailedCheck -> Result.success()
+                anySuccessfulCheck -> Result.success() // Consider partial success as success
+                else -> Result.failure()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error in notification worker", e)
             return Result.failure()
@@ -88,8 +117,13 @@ class NotificationWorker(
 
     /**
      * Check for customer birthdays and anniversaries
+     * @return true if any notifications were created
      */
-    private suspend fun checkCustomerSpecialDates(phoneNumber: String) {
+    private suspend fun checkCustomerSpecialDates(
+        phoneNumber: String,
+        checkBirthdays: Boolean,
+        checkAnniversaries: Boolean
+    ): Boolean {
         // Get today's date in MM-dd format (without year)
         val today = SimpleDateFormat("MM-dd", Locale.getDefault()).format(Date())
 
@@ -101,10 +135,11 @@ class NotificationWorker(
             .await()
 
         val customers = customersSnapshot.toObjects(Customer::class.java)
+        var notificationsCreated = false
 
         // Check birthdays
-        if (repository.shouldSendNotification(NotificationType.BIRTHDAY)) {
-            customers.forEach { customer ->
+        if (checkBirthdays) {
+            for (customer in customers) {
                 // Convert stored birthday to MM-dd format
                 val birthdayDate = try {
                     val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(customer.birthday)
@@ -115,27 +150,34 @@ class NotificationWorker(
 
                 // If today is the customer's birthday, create a notification
                 if (birthdayDate == today) {
-                    val notification = AppNotification(
-                        customerId = customer.id,
-                        customerName = "${customer.firstName} ${customer.lastName}",
-                        title = "Customer Birthday Today",
-                        message = "${customer.firstName} ${customer.lastName} is celebrating their birthday today!",
-                        type = NotificationType.BIRTHDAY,
-                        status = NotificationStatus.UNREAD,
-                        priority = NotificationPriority.NORMAL
+                    // Check if a birthday notification already exists for this customer today
+                    val existingNotification = doesNotificationExist(
+                        phoneNumber,
+                        NotificationType.BIRTHDAY,
+                        customer.id
                     )
 
-                    // Double-check preference before creating notification
-                    if (repository.shouldSendNotification(NotificationType.BIRTHDAY)) {
+                    if (!existingNotification) {
+                        val notification = AppNotification(
+                            customerId = customer.id,
+                            customerName = "${customer.firstName} ${customer.lastName}",
+                            title = "Customer Birthday Today",
+                            message = "${customer.firstName} ${customer.lastName} is celebrating their birthday today!",
+                            type = NotificationType.BIRTHDAY,
+                            status = NotificationStatus.UNREAD,
+                            priority = NotificationPriority.NORMAL
+                        )
+
                         repository.createNotification(notification)
+                        notificationsCreated = true
                     }
                 }
             }
         }
 
         // Similarly check anniversaries
-        if (repository.shouldSendNotification(NotificationType.ANNIVERSARY)) {
-            customers.forEach { customer ->
+        if (checkAnniversaries) {
+            for (customer in customers) {
                 val anniversaryDate = try {
                     val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(customer.anniversary)
                     SimpleDateFormat("MM-dd", Locale.getDefault()).format(date)
@@ -144,22 +186,64 @@ class NotificationWorker(
                 }
 
                 if (anniversaryDate == today) {
-                    val notification = AppNotification(
-                        customerId = customer.id,
-                        customerName = "${customer.firstName} ${customer.lastName}",
-                        title = "Customer Anniversary Today",
-                        message = "${customer.firstName} ${customer.lastName} is celebrating their anniversary today!",
-                        type = NotificationType.ANNIVERSARY,
-                        status = NotificationStatus.UNREAD,
-                        priority = NotificationPriority.NORMAL
+                    // Check if an anniversary notification already exists for this customer today
+                    val existingNotification = doesNotificationExist(
+                        phoneNumber,
+                        NotificationType.ANNIVERSARY,
+                        customer.id
                     )
 
-                    // Double-check preference before creating notification
-                    if (repository.shouldSendNotification(NotificationType.ANNIVERSARY)) {
+                    if (!existingNotification) {
+                        val notification = AppNotification(
+                            customerId = customer.id,
+                            customerName = "${customer.firstName} ${customer.lastName}",
+                            title = "Customer Anniversary Today",
+                            message = "${customer.firstName} ${customer.lastName} is celebrating their anniversary today!",
+                            type = NotificationType.ANNIVERSARY,
+                            status = NotificationStatus.UNREAD,
+                            priority = NotificationPriority.NORMAL
+                        )
+
                         repository.createNotification(notification)
+                        notificationsCreated = true
                     }
                 }
             }
+        }
+
+        return notificationsCreated
+    }
+
+    /**
+     * Check if a notification already exists for the given type and entity id
+     * Helps avoid duplicate notifications
+     */
+    private suspend fun doesNotificationExist(
+        phoneNumber: String,
+        type: NotificationType,
+        entityId: String
+    ): Boolean {
+        try {
+            // Define a time threshold (24 hours ago)
+            val calendar = Calendar.getInstance()
+            calendar.add(Calendar.HOUR, -24)
+            val timestamp = com.google.firebase.Timestamp(Date(calendar.timeInMillis))
+
+            // Query for existing notifications
+            val querySnapshot = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("notifications")
+                .whereEqualTo("type", type)
+                .whereEqualTo("customerId", entityId)
+                .whereGreaterThan("createdAt", timestamp)
+                .limit(1)
+                .get()
+                .await()
+
+            return !querySnapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking for existing notification", e)
+            return false // If we can't check, assume no existing notification to be safe
         }
     }
 
@@ -167,17 +251,24 @@ class NotificationWorker(
      * Generate and send a monthly business overview notification
      */
     private suspend fun sendMonthlyBusinessOverviewNotification(phoneNumber: String) {
-        // Double-check preference before fetching data
-        if (!repository.shouldSendNotification(NotificationType.GENERAL)) {
-            return
-        }
-
         // Fetch business overview data
         val businessOverview = fetchBusinessOverviewData(phoneNumber)
 
+        // Check if a business overview notification was already sent today
+        val existingNotification = doesNotificationExist(
+            phoneNumber,
+            NotificationType.GENERAL,
+            "SYSTEM_MONTHLY_OVERVIEW"
+        )
+
+        if (existingNotification) {
+            Log.d(TAG, "Monthly business overview already sent today, skipping")
+            return
+        }
+
         // Create comprehensive notification
         val notification = AppNotification(
-            customerId = "SYSTEM",
+            customerId = "SYSTEM_MONTHLY_OVERVIEW",
             customerName = "Business Overview",
             title = "Monthly Business Insights",
             message = createBusinessOverviewMessage(businessOverview),
@@ -186,10 +277,7 @@ class NotificationWorker(
             priority = NotificationPriority.NORMAL
         )
 
-        // Final check before creating notification
-        if (repository.shouldSendNotification(NotificationType.GENERAL)) {
-            repository.createNotification(notification)
-        }
+        repository.createNotification(notification)
     }
 
     /**
@@ -280,11 +368,11 @@ class NotificationWorker(
 
     /**
      * Check for and send low stock alerts
+     * @return true if any low stock notifications were created
      */
-    private suspend fun sendLowStockAlerts(phoneNumber: String) {
-        // Double-check if low stock alerts are enabled
-        if (!repository.shouldSendNotification(NotificationType.GENERAL)) {
-            return
+    private suspend fun sendLowStockAlerts(phoneNumber: String, preferences: NotificationPreferences): Boolean {
+        if (!preferences.lowStock) {
+            return false
         }
 
         // Fetch inventory items with low stock
@@ -297,46 +385,63 @@ class NotificationWorker(
         val lowStockItems = inventorySnapshot.toObjects(JewelleryItem::class.java)
             .filter { it.stock <= 5 }
 
-        if (lowStockItems.isEmpty()) return
+        if (lowStockItems.isEmpty()) return false
+
+        var notificationsCreated = false
 
         // If there are many low stock items, create a summary notification
         if (lowStockItems.size > 3) {
-            val summaryNotification = AppNotification(
-                customerId = "SYSTEM",
-                customerName = "Inventory Alert",
-                title = "Multiple Items Low in Stock",
-                message = "${lowStockItems.size} items are running low on stock",
-                type = NotificationType.GENERAL,
-                status = NotificationStatus.UNREAD,
-                priority = NotificationPriority.HIGH,
-                relatedItemId = null // No specific item for summary
+            // Check if a summary notification already exists for today
+            val existingSummary = doesNotificationExist(
+                phoneNumber,
+                NotificationType.GENERAL,
+                "LOW_STOCK_SUMMARY"
             )
 
-            // Final check before creating notification
-            if (repository.shouldSendNotification(NotificationType.GENERAL)) {
-                repository.createNotification(summaryNotification)
-            }
-        } else {
-            // Create individual notifications for each item
-            lowStockItems.forEach { item ->
-                val notification = AppNotification(
-                    customerId = "SYSTEM",
+            if (!existingSummary) {
+                val summaryNotification = AppNotification(
+                    customerId = "LOW_STOCK_SUMMARY",
                     customerName = "Inventory Alert",
-                    title = "Low Stock: ${item.displayName}",
-                    message = "Current stock: ${item.stock} ${item.stockUnit}",
+                    title = "Multiple Items Low in Stock",
+                    message = "${lowStockItems.size} items are running low on stock",
                     type = NotificationType.GENERAL,
                     status = NotificationStatus.UNREAD,
                     priority = NotificationPriority.HIGH,
-                    relatedItemId = item.id,
-                    stockLevel = item.stock
+                    relatedItemId = null // No specific item for summary
                 )
 
-                // Final check before creating notification
-                if (repository.shouldSendNotification(NotificationType.GENERAL)) {
+                repository.createNotification(summaryNotification)
+                notificationsCreated = true
+            }
+        } else {
+            // Create individual notifications for each item if they don't already exist
+            for (item in lowStockItems) {
+                val existingItemAlert = doesNotificationExist(
+                    phoneNumber,
+                    NotificationType.GENERAL,
+                    "ITEM_${item.id}"
+                )
+
+                if (!existingItemAlert) {
+                    val notification = AppNotification(
+                        customerId = "ITEM_${item.id}",
+                        customerName = "Inventory Alert",
+                        title = "Low Stock: ${item.displayName}",
+                        message = "Current stock: ${item.stock} ${item.stockUnit}",
+                        type = NotificationType.GENERAL,
+                        status = NotificationStatus.UNREAD,
+                        priority = NotificationPriority.HIGH,
+                        relatedItemId = item.id,
+                        stockLevel = item.stock
+                    )
+
                     repository.createNotification(notification)
+                    notificationsCreated = true
                 }
             }
         }
+
+        return notificationsCreated
     }
 
     // Data class for business overview

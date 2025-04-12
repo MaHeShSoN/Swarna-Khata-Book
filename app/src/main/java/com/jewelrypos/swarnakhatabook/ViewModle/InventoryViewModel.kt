@@ -159,7 +159,27 @@ class InventoryViewModel(
     // --- Data Loading & Refresh ---
 
     fun refreshData() {
+
         loadFirstPage()
+    }
+
+
+    fun refreshDataAndClearFilters() {
+        // Clear active filters
+        if (_activeFilters.value?.isNotEmpty() == true) {
+            _activeFilters.value = emptySet()
+        }
+
+        // Clear search query
+        currentSearchQuery = ""
+
+        // Cancel any ongoing search job
+        searchJob?.cancel()
+
+        // Reload first page of data
+        loadFirstPage()
+
+        Log.d("InventoryViewModel", "Refreshed data and cleared all filters")
     }
 
     private fun loadFirstPage() {

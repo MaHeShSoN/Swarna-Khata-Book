@@ -9,7 +9,8 @@
     <color name="cream_background">#FEF9E7</color>         <!-- Cream background -->
 
     <!-- Suggested complementary colors -->
-    <color name="my_light_tertiary">#6B5B95</color>        <!-- Muted purple - good contrast with gold -->
+    <color name="my_light_tertiary">#6B5B95
+    </color>        <!-- Muted purple - good contrast with gold -->
     <color name="my_light_error">#C43E00</color>           <!-- Warm orange-red -->
     <color name="my_light_surface">#FFFBF0</color>         <!-- Extremely light cream for cards -->
 
@@ -28,7 +29,8 @@
 
     <!-- Specifically for chips in M3 -->
     <color name="chip_background">#F0E6BD</color>          <!-- Light gold for chip background -->
-    <color name="chip_selected">#C9AB38</color>            <!-- Slightly darker gold for selected chip -->
+    <color name="chip_selected">#C9AB38
+    </color>            <!-- Slightly darker gold for selected chip -->
     <color name="chip_text">#453A0F</color>                <!-- Dark text for chips -->
 
     <!-- For Silver & other image -->
@@ -63,10 +65,89 @@
     <color name="indigo">#696FCA</color>
     <color name="gold">#D1A131</color>
 
-    <color name="my_light_on_surface_variant">#544E3A</color>  <!-- A bit lighter/softer than my_light_on_surface -->
+    <color name="my_light_on_surface_variant">#544E3A
+    </color>  <!-- A bit lighter/softer than my_light_on_surface -->
     <color name="status_unpaid_light">#FFCDD2</color>
     <!-- Supplier/Wholesaler specific colors -->
-    <color name="supplier_button_color">#6B5B95</color>       <!-- Your existing my_light_tertiary (purple) -->
-    <color name="supplier_badge_color">#9C27B0</color>        <!-- Your existing color_purple, a bit more vibrant -->
+    <color name="supplier_button_color">#6B5B95
+    </color>       <!-- Your existing my_light_tertiary (purple) -->
+    <color name="supplier_badge_color">#9C27B0
+    </color>        <!-- Your existing color_purple, a bit more vibrant -->
     <color name="supplier_text_color">#544E3A</color>
+
+
+    <!-- Colors for Dard Theme -->
+
+
+    <!-- Dark theme colors -->
+    <color name="my_dark_primary">#FFCB57</color>         <!-- Brighter gold for dark theme -->
+    <color name="my_dark_secondary">#D6B459</color>       <!-- Lighter gold secondary -->
+    <color name="dark_background">#1C1A15
+    </color>         <!-- Very dark background with slight warm tint -->
+
+    <!-- Complementary colors for dark theme -->
+    <color name="my_dark_tertiary">#9D91C4
+    </color>        <!-- Lighter purple - good contrast in dark mode -->
+    <color name="my_dark_error">#FF6E40
+    </color>           <!-- Brighter orange-red for dark theme -->
+    <color name="my_dark_surface">#27251D</color>         <!-- Dark surface with gold tint -->
+
+    <!-- Additional variations for dark theme components -->
+    <color name="my_dark_on_primary">#2C2200</color>      <!-- Dark text on gold components -->
+    <color name="my_dark_on_secondary">#1C1A15
+    </color>    <!-- Dark background as text on lighter components -->
+    <color name="my_dark_on_tertiary">#1C1A15</color>     <!-- Dark text on purple -->
+    <color name="my_dark_primary_container">#3D3728</color><!-- Dark gold for containers -->
+    <color name="my_dark_secondary_container">#4D4326</color><!-- Mid-dark gold for containers -->
+    <color name="my_dark_tertiary_container">#362F50</color><!-- Dark purple for containers -->
+
+    <!-- Neutral tones for text in dark theme -->
+    <color name="my_dark_on_background">#E6E1D4</color>   <!-- Off-white for text -->
+    <color name="my_dark_on_surface">#F5F0E1</color>      <!-- Light cream for text -->
+    <color name="my_dark_outline">#BFA64C
+    </color>         <!-- Bright gold outline for components -->
+
+    <!-- Specifically for chips in dark theme -->
+    <color name="dark_chip_background">#3D3523</color>     <!-- Dark gold for chip background -->
+    <color name="dark_chip_selected">#FFC43B</color>      <!-- Brighter gold for selected chip -->
+    <color name="dark_chip_text">#F5F0E1</color>          <!-- Light text for chips -->
+
+    <!-- For Silver & other image in dark theme -->
+    <color name="dark_shape_image_silver">#C0C0C0</color>
+    <color name="dark_shape_image_silver_outline">#A0A0A0</color>
+    <color name="dark_shape_image_other">#9D91C4</color>
+    <color name="dark_star_color">#FFD84D</color>
+
+    <!-- Colors for status indicators in dark theme -->
+    <color name="dark_status_pending">#FFB547</color>          <!-- Brighter Amber for Pending -->
+    <color name="dark_status_in_progress">#64B5F6</color>      <!-- Lighter Blue for In Progress -->
+    <color name="dark_status_completed">#66BB6A</color>        <!-- Lighter Green for Completed -->
+    <color name="dark_status_cancelled">#EF5350</color>        <!-- Lighter Red for Cancelled -->
+
+    <!-- Colors for payment status indicators in dark theme -->
+    <color name="dark_status_paid">#66BB6A</color>             <!-- Lighter Green for Paid -->
+    <color name="dark_status_partial">#FFB547
+    </color>          <!-- Brighter Amber for Partial payment -->
+    <color name="dark_status_unpaid">#EF5350</color>           <!-- Lighter Red for Unpaid -->
+    <color name="dark_status_unpaid_light">#4D2521
+    </color>     <!-- Dark red background for unpaid warning -->
+
+    <!-- Accent colors for dark theme -->
+    <color name="dark_green">#81C784</color>
+    <color name="dark_blue">#64B5F6</color>
+    <color name="dark_purple">#BA68C8</color>
+    <color name="dark_red">#EF5350</color>
+    <color name="dark_indigo">#9FA8DA</color>
+    <color name="dark_gold">#FFD54F</color>
+    <color name="dark_orange">#FFB74D</color>
+
+    <color name="my_dark_on_surface_variant">#D6CDB3
+    </color>  <!-- Lighter variant for dark theme -->
+
+    <!-- Supplier/Wholesaler specific colors -->
+    <color name="dark_supplier_button_color">#9D91C4</color>  <!-- Lighter purple for dark theme -->
+    <color name="dark_supplier_badge_color">#BA68C8</color>   <!-- Brighter purple badge -->
+    <color name="dark_supplier_text_color">#F5F0E1</color>    <!-- Light text for dark theme -->
+
+
 </resources>

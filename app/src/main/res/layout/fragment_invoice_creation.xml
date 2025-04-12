@@ -634,8 +634,8 @@
             android:id="@+id/actionButtonsLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
             android:orientation="horizontal"
+            android:layout_marginTop="16dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/notesCard">
 
@@ -664,17 +664,6 @@
         </LinearLayout>
 
         <!-- Optional: Print/Share Button -->
-        <Button
-            android:id="@+id/printButton"
-            style="@style/Widget.Material3.Button.TextButton.Icon"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Print Preview"
-            android:textColor="@color/my_light_primary"
-            app:icon="@drawable/ic_invoice"
-            app:iconTint="@color/my_light_primary"
-            app:layout_constraintTop_toBottomOf="@id/actionButtonsLayout" />
 
         <FrameLayout
             android:id="@+id/progressOverlay"
