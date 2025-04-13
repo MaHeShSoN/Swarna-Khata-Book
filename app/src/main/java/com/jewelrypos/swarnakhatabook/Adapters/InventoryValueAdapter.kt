@@ -12,7 +12,9 @@ import com.jewelrypos.swarnakhatabook.R
 import java.text.DecimalFormat
 
 class InventoryValueAdapter :
-    ListAdapter<InventoryValueItem, InventoryValueAdapter.InventoryViewHolder>(InventoryValueDiffCallback) {
+    ListAdapter<InventoryValueItem, InventoryValueAdapter.InventoryViewHolder>(
+        InventoryValueDiffCallback
+    ) {
 
     private var currentItems = listOf<InventoryValueItem>()
     private var filteredItems = listOf<InventoryValueItem>()
@@ -30,8 +32,9 @@ class InventoryValueAdapter :
         holder.bind(item)
     }
 
-    fun submitList(list: List<InventoryValueItem>) {
-        currentItems = list
+    // Add the override keyword and make the list parameter nullable
+    override fun submitList(list: List<InventoryValueItem>?) {
+        currentItems = list ?: emptyList()
         applyFilter()
     }
 
@@ -78,7 +81,7 @@ class InventoryValueAdapter :
             totalValue.text = "Total: ₹${currencyFormatter.format(item.totalStockValue)}"
 
             // Set background color based on item type
-            val backgroundRes = when(item.itemType.uppercase()) {
+            val backgroundRes = when (item.itemType.uppercase()) {
                 "GOLD" -> R.drawable.inventory_gold_background
                 "SILVER" -> R.drawable.inventory_silver_background
                 else -> R.drawable.inventory_other_background
@@ -88,14 +91,21 @@ class InventoryValueAdapter :
     }
 
     companion object {
-        private val InventoryValueDiffCallback = object : DiffUtil.ItemCallback<InventoryValueItem>() {
-            override fun areItemsTheSame(oldItem: InventoryValueItem, newItem: InventoryValueItem): Boolean {
-                return oldItem.id == newItem.id
-            }
+        private val InventoryValueDiffCallback =
+            object : DiffUtil.ItemCallback<InventoryValueItem>() {
+                override fun areItemsTheSame(
+                    oldItem: InventoryValueItem,
+                    newItem: InventoryValueItem
+                ): Boolean {
+                    return oldItem.id == newItem.id
+                }
 
-            override fun areContentsTheSame(oldItem: InventoryValueItem, newItem: InventoryValueItem): Boolean {
-                return oldItem == newItem
+                override fun areContentsTheSame(
+                    oldItem: InventoryValueItem,
+                    newItem: InventoryValueItem
+                ): Boolean {
+                    return oldItem == newItem
+                }
             }
-        }
     }
 }

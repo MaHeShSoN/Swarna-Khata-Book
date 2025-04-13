@@ -14,6 +14,8 @@ import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem // Assuming need
 import kotlinx.coroutines.Dispatchers // Import Dispatchers
 import kotlinx.coroutines.withContext // Import withContext
 import kotlinx.coroutines.tasks.await
+import java.util.Calendar
+import java.util.Date
 import kotlin.math.max // For maxOf
 
 // Define custom exceptions if not already defined elsewhere
@@ -115,6 +117,47 @@ class InvoiceRepository(
         } catch (e: Exception) {
             Log.e(TAG, "Error saving invoice ${invoice.invoiceNumber}", e)
             Result.failure(e)
+        }
+    }
+
+
+    /**
+     * Fetches all invoices within a specific date range.
+     * Note: Ensure 'invoiceDate' field in Firestore is stored as a Timestamp.
+     */
+    /**
+     * Fetches all invoices within a specific date range.
+     * Assumes 'invoiceDate' field in Firestore is stored as a Long (milliseconds since epoch).
+     */
+    suspend fun getInvoicesBetweenDates(startDate: Date, endDate: Date): List<Invoice> = withContext(Dispatchers.IO) {
+        try {
+            // Get the time in milliseconds for comparison
+            val startTime = startDate.time
+            // Adjust end time to include the whole day if necessary (often needed for 'less than or equal to' logic)
+            // Example: Set end date to the very end of the selected day
+            val calendar = Calendar.getInstance()
+            calendar.time = endDate
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endTime = calendar.timeInMillis
+
+            Log.d(TAG, "Fetching invoices between ${Date(startTime)} and ${Date(endTime)} (Long: $startTime to $endTime)")
+
+            val snapshot = getUserCollection("invoices")
+                .whereGreaterThanOrEqualTo("invoiceDate", startTime) // Compare Long value
+                .whereLessThanOrEqualTo("invoiceDate", endTime)     // Compare Long value
+                // Optional: Add ordering if needed, e.g., .orderBy("invoiceDate", Query.Direction.ASCENDING)
+                .get()
+                .await()
+
+            val invoices = snapshot.toObjects(Invoice::class.java)
+            Log.d(TAG, "Fetched ${invoices.size} invoices for the date range.")
+            invoices // Return the list
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching invoices between dates (using Long)", e)
+            emptyList() // Return an empty list on error
         }
     }
 

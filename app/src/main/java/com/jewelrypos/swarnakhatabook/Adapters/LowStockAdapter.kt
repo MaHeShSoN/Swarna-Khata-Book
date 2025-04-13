@@ -31,8 +31,8 @@ class LowStockAdapter :
         holder.bind(item)
     }
 
-    fun submitList(list: List<LowStockItem>) {
-        currentItems = list
+    override fun submitList(list: List<LowStockItem>?) {
+        currentItems = list ?: emptyList()
         applyFilter()
     }
 

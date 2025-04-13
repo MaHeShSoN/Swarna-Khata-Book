@@ -81,7 +81,7 @@ class MoreSettingFragment : Fragment() {
                     title = "Reports",
                     subtitle = "View and export business reports and analytics",
                     iconResId = R.drawable.icon_park_outline__sales_report,
-                    badgeText = null
+                    badgeText = if (!isPremium) "PREMIUM" else null  // Add PREMIUM badge for non-premium users
                 ),
                 SettingsItem(
                     id = "invoice_format",
@@ -154,7 +154,7 @@ class MoreSettingFragment : Fragment() {
                                 mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
                             } else {
                                 // Show premium feature dialog
-                                showPremiumFeatureDialog()
+                                showPremiumFeatureDialog("Advanced invoice templates")
                             }
                         }
 
@@ -174,6 +174,15 @@ class MoreSettingFragment : Fragment() {
                             val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
                             mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
                         }
+                        "reports" -> {
+                            if (isPremium) {
+                                val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                                mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
+                            } else {
+                                // Show premium feature dialog
+                                showPremiumFeatureDialog("Business reports")
+                            }
+                        }
                     }
                 }
 
@@ -185,10 +194,10 @@ class MoreSettingFragment : Fragment() {
         }
     }
 
-    private fun showPremiumFeatureDialog() {
+    private fun showPremiumFeatureDialog(featureName: String) {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle("Premium Feature")
-            .setMessage("Advanced invoice templates are only available with a premium subscription. Upgrade now to access all templates and features.")
+            .setMessage("$featureName are only available with a premium subscription. Upgrade now to access all premium features.")
             .setPositiveButton("Upgrade") { _, _ ->
                 startActivity(Intent(requireContext(), UpgradeActivity::class.java))
             }.setNegativeButton("Not Now", null).show()

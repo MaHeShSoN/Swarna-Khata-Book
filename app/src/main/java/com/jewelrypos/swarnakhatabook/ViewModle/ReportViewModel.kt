@@ -10,9 +10,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.CustomerSalesData
 import com.jewelrypos.swarnakhatabook.DataClasses.GstReportItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.InventoryValueItem
+import com.jewelrypos.swarnakhatabook.DataClasses.ItemSalesData
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.LowStockItem
 import com.jewelrypos.swarnakhatabook.DataClasses.SalesReportData
@@ -26,8 +28,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 
 class ReportViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -54,8 +58,8 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     val errorMessage: LiveData<String?> = _errorMessage
 
     // Sales Report Data
-    private val _salesReportData = MutableLiveData<SalesReportData>()
-    val salesReportData: LiveData<SalesReportData> = _salesReportData
+    private val _salesReportData = MutableLiveData<SalesReportData?>()
+    val salesReportData: LiveData<SalesReportData?> = _salesReportData
 
     // Inventory Report Data
     private val _inventoryItems = MutableLiveData<List<InventoryValueItem>>()
@@ -81,7 +85,8 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     val selectedCustomer: LiveData<Customer?> = _selectedCustomer
 
     // Customer statement data
-    private val _customerTransactions = MutableLiveData<List<Any>>() // Will contain invoices and payments
+    private val _customerTransactions =
+        MutableLiveData<List<Any>>() // Will contain invoices and payments
     val customerTransactions: LiveData<List<Any>> = _customerTransactions
 
     private val _openingBalance = MutableLiveData<Double>(0.0)
@@ -89,6 +94,12 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _closingBalance = MutableLiveData<Double>(0.0)
     val closingBalance: LiveData<Double> = _closingBalance
+
+    private val _topSellingItems = MutableLiveData<List<ItemSalesData>?>()
+    val topSellingItems: LiveData<List<ItemSalesData>?> = _topSellingItems
+
+    private val _topCustomers = MutableLiveData<List<CustomerSalesData>?>()
+    val topCustomers: LiveData<List<CustomerSalesData>?> = _topCustomers
 
     init {
         invoiceRepository = InvoiceRepository(firestore, auth)
@@ -114,12 +125,14 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
         // Load customers for selection
         loadCustomers()
+
+        loadSalesReport()
     }
 
     fun setDateRange(start: Date, end: Date) {
         _startDate.value = start
         _endDate.value = end
-
+        loadSalesReport()
         // Refresh data for currently selected report if any
     }
 
@@ -133,12 +146,133 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         _customerTransactions.value = emptyList()
     }
 
+    fun loadSalesReport() {
+        val start = _startDate.value ?: return // Need dates to load
+        val end = _endDate.value ?: return
+
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                // FIXME: Replace 'getInvoicesBetweenDates' with the actual method from your InvoiceRepository
+                val invoices = invoiceRepository.getInvoicesBetweenDates(start, end)
+
+                if (invoices.isNullOrEmpty()) {
+                    _salesReportData.postValue(null)
+                    _topSellingItems.postValue(emptyList())
+                    _topCustomers.postValue(emptyList())
+                    // _errorMessage.postValue("No sales data found for the selected period.") // Optional message
+                } else {
+                    // --- Calculate Sales Report Data ---
+                    val totalSales = invoices.sumOf { it.totalAmount }
+                    val totalPaid = invoices.sumOf { it.paidAmount }
+                    val unpaidAmount = totalSales - totalPaid
+                    val collectionRate = if (totalSales > 0) (totalPaid / totalSales) * 100 else 0.0
+                    val invoiceCount = invoices.size
+
+                    // Calculate Sales by Category
+                    val salesByCategory = invoices.flatMap { it.items }
+                        .groupBy { it.itemDetails?.category ?: "Uncategorized" } // Assumes JewelleryItem has category
+                        .mapValues { entry -> entry.value.sumOf { item -> item.price * item.quantity } }
+                        .map { SalesByCategoryItem(it.key, it.value) }
+
+                    // --- Calculate Sales by Customer Type ---
+                    // FIXME: This calculation cannot be done directly as Invoice object lacks customerType.
+                    // Requires fetching Customer objects based on customerId or removing this metric.
+                    // Commenting out for now:
+                    /*
+                    val salesByCustomerType = invoices
+                        // Needs logic to fetch customer type based on it.customerId
+                        .groupBy { fetchedCustomerTypeMap[it.customerId] ?: "Unknown" }
+                        .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
+                        .map { SalesByCustomerTypeItem(it.key, it.value) }
+                    */
+                    // Assigning empty list temporarily
+                    val salesByCustomerType = emptyList<SalesByCustomerTypeItem>()
+
+
+                    // Calculate Sales by Date
+                    // Assuming Invoice has 'invoiceDate: Long'
+                    val salesByDate = invoices
+                        .groupBy { invoice ->
+                            // Format Long timestamp to a date string (e.g., "dd MMM yyyy")
+                            val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                            dateFormat.format(Date(invoice.invoiceDate))
+                        }
+                        .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
+                        .map { SalesByDateItem(it.key, it.value) }
+                        .sortedBy { it.date } // Sort by date string (basic sort)
+
+
+                    val reportData = SalesReportData(
+                        totalSales = totalSales,
+                        paidAmount = totalPaid,
+                        unpaidAmount = unpaidAmount,
+                        collectionRate = collectionRate,
+                        invoiceCount = invoiceCount,
+                        salesByCategory = salesByCategory,
+                        salesByCustomerType = salesByCustomerType, // Using empty list for now
+                        salesByDate = salesByDate
+                    )
+                    _salesReportData.postValue(reportData)
+
+
+                    // --- Calculate Top Selling Items ---
+                    // Assuming InvoiceItem has 'itemDetails: JewelleryItem' and JewelleryItem has 'displayName: String'
+                    val itemSales = invoices.flatMap { it.items }
+                        .groupBy { it.itemDetails?.displayName ?: "Unknown Item" } // Group by display name
+                        .map { entry ->
+                            val name = entry.key
+                            val quantity = entry.value.sumOf { item -> item.quantity }
+                            val revenue = entry.value.sumOf { item -> item.price * item.quantity }
+                            ItemSalesData(name, quantity, revenue)
+                        }
+                        .sortedByDescending { it.totalRevenue }
+                        .take(5)
+                    _topSellingItems.postValue(itemSales)
+
+
+                    // --- Calculate Top Customers (Corrected) ---
+                    // Group by customerId first
+                    val customerSales = invoices
+                        .filter { it.customerId.isNotBlank() } // Ensure customerId exists
+                        .groupBy { it.customerId } // Group by customer ID string
+                        .map { entry ->
+                            val customerId = entry.key
+                            val customerInvoices = entry.value // List of invoices for this customer
+                            val totalValue = customerInvoices.sumOf { inv -> inv.totalAmount }
+                            val count = customerInvoices.size
+                            // Get customer name from the first invoice (assuming it's consistent)
+                            val name = customerInvoices.firstOrNull()?.customerName?.trim() ?: customerId
+
+                            CustomerSalesData(name.ifBlank { customerId }, totalValue, count) // Use ID if name is blank
+                        }
+                        .sortedByDescending { it.totalPurchaseValue } // Sort by purchase value
+                        .take(5) // Take top 5
+                    _topCustomers.postValue(customerSales)
+
+                    _errorMessage.postValue(null) // Clear previous error
+                }
+
+            } catch (e: Exception) {
+                _errorMessage.postValue("Error loading sales report: ${e.localizedMessage}")
+                _salesReportData.postValue(null)
+                _topSellingItems.postValue(null)
+                _topCustomers.postValue(null)
+                Log.e("ReportViewModel", "Error loading sales report", e)
+            } finally {
+                _isLoading.postValue(false)
+            }
+        }
+    }
     // Load customers for customer statement selection
     fun loadCustomers() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                customerRepository.fetchCustomersPaginated(loadNextPage = false, source = Source.DEFAULT).fold(
+                customerRepository.fetchCustomersPaginated(
+                    loadNextPage = false,
+                    source = Source.DEFAULT
+                ).fold(
                     onSuccess = { customers ->
                         _customers.value = customers
                         _isLoading.value = false
@@ -240,7 +374,8 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
                 // Process customer type breakdown
                 val customerType = customerMap[invoice.customerId]?.customerType ?: "Consumer"
-                salesByCustomerType[customerType] = (salesByCustomerType[customerType] ?: 0.0) + invoice.totalAmount
+                salesByCustomerType[customerType] =
+                    (salesByCustomerType[customerType] ?: 0.0) + invoice.totalAmount
 
                 // Process date for trends
                 // Group by day for simplicity
@@ -265,12 +400,14 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             }.sortedByDescending { it.amount }
 
             val salesByDateList = salesByDate.map { (date, amount) ->
-                SalesByDateItem(Date(date), amount)
+                SalesByDateItem(date.toString(), amount)
             }.sortedBy { it.date }
 
             SalesReportData(
                 totalSales = totalSales,
-                totalPaid = totalPaid,
+                paidAmount = totalPaid,
+                unpaidAmount = totalSales - totalPaid,
+                collectionRate = if (totalSales > 0) (totalPaid / totalSales) * 100 else 0.0,
                 invoiceCount = invoiceCount,
                 salesByCategory = salesByCategoryList,
                 salesByCustomerType = salesByCustomerTypeList,
@@ -426,7 +563,8 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 // Group invoice items by tax rate
-                val taxRateGroups = mutableMapOf<Double, MutableList<Pair<Double, Double>>>() // taxRate -> List of (taxableAmount, taxAmount)
+                val taxRateGroups =
+                    mutableMapOf<Double, MutableList<Pair<Double, Double>>>() // taxRate -> List of (taxableAmount, taxAmount)
 
                 invoices.forEach { invoice ->
                     invoice.items.forEach { invoiceItem ->
@@ -436,7 +574,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
                         // Calculate taxable amount (price before tax)
                         val taxRate = item.taxRate
-                        val taxableAmount = (itemPrice * quantity) / (1 + taxRate/100)
+                        val taxableAmount = (itemPrice * quantity) / (1 + taxRate / 100)
                         val taxAmount = itemPrice * quantity - taxableAmount
 
                         val taxRateList = taxRateGroups.getOrPut(taxRate) { mutableListOf() }
@@ -454,7 +592,6 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                         taxableAmount = totalTaxableAmount,
                         cgst = totalTaxAmount / 2, // Assuming equal split between CGST and SGST
                         sgst = totalTaxAmount / 2,
-                        igst = 0.0, // Set IGST to 0 for now
                         totalTax = totalTaxAmount
                     )
                 }.sortedBy { it.taxRate }
@@ -572,7 +709,11 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 val transactionsWithBalance = allTransactions.map { invoice ->
                     val unpaidAmount = invoice.totalAmount - invoice.paidAmount
                     // Apply change based on customer balance type
-                    runningBalance += if (customer.balanceType.equals("Credit", ignoreCase = true)) {
+                    runningBalance += if (customer.balanceType.equals(
+                            "Credit",
+                            ignoreCase = true
+                        )
+                    ) {
                         unpaidAmount  // For Credit customers, unpaid amounts increase the balance
                     } else {
                         -unpaidAmount // For Debit customers, unpaid amounts decrease the balance

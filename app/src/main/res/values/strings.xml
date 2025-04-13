@@ -21,4 +21,76 @@
     <string name="credit_limit_usage">Credit Limit Usage</string>
     <string name="edit_notes">Edit</string>
     <string name="save_notes">Save</string>
+    <string name="date_range_format">%1$s to %2$s</string>
+    <string name="reports">Reports</string>
+    <string name="sales_report">Sales Report</string>
+    <string name="inventory_valuation">Inventory Valuation</string>
+    <string name="gst_report">GST Report</string>
+    <string name="low_stock_report">Low Stock Report</string>
+    <string name="customer_statement">Customer Statement</string>
+    <string name="export_pdf">Export PDF</string>
+    <string name="select_customer">Select Customer</string>
+    <string name="no_customer_selected">No Customer Selected</string>
+    <string name="no_transactions">No Transactions</string>
+    <string name="no_low_stock_items">No Low Stock Items</string>
+    <string name="customer_details">Customer Details</string>
+    <string name="transaction_history">Transaction History</string>
+    <string name="balance_summary">Balance Summary</string>
+    <string name="opening_balance">Opening Balance</string>
+    <string name="closing_balance">Closing Balance</string>
+    <string name="sales_report_title">Sales Report</string>
+    <string name="action_select_date_range">Select Date Range</string>
+    <string name="action_export_pdf">Export PDF</string>
+    <string name="date_range_icon_desc">Date range icon</string>
+    <string name="change_date_range_desc">Change date range</string>
+    <string name="select_a_date_range">Select a date range</string>
+    <string name="select_date_range_title">Select Date Range</string>
+    <string name="sales_summary_title">Sales Summary</string>
+    <string name="total_sales_label">Total Sales</string>
+    <string name="total_paid_label">Total Paid</string>
+    <string name="total_unpaid_label">Total Unpaid</string>
+    <string name="collection_rate_label">Collection Rate</string>
+    <string name="invoice_count_label">Invoice Count</string>
+
+    <string name="sales_trend_by_date_title">Sales Trend by Date</string>
+    <string name="no_sales_trend_data_available">No sales trend data available for this period.</string>
+    <string name="sales_by_category_title">By Category</string>
+    <string name="no_category_data_available">No category data available.</string>
+    <string name="sales_by_customer_type_title">By Customer Type</string>
+    <string name="no_customer_type_data_available">No customer type data available.</string>
+    <string name="top_selling_items_title">Top Selling Items (by Revenue)</string>
+    <string name="no_item_data_available">No item data available for this period.</string>
+
+    <string name="top_customers_title">Top Customers (by Revenue)</string>
+    <string name="no_customer_data_available">No customer data available for this period.</string>
+
+    <string name="pdf_export_not_implemented_sales">PDF Export not yet implemented for Sales Report.</string>
+
+
+    <string name="pdf_sales_report_title">Sales Report</string>
+    <string name="pdf_period_label">Period:</string>
+    <string name="pdf_sales_summary_header">Sales Summary</string>
+    <string name="pdf_total_sales_label">Total Sales:</string>
+    <string name="pdf_total_paid_label">Total Paid:</string>
+    <string name="pdf_total_unpaid_label">Total Unpaid:</string>
+    <string name="pdf_collection_rate_label">Collection Rate:</string>
+    <string name="pdf_invoice_count_label">Invoice Count:</string>
+    <string name="pdf_top_items_header">Top Selling Items</string>
+    <string name="pdf_no_top_items">No top selling item data available.</string>
+    <string name="pdf_top_customers_header">Top Customers</string>
+    <string name="pdf_no_top_customers">No top customer data available.</string>
+
+    <string name="share_report_pdf_title">Share Report PDF</string>
+    <string name="error_no_app_to_share_pdf">No app found to share PDF</string>
+    <string name="error_sharing_pdf">Error sharing PDF</string>
+    <string name="error_no_app_to_open_pdf">No app found to open PDF</string>
+    <string name="error_opening_pdf">Error opening PDF</string>
+
+    <string name="error_report_data_not_loaded">Report data not loaded.</string>
+    <string name="error_date_range_not_set">Please select a date range first.</string>
+    <string name="error_list_data_not_loaded">Report list data not loaded.</string>
+    <string name="report_exported_success">Report exported successfully.</string>
+    <string name="error_exporting_report">Error exporting report</string>
+
+
 </resources>

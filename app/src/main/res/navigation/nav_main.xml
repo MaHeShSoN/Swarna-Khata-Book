@@ -239,7 +239,23 @@
         android:id="@+id/reportsFragment"
         android:name="com.jewelrypos.swarnakhatabook.ReportsFragment"
         android:label="fragment_reports"
-        tools:layout="@layout/fragment_reports" />
+        tools:layout="@layout/fragment_reports" >
+        <action
+            android:id="@+id/action_reportsFragment_to_salesReportFragment"
+            app:destination="@id/salesReportFragment" />
+        <action
+            android:id="@+id/action_reportsFragment_to_lowStockReportFragment"
+            app:destination="@id/lowStockReportFragment" />
+        <action
+            android:id="@+id/action_reportsFragment_to_gstReportFragment"
+            app:destination="@id/gstReportFragment" />
+        <action
+            android:id="@+id/action_reportsFragment_to_inventoryReportFragment"
+            app:destination="@id/inventoryReportFragment" />
+        <action
+            android:id="@+id/action_reportsFragment_to_customerStatementFragment"
+            app:destination="@id/customerStatementFragment" />
+    </fragment>
     <fragment
         android:id="@+id/salesReportFragment"
         android:name="com.jewelrypos.swarnakhatabook.SalesReportFragment"

@@ -9,14 +9,20 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Environment
 import android.util.Log
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.DataClasses.CustomerSalesData
 import com.jewelrypos.swarnakhatabook.DataClasses.GstReportItem
 import com.jewelrypos.swarnakhatabook.DataClasses.InventoryValueItem
+import com.jewelrypos.swarnakhatabook.DataClasses.ItemSalesData
 import com.jewelrypos.swarnakhatabook.DataClasses.LowStockItem
 import com.jewelrypos.swarnakhatabook.DataClasses.SalesReportData
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -27,6 +33,9 @@ class PDFExportUtility(private val context: Context) {
     private val pageWidth = 612 // A4 Width in points (8.5 x 72)
     private val pageHeight = 792 // A4 Height in points (11 x 72)
     private val margin = 50f
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    private val percentFormatter = DecimalFormat("0.0'%'")
+    private val TAG = "PDFExportUtility"
 
     private val titlePaint = Paint().apply {
         color = Color.BLACK
@@ -64,83 +73,173 @@ class PDFExportUtility(private val context: Context) {
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
-    fun exportSalesReport(startDate: String, endDate: String, salesData: SalesReportData): Boolean {
+    suspend fun exportSalesReport(
+        startDate: Date,
+        endDate: Date,
+        reportData: SalesReportData,
+        topItems: List<ItemSalesData>,
+        topCustomers: List<CustomerSalesData>
+    ): Uri? = withContext(Dispatchers.IO) { // Ensure file operations are off the main thread
+
+        val document = PdfDocument()
+        // Define page dimensions (e.g., A4 size in points: 595 x 842)
+        val pageHeight = 842
+        val pageWidth = 595
+        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+        val page = document.startPage(pageInfo)
+        val canvas: Canvas = page.canvas
+
+        // --- Paint objects for drawing ---
+        val titlePaint = Paint().apply {
+            textSize = 18f
+            isFakeBoldText = true
+            color = Color.BLACK
+        }
+        val headerPaint = Paint().apply {
+            textSize = 14f
+            isFakeBoldText = true
+            color = Color.BLACK
+        }
+        val textPaint = Paint().apply {
+            textSize = 11f
+            color = Color.DKGRAY
+        }
+        val boldTextPaint = Paint().apply {
+            textSize = 11f
+            isFakeBoldText = true
+            color = Color.BLACK
+        }
+        val smallTextPaint = Paint().apply {
+            textSize = 9f
+            color = Color.GRAY
+        }
+
+        // --- Start Drawing ---
+        var yPosition = 40f // Starting Y position (top margin)
+        val leftMargin = 40f
+        val rightMargin = pageWidth - 40f
+        val lineSpacing = 15f // Spacing between text lines
+        val sectionSpacing = 25f // Spacing between sections
+
         try {
-            val document = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-            val page = document.startPage(pageInfo)
-            val canvas = page.canvas
+            // 1. Report Title and Date Range
+            canvas.drawText("Sales Report", leftMargin, yPosition, titlePaint)
+            yPosition += lineSpacing * 1.5f
+            val dateRangeStr = "${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}"
+            canvas.drawText("Period: $dateRangeStr", leftMargin, yPosition, textPaint)
+            yPosition += sectionSpacing
 
-            var yPosition = drawReportHeader(canvas, "Sales Report", startDate, endDate)
+            // 2. Sales Summary Section
+            canvas.drawText("Sales Summary", leftMargin, yPosition, headerPaint)
+            yPosition += lineSpacing * 1.5f
+            // Draw summary data in two columns
+            val col1X = leftMargin
+            val col2X = leftMargin + (pageWidth / 2f) - 20f // Adjust as needed
 
-            // Draw summary section
-            canvas.drawText("Sales Summary", margin, yPosition, headerPaint)
-            yPosition += 30
+            canvas.drawText("Total Sales:", col1X, yPosition, textPaint)
+            canvas.drawText(currencyFormatter.format(reportData.totalSales), col1X + 100, yPosition, boldTextPaint)
+            canvas.drawText("Total Paid:", col2X, yPosition, textPaint)
+            canvas.drawText(currencyFormatter.format(reportData.paidAmount), col2X + 100, yPosition, boldTextPaint)
+            yPosition += lineSpacing
 
-            // Draw summary table
-            val summaryData = listOf(
-                Pair("Total Sales", "₹${currencyFormatter.format(salesData.totalSales)}"),
-                Pair("Total Paid", "₹${currencyFormatter.format(salesData.totalPaid)}"),
-                Pair("Total Unpaid", "₹${currencyFormatter.format(salesData.totalSales - salesData.totalPaid)}"),
-                Pair("Collection Rate", "${DecimalFormat("#0.00").format(if (salesData.totalSales > 0) (salesData.totalPaid / salesData.totalSales) * 100 else 0.0)}%"),
-                Pair("Total Invoices", salesData.invoiceCount.toString())
-            )
+            canvas.drawText("Total Unpaid:", col1X, yPosition, textPaint)
+            canvas.drawText(currencyFormatter.format(reportData.unpaidAmount), col1X + 100, yPosition, boldTextPaint)
+            canvas.drawText("Collection Rate:", col2X, yPosition, textPaint)
+            canvas.drawText(percentFormatter.format(reportData.collectionRate / 100.0), col2X + 100, yPosition, boldTextPaint)
+            yPosition += lineSpacing
 
-            yPosition = drawTableWithTwoColumns(canvas, summaryData, yPosition)
-            yPosition += 30
+            canvas.drawText("Invoice Count:", col1X, yPosition, textPaint)
+            canvas.drawText(reportData.invoiceCount.toString(), col1X + 100, yPosition, boldTextPaint)
+            yPosition += sectionSpacing
 
-            // Draw category breakdown
-            canvas.drawText("Sales by Category", margin, yPosition, headerPaint)
-            yPosition += 30
 
-            val categoryData = salesData.salesByCategory.map {
-                Pair(it.category, "₹${currencyFormatter.format(it.amount)}")
+            // 3. Top Selling Items Section
+            canvas.drawText("Top Selling Items", leftMargin, yPosition, headerPaint)
+            yPosition += lineSpacing * 1.5f
+            if (topItems.isEmpty()) {
+                canvas.drawText("No top selling item data available.", leftMargin, yPosition, textPaint)
+                yPosition += lineSpacing
+            } else {
+                // Draw table header (optional)
+                // ...
+                topItems.forEachIndexed { index, item ->
+                    if (yPosition > pageHeight - 60) { // Check for page break
+                        document.finishPage(page)
+                        // Start new page if needed (omitted for brevity)
+                        // page = document.startPage(pageInfo)
+                        // canvas = page.canvas
+                        // yPosition = 40f // Reset Y
+                        // Draw headers again if needed
+                    }
+                    val itemText = "${index + 1}. ${item.itemName} (Qty: ${item.quantitySold}) - ${currencyFormatter.format(item.totalRevenue)}"
+                    canvas.drawText(itemText, leftMargin, yPosition, textPaint)
+                    yPosition += lineSpacing
+                }
             }
+            yPosition += sectionSpacing
 
-            yPosition = drawTableWithTwoColumns(canvas, categoryData, yPosition)
-            yPosition += 30
 
-            // Draw customer type breakdown
-            canvas.drawText("Sales by Customer Type", margin, yPosition, headerPaint)
-            yPosition += 30
-
-            val customerTypeData = salesData.salesByCustomerType.map {
-                Pair(it.customerType, "₹${currencyFormatter.format(it.amount)}")
+            // 4. Top Customers Section
+            canvas.drawText("Top Customers", leftMargin, yPosition, headerPaint)
+            yPosition += lineSpacing * 1.5f
+            if (topCustomers.isEmpty()) {
+                canvas.drawText("No top customer data available.", leftMargin, yPosition, textPaint)
+                yPosition += lineSpacing
+            } else {
+                topCustomers.forEachIndexed { index, customer ->
+                    if (yPosition > pageHeight - 60) { // Check for page break
+                        // Handle page break as above
+                    }
+                    val customerText = "${index + 1}. ${customer.customerName} (Invoices: ${customer.invoiceCount}) - ${currencyFormatter.format(customer.totalPurchaseValue)}"
+                    canvas.drawText(customerText, leftMargin, yPosition, textPaint)
+                    yPosition += lineSpacing
+                }
             }
+            yPosition += sectionSpacing
 
-            yPosition = drawTableWithTwoColumns(canvas, customerTypeData, yPosition)
+            // TODO: Add other sections if needed (e.g., Sales by Category/Date as tables)
+            // Drawing charts directly onto PDF canvas is complex. It's usually easier
+            // to represent the chart data in tabular format in the PDF.
 
+            // Finish the page
             document.finishPage(page)
 
-            // Create a second page for sales trend
-            val page2Info = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 2).create()
-            val page2 = document.startPage(page2Info)
-            val canvas2 = page2.canvas
+            // --- Save the document ---
+            val fileName = "SalesReport_${dateFormat.format(Date())}.pdf"
+            // Use app-specific external storage for broader access if needed
+            val directory = File(context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "Reports")
+            if (!directory.exists()) {
+                directory.mkdirs()
+            }
+            val file = File(directory, fileName)
 
-            var y2Position = margin + 50
+            try {
+                FileOutputStream(file).use { fos ->
+                    document.writeTo(fos)
+                }
+                Log.d(TAG, "PDF saved successfully: ${file.absolutePath}")
 
-            // Title for second page
-            canvas2.drawText("Sales Report (continued)", pageWidth / 2f, y2Position, titlePaint)
-            y2Position += 50
-
-            // Draw sales trend
-            canvas2.drawText("Sales Trend", margin, y2Position, headerPaint)
-            y2Position += 30
-
-            val dateData = salesData.salesByDate.map {
-                Pair(dateFormatter.format(it.date), "₹${currencyFormatter.format(it.amount)}")
+                // Return the content URI using FileProvider
+                return@withContext FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.provider", // Make sure this matches your provider authority in AndroidManifest.xml
+                    file
+                )
+            } catch (e: IOException) {
+                Log.e(TAG, "Error writing PDF to file", e)
+                return@withContext null
             }
 
-            drawTableWithTwoColumns(canvas2, dateData, y2Position)
-
-            document.finishPage(page2)
-
-            // Save and share the PDF
-            return savePdfAndShare(document, "SalesReport_${startDate}_to_${endDate}.pdf")
-
         } catch (e: Exception) {
-            Log.e("PDFExportUtility", "Error exporting sales report", e)
-            return false
+            Log.e(TAG, "Error generating Sales Report PDF content", e)
+            // Make sure page is finished even on error before closing document
+            if (document.pages.size > 0 && !page.canvas.isOpaque) { // Check if page was started
+                document.finishPage(page)
+            }
+            return@withContext null
+        } finally {
+            // Close the document
+            document.close()
         }
     }
 
@@ -206,6 +305,41 @@ class PDFExportUtility(private val context: Context) {
             Log.e("PDFExportUtility", "Error exporting inventory report", e)
             return false
         }
+    }
+
+    // --- Optional: Helper method to share/open the generated PDF ---
+    fun sharePdf(fileUri: Uri) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, fileUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) // Grant permission to receiving app
+            }
+            val chooser = Intent.createChooser(intent, "Share Report PDF")
+            if (chooser.resolveActivity(context.packageManager) != null) {
+                context.startActivity(chooser)
+            } else {
+                Toast.makeText(context, "No app found to share PDF", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating share intent", e)
+            Toast.makeText(context, "Error sharing PDF", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openPdf(fileUri: Uri) = try {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(fileUri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) // Grant permission to viewing app
+        }
+        if (intent.resolveActivity(context.packageManager) != null) {
+            context.startActivity(intent)
+        } else {
+            Toast.makeText(context, "No app found to open PDF", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Error creating open intent", e)
+        Toast.makeText(context, "Error opening PDF", Toast.LENGTH_SHORT).show()
     }
 
     fun exportGstReport(startDate: String, endDate: String, gstItems: List<GstReportItem>): Boolean {

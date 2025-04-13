@@ -1,10 +1,10 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.os.Bundle
+import android.util.Log // Import Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -18,6 +18,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerStatementBindi
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerListBottomSheet // Import the BottomSheet
 
 class CustomerStatementFragment : Fragment() {
 
@@ -27,7 +28,7 @@ class CustomerStatementFragment : Fragment() {
     private lateinit var viewModel: ReportViewModel
     private lateinit var adapter: CustomerStatementAdapter
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
-    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) // Line 31 (Corrected)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -83,9 +84,13 @@ class CustomerStatementFragment : Fragment() {
             adapter = this@CustomerStatementFragment.adapter
         }
 
-        // Setup customer selection
+        // Setup customer selection button
         binding.selectCustomerButton.setOnClickListener {
-            showCustomerSelectionDialog()
+            showCustomerSelectionBottomSheet() // Changed to use BottomSheet
+        }
+        // Setup change customer button (if needed)
+        binding.changeCustomerButton.setOnClickListener {
+            showCustomerSelectionBottomSheet() // Changed to use BottomSheet
         }
     }
 
@@ -101,13 +106,12 @@ class CustomerStatementFragment : Fragment() {
             }
         }
 
-        viewModel.customers.observe(viewLifecycleOwner) { customers ->
-            // Update customer dropdown adapter if customers list changes
-            setupCustomerDropdown(customers)
-        }
+        // No need to observe customers here for the dropdown anymore
 
         viewModel.selectedCustomer.observe(viewLifecycleOwner) { customer ->
             updateSelectedCustomerUI(customer)
+            // Load statement only if a customer is actually selected
+            customer?.let { viewModel.loadCustomerStatement(it) }
         }
 
         viewModel.customerTransactions.observe(viewLifecycleOwner) { transactions ->
@@ -157,36 +161,19 @@ class CustomerStatementFragment : Fragment() {
         }
     }
 
-    private fun setupCustomerDropdown(customers: List<Customer>) {
-        // This is used to populate the customer selection dialog
-        binding.noCustomerSelectedLayout.visibility = View.VISIBLE
-        binding.customerDetailsLayout.visibility = View.GONE
-        binding.statementLayout.visibility = View.GONE
-    }
-
-    private fun showCustomerSelectionDialog() {
-        val customers = viewModel.customers.value ?: return
-        if (customers.isEmpty()) {
-            Toast.makeText(context, "No customers available", Toast.LENGTH_SHORT).show()
-            return
+    // **MODIFIED FUNCTION**
+    private fun showCustomerSelectionBottomSheet() {
+        val customerListBottomSheet = CustomerListBottomSheet.newInstance()
+        customerListBottomSheet.setOnCustomerSelectedListener { selectedCustomer ->
+            // This lambda is called when a customer is selected in the bottom sheet
+            Log.d("CustomerStatement", "Customer selected: ${selectedCustomer.firstName}")
+            viewModel.selectCustomer(selectedCustomer)
+            // Bottom sheet dismisses itself after selection (handled within CustomerListBottomSheet)
         }
-
-        // Create customer names list for the dialog
-        val customerNames = customers.map { "${it.firstName} ${it.lastName}" }.toTypedArray()
-
-        // Show dialog with customer names
-        val builder = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-        builder.setTitle("Select Customer")
-            .setItems(customerNames) { _, which ->
-                // Select the customer
-                val selectedCustomer = customers[which]
-                viewModel.selectCustomer(selectedCustomer)
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-            .show()
+        // Use parentFragmentManager as this is a fragment showing another fragment (bottom sheet)
+        customerListBottomSheet.show(parentFragmentManager, CustomerListBottomSheet.TAG)
     }
+
 
     private fun updateSelectedCustomerUI(customer: Customer?) {
         if (customer == null) {
@@ -209,10 +196,16 @@ class CustomerStatementFragment : Fragment() {
     }
 
     private fun exportReportToPdf() {
-        val customer = viewModel.selectedCustomer.value ?: return
-        val transactions = viewModel.customerTransactions.value ?: return
-        val openingBalance = viewModel.openingBalance.value ?: 0.0
-        val closingBalance = viewModel.closingBalance.value ?: 0.0
+        val customer = viewModel.selectedCustomer.value
+        val transactions = viewModel.customerTransactions.value
+        val openingBalance = viewModel.openingBalance.value
+        val closingBalance = viewModel.closingBalance.value
+
+        if (customer == null || transactions == null || openingBalance == null || closingBalance == null) {
+            Toast.makeText(requireContext(), "Please select a customer first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
 
         try {
             val startDate = viewModel.startDate.value?.let { dateFormat.format(it) } ?: ""

@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
-            app:navigationIcon="@drawable/baseline_arrow_back_24"
+            app:navigationIcon="@drawable/famicons__arrow_back"
             app:title="Reports"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
@@ -38,7 +38,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        app:cardElevation="2dp"
+        app:cardBackgroundColor="@color/my_light_surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="3dp"
+        app:strokeColor="@color/my_light_outline"
+        app:strokeWidth="1dp"
         app:layout_constraintTop_toBottomOf="@+id/progressBar">
 
         <LinearLayout
@@ -51,18 +55,19 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Date Range"
+                android:fontFamily="@font/librebaskervilleregular"
                 android:textColor="@color/my_light_on_surface"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:textSize="18sp" />
 
             <TextView
                 android:id="@+id/dateRangeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:drawableEnd="@drawable/material_symbols__calendar_month_outline_rounded"
+                android:drawableEnd="@drawable/material_symbols__date_range_rounded"
                 android:drawablePadding="8dp"
-                android:textColor="@color/my_light_on_surface"
+                android:fontFamily="@font/montserratregular"
+                android:textColor="@color/my_light_on_background"
                 android:textSize="14sp"
                 tools:text="01 Mar 2023 - 31 Mar 2023" />
 
@@ -76,9 +81,9 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="Select Report Type"
+        android:fontFamily="@font/librebaskervilleregular"
         android:textColor="@color/my_light_on_surface"
-        android:textSize="16sp"
-        android:textStyle="bold"
+        android:textSize="18sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/dateRangeCard" />
 
@@ -88,7 +93,7 @@
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:clipToPadding="false"
-        android:padding="8dp"
+        android:paddingVertical="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/reportsLabel"
         tools:listitem="@layout/item_report_type" />

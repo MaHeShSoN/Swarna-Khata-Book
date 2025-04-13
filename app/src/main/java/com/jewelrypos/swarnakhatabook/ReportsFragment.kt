@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.jewelrypos.swarnakhatabook.Adapters.ReportTypeAdapter
@@ -14,7 +15,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.ReportType
 import com.jewelrypos.swarnakhatabook.Factorys.ReportViewModelFactory
 import com.jewelrypos.swarnakhatabook.ViewModle.ReportViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentReportsBinding
-import com.jewelrypos.swarnakhatabook.utils.DateRangeHelper
+
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -83,31 +84,31 @@ class ReportsFragment : Fragment() {
                 id = "sales_report",
                 title = "Sales Report",
                 description = "View sales summary by product type, customer type, and time period",
-                iconResId = R.drawable.ic_sales_report
+                iconResId = R.drawable.icon_park_outline__sales_report
             ),
             ReportType(
                 id = "inventory_valuation",
                 title = "Inventory Valuation",
                 description = "Current inventory value and stock levels by product category",
-                iconResId = R.drawable.ic_inventory_report
+                iconResId = R.drawable.mingcute__inventory_fill
             ),
             ReportType(
                 id = "customer_statement",
                 title = "Customer Account Statement",
                 description = "Detailed transaction history for individual customers",
-                iconResId = R.drawable.ic_customer_report
+                iconResId = R.drawable.line_md__person_twotone
             ),
             ReportType(
                 id = "gst_report",
                 title = "GST Report",
                 description = "Summary of GST collected for tax filing",
-                iconResId = R.drawable.ic_tax_report
+                iconResId = R.drawable.hugeicons__taxes
             ),
             ReportType(
                 id = "low_stock",
                 title = "Low Stock Report",
                 description = "Items below reorder threshold that need attention",
-                iconResId = R.drawable.ic_low_stock_report
+                iconResId = R.drawable.basil__box_solid
             )
         )
 
@@ -154,10 +155,12 @@ class ReportsFragment : Fragment() {
     private fun showDateRangePicker() {
         val dateRangePicker = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText("Select Date Range")
-            .setSelection(androidx.core.util.Pair(
-                viewModel.startDate.value!!.time,
-                viewModel.endDate.value!!.time
-            ))
+            .setSelection(
+                androidx.core.util.Pair(
+                    viewModel.startDate.value!!.time,
+                    viewModel.endDate.value!!.time
+                )
+            )
             .build()
 
         dateRangePicker.addOnPositiveButtonClickListener { selection ->
@@ -188,43 +191,24 @@ class ReportsFragment : Fragment() {
     }
 
     private fun navigateToSalesReport() {
-        val fragment = SalesReportFragment()
-        val transaction = parentFragmentManager.beginTransaction()
-        transaction.replace(R.id.inner_nav_host_fragment, fragment)
-        transaction.addToBackStack(null)
-        transaction.commit()
+        findNavController().navigate(R.id.action_reportsFragment_to_salesReportFragment)
     }
 
     private fun navigateToInventoryReport() {
-        val fragment = InventoryReportFragment()
-        val transaction = parentFragmentManager.beginTransaction()
-        transaction.replace(R.id.inner_nav_host_fragment, fragment)
-        transaction.addToBackStack(null)
-        transaction.commit()
+        findNavController().navigate(R.id.action_reportsFragment_to_inventoryReportFragment)
+
     }
 
     private fun navigateToCustomerStatementReport() {
-        val fragment = CustomerStatementFragment()
-        val transaction = parentFragmentManager.beginTransaction()
-        transaction.replace(R.id.inner_nav_host_fragment, fragment)
-        transaction.addToBackStack(null)
-        transaction.commit()
+        findNavController().navigate(R.id.action_reportsFragment_to_customerStatementFragment)
     }
 
     private fun navigateToGstReport() {
-        val fragment = GstReportFragment()
-        val transaction = parentFragmentManager.beginTransaction()
-        transaction.replace(R.id.inner_nav_host_fragment, fragment)
-        transaction.addToBackStack(null)
-        transaction.commit()
+        findNavController().navigate(R.id.action_reportsFragment_to_gstReportFragment)
     }
 
     private fun navigateToLowStockReport() {
-        val fragment = LowStockReportFragment()
-        val transaction = parentFragmentManager.beginTransaction()
-        transaction.replace(R.id.inner_nav_host_fragment, fragment)
-        transaction.addToBackStack(null)
-        transaction.commit()
+        findNavController().navigate(R.id.action_reportsFragment_to_lowStockReportFragment)
     }
 
     override fun onDestroyView() {
