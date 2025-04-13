@@ -7,9 +7,13 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentUpdateSettingsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Fragment for managing app update settings
@@ -56,13 +60,17 @@ class UpdateSettingsFragment : Fragment() {
 
         // Save preference when changed
         binding.switchAutoCheckUpdates.setOnCheckedChangeListener { _, isChecked ->
-            sharedPreferences.edit().putBoolean("auto_check_updates", isChecked).apply()
+            lifecycleScope.launch(Dispatchers.IO) {
+                sharedPreferences.edit().putBoolean("auto_check_updates", isChecked).apply()
 
-            Toast.makeText(
-                requireContext(),
-                if (isChecked) "Automatic updates enabled" else "Automatic updates disabled",
-                Toast.LENGTH_SHORT
-            ).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        if (isChecked) "Automatic updates enabled" else "Automatic updates disabled",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
 
         // Wifi-only updates
@@ -71,16 +79,19 @@ class UpdateSettingsFragment : Fragment() {
 
         // Save preference when changed
         binding.switchWifiOnly.setOnCheckedChangeListener { _, isChecked ->
-            sharedPreferences.edit().putBoolean("wifi_only_updates", isChecked).apply()
+            lifecycleScope.launch(Dispatchers.IO) {
+                sharedPreferences.edit().putBoolean("wifi_only_updates", isChecked).apply()
 
-            Toast.makeText(
-                requireContext(),
-                if (isChecked) "Updates will download on Wi-Fi only" else "Updates may use mobile data",
-                Toast.LENGTH_SHORT
-            ).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        if (isChecked) "Updates will download on Wi-Fi only" else "Updates may use mobile data",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
     }
-
     private fun setupButtons() {
         // Check for updates button
         binding.btnCheckUpdates.setOnClickListener {

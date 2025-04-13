@@ -2,10 +2,11 @@ package com.jewelrypos.swarnakhatabook.Utilitys
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Handler
-import android.os.Looper
 import java.util.Date
 
+/**
+ * Manages PIN security, including failed attempts tracking and lockouts
+ */
 object PinSecurityManager {
     private const val MAX_ATTEMPTS = 5
     private const val LOCKOUT_DURATION_MS = 5 * 60 * 1000 // 5 minutes
@@ -13,6 +14,9 @@ object PinSecurityManager {
     private const val KEY_ATTEMPTS = "pin_attempts"
     private const val KEY_LOCKOUT_TIME = "pin_lockout_time"
 
+    /**
+     * Records a failed PIN attempt and returns the updated security status
+     */
     fun recordFailedAttempt(context: Context): PinSecurityStatus {
         val prefs = SecurePreferences.getInstance(context)
         val attempts = prefs.getInt(KEY_ATTEMPTS, 0) + 1
@@ -30,11 +34,17 @@ object PinSecurityManager {
         return PinSecurityStatus.Limited(MAX_ATTEMPTS - attempts)
     }
 
+    /**
+     * Resets the failed attempts counter and lockout timer
+     */
     fun resetAttempts(context: Context) {
         val prefs = SecurePreferences.getInstance(context)
         prefs.edit().remove(KEY_ATTEMPTS).remove(KEY_LOCKOUT_TIME).apply()
     }
 
+    /**
+     * Checks the current PIN security status
+     */
     fun checkStatus(context: Context): PinSecurityStatus {
         val prefs = SecurePreferences.getInstance(context)
         val lockoutTime = prefs.getLong(KEY_LOCKOUT_TIME, 0)
@@ -57,6 +67,9 @@ object PinSecurityManager {
         }
     }
 
+    /**
+     * Gets the remaining lockout time in milliseconds
+     */
     private fun getRemainingLockoutTime(context: Context): Long {
         val prefs = SecurePreferences.getInstance(context)
         val lockoutTime = prefs.getLong(KEY_LOCKOUT_TIME, 0)
@@ -64,6 +77,9 @@ object PinSecurityManager {
     }
 }
 
+/**
+ * Represents the current PIN security status
+ */
 sealed class PinSecurityStatus {
     object Normal : PinSecurityStatus()
     data class Limited(val remainingAttempts: Int) : PinSecurityStatus()

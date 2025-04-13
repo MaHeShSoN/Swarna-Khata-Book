@@ -9,4 +9,7 @@
     <external-path
         name="external_files"
         path="." /> <!-- Allow access to all files in external storage -->
+    <external-files-path
+        name="downloads"
+        path="Download/" />
 </paths>

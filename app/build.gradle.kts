@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.5"
+        versionCode = 6
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -117,4 +117,7 @@ dependencies {
 
     implementation ("com.android.billingclient:billing:6.0.1")
     implementation ("com.android.billingclient:billing-ktx:6.0.1")
+
+    implementation ("org.apache.poi:poi:5.2.3")
+    implementation ("org.apache.poi:poi-ooxml:5.2.3")
 }

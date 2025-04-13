@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -28,6 +29,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
+import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
@@ -373,10 +375,23 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun showPinFallbackDialog() {
         // First check PIN security status
         val securityStatus = PinSecurityManager.checkStatus(this)
+
+        // Prepare reason message based on biometric status
+        val biometricManager = BiometricManager.from(this)
+        val biometricStatus = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+
+        val reason = when (biometricStatus) {
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
+                "Your device doesn't support biometric authentication."
+            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
+                "Biometric authentication is currently unavailable."
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
+                "No biometric credentials enrolled. Using PIN instead."
+            else -> "Biometric authentication failed. Using PIN instead."
+        }
 
         when (securityStatus) {
             is PinSecurityStatus.Locked -> {
@@ -390,7 +405,6 @@ class MainActivity : AppCompatActivity() {
                     .show()
                 return
             }
-
             else -> {
                 // Continue with PIN dialog
             }
@@ -401,16 +415,24 @@ class MainActivity : AppCompatActivity() {
         val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
         val pinEditText = dialogView.findViewById<EditText>(R.id.pinEditText)
 
-        // Add warning for limited attempts
-        if (securityStatus is PinSecurityStatus.Limited) {
-            val messageTextView = dialogView.findViewById<TextInputLayout>(R.id.pin)
-            messageTextView.helperText  = "You have ${securityStatus.remainingAttempts} attempts remaining"
-            messageTextView.setHelperTextColor(getColorStateList(R.color.red))
+        // Add reason message to dialog if available
+        val messageTextView = dialogView.findViewById<TextView>(R.id.pin_fallback_reason)
+        if (messageTextView != null) {
+            messageTextView.text = reason
             messageTextView.visibility = View.VISIBLE
         }
 
+        // Add warning for limited attempts
+        if (securityStatus is PinSecurityStatus.Limited) {
+            val pinLayout = dialogView.findViewById<TextInputLayout>(R.id.pin)
+            if (pinLayout != null) {
+                pinLayout.helperText = "${securityStatus.remainingAttempts} attempts remaining"
+                pinLayout.setHelperTextColor(ColorStateList.valueOf(getColor(R.color.status_unpaid)))
+            }
+        }
+
         builder.setView(dialogView)
-            .setTitle("Enter PIN")
+            .setTitle("PIN Verification Required")
             .setMessage("Please enter your PIN to continue")
             .setPositiveButton("Unlock", null) // Set below
             .setNegativeButton("Cancel") { _, _ -> finish() }
@@ -421,9 +443,8 @@ class MainActivity : AppCompatActivity() {
 
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val enteredPin = pinEditText.text.toString()
-            val savedPin = sharedPreferences.getString("app_lock_pin", null)
 
-            if (savedPin != null && enteredPin == savedPin) {
+            if (PinHashUtil.verifyPin(enteredPin, sharedPreferences)) {
                 // PIN is correct
                 dialog.dismiss()
                 PinSecurityManager.resetAttempts(this)
@@ -432,22 +453,35 @@ class MainActivity : AppCompatActivity() {
                 // PIN is incorrect
                 val updatedSecurityStatus = PinSecurityManager.recordFailedAttempt(this)
 
-                if (updatedSecurityStatus is PinSecurityStatus.Locked) {
-                    dialog.dismiss()
-                    // Show lockout dialog
-                    val minutes = (updatedSecurityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
-                    AlertDialog.Builder(this)
-                        .setTitle("Too Many Failed Attempts")
-                        .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
-                        .setPositiveButton("OK") { _, _ -> finish() }
-                        .setCancelable(false)
-                        .show()
-                } else if (updatedSecurityStatus is PinSecurityStatus.Limited) {
-                    pinEditText.error =
-                        "Incorrect PIN (${updatedSecurityStatus.remainingAttempts} attempts remaining)"
-                    pinEditText.text.clear()
+                when (updatedSecurityStatus) {
+                    is PinSecurityStatus.Locked -> {
+                        dialog.dismiss()
+                        // Show lockout dialog
+                        val minutes = (updatedSecurityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+                        AlertDialog.Builder(this)
+                            .setTitle("Too Many Failed Attempts")
+                            .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
+                            .setPositiveButton("OK") { _, _ -> finish() }
+                            .setCancelable(false)
+                            .show()
+                    }
+                    is PinSecurityStatus.Limited -> {
+                        pinEditText.error = "Incorrect PIN (${updatedSecurityStatus.remainingAttempts} attempts remaining)"
+                        pinEditText.text.clear()
+
+                        // Update helper text
+                        val pinLayout = dialogView.findViewById<TextInputLayout>(R.id.pin)
+                        if (pinLayout != null) {
+                            pinLayout.helperText = "${updatedSecurityStatus.remainingAttempts} attempts remaining"
+                        }
+                    }
+                    else -> {
+                        pinEditText.error = "Incorrect PIN"
+                        pinEditText.text.clear()
+                    }
                 }
             }
         }
     }
+
 }

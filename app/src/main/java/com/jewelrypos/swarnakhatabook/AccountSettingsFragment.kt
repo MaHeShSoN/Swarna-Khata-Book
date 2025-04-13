@@ -8,12 +8,17 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -21,7 +26,16 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
+import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
+import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
+import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import com.jewelrypos.swarnakhatabook.databinding.FragmentAccountSettingsBinding
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.concurrent.Executor
 
 class AccountSettingsFragment : Fragment() {
@@ -68,7 +82,8 @@ class AccountSettingsFragment : Fragment() {
     private fun setupBiometrics() {
         executor = ContextCompat.getMainExecutor(requireContext())
 
-        biometricPrompt = BiometricPrompt(this, executor,
+        biometricPrompt = BiometricPrompt(
+            this, executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
@@ -85,7 +100,8 @@ class AccountSettingsFragment : Fragment() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
                     if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
-                        errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
+                        errorCode != BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                    ) {
                         Toast.makeText(
                             requireContext(),
                             "Authentication error: $errString",
@@ -180,6 +196,7 @@ class AccountSettingsFragment : Fragment() {
                 // Device supports biometric authentication, show prompt
                 biometricPrompt.authenticate(promptInfo)
             }
+
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
                 // Device doesn't support biometric authentication
                 binding.switchAppLock.isChecked = false
@@ -189,6 +206,7 @@ class AccountSettingsFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+
             BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
                 // Biometric features are currently unavailable
                 binding.switchAppLock.isChecked = false
@@ -198,6 +216,7 @@ class AccountSettingsFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+
             BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
                 // User hasn't enrolled any biometrics
                 binding.switchAppLock.isChecked = false
@@ -225,8 +244,11 @@ class AccountSettingsFragment : Fragment() {
         val confirmPinEditText = dialogView.findViewById<TextInputEditText>(R.id.confirmPinEditText)
         val currentPinLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPinLayout)
 
+        // Get secure preferences
+        val securePrefs = SecurePreferences.getInstance(requireContext())
+
         // Check if PIN exists
-        val hasPinSet = sharedPreferences.contains("app_lock_pin")
+        val hasPinSet = securePrefs.contains("pin_hash") && securePrefs.contains("pin_salt")
 
         // Hide current PIN field if no PIN is set yet
         if (!hasPinSet) {
@@ -257,8 +279,7 @@ class AccountSettingsFragment : Fragment() {
 
             // Validate current PIN if required
             if (hasPinSet && currentPinLayout.visibility == View.VISIBLE) {
-                val savedPin = sharedPreferences.getString("app_lock_pin", "")
-                if (enteredCurrentPin != savedPin) {
+                if (!PinHashUtil.verifyPin(enteredCurrentPin, securePrefs)) {
                     currentPinEditText.error = "Current PIN is incorrect"
                     isValid = false
                 }
@@ -277,20 +298,25 @@ class AccountSettingsFragment : Fragment() {
             }
 
             if (isValid) {
-                // Save the new PIN
-                sharedPreferences.edit().putString("app_lock_pin", newPin).apply()
+                // Start background operation
+                lifecycleScope.launch(Dispatchers.IO) {
+                    // Store PIN securely
+                    PinHashUtil.storePin(newPin, securePrefs)
 
-                dialog.dismiss()
-                Toast.makeText(requireContext(), "PIN updated successfully", Toast.LENGTH_SHORT).show()
+                    // Update UI on main thread
+                    withContext(Dispatchers.Main) {
+                        dialog.dismiss()
+                        Toast.makeText(
+                            requireContext(),
+                            "PIN updated successfully",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
         }
     }
 
-    private fun showSecurityQuestionsDialog() {
-        // Show dialog to set up security questions
-        // This is a placeholder for actual security questions setup
-        Toast.makeText(requireContext(), "Security questions to be implemented", Toast.LENGTH_SHORT).show()
-    }
 
     private fun showDeleteDataConfirmationDialog() {
         AlertDialog.Builder(requireContext())
@@ -309,6 +335,14 @@ class AccountSettingsFragment : Fragment() {
         val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
         val pinEditText = dialogView.findViewById<TextInputEditText>(R.id.pinEditText)
 
+        // Add warning text
+        val messageTextView = dialogView.findViewById<TextView>(R.id.pin_fallback_reason)
+        if (messageTextView != null) {
+            messageTextView.text = "This operation will permanently delete all your data"
+            messageTextView.setTextColor(requireContext().getColor(R.color.status_unpaid))
+            messageTextView.visibility = View.VISIBLE
+        }
+
         builder.setView(dialogView)
             .setTitle("Confirm with PIN")
             .setMessage("Please enter your PIN to confirm data deletion")
@@ -321,33 +355,52 @@ class AccountSettingsFragment : Fragment() {
         // Override the positive button click to validate PIN
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
             val enteredPin = pinEditText.text.toString()
-            val savedPin = sharedPreferences.getString("app_lock_pin", "1234") // Default is 1234
+            val securePrefs = SecurePreferences.getInstance(requireContext())
 
-            if (enteredPin == savedPin) {
+            // Use secure PIN verification
+            if (PinHashUtil.verifyPin(enteredPin, securePrefs)) {
                 // PIN is correct, proceed with data deletion
                 dialog.dismiss()
                 deleteAllData()
             } else {
-                // PIN is incorrect
-                pinEditText.error = "Incorrect PIN"
-                pinEditText.text?.clear()
+                // Track failed attempt
+                val securityStatus = PinSecurityManager.recordFailedAttempt(requireContext())
+
+                when (securityStatus) {
+                    is PinSecurityStatus.Locked -> {
+                        dialog.dismiss()
+                        // Show lockout dialog
+                        val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+                        AlertDialog.Builder(requireContext())
+                            .setTitle("Too Many Failed Attempts")
+                            .setMessage("PIN entry has been disabled for $minutes minutes.")
+                            .setPositiveButton("OK", null)
+                            .setCancelable(true)
+                            .show()
+                    }
+
+                    is PinSecurityStatus.Limited -> {
+                        pinEditText.error =
+                            "Incorrect PIN (${securityStatus.remainingAttempts} attempts remaining)"
+                        pinEditText.text?.clear()
+                    }
+
+                    else -> {
+                        pinEditText.error = "Incorrect PIN"
+                        pinEditText.text?.clear()
+                    }
+                }
             }
         }
     }
 
     private fun deleteAllData() {
-        // Show loading dialog
-        val loadingDialog = AlertDialog.Builder(requireContext())
-            .setTitle("Deleting Data")
-            .setMessage("Please wait while we delete your data...")
-            .setCancelable(false)
-            .create()
-
-        loadingDialog.show()
+        // Create and show a detailed progress dialog
+        val loadingDialog = showDeletionProgressDialog()
 
         // Start deleting data
-        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
         val userId = auth.currentUser?.phoneNumber?.replace("+", "") ?: ""
 
         if (userId.isNotEmpty()) {
@@ -355,127 +408,281 @@ class AccountSettingsFragment : Fragment() {
             deleteFirestoreData(userId, loadingDialog)
         } else {
             // No user ID, just clear local data and redirect
+            updateDeletionProgress(loadingDialog, "User data", false)
             clearLocalDataAndRedirect(loadingDialog)
         }
+    }
+
+    private fun showDeletionProgressDialog(): AlertDialog {
+        val builder = AlertDialog.Builder(requireContext())
+        val inflater = requireActivity().layoutInflater
+        val dialogView = inflater.inflate(R.layout.dialog_deletion_progress, null)
+
+        val progressBar = dialogView.findViewById<ProgressBar>(R.id.progressBar)
+        val statusTextView = dialogView.findViewById<TextView>(R.id.statusTextView)
+        val progressSteps = dialogView.findViewById<LinearLayout>(R.id.progressSteps)
+
+        // Setup progress steps
+        val collections =
+            listOf("Customers", "Invoices", "Inventory", "Notifications", "Payments", "Settings")
+        collections.forEach { collection ->
+            val stepView = inflater.inflate(R.layout.item_progress_step, null)
+            val stepText = stepView.findViewById<TextView>(R.id.stepText)
+            val stepStatus = stepView.findViewById<ImageView>(R.id.stepStatus)
+
+            stepText.text = "Deleting $collection"
+            stepStatus.visibility = View.INVISIBLE
+
+            progressSteps.addView(stepView)
+        }
+
+        builder.setView(dialogView)
+            .setTitle("Deleting Data")
+            .setCancelable(false)
+
+        return builder.create().apply { show() }
+    }
+
+    private fun updateDeletionProgress(
+        dialog: AlertDialog,
+        collection: String,
+        isSuccess: Boolean
+    ) {
+        requireActivity().runOnUiThread {
+            val progressSteps = dialog.findViewById<LinearLayout>(R.id.progressSteps)
+            val statusTextView = dialog.findViewById<TextView>(R.id.statusTextView)
+
+            for (i in 0 until progressSteps!!.childCount) {
+                val stepView = progressSteps.getChildAt(i)
+                val stepText = stepView.findViewById<TextView>(R.id.stepText)
+                val stepStatus = stepView.findViewById<ImageView>(R.id.stepStatus)
+
+                if (stepText.text.toString() == "Deleting $collection") {
+                    stepStatus.visibility = View.VISIBLE
+                    stepStatus.setImageResource(
+                        if (isSuccess) R.drawable.ic_check
+                        else R.drawable.tdesign__notification_error_filled
+                    )
+                    break
+                }
+            }
+
+            statusTextView!!.text = "Processing $collection..."
+        }
+
     }
 
     private fun deleteFirestoreData(userId: String, loadingDialog: AlertDialog) {
         val firestore = FirebaseFirestore.getInstance()
         val userDoc = firestore.collection("users").document(userId)
 
-        // Define collections to delete
-        val collections = listOf(
-            "customers",
-            "invoices",
-            "inventory",
-            "notifications",
-            "payments",
-            "settings"
-        )
+        // Define collections to delete with verification
+        val collections = listOf("customers", "invoices", "inventory", "notifications", "payments", "settings")
+        val deletionStatus = mutableMapOf<String, Boolean>()
+        collections.forEach { deletionStatus[it] = false }
 
-        // Delete each collection
-        var completedCollections = 0
-        var hasError = false
+        // Create a coroutine scope for async operations
+        lifecycleScope.launch {
+            collections.forEach { collection ->
+                try {
+                    // Update progress in UI
+                    updateDeletionProgress(loadingDialog, collection.capitalize(), false)
 
-        for (collection in collections) {
-            userDoc.collection(collection)
-                .get()
-                .addOnSuccessListener { querySnapshot ->
-                    // Create batch to delete documents
-                    val batch = firestore.batch()
-                    for (document in querySnapshot.documents) {
-                        batch.delete(document.reference)
+                    // Get collection documents
+                    val querySnapshot = withContext(Dispatchers.IO) {
+                        userDoc.collection(collection).get().await()
                     }
 
-                    // Commit the batch
-                    if (querySnapshot.documents.isNotEmpty()) {
-                        batch.commit()
-                            .addOnSuccessListener {
-                                completedCollections++
-                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
-                            }
-                            .addOnFailureListener {
-                                hasError = true
-                                completedCollections++
-                                checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
-                            }
-                    } else {
-                        // No documents in this collection
-                        completedCollections++
-                        checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
+                    if (querySnapshot.isEmpty) {
+                        // No documents to delete
+                        deletionStatus[collection] = true
+                        updateDeletionProgress(loadingDialog, collection.capitalize(), true)
+                        checkDeletionComplete(deletionStatus, userDoc, loadingDialog)
+                        return@forEach
                     }
+
+                    // Use batches for efficient deletion (Firestore limits: 500 operations per batch)
+                    val chunks = querySnapshot.documents.chunked(450)
+
+                    withContext(Dispatchers.IO) {
+                        chunks.forEachIndexed { index, chunk ->
+                            val batch = firestore.batch()
+                            chunk.forEach { document -> batch.delete(document.reference) }
+
+                            try {
+                                batch.commit().await()
+                                withContext(Dispatchers.Main) {
+                                    val statusTextView = loadingDialog.findViewById<TextView>(R.id.statusTextView)
+                                    statusTextView?.text = "Deleting $collection (${index+1}/${chunks.size})"
+                                }
+                                Log.d("DataDeletion", "Deleted ${chunk.size} documents from $collection (batch ${index+1}/${chunks.size})")
+                            } catch (e: Exception) {
+                                Log.e("DataDeletion", "Error deleting $collection batch: ${e.message}")
+                                throw e
+                            }
+                        }
+                    }
+
+                    // Mark collection as successfully deleted
+                    deletionStatus[collection] = true
+                    updateDeletionProgress(loadingDialog, collection.capitalize(), true)
+
+                } catch (e: Exception) {
+                    Log.e("DataDeletion", "Error deleting collection $collection: ${e.message}")
+                    // Mark as failed in UI
+                    updateDeletionProgress(loadingDialog, collection.capitalize(), false)
+                } finally {
+                    // Check if all collections are processed
+                    checkDeletionComplete(deletionStatus, userDoc, loadingDialog)
                 }
-                .addOnFailureListener {
-                    hasError = true
-                    completedCollections++
-                    checkDeletionProgress(completedCollections, collections.size, loadingDialog, hasError, userDoc)
-                }
+            }
         }
     }
+    private fun checkDeletionComplete(
+        status: Map<String, Boolean>,
+        userDoc: DocumentReference,
+        loadingDialog: AlertDialog
+    ) {
+        // Check if all collections are processed
+        if (status.values.all { it != null }) { // Allow both true and false, just need a decision made
 
-    private fun checkDeletionProgress(completed: Int, total: Int, loadingDialog: AlertDialog, hasError: Boolean, userDoc: DocumentReference) {
-        if (completed >= total) {
-            // All collections processed, now delete the user document itself
-            userDoc.delete()
-                .addOnSuccessListener {
-                    // Successfully deleted user document
-                    clearLocalDataAndRedirect(loadingDialog, hasError)
-                }
-                .addOnFailureListener { e ->
-                    Log.e("AccountSettings", "Error deleting user document", e)
+            // Count success and failures
+            val successCount = status.values.count { it }
+            val totalCount = status.size
+
+            // Update final status
+            requireActivity().runOnUiThread {
+                val statusTextView = loadingDialog.findViewById<TextView>(R.id.statusTextView)
+                statusTextView?.text = "Completed: $successCount/$totalCount collections processed"
+            }
+
+            // All collections processed, now delete the user document
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    // Update UI
+                    withContext(Dispatchers.Main) {
+                        val statusTextView = loadingDialog.findViewById<TextView>(R.id.statusTextView)
+                        statusTextView?.text = "Deleting user account data..."
+                    }
+
+                    // Delete document
+                    userDoc.delete().await()
+
+                    Log.d("DataDeletion", "User document deleted successfully")
+
+                    // Final cleanup
+                    clearLocalDataAndRedirect(loadingDialog, status.values.any { !it })
+
+                } catch (e: Exception) {
+                    Log.e("DataDeletion", "Error in final user document deletion: ${e.message}")
                     clearLocalDataAndRedirect(loadingDialog, true)
                 }
+            }
         }
     }
-
     private fun clearLocalDataAndRedirect(loadingDialog: AlertDialog, hasError: Boolean = false) {
-        // Clear SharedPreferences
-        val allPrefs = listOf(
-            "jewelry_pos_settings",
-            "shop_preferences",
-            "jewelry_pos_pdf_settings",
-            "secure_jewelry_pos_settings" // Add the encrypted preferences
-        )
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Log start of cleanup
+                Log.d("AccountSettings", "Starting local data cleanup")
 
-        for (prefName in allPrefs) {
-            val prefs = requireContext().getSharedPreferences(prefName, Context.MODE_PRIVATE)
-            prefs.edit().clear().apply()
-        }
+                // Clear SharedPreferences
+                val allPrefs = listOf(
+                    "jewelry_pos_settings",
+                    "shop_preferences",
+                    "jewelry_pos_pdf_settings",
+                    "secure_jewelry_pos_settings"
+                )
 
-        // Clear specific databases used by the app
-        try {
-            // Replace these with your actual database names
-            requireContext().deleteDatabase("jewelry_app_database.db")
-            requireContext().deleteDatabase("jewelry_pos_cache.db")
-        } catch (e: Exception) {
-            Log.e("AccountSettings", "Error deleting databases", e)
-        }
+                for (prefName in allPrefs) {
+                    try {
+                        val prefs =
+                            requireContext().getSharedPreferences(prefName, Context.MODE_PRIVATE)
+                        prefs.edit().clear().apply()
+                        Log.d("AccountSettings", "Cleared preferences: $prefName")
+                    } catch (e: Exception) {
+                        Log.e(
+                            "AccountSettings",
+                            "Error clearing preferences $prefName: ${e.message}"
+                        )
+                    }
+                }
 
-        // Clear shop data
-        ShopManager.clearLocalShop(requireContext())
+                // Clear specific databases
+                try {
+                    requireContext().deleteDatabase("jewelry_app_database.db")
+                    Log.d("AccountSettings", "Deleted database: jewelry_app_database.db")
+                } catch (e: Exception) {
+                    Log.e(
+                        "AccountSettings",
+                        "Error deleting database jewelry_app_database.db: ${e.message}"
+                    )
+                }
 
-        // Dismiss loading dialog
-        loadingDialog.dismiss()
+                try {
+                    requireContext().deleteDatabase("jewelry_pos_cache.db")
+                    Log.d("AccountSettings", "Deleted database: jewelry_pos_cache.db")
+                } catch (e: Exception) {
+                    Log.e(
+                        "AccountSettings",
+                        "Error deleting database jewelry_pos_cache.db: ${e.message}"
+                    )
+                }
 
-        // Show completion message
-        val message = if (hasError) {
-            "Some data may not have been completely deleted due to errors. Local data has been cleared."
-        } else {
-            "All your data has been successfully deleted."
-        }
+                // Clear shop data
+                try {
+                    ShopManager.clearLocalShop(requireContext())
+                    Log.d("AccountSettings", "Cleared shop manager data")
+                } catch (e: Exception) {
+                    Log.e("AccountSettings", "Error clearing shop manager data: ${e.message}")
+                }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Data Deletion Complete")
-            .setMessage(message)
-            .setPositiveButton("OK") { _, _ ->
-                // Redirect to launcher screen
-                val intent = Intent(requireContext(), MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                requireActivity().finish()
+                // Switch to main thread for UI operations
+                withContext(Dispatchers.Main) {
+                    // Dismiss loading dialog
+                    if (loadingDialog.isShowing) {
+                        loadingDialog.dismiss()
+                    }
+
+                    // Show completion message
+                    val message = if (hasError) {
+                        "Some data may not have been completely deleted due to errors. Local data has been cleared."
+                    } else {
+                        "All your data has been successfully deleted."
+                    }
+
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Data Deletion Complete")
+                        .setMessage(message)
+                        .setPositiveButton("OK") { _, _ ->
+                            // Redirect to launcher screen
+                            val intent = Intent(requireContext(), MainActivity::class.java)
+                            intent.flags =
+                                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            startActivity(intent)
+                            requireActivity().finish()
+                        }
+                        .setCancelable(false)
+                        .show()
+                }
+            } catch (e: Exception) {
+                Log.e("AccountSettings", "Unexpected error in clearLocalDataAndRedirect", e)
+
+                // Ensure UI operations run on main thread
+                withContext(Dispatchers.Main) {
+                    if (loadingDialog.isShowing) {
+                        loadingDialog.dismiss()
+                    }
+
+                    // Show error dialog
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Error During Cleanup")
+                        .setMessage("An unexpected error occurred while cleaning up: ${e.message}")
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
             }
-            .setCancelable(false)
-            .show()
+        }
     }
 
     private fun showLogoutConfirmationDialog() {

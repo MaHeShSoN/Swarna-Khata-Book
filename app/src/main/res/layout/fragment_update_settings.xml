@@ -113,9 +113,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:fontFamily="@font/montserratregular"
                 android:text="Download updates on Wi-Fi only"
-                android:textColor="@color/my_light_on_surface" />
+                android:textAppearance="@style/TextAppearance.App.Body"
+                app:thumbTint="@color/my_light_primary"
+                app:trackTint="@color/my_light_primary_container" />
 
             <TextView
                 android:layout_width="match_parent"
