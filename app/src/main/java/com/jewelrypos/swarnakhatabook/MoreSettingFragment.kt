@@ -75,7 +75,15 @@ class MoreSettingFragment : Fragment() {
                     title = "Shop Details",
                     subtitle = "Configure your shop information for invoices",
                     iconResId = R.drawable.ic_store
-                ), SettingsItem(
+                ),
+                SettingsItem(
+                    id = "reports",
+                    title = "Reports",
+                    subtitle = "View and export business reports and analytics",
+                    iconResId = R.drawable.icon_park_outline__sales_report,
+                    badgeText = null
+                ),
+                SettingsItem(
                     id = "invoice_format",
                     title = "Invoice PDF Format",
                     subtitle = "Customize the appearance of your invoice PDFs",
@@ -86,7 +94,8 @@ class MoreSettingFragment : Fragment() {
                     subtitle = "Choose from multiple professional templates",
                     iconResId = R.drawable.ic_template,
                     badgeText = if (!isPremium) "PREMIUM" else null
-                ), SettingsItem(
+                ),
+                SettingsItem(
                     id = "account_settings",
                     title = "Account Settings",
                     subtitle = "Manage app lock, security and account options",
@@ -159,6 +168,11 @@ class MoreSettingFragment : Fragment() {
                             val mainNavController =
                                 requireActivity().findNavController(R.id.nav_host_fragment)
                             mainNavController.navigate(R.id.action_mainScreenFragment_to_updateSettingsFragment)
+                        }
+
+                        "reports" -> {
+                            val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                            mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
                         }
                     }
                 }

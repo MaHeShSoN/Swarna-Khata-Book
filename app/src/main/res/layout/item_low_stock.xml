@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/my_light_outline"
+    app:cardCornerRadius="8dp"
+    app:cardBackgroundColor="@color/my_light_surface"
+    >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header row with item name and type -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/itemName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/librebaskervilleregular"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="18sp"
+                tools:text="Gold Chain 22K" />
+
+            <TextView
+                android:id="@+id/itemType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_badge_background"
+                android:fontFamily="@font/montserratmedium"
+                android:paddingStart="8dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                tools:text="GOLD" />
+        </LinearLayout>
+
+        <!-- Item details -->
+        <TextView
+            android:id="@+id/itemCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:fontFamily="@font/montserratlight"
+            android:textColor="@color/my_light_secondary"
+            android:textSize="12sp"
+            tools:text="Code: GC001" />
+
+        <!-- Stock information -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratmedium"
+                    android:text="CURRENT STOCK"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="10sp"
+                    android:textAllCaps="true" />
+
+                <TextView
+                    android:id="@+id/currentStock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/status_unpaid"
+                    android:textSize="14sp"
+                    tools:text="2 pcs" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratmedium"
+                    android:text="REORDER LEVEL"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="10sp"
+                    android:textAllCaps="true" />
+
+                <TextView
+                    android:id="@+id/reorderLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp"
+                    tools:text="5 pcs" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Last sold date -->
+        <TextView
+            android:id="@+id/lastSoldDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="@font/montserratlight"
+            android:textColor="@color/my_light_secondary"
+            android:textSize="12sp"
+            tools:text="Last Sold: 15 Mar 2023" />
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

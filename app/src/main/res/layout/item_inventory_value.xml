@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    app:cardBackgroundColor="@color/my_light_surface"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="2dp"
+    app:strokeColor="@color/my_light_outline"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Header row with item name and type -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/itemName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/librebaskervilleregular"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="18sp"
+                tools:text="Gold Chain 22K" />
+
+            <TextView
+                android:id="@+id/itemType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/rounded_badge_background"
+                android:fontFamily="@font/montserratmedium"
+                android:paddingStart="8dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="2dp"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                tools:text="GOLD" />
+        </LinearLayout>
+
+        <!-- Item details -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/itemCode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratlight"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="12sp"
+                tools:text="Code: GC001" />
+
+            <TextView
+                android:id="@+id/stockLevel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/montserratlight"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="12sp"
+                tools:text="Stock: 5 pcs" />
+        </LinearLayout>
+
+        <!-- Value breakdown -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/metalValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratmedium"
+                android:text="METAL VALUE"
+                android:textAllCaps="true"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/metalValueText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratregular"
+                android:gravity="end"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="12sp"
+                tools:text="₹40,000.00" />
+
+            <TextView
+                android:id="@+id/makingValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratmedium"
+                android:text="MAKING CHARGE"
+                android:textAllCaps="true"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/makingValueText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratregular"
+                android:gravity="end"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="12sp"
+                tools:text="₹8,000.00" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/diamondValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratmedium"
+                android:text="DIAMOND VALUE"
+                android:textAllCaps="true"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/diamondValueText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratregular"
+                android:gravity="end"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="12sp"
+                tools:text="₹2,000.00" />
+        </LinearLayout>
+
+        <!-- Total values -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/itemValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratmedium"
+                android:text="PER UNIT"
+                android:textAllCaps="true"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/itemValueText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/librebaskervillebold"
+                android:gravity="end"
+                android:textColor="@color/my_light_primary"
+                android:textSize="14sp"
+                tools:text="₹50,000.00" />
+
+            <TextView
+                android:id="@+id/totalValue"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:fontFamily="@font/montserratmedium"
+                android:text="TOTAL VALUE"
+                android:textAllCaps="true"
+                android:textColor="@color/my_light_secondary"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/totalValueText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/librebaskervillebold"
+                android:gravity="end"
+                android:textColor="@color/my_light_primary"
+                android:textSize="14sp"
+                tools:text="₹2,50,000.00" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+
+</com.google.android.material.card.MaterialCardView>

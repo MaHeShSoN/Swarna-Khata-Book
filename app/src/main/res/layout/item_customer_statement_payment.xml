@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="@drawable/payment_item_background">
+
+    <TextView
+        android:id="@+id/dateText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="14sp"
+        tools:text="15 Mar 2023" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="3"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/descriptionText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="Payment" />
+
+        <TextView
+            android:id="@+id/methodText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/my_light_on_surface_variant"
+            android:textSize="12sp"
+            tools:text="via Cash" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/debitText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:textColor="@color/status_unpaid"
+        android:textSize="14sp"
+        tools:text="-" />
+
+    <TextView
+        android:id="@+id/creditText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="2"
+        android:textColor="@color/status_paid"
+        android:textSize="14sp"
+        tools:text="₹5,000.00" />
+
+</LinearLayout>

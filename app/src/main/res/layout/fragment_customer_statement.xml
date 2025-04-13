@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    tools:context=".CustomerStatementFragment">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/my_light_primary"
+            app:navigationIcon="@drawable/famicons__arrow_back"
+            app:title="Customer Statement"
+            app:menu="@menu/report_menu"
+            app:titleTextAppearance="@style/ToolbarTitle"
+            app:titleTextColor="@color/white" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Date Range Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Date Range"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:id="@+id/dateRangeText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:drawableStart="@drawable/material_symbols__date_range_rounded"
+                        android:drawablePadding="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp"
+                        tools:text="01 Mar 2023 to 31 Mar 2023" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- No Customer Selected Layout -->
+            <LinearLayout
+                android:id="@+id/noCustomerSelectedLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="32dp">
+
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:alpha="0.5"
+                    android:src="@drawable/ic_account"
+                    app:tint="@color/my_light_on_surface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="No Customer Selected"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:text="Please select a customer to view their account statement."
+                    android:fontFamily="@font/montserratregular"
+                    android:textColor="@color/my_light_on_background"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/selectCustomerButton"
+                    style="@style/Widget.App.Button.Gold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Select Customer"
+                    android:textAppearance="@style/TextAppearance.App.Button" />
+            </LinearLayout>
+
+            <!-- Customer Details Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/customerDetailsLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Customer Details"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="18sp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/changeCustomerButton"
+                            style="@style/Widget.App.Button.OutlinedGold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Change"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Customer Name -->
+                    <TextView
+                        android:id="@+id/customerNameText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp"
+                        tools:text="John Smith" />
+
+                    <!-- Customer Type -->
+                    <TextView
+                        android:id="@+id/customerTypeText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/rounded_badge_background"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp"
+                        android:fontFamily="@font/montserratmedium"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+                        tools:text="Consumer" />
+
+                    <!-- Customer Phone -->
+                    <TextView
+                        android:id="@+id/customerPhoneText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:drawableStart="@drawable/baseline_phone_24"
+                        android:drawablePadding="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp"
+                        tools:text="+91 9876543210" />
+
+                    <!-- Customer Address -->
+                    <TextView
+                        android:id="@+id/customerAddressText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:drawableStart="@drawable/mdi__location"
+                        android:drawablePadding="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp"
+                        tools:text="123 Main St, Mumbai, Maharashtra 400001" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Statement Layout -->
+            <LinearLayout
+                android:id="@+id/statementLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!-- Balance Summary Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginVertical="8dp"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="3dp"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Balance Summary"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="18sp" />
+
+                        <!-- Opening Balance Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="16dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Opening Balance"
+                                android:fontFamily="@font/montserratmedium"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="10sp"
+                                android:textAllCaps="true" />
+
+                            <TextView
+                                android:id="@+id/openingBalanceValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratsemibold"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp"
+                                tools:text="₹10,000.00" />
+                        </LinearLayout>
+
+                        <!-- Closing Balance Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Closing Balance"
+                                android:fontFamily="@font/montserratmedium"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="10sp"
+                                android:textAllCaps="true" />
+
+                            <TextView
+                                android:id="@+id/closingBalanceValue"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/librebaskervillebold"
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="20sp"
+                                tools:text="₹12,500.00" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Transaction History Header -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Transaction History"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="18sp"
+                    android:layout_marginVertical="8dp" />
+
+                <!-- Transaction Table Header -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="8dp"
+                    android:background="@color/my_light_primary_container">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:text="Date"
+                        android:fontFamily="@font/montserratmedium"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="10sp"
+                        android:textAllCaps="true" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="3"
+                        android:text="Description"
+                        android:fontFamily="@font/montserratmedium"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="10sp"
+                        android:textAllCaps="true" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:text="Debit"
+                        android:fontFamily="@font/montserratmedium"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="10sp"
+                        android:textAllCaps="true" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:text="Credit"
+                        android:fontFamily="@font/montserratmedium"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="10sp"
+                        android:textAllCaps="true" />
+                </LinearLayout>
+
+                <!-- Transactions List -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/transactionsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="5"
+                    tools:listitem="@layout/item_customer_statement_invoice" />
+
+                <!-- Empty State -->
+                <LinearLayout
+                    android:id="@+id/emptyStateLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="32dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:alpha="0.5"
+                        android:src="@drawable/ic_invoice"
+                        app:tint="@color/my_light_on_surface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="No Transactions"
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="No transactions found for this customer in the selected date range."
+                        android:fontFamily="@font/montserratregular"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

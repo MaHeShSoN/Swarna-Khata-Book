@@ -12,6 +12,6 @@
     <item
         android:id="@+id/action_export_excel"
         android:title="Export to Excel"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="never" />
 
 </menu>

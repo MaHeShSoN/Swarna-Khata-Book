@@ -50,6 +50,7 @@
             android:layout_height="wrap_content"
             android:background="@color/my_light_primary"
             app:menu="@menu/sales_menu"
+            app:popupTheme="@style/CustomPopupMenu"
             app:title="Sales"
             app:titleTextAppearance="@style/ToolbarTitle" />
 

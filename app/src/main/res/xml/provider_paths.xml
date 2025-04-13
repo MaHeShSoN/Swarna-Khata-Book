@@ -5,11 +5,17 @@
         path="." />
     <files-path
         name="my_files"
-        path="." /> <!-- Allow access to all files in internal storage -->
+        path="." />
     <external-path
         name="external_files"
-        path="." /> <!-- Allow access to all files in external storage -->
+        path="." />
     <external-files-path
         name="downloads"
         path="Download/" />
+    <external-files-path
+        name="documents"
+        path="Documents/" />
+    <files-path
+        name="files"
+        path="." />
 </paths>

@@ -103,6 +103,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_updateSettingsFragment"
             app:destination="@id/updateSettingsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_reportsFragment"
+            app:destination="@id/reportsFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -232,4 +235,34 @@
         android:name="com.jewelrypos.swarnakhatabook.UpdateSettingsFragment"
         android:label="fragment_update_settings"
         tools:layout="@layout/fragment_update_settings" />
+    <fragment
+        android:id="@+id/reportsFragment"
+        android:name="com.jewelrypos.swarnakhatabook.ReportsFragment"
+        android:label="fragment_reports"
+        tools:layout="@layout/fragment_reports" />
+    <fragment
+        android:id="@+id/salesReportFragment"
+        android:name="com.jewelrypos.swarnakhatabook.SalesReportFragment"
+        android:label="fragment_sales_report"
+        tools:layout="@layout/fragment_sales_report" />
+    <fragment
+        android:id="@+id/inventoryReportFragment"
+        android:name="com.jewelrypos.swarnakhatabook.InventoryReportFragment"
+        android:label="fragment_inventory_report"
+        tools:layout="@layout/fragment_inventory_report" />
+    <fragment
+        android:id="@+id/gstReportFragment"
+        android:name="com.jewelrypos.swarnakhatabook.GstReportFragment"
+        android:label="fragment_gst_report"
+        tools:layout="@layout/fragment_gst_report" />
+    <fragment
+        android:id="@+id/lowStockReportFragment"
+        android:name="com.jewelrypos.swarnakhatabook.LowStockReportFragment"
+        android:label="fragment_low_stock_report"
+        tools:layout="@layout/fragment_low_stock_report" />
+    <fragment
+        android:id="@+id/customerStatementFragment"
+        android:name="com.jewelrypos.swarnakhatabook.CustomerStatementFragment"
+        android:label="fragment_customer_statement"
+        tools:layout="@layout/fragment_customer_statement" />
 </navigation>

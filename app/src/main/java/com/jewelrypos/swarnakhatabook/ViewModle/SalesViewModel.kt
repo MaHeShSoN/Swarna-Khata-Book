@@ -415,6 +415,8 @@ class SalesViewModel(
         loadFirstPage()
     }
 
+    fun getCurrentSearchQuery(): String = currentSearchQuery
+
     // --- Invoice Creation/Editing Methods ---
 
     // Set the selected customer
