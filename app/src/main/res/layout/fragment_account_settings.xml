@@ -62,8 +62,8 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -86,8 +86,8 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -109,7 +109,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- App Lock Card -->
+            <!-- App Lock Card - Modified for PIN-only -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -136,7 +136,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="App Lock"
+                            android:text="PIN Security"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp" />
 
@@ -156,7 +156,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:fontFamily="@font/montserratregular"
-                        android:text="Enable app lock to protect your data with biometric authentication."
+                        android:text="Enable PIN protection to secure your data. You can set a 4-digit PIN that will be required to access the app."
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp" />
 
@@ -166,9 +166,23 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:fontFamily="@font/montserratmedium"
-                        android:text="Enable App Lock"
+                        android:text="Enable PIN Protection"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
+
+                    <!-- New info text about reverse PIN feature -->
+                    <TextView
+                        android:id="@+id/reversePinInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:background="@color/my_light_primary_container"
+                        android:fontFamily="@font/montserratmedium"
+                        android:padding="8dp"
+                        android:text="Security: If you're ever forced to unlock your app under duress, entering your PIN in reverse will securely wipe all app data."
+                        android:textColor="@color/status_paid"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -244,7 +258,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/montserratregular"
-                                    android:text="Change your app backup PIN"
+                                    android:text="Change your security PIN"
                                     android:textColor="@color/my_light_on_surface_variant"
                                     android:textSize="14sp" />
                             </LinearLayout>
@@ -257,8 +271,6 @@
                                 app:tint="@color/my_light_on_surface_variant" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
-
-                    <!-- Security Questions Option -->
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -1,57 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/pin_dialog_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Current PIN Input (for change PIN scenarios) -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/currentPinLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:hint="Current PIN"
-        app:endIconMode="password_toggle"
-        app:errorEnabled="true">
+        android:layout_marginBottom="16dp"
+        app:passwordToggleEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/currentPinEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="Current PIN"
             android:inputType="numberPassword"
-            android:maxLength="6" />
+            android:maxLength="8" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- New PIN Input -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/newPinLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:hint="New PIN"
-        app:endIconMode="password_toggle"
-        app:errorEnabled="true">
+        android:layout_marginBottom="16dp"
+        app:passwordToggleEnabled="true"
+        app:helperText="Minimum 4 digits"
+        app:helperTextEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/newPinEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="New PIN"
             android:inputType="numberPassword"
-            android:maxLength="6" />
+            android:maxLength="8" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Confirm PIN Input -->
     <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/confirmPinLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Confirm New PIN"
-        app:endIconMode="password_toggle"
-        app:errorEnabled="true">
+        android:layout_marginBottom="16dp"
+        app:passwordToggleEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/confirmPinEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="Confirm PIN"
             android:inputType="numberPassword"
-            android:maxLength="6" />
+            android:maxLength="8" />
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Reverse PIN Info -->
+    <TextView
+        android:id="@+id/reversePinInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:background="@color/my_light_primary_container"
+        android:fontFamily="@font/montserratmedium"
+        android:padding="12dp"
+        android:text="Security Feature: If you're ever forced to unlock this app under duress, entering your PIN in reverse will trigger a complete data wipe without alerting anyone."
+        android:textColor="@color/my_light_primary"
+        android:textSize="14sp" />
 
 </LinearLayout>

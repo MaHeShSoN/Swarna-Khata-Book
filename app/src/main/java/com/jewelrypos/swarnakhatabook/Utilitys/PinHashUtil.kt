@@ -8,6 +8,7 @@ import java.security.SecureRandom
 
 /**
  * Utility for securely handling PIN hashing and verification
+ * Extended to support reverse PIN for data wipe functionality
  */
 object PinHashUtil {
     private const val HASH_ALGORITHM = "SHA-256"
@@ -51,15 +52,26 @@ object PinHashUtil {
     }
 
     /**
-     * Verifies if the entered PIN matches the stored hashed PIN
+     * Reverses a PIN (e.g., "1234" becomes "4321")
      */
-    fun verifyPin(enteredPin: String, prefs: SharedPreferences): Boolean {
+    private fun reversePin(pin: String): String {
+        return pin.reversed()
+    }
+
+    /**
+     * Verifies if the entered PIN matches the stored PIN or is the reverse PIN
+     *
+     * @param enteredPin The PIN entered by user
+     * @param prefs SharedPreferences containing the stored PIN
+     * @return PinCheckResult indicating normal match, reverse match, or no match
+     */
+    fun checkPin(enteredPin: String, prefs: SharedPreferences): PinCheckResult {
         // For extra security, add a minimum delay to prevent timing attacks
         // This makes brute force attacks more time-consuming
         Thread.sleep(300)
 
         // Basic validation
-        if (enteredPin.isBlank()) return false
+        if (enteredPin.isBlank()) return PinCheckResult.NO_MATCH
 
         // Check for new secure format
         val storedHash = prefs.getString(KEY_PIN_HASH, "")
@@ -70,17 +82,45 @@ object PinHashUtil {
                 Base64.decode(saltString, Base64.NO_WRAP)
             } catch (e: Exception) {
                 Log.e("PinHashUtil", "Error decoding salt: ${e.message}")
-                return false
+                return PinCheckResult.NO_MATCH
             }
 
+            // Check normal PIN
             val computedHash = hashPin(enteredPin, salt)
-            return constantTimeEquals(computedHash, storedHash)
+            if (constantTimeEquals(computedHash, storedHash)) {
+                return PinCheckResult.NORMAL_MATCH
+            }
+
+            // Check reverse PIN
+            val reversedPin = reversePin(enteredPin)
+            val reversedHash = hashPin(reversedPin, salt)
+            if (constantTimeEquals(reversedHash, storedHash)) {
+                return PinCheckResult.REVERSE_MATCH
+            }
         }
 
         // Fall back to legacy format for backward compatibility during migration
         val legacyPin = prefs.getString("app_lock_pin", null)
-        return legacyPin != null && legacyPin == enteredPin
+        if (legacyPin != null) {
+            if (legacyPin == enteredPin) {
+                return PinCheckResult.NORMAL_MATCH
+            }
+            if (legacyPin == reversePin(enteredPin)) {
+                return PinCheckResult.REVERSE_MATCH
+            }
+        }
+
+        return PinCheckResult.NO_MATCH
     }
+
+    /**
+     * Maintains compatibility with old code by returning a boolean
+     * But now only checks for normal match
+     */
+    fun verifyPin(enteredPin: String, prefs: SharedPreferences): Boolean {
+        return checkPin(enteredPin, prefs) == PinCheckResult.NORMAL_MATCH
+    }
+
     /**
      * Constant-time comparison to prevent timing attacks
      */
@@ -93,4 +133,13 @@ object PinHashUtil {
         }
         return result == 0
     }
+}
+
+/**
+ * Represents the result of a PIN check
+ */
+enum class PinCheckResult {
+    NORMAL_MATCH,   // PIN matches the stored PIN
+    REVERSE_MATCH,  // PIN is the reverse of stored PIN (data wipe trigger)
+    NO_MATCH        // PIN doesn't match
 }

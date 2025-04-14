@@ -11,6 +11,8 @@
         <item name="android:colorBackground">@color/cream_background</item>
     </style>
 
+
+
     <style name="Theme.SwarnaKhataBook" parent="Base.Theme.SwarnaKhataBook" />
 
     <style name="Widget.App.Chip.Filter.Warning" parent="Widget.App.Chip.Filter">
@@ -20,6 +22,25 @@
         <item name="checkedIconTint">@color/red</item>
         <item name="rippleColor">@color/my_light_secondary</item>
         <item name="chipIconTint">@color/red</item>
+    </style>
+
+
+    <!-- Add these styles to your existing styles.xml file -->
+    <style name="PinKeypadButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+        <item name="cornerRadius">32dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:fontFamily">@font/montserratbold</item>
+        <item name="strokeColor">@color/my_light_outline</item>
+        <item name="rippleColor">@color/my_light_primary_container</item>
+    </style>
+
+    <style name="PinKeypadButton.Action" parent="PinKeypadButton">
+        <item name="iconSize">24dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">0dp</item>
     </style>
 
 
@@ -47,6 +68,20 @@
         <item name="android:dropDownHorizontalOffset">0dp</item>
         <item name="android:dropDownVerticalOffset">0dp</item>
         <item name="elevation">8dp</item>
+    </style>
+
+    <style name="FullScreenBottomSheetDialog" parent="Theme.MaterialComponents.Light.BottomSheetDialog">
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+        <item name="bottomSheetStyle">@style/FullScreenBottomSheet</item>
+    </style>
+
+    <style name="FullScreenBottomSheet" parent="Widget.MaterialComponents.BottomSheet">
+        <item name="android:background">@drawable/full_screen_bottom_sheet_background</item>
+        <item name="behavior_peekHeight">0dp</item>
+        <item name="behavior_fitToContents">true</item>
+        <item name="behavior_skipCollapsed">true</item>
     </style>
 
     <style name="BottomNavigationTheme" parent="Theme.AppCompat.Light">

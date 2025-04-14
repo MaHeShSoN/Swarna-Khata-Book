@@ -2,7 +2,6 @@ package com.jewelrypos.swarnakhatabook.Utilitys
 
 import android.content.Context
 import android.content.SharedPreferences
-import java.util.Date
 
 /**
  * Manages PIN security, including failed attempts tracking and lockouts
@@ -74,6 +73,14 @@ object PinSecurityManager {
         val prefs = SecurePreferences.getInstance(context)
         val lockoutTime = prefs.getLong(KEY_LOCKOUT_TIME, 0)
         return Math.max(0, lockoutTime - System.currentTimeMillis())
+    }
+
+    /**
+     * Checks if a PIN is set
+     */
+    fun isPinSet(context: Context): Boolean {
+        val prefs = SecurePreferences.getInstance(context)
+        return prefs.contains("pin_hash") && prefs.contains("pin_salt")
     }
 }
 

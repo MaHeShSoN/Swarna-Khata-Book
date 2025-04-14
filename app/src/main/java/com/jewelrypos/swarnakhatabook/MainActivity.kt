@@ -13,9 +13,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -25,10 +22,14 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
+import com.jewelrypos.swarnakhatabook.BottomSheet.PinEntryBottomSheet
 import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateHelper
+import com.jewelrypos.swarnakhatabook.Utilitys.DataWipeManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationScheduler
+import com.jewelrypos.swarnakhatabook.Utilitys.PinCheckResult
+import com.jewelrypos.swarnakhatabook.Utilitys.PinEntryDialogHandler
 import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
@@ -39,12 +40,8 @@ import java.util.concurrent.Executor
 class MainActivity : AppCompatActivity() {
 
     private lateinit var sharedPreferences: SharedPreferences
-    private lateinit var executor: Executor
-    private lateinit var biometricPrompt: BiometricPrompt
-    private lateinit var promptInfo: BiometricPrompt.PromptInfo
     private var wasInBackground = false
     private lateinit var appUpdateHelper: AppUpdateHelper
-
 
     // Request permission launcher for notifications (Android 13+)
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -67,17 +64,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         // Initialize SharedPreferences
-//        sharedPreferences = getSharedPreferences("jewelry_pos_settings", Context.MODE_PRIVATE)
         sharedPreferences = SecurePreferences.getInstance(this)
+
         // Request notification permission if needed (for Android 13+)
         requestNotificationPermission()
 
-
         initializeAppUpdateHelper()
+
         // Check subscription status when app starts
         checkSubscriptionStatus()
-
-        setupBiometrics()
 
         initializeNotificationSystem()
 
@@ -283,12 +278,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Check if app was in background and app lock is enabled
-        if (wasInBackground) {
-            val isAppLockEnabled = sharedPreferences.getBoolean("app_lock_enabled", false)
-            if (isAppLockEnabled) {
-                checkBiometricSupport()
-            }
+        // Check if app was in background and PIN security is enabled
+        if (wasInBackground && PinSecurityManager.isPinSet(this)) {
+            showPinVerificationDialog()
         }
 
         // Reset flag
@@ -314,174 +306,61 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupBiometrics() {
-        executor = ContextCompat.getMainExecutor(this)
-
-        biometricPrompt = BiometricPrompt(
-            this, executor,
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    // Authentication successful, proceed with app
-                    wasInBackground = false
-                }
-
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                        // User clicked cancel, close the app
-                        finish()
-                    } else if (errorCode != BiometricPrompt.ERROR_USER_CANCELED) {
-                        // Show error and fall back to PIN
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Authentication error: $errString",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        // Show PIN fallback
-                        showPinFallbackDialog()
-                    }
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Authentication failed",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            })
-
-        promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Authentication Required")
-            .setSubtitle("Please authenticate to continue using the app")
-            .setNegativeButtonText("Cancel")
-            .build()
-    }
-
-    private fun checkBiometricSupport() {
-        val biometricManager = BiometricManager.from(this)
-        when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> {
-                // Device supports biometric authentication, show prompt
-                biometricPrompt.authenticate(promptInfo)
-            }
-
-            else -> {
-                // Biometric authentication not available, use PIN fallback
-                showPinFallbackDialog()
-            }
-        }
-    }
-    private fun showPinFallbackDialog() {
-        // First check PIN security status
+    /**
+     * Shows PIN verification dialog when app is resumed
+     */
+    /**
+     * Shows PIN verification dialog when app is resumed
+     */
+    private fun showPinVerificationDialog() {
+        // Check security status first
         val securityStatus = PinSecurityManager.checkStatus(this)
 
-        // Prepare reason message based on biometric status
-        val biometricManager = BiometricManager.from(this)
-        val biometricStatus = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-
-        val reason = when (biometricStatus) {
-            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ->
-                "Your device doesn't support biometric authentication."
-            BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE ->
-                "Biometric authentication is currently unavailable."
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED ->
-                "No biometric credentials enrolled. Using PIN instead."
-            else -> "Biometric authentication failed. Using PIN instead."
+        if (securityStatus is PinSecurityStatus.Locked) {
+            // Show lockout dialog
+            val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+            AlertDialog.Builder(this)
+                .setTitle("Too Many Failed Attempts")
+                .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
+                .setPositiveButton("OK") { _, _ -> finish() }
+                .setCancelable(false)
+                .show()
+            return
         }
 
-        when (securityStatus) {
-            is PinSecurityStatus.Locked -> {
-                // Show lockout dialog
-                val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
-                AlertDialog.Builder(this)
-                    .setTitle("Too Many Failed Attempts")
-                    .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
-                    .setPositiveButton("OK") { _, _ -> finish() }
-                    .setCancelable(false)
-                    .show()
-                return
-            }
-            else -> {
-                // Continue with PIN dialog
-            }
-        }
-
-        val builder = AlertDialog.Builder(this)
-        val inflater = layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
-        val pinEditText = dialogView.findViewById<EditText>(R.id.pinEditText)
-
-        // Add reason message to dialog if available
-        val messageTextView = dialogView.findViewById<TextView>(R.id.pin_fallback_reason)
-        if (messageTextView != null) {
-            messageTextView.text = reason
-            messageTextView.visibility = View.VISIBLE
-        }
-
-        // Add warning for limited attempts
-        if (securityStatus is PinSecurityStatus.Limited) {
-            val pinLayout = dialogView.findViewById<TextInputLayout>(R.id.pin)
-            if (pinLayout != null) {
-                pinLayout.helperText = "${securityStatus.remainingAttempts} attempts remaining"
-                pinLayout.setHelperTextColor(ColorStateList.valueOf(getColor(R.color.status_unpaid)))
-            }
-        }
-
-        builder.setView(dialogView)
-            .setTitle("PIN Verification Required")
-            .setMessage("Please enter your PIN to continue")
-            .setPositiveButton("Unlock", null) // Set below
-            .setNegativeButton("Cancel") { _, _ -> finish() }
-            .setCancelable(false)
-
-        val dialog = builder.create()
-        dialog.show()
-
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val enteredPin = pinEditText.text.toString()
-
-            if (PinHashUtil.verifyPin(enteredPin, sharedPreferences)) {
-                // PIN is correct
-                dialog.dismiss()
-                PinSecurityManager.resetAttempts(this)
+        // Show the full-screen PIN entry
+        PinEntryBottomSheet.showPinVerification(
+            context = this,
+            fragmentManager = supportFragmentManager,
+            prefs = sharedPreferences,
+            title = "Verify PIN",
+            reason = "Please enter your PIN to continue",
+            onPinCorrect = {
+                // PIN correct, continue app
                 wasInBackground = false
-            } else {
-                // PIN is incorrect
-                val updatedSecurityStatus = PinSecurityManager.recordFailedAttempt(this)
-
-                when (updatedSecurityStatus) {
-                    is PinSecurityStatus.Locked -> {
-                        dialog.dismiss()
-                        // Show lockout dialog
-                        val minutes = (updatedSecurityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
-                        AlertDialog.Builder(this)
-                            .setTitle("Too Many Failed Attempts")
-                            .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
-                            .setPositiveButton("OK") { _, _ -> finish() }
-                            .setCancelable(false)
-                            .show()
-                    }
-                    is PinSecurityStatus.Limited -> {
-                        pinEditText.error = "Incorrect PIN (${updatedSecurityStatus.remainingAttempts} attempts remaining)"
-                        pinEditText.text.clear()
-
-                        // Update helper text
-                        val pinLayout = dialogView.findViewById<TextInputLayout>(R.id.pin)
-                        if (pinLayout != null) {
-                            pinLayout.helperText = "${updatedSecurityStatus.remainingAttempts} attempts remaining"
-                        }
-                    }
-                    else -> {
-                        pinEditText.error = "Incorrect PIN"
-                        pinEditText.text.clear()
-                    }
+            },
+            onPinIncorrect = { status ->
+                // Handle incorrect PIN based on status
+                if (status is PinSecurityStatus.Locked) {
+                    val minutes = (status.remainingLockoutTimeMs / 60000).toInt() + 1
+                    AlertDialog.Builder(this)
+                        .setTitle("Too Many Failed Attempts")
+                        .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
+                        .setPositiveButton("OK") { _, _ -> finish() }
+                        .setCancelable(false)
+                        .show()
                 }
+            },
+            onReversePinEntered = {
+                // Reverse PIN entered - trigger data wipe
+                DataWipeManager.performEmergencyWipe(applicationContext) {
+                    // Restart app after wipe is complete
+                    DataWipeManager.restartApp(applicationContext)
+                }
+            },
+            onCancelled = {
+                // User cancelled, exit app
+                finish()
             }
-        }
-    }
-
-}
+        )
+    }}
