@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cream_background"
+    tools:context=".RecyclingBinFragment">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/topAppBar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/my_light_primary"
+            app:menu="@menu/recycling_bin_menu"
+            app:navigationIcon="@drawable/famicons__arrow_back"
+            app:popupTheme="@style/CustomPopupMenu"
+            app:title="Recycling Bin"
+            app:titleTextAppearance="@style/ToolbarTitle"
+            app:titleTextColor="@color/white" />
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/my_light_primary"
+            app:tabGravity="fill"
+            app:tabIndicatorColor="@color/white"
+            app:tabMode="fixed"
+            app:tabSelectedTextColor="@color/white"
+            app:tabTextColor="@color/white">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="All" />
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Invoices" />
+
+        </com.google.android.material.tabs.TabLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:paddingLeft="2dp"
+        android:paddingTop="0dp"
+        android:paddingRight="2dp"
+        android:visibility="invisible"
+        app:layout_anchor="@id/appBarLayout"
+        app:layout_anchorGravity="bottom" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefreshLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:padding="16dp" />
+
+            <!-- Empty state view -->
+            <LinearLayout
+                android:id="@+id/emptyStateView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:alpha="0.5"
+                    android:src="@drawable/material_symbols__delete"
+                    app:tint="@color/my_light_on_surface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Recycling Bin is Empty"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="@font/montserratregular"
+                    android:gravity="center"
+                    android:text="Items you delete will appear here for 30 days before being permanently deleted"
+                    android:textColor="@color/my_light_secondary"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+        </FrameLayout>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

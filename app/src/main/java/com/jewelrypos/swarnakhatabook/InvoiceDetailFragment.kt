@@ -825,11 +825,13 @@ class InvoiceDetailFragment : Fragment() {
 
 
     private fun calculateTax(invoice: Invoice): Double {
-        // Regular tax calculation
         return invoice.items.sumOf { item ->
-            val itemSubtotal = calculateSubtotal(invoice)
-            val itemExtraCharges = calculateExtraCharges(invoice)
-            (itemSubtotal + itemExtraCharges) * (item.itemDetails.taxRate / 100.0)
+            val itemSubtotal = item.price * item.quantity // Subtotal for THIS item
+            // Use the existing helper to get extra charges for THIS item
+            val itemExtraCharges = getItemExtraChargesTotal(item)
+            val taxableAmountForItem = itemSubtotal + itemExtraCharges
+            // Calculate tax for THIS item based on its taxable amount and rate
+            taxableAmountForItem * (item.itemDetails.taxRate / 100.0)
         }
     }
 
@@ -1440,9 +1442,9 @@ class InvoiceDetailFragment : Fragment() {
 
         val title = if (isWholesaler) "Delete Purchase Order" else "Delete Invoice"
         val message = if (isWholesaler)
-            "Are you sure you want to delete this purchase order? This will remove items from your inventory and update supplier balance."
+            "Are you sure you want to delete this purchase order? It will be moved to the recycling bin where you can restore it within 30 days if needed."
         else
-            "Are you sure you want to delete this invoice? This will return items to your inventory and update customer balance."
+            "Are you sure you want to delete this invoice? It will be moved to the recycling bin where you can restore it within 30 days if needed."
 
         ThemedM3Dialog(requireContext())
             .setTitle(title)
@@ -1465,6 +1467,13 @@ class InvoiceDetailFragment : Fragment() {
                         binding.progressBar.visibility = View.GONE
 
                         if (success) {
+                            // Show a success message mentioning the recycling bin
+                            Toast.makeText(
+                                context,
+                                "Invoice moved to recycling bin",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
                             // Post the event for refreshing the invoice list
                             EventBus.postInvoiceDeleted()
                             // Navigate back
@@ -1492,7 +1501,6 @@ class InvoiceDetailFragment : Fragment() {
             }
             .show()
     }
-
     // Utility methods for error and loading handling
     private fun showErrorMessage(message: String) {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()

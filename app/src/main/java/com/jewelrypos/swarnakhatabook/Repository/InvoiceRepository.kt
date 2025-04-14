@@ -120,47 +120,6 @@ class InvoiceRepository(
         }
     }
 
-
-    /**
-     * Fetches all invoices within a specific date range.
-     * Note: Ensure 'invoiceDate' field in Firestore is stored as a Timestamp.
-     */
-    /**
-     * Fetches all invoices within a specific date range.
-     * Assumes 'invoiceDate' field in Firestore is stored as a Long (milliseconds since epoch).
-     */
-    suspend fun getInvoicesBetweenDates(startDate: Date, endDate: Date): List<Invoice> = withContext(Dispatchers.IO) {
-        try {
-            // Get the time in milliseconds for comparison
-            val startTime = startDate.time
-            // Adjust end time to include the whole day if necessary (often needed for 'less than or equal to' logic)
-            // Example: Set end date to the very end of the selected day
-            val calendar = Calendar.getInstance()
-            calendar.time = endDate
-            calendar.set(Calendar.HOUR_OF_DAY, 23)
-            calendar.set(Calendar.MINUTE, 59)
-            calendar.set(Calendar.SECOND, 59)
-            calendar.set(Calendar.MILLISECOND, 999)
-            val endTime = calendar.timeInMillis
-
-            Log.d(TAG, "Fetching invoices between ${Date(startTime)} and ${Date(endTime)} (Long: $startTime to $endTime)")
-
-            val snapshot = getUserCollection("invoices")
-                .whereGreaterThanOrEqualTo("invoiceDate", startTime) // Compare Long value
-                .whereLessThanOrEqualTo("invoiceDate", endTime)     // Compare Long value
-                // Optional: Add ordering if needed, e.g., .orderBy("invoiceDate", Query.Direction.ASCENDING)
-                .get()
-                .await()
-
-            val invoices = snapshot.toObjects(Invoice::class.java)
-            Log.d(TAG, "Fetched ${invoices.size} invoices for the date range.")
-            invoices // Return the list
-        } catch (e: Exception) {
-            Log.e(TAG, "Error fetching invoices between dates (using Long)", e)
-            emptyList() // Return an empty list on error
-        }
-    }
-
     /**
      * Helper to update customer balance during saveInvoice.
      * Assumes it's called within a withContext(Dispatchers.IO) block.
@@ -442,6 +401,38 @@ class InvoiceRepository(
         }
     }
 
+    suspend fun getInvoicesBetweenDates(startDate: Date, endDate: Date): List<Invoice> = withContext(Dispatchers.IO) {
+        try {
+            // Get the time in milliseconds for comparison
+            val startTime = startDate.time
+            // Adjust end time to include the whole day if necessary (often needed for 'less than or equal to' logic)
+            // Example: Set end date to the very end of the selected day
+            val calendar = Calendar.getInstance()
+            calendar.time = endDate
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endTime = calendar.timeInMillis
+
+            Log.d(TAG, "Fetching invoices between ${Date(startTime)} and ${Date(endTime)} (Long: $startTime to $endTime)")
+
+            val snapshot = getUserCollection("invoices")
+                .whereGreaterThanOrEqualTo("invoiceDate", startTime) // Compare Long value
+                .whereLessThanOrEqualTo("invoiceDate", endTime)     // Compare Long value
+                // Optional: Add ordering if needed, e.g., .orderBy("invoiceDate", Query.Direction.ASCENDING)
+                .get()
+                .await()
+
+            val invoices = snapshot.toObjects(Invoice::class.java)
+            Log.d(TAG, "Fetched ${invoices.size} invoices for the date range.")
+            invoices // Return the list
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching invoices between dates (using Long)", e)
+            emptyList() // Return an empty list on error
+        }
+    }
+
 
     // --- Helper Methods ---
 
@@ -462,6 +453,104 @@ class InvoiceRepository(
             // If their balance is Debit (we owe them - unusual?), positive change means we owe less.
             // If their balance is Credit (they owe us), positive change means they owe more.
             if (customer.balanceType.uppercase() == "DEBIT") -balanceChange else balanceChange
+        }
+    }
+
+    /**
+     * Moves an invoice to the recycling bin instead of permanently deleting it.
+     * This replaces the original deleteInvoice method.
+     */
+    suspend fun moveInvoiceToRecycleBin(invoiceNumber: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Moving invoice to recycling bin: $invoiceNumber")
+
+            // First, get the invoice to be "deleted"
+            val invoiceRef = getUserCollection("invoices").document(invoiceNumber)
+            val invoiceDoc = invoiceRef.get().await()
+
+            if (!invoiceDoc.exists()) {
+                return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
+            }
+
+            val invoice = invoiceDoc.toObject<Invoice>()
+                ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
+
+            // Create a RecycledItemsRepository to handle the recycling bin operation
+            val recycledItemsRepository = RecycledItemsRepository(firestore, auth)
+
+            // Move to recycling bin
+            val recycleResult = recycledItemsRepository.moveInvoiceToRecycleBin(invoice)
+
+            // If successful, proceed with all the usual reversion of inventory and customer balance changes
+            if (recycleResult.isSuccess) {
+                // Get customer details for type checking
+                val customerDoc = getUserCollection("customers").document(invoice.customerId).get().await()
+                val customer = customerDoc.toObject<Customer>()
+                val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+                // Revert inventory changes
+                updateInventoryOnDeletion(invoice, isWholesaler)
+
+                // Revert customer balance change
+                if (invoice.customerId.isNotEmpty() && customer != null) {
+                    updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+                }
+
+                // Delete the invoice from active invoices
+                invoiceRef.delete().await()
+
+                Log.d(TAG, "Successfully moved invoice to recycling bin: $invoiceNumber")
+                Result.success(Unit)
+            } else {
+                // If recycling failed, propagate the error
+                Result.failure(recycleResult.exceptionOrNull() ?: Exception("Unknown error recycling invoice"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error moving invoice to recycling bin: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Permanently deletes an invoice, bypassing the recycling bin.
+     * This should only be used in specific cases or when deleting from the recycling bin.
+     */
+    suspend fun permanentlyDeleteInvoice(invoiceNumber: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Permanently deleting invoice: $invoiceNumber")
+
+            // This is the original deleteInvoice logic
+            val invoiceRef = getUserCollection("invoices").document(invoiceNumber)
+            val invoiceDoc = invoiceRef.get().await()
+
+            if (!invoiceDoc.exists()) {
+                return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
+            }
+
+            val invoice = invoiceDoc.toObject<Invoice>()
+                ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
+
+            // Get customer details for type checking
+            val customerDoc = getUserCollection("customers").document(invoice.customerId).get().await()
+            val customer = customerDoc.toObject<Customer>()
+            val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+            // Revert inventory changes
+            updateInventoryOnDeletion(invoice, isWholesaler)
+
+            // Revert customer balance change
+            if (invoice.customerId.isNotEmpty() && customer != null) {
+                updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+            }
+
+            // Delete the invoice
+            invoiceRef.delete().await()
+
+            Log.d(TAG, "Successfully deleted invoice permanently: $invoiceNumber")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error permanently deleting invoice: ${e.message}", e)
+            Result.failure(e)
         }
     }
 

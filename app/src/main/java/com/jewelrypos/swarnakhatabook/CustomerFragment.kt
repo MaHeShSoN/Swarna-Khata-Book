@@ -21,6 +21,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.CustomerAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
@@ -65,8 +66,36 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         setupObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
+        setupEventBusObservers()
     }
 
+
+    private fun setupEventBusObservers() {
+        EventBus.customerAddedEvent.observe(viewLifecycleOwner) { added ->
+            if (added) {
+                customerViewModel.refreshData() // Refresh the list
+                EventBus.resetCustomerAddedEvent() // Reset the event
+                Log.d("CustomerFragment", "Customer add event received, refreshing data.")
+            }
+        }
+
+        EventBus.customerUpdatedEvent.observe(viewLifecycleOwner) { updated ->
+            if (updated) {
+                customerViewModel.refreshData() // Refresh the list
+                EventBus.resetCustomerUpdatedEvent() // Reset the event
+                Log.d("CustomerFragment", "Customer update event received, refreshing data.")
+            }
+        }
+
+        EventBus.customerDeletedEvent.observe(viewLifecycleOwner) { deleted ->
+            if (deleted) {
+                customerViewModel.refreshData() // Refresh the list
+                EventBus.resetCustomerDeletedEvent() // Reset the event
+                Log.d("CustomerFragment", "Customer delete event received, refreshing data.")
+                Toast.makeText(context, "Customer removed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     private fun setupSearchView() {
         val searchView = binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
@@ -248,7 +277,19 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
 
     // --- CustomerOperationListener Implementation ---
     override fun onCustomerAdded(customer: Customer) {
-        customerViewModel.addCustomer(customer)
+        // Call the ViewModel to add the customer
+        customerViewModel.addCustomer(customer).observe(viewLifecycleOwner) { result ->
+            if (result.isSuccess) {
+                // Post the event instead of directly refreshing here
+                EventBus.postCustomerAdded()
+                Log.d("CustomerFragment", "Posted customer added event.")
+                Toast.makeText(requireContext(), "Client added successfully", Toast.LENGTH_SHORT).show()
+                // The EventBus observer below will handle the refresh
+            } else {
+                // Handle error (ViewModel should update errorMessage LiveData)
+                Log.e("CustomerFragment", "Error adding customer via ViewModel", result.exceptionOrNull())
+            }
+        }
     }
 
     override fun onCustomerUpdated(customer: Customer) {

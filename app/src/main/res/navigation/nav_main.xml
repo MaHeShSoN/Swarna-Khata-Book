@@ -106,6 +106,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_reportsFragment"
             app:destination="@id/reportsFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_recyclingBinFragment"
+            app:destination="@id/recyclingBinFragment" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -281,4 +284,9 @@
         android:name="com.jewelrypos.swarnakhatabook.CustomerStatementFragment"
         android:label="fragment_customer_statement"
         tools:layout="@layout/fragment_customer_statement" />
+    <fragment
+        android:id="@+id/recyclingBinFragment"
+        android:name="com.jewelrypos.swarnakhatabook.RecyclingBinFragment"
+        android:label="fragment_recycling_bin"
+        tools:layout="@layout/fragment_recycling_bin" />
 </navigation>

@@ -3,20 +3,27 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.jewelrypos.swarnakhatabook.DataClasses.Shop
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentShopSettingsBinding
 import com.google.firebase.Timestamp
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,7 +37,7 @@ class ShopSettingsFragment : Fragment() {
 
     private var logoUri: Uri? = null
     private var signatureUri: Uri? = null
-
+    private var hasUnsavedChanges = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -52,13 +59,30 @@ class ShopSettingsFragment : Fragment() {
 
         // Load shop details
         loadShopDetails()
+        // --- NEW: Add the back press callback ---
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            backPressedCallback
+        )
+    }
 
+    private val backPressedCallback = object : OnBackPressedCallback(true /* enabled by default */) {
+        override fun handleOnBackPressed() {
+            if (hasUnsavedChanges) {
+                showUnsavedChangesDialog()
+            } else {
+                // Disable this callback and pop the fragment
+                isEnabled = false
+                findNavController().navigateUp() // Use NavController
+            }
+        }
     }
 
     private fun setupToolbar() {
         val toolbar: Toolbar = binding.topAppBar
         toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            // Trigger the custom back press handling
+            backPressedCallback.handleOnBackPressed()
         }
 
         toolbar.setOnMenuItemClickListener { menuItem ->
@@ -95,10 +119,12 @@ class ShopSettingsFragment : Fragment() {
                 )
             }
             binding.progressBar.visibility = View.GONE
+            setupChangeListeners()
         }
     }
 
     private fun updateUI(shop: Shop) {
+        removeChangeListeners()
         // Populate fields with shop data
         binding.shopNameEditText.setText(shop.shopName)
         binding.addressEditText.setText(shop.address)
@@ -106,10 +132,86 @@ class ShopSettingsFragment : Fragment() {
         binding.emailEditText.setText(shop.email)
         binding.gstNumberEditText.setText(shop.gstNumber)
 
+        setupChangeListeners()
 
+        hasUnsavedChanges = false
+    }
+
+    private val textWatcher = object : TextWatcher {
+        override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+        override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        override fun afterTextChanged(s: Editable?) {
+            // Check if the current text differs from the originally loaded shop data
+            if (isDataChanged()) {
+                hasUnsavedChanges = true
+            }
+        }
     }
 
 
+    private fun isDataChanged(): Boolean {
+        val originalShop = shop ?: return false // If no original data, assume changed
+
+        val currentName = binding.shopNameEditText.text.toString()
+        val currentAddress = binding.addressEditText.text.toString()
+        val currentPhone = binding.phoneEditText.text.toString()
+        val currentEmail = binding.emailEditText.text.toString()
+        val currentGst = binding.gstNumberEditText.text.toString()
+
+        return currentName != originalShop.shopName ||
+                currentAddress != originalShop.address ||
+                currentPhone != originalShop.phoneNumber ||
+                currentEmail != originalShop.email ||
+                currentGst != originalShop.gstNumber
+    }
+
+
+    private fun setupChangeListeners() {
+        binding.shopNameEditText.addTextChangedListener(textWatcher)
+        binding.addressEditText.addTextChangedListener(textWatcher)
+        binding.phoneEditText.addTextChangedListener(textWatcher)
+        binding.emailEditText.addTextChangedListener(textWatcher)
+        binding.gstNumberEditText.addTextChangedListener(textWatcher)
+        // Add listeners for logo/signature URIs if you implement those changes
+    }
+
+    private fun removeChangeListeners() {
+        binding.shopNameEditText.removeTextChangedListener(textWatcher)
+        binding.addressEditText.removeTextChangedListener(textWatcher)
+        binding.phoneEditText.removeTextChangedListener(textWatcher)
+        binding.emailEditText.removeTextChangedListener(textWatcher)
+        binding.gstNumberEditText.removeTextChangedListener(textWatcher)
+        // Remove listeners for logo/signature URIs if you implement those changes
+    }
+
+    private fun showUnsavedChangesDialog() {
+        ThemedM3Dialog(requireContext())
+            .setTitle("Unsaved Changes")
+            .setLayout(R.layout.dialog_confirmation) // Use a layout with a TextView
+            .apply {
+                // Set the message in the custom layout
+                findViewById<TextView>(R.id.confirmationMessage)?.text =
+                    "You have unsaved changes. Do you want to save them before leaving?"
+            }
+            .setPositiveButton("Save") { dialog, _ ->
+                saveShopDetails()
+                // Assuming save is successful for navigation logic
+                // A better approach might be to navigate only after confirming save success
+                hasUnsavedChanges = false // Allow back navigation after save attempt
+                findNavController().navigateUp()
+                dialog.dismiss() // Dismiss the dialog interface
+            }
+            .setNegativeButton("Discard") { dialog ->
+                hasUnsavedChanges = false // Allow back navigation without saving
+                findNavController().navigateUp()
+                dialog.dismiss() // Dismiss the dialog interface
+            }
+            .setNeutralButton("Cancel") { dialog, _ ->
+                // Just dismiss the dialog
+                dialog.dismiss() // Dismiss the dialog interface
+            }
+            .show() // Show the themed dialog
+    }
     private fun saveShopDetails() {
         val shopName = binding.shopNameEditText.text.toString().trim()
         val address = binding.addressEditText.text.toString().trim()
@@ -117,23 +219,24 @@ class ShopSettingsFragment : Fragment() {
         val email = binding.emailEditText.text.toString().trim()
         val gstNumber = binding.gstNumberEditText.text.toString().trim()
 
-        // Validate input
+        // --- Validation (Keep your existing validation) ---
         if (shopName.isEmpty()) {
             binding.shopNameInputLayout.error = "Shop name is required"
             return
-        }
+        } else binding.shopNameInputLayout.error = null
 
         if (address.isEmpty()) {
             binding.addressInputLayout.error = "Address is required"
             return
-        }
+        } else binding.addressInputLayout.error = null
 
         if (phone.isEmpty()) {
             binding.phoneInputLayout.error = "Phone number is required"
             return
-        }
+        } else binding.phoneInputLayout.error = null
+        // --- End Validation ---
 
-        // Update shop object
+
         shop?.let { currentShop ->
             val updatedShop = currentShop.copy(
                 shopName = shopName,
@@ -142,34 +245,44 @@ class ShopSettingsFragment : Fragment() {
                 email = email,
                 gstNumber = gstNumber,
                 hasGst = gstNumber.isNotEmpty(),
-                logo = logoUri?.toString() ?: currentShop.logo,
-                signature = signatureUri?.toString() ?: currentShop.signature
+                // Add logo/signature URIs if implemented
+                // logo = logoUri?.toString() ?: currentShop.logo,
+                // signature = signatureUri?.toString() ?: currentShop.signature
             )
 
+            // --- Access binding here is OK because view still exists ---
             binding.progressBar.visibility = View.VISIBLE
 
-            // Save updated shop
             ShopManager.saveShop(updatedShop, requireContext()) { success, error ->
-                binding.progressBar.visibility = View.GONE
+                // --- Callback runs LATER, potentially after view is destroyed ---
+
+                // --- >>> ADD THIS CHECK <<< ---
+                if (_binding == null || !isAdded) {
+                    // Fragment view is destroyed or fragment is detached, cannot update UI
+                    Log.w("ShopSettings", "View destroyed before save callback executed. Cannot update UI.")
+                    return@saveShop // Exit the callback
+                }
+                // --- >>> END CHECK <<< ---
+
+                // --- Now it's safe to access binding ---
+                binding.progressBar.visibility = View.GONE // This line was causing the crash
 
                 if (success) {
-                    Toast.makeText(context, "Shop details saved successfully", Toast.LENGTH_SHORT)
-                        .show()
-                    shop = updatedShop
+                    Toast.makeText(context, "Shop details saved successfully", Toast.LENGTH_SHORT).show()
+                    shop = updatedShop // Update the local copy
+                    hasUnsavedChanges = false // Reset flag after successful save
+                    // Optionally navigate back after save
+                    // findNavController().navigateUp()
                 } else {
-                    Toast.makeText(
-                        context,
-                        "Failed to save shop details: ${error?.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "Failed to save shop details: ${error?.message}", Toast.LENGTH_SHORT).show()
                     Log.e("ShopSettings", "Error saving shop details", error)
                 }
             }
         }
     }
-
     override fun onDestroyView() {
         super.onDestroyView()
+        removeChangeListeners()
         _binding = null
     }
 }

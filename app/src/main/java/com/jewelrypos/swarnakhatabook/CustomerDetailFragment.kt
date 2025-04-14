@@ -23,6 +23,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.CustomerDetailViewPagerAdapter
 import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
@@ -142,6 +143,7 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
             result.fold(
                 onSuccess = {
                     Toast.makeText(requireContext(), "Customer deleted successfully", Toast.LENGTH_SHORT).show()
+                    EventBus.postCustomerDeleted()
                     // Navigate back to customer list
                     findNavController().navigateUp()
                 },
@@ -215,6 +217,7 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
         // Refresh customer details after update
         this.customer = customer
         setupUI(customer)
+        EventBus.postCustomerUpdated()
     }
 
     override fun onDestroyView() {

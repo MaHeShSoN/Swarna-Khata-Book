@@ -65,7 +65,7 @@
 
     <style name="TextAppearance.Material3.ActionBar.Title" parent="Theme.AppCompat.NoActionBar">
         <item name="android:textColor">@color/white</item>
-        <item name="android:fontFamily">@font/playfairregular</item>
+        <item name="android:fontFamily">@font/montserratregular</item>
     </style>
 
     <style name="ToolbarTitle" parent="TextAppearance.Material3.ActionBar.Title">

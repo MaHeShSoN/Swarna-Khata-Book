@@ -36,4 +36,5 @@ data class Customer(
     val lastUpdatedAt: Long = System.currentTimeMillis()
     //* Last Purchase Date: [Date]
     //* Total Purchase Value: [Currency]
+
 ) : Serializable

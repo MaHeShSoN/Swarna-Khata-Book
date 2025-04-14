@@ -484,7 +484,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
-// In InvoiceDetailViewModel.kt, make sure the deleteInvoice method properly handles errors:
+
 
     fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
         val currentInvoice = _invoice.value ?: return
@@ -504,10 +504,12 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
                     )
                 }
 
-                val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
+                // Change this line to use moveInvoiceToRecycleBin instead of deleteInvoice
+                val result = invoiceRepository.moveInvoiceToRecycleBin(currentInvoice.invoiceNumber)
+
                 result.fold(
                     onSuccess = {
-                        _errorMessage.value = "Invoice deleted successfully"
+                        _errorMessage.value = "Invoice moved to recycling bin"
                         onComplete(true)
                     },
                     onFailure = { error ->
@@ -525,6 +527,49 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
             }
         }
     }
+
+
+// In InvoiceDetailViewModel.kt, make sure the deleteInvoice method properly handles errors:
+
+//    fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
+//        val currentInvoice = _invoice.value ?: return
+//        _isLoading.value = true
+//        _errorMessage.value = ""
+//
+//        viewModelScope.launch {
+//            try {
+//                // Ensure we have customer data if needed for the repository
+//                if (_customer.value == null && currentInvoice.customerId.isNotEmpty()) {
+//                    // Fetch customer data if we don't have it yet
+//                    customerRepository.getCustomerById(currentInvoice.customerId).fold(
+//                        onSuccess = { customer ->
+//                            _customer.value = customer
+//                        },
+//                        onFailure = { /* Continue with deletion anyway */ }
+//                    )
+//                }
+//
+//                val result = invoiceRepository.deleteInvoice(currentInvoice.invoiceNumber)
+//                result.fold(
+//                    onSuccess = {
+//                        _errorMessage.value = "Invoice deleted successfully"
+//                        onComplete(true)
+//                    },
+//                    onFailure = { error ->
+//                        _errorMessage.value = "Failed to delete invoice: ${error.message}"
+//                        Log.e("InvoiceDetailViewModel", "Failed to delete invoice", error)
+//                        onComplete(false)
+//                    }
+//                )
+//            } catch (e: Exception) {
+//                _errorMessage.value = "Error deleting invoice: ${e.message}"
+//                Log.e("InvoiceDetailViewModel", "Error deleting invoice", e)
+//                onComplete(false)
+//            } finally {
+//                _isLoading.value = false
+//            }
+//        }
+//    }
     // Improved customer balance update after invoices change
 //    private suspend fun updateCustomerBalance(oldInvoice: Invoice, newInvoice: Invoice) {
 //        // Only proceed if customer IDs match and we're working with the same customer

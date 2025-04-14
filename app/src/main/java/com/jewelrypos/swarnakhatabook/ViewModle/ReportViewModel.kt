@@ -146,6 +146,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         _customerTransactions.value = emptyList()
     }
 
+
     fun loadSalesReport() {
         val start = _startDate.value ?: return // Need dates to load
         val end = _endDate.value ?: return

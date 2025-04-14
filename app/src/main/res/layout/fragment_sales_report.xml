@@ -349,43 +349,10 @@
                         <com.github.mikephil.charting.charts.PieChart
                             android:id="@+id/salesByCategoryChart"
                             android:layout_width="match_parent"
-                            android:layout_height="150dp" />
+                            android:layout_height="300dp" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/salesCustomerTypeCard"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/my_light_surface"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="2dp"
-                    app:strokeColor="@color/my_light_outline"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="16dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:text="@string/sales_by_customer_type_title"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-
-                        <com.github.mikephil.charting.charts.PieChart
-                            android:id="@+id/salesByCustomerTypeChart"
-                            android:layout_width="match_parent"
-                            android:layout_height="150dp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
 

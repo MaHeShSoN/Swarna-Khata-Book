@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/my_light_surface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="3dp"
+    app:strokeColor="@color/my_light_outline"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Type Indicator Circle -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/itemTypeIndicator"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/icon_background_circle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/itemTypeIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/tabler__file_invoice"
+            android:background="@drawable/icon_background_circle"
+            app:layout_constraintBottom_toBottomOf="@id/itemTypeIndicator"
+            app:layout_constraintEnd_toEndOf="@id/itemTypeIndicator"
+            app:layout_constraintStart_toStartOf="@id/itemTypeIndicator"
+            app:layout_constraintTop_toTopOf="@id/itemTypeIndicator"
+            app:tint="@color/my_light_primary" />
+
+        <!-- Item Type -->
+        <TextView
+            android:id="@+id/recycledItemType"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/montserratlight"
+            android:maxLines="1"
+            android:textColor="@color/my_light_secondary"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toStartOf="@id/actionsLayout"
+            app:layout_constraintStart_toEndOf="@id/itemTypeIndicator"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Invoice" />
+
+        <!-- Item Name -->
+        <TextView
+            android:id="@+id/recycledItemName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/librebaskervilleregular"
+            android:maxLines="2"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="12sp"
+            app:layout_constraintEnd_toStartOf="@id/actionsLayout"
+            app:layout_constraintStart_toEndOf="@id/itemTypeIndicator"
+            app:layout_constraintTop_toBottomOf="@id/recycledItemType"
+            tools:text="Invoice #INV-123 - Customer Name" />
+
+        <!-- Divider -->
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:alpha="0.5"
+            android:background="@color/my_light_outline"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/recycledItemName" />
+
+        <!-- Date Information -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/datesContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/divider">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/deletedDateCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="38dp"
+                app:cardBackgroundColor="@color/my_light_primary_container"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:layout_constraintEnd_toStartOf="@id/expiryDateCard"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:strokeColor="@color/my_light_primary"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="DELETED"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/deletedDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="Yesterday" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/expiryDateCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                app:cardBackgroundColor="@color/status_unpaid_light"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="2dp"
+                app:cardUseCompatPadding="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_weight="1"
+                app:layout_constraintStart_toEndOf="@id/deletedDateCard"
+                app:layout_constraintTop_toTopOf="parent"
+                app:strokeColor="@color/status_unpaid"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="EXPIRES"
+                        android:textColor="@color/status_unpaid"
+                        android:textSize="10sp" />
+
+                    <TextView
+                        android:id="@+id/expiryDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="In 29 days" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Actions Layout -->
+        <LinearLayout
+            android:id="@+id/actionsLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toTopOf="@id/divider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/restoreButton"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Restore item"
+                app:icon="@drawable/tabler__restore"
+                app:iconSize="24dp"
+                app:iconTint="@color/my_light_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/deleteButton"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Delete permanently"
+                app:icon="@drawable/material_symbols__delete_forever"
+                app:iconSize="24dp"
+                app:iconTint="@color/status_unpaid" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

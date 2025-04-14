@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.widget.TextView
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog // Import your custom dialog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -74,7 +76,7 @@ class MoreSettingFragment : Fragment() {
                     id = "shop_details",
                     title = "Shop Details",
                     subtitle = "Configure your shop information for invoices",
-                    iconResId = R.drawable.ic_store
+                    iconResId = R.drawable.stash__shop_light
                 ),
                 SettingsItem(
                     id = "reports",
@@ -99,14 +101,21 @@ class MoreSettingFragment : Fragment() {
                     id = "account_settings",
                     title = "Account Settings",
                     subtitle = "Manage app lock, security and account options",
-                    iconResId = R.drawable.ic_account
-                ), SettingsItem(
+                    iconResId = R.drawable.material_symbols__account_circle_outline
+                ),
+                SettingsItem(
                     id = "app_updates",
                     title = "App Updates",
                     subtitle = "Manage automatic updates and check for new versions",
                     iconResId = R.drawable.material_symbols__refresh_rounded
+                ),
+                SettingsItem(
+                    id = "recycling_bin",
+                    title = "Recycling Bin",
+                    subtitle = "Recover deleted invoices, customers, and items",
+                    iconResId = R.drawable.solar__trash_bin_trash_line_duotone,
+                    badgeText = if (!isPremium) "PREMIUM" else null
                 )
-
             )
 
             // Update the UI on the main thread
@@ -171,13 +180,22 @@ class MoreSettingFragment : Fragment() {
                         }
 
                         "reports" -> {
-                            val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
-                        }
-                        "reports" -> {
                             if (isPremium) {
-                                val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+                                val mainNavController =
+                                    requireActivity().findNavController(R.id.nav_host_fragment)
                                 mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
+                            } else {
+                                // Show premium feature dialog
+                                showPremiumFeatureDialog("Business reports")
+                            }
+                        }
+
+                        "recycling_bin" -> {
+                            // Navigate to RecyclingBinFragment
+                            if (isPremium) {
+                                val mainNavController =
+                                    requireActivity().findNavController(R.id.nav_host_fragment)
+                                mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
                             } else {
                                 // Show premium feature dialog
                                 showPremiumFeatureDialog("Business reports")
@@ -194,13 +212,30 @@ class MoreSettingFragment : Fragment() {
         }
     }
 
+    // Inside MoreSettingFragment.kt
+
+// Import necessary classes if not already imported
+
+
+    // Replace the existing showPremiumFeatureDialog function with this one:
     private fun showPremiumFeatureDialog(featureName: String) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Premium Feature")
-            .setMessage("$featureName are only available with a premium subscription. Upgrade now to access all premium features.")
-            .setPositiveButton("Upgrade") { _, _ ->
+        ThemedM3Dialog(requireContext())
+            .setTitle("✨ Unlock Premium ✨")
+            .setLayout(R.layout.dialog_confirmation)
+            .apply {
+                findViewById<TextView>(R.id.confirmationMessage)?.text =
+                    "Unlock powerful features like '$featureName' by upgrading to Premium! Enhance your business management today."
+            }
+            .setPositiveButton("Upgrade Now") { dialog, _ -> // Positive button can take two args
                 startActivity(Intent(requireContext(), UpgradeActivity::class.java))
-            }.setNegativeButton("Not Now", null).show()
+                dialog.dismiss()
+            }
+            // --- CORRECTED LAMBDA SIGNATURE ---
+            .setNegativeButton("Maybe Later") { dialog -> // Only one parameter: dialog
+                dialog.dismiss()
+            }
+            // --- END CORRECTION ---
+            .show()
     }
 
     override fun onDestroyView() {

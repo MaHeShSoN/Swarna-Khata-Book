@@ -12,5 +12,5 @@ data class Invoice(
     val payments: List<Payment> = listOf(),
     val totalAmount: Double = 0.0,
     val paidAmount: Double = 0.0,
-    val notes: String = "",
+    val notes: String = ""
 )

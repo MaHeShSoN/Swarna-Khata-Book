@@ -167,7 +167,7 @@ class SalesReportFragment : Fragment() {
 
 
         setupPieChart(binding.salesByCategoryChart)
-        setupPieChart(binding.salesByCustomerTypeChart)
+//        setupPieChart(binding.salesByCustomerTypeChart)
         setupBarChart(binding.salesByDateChart) // Setup bar chart style
     }
 
@@ -187,7 +187,7 @@ class SalesReportFragment : Fragment() {
                 binding.summaryCard.visibility = View.GONE
                 binding.salesTrendCard.visibility = View.GONE
                 binding.salesCategoryCard.visibility = View.GONE
-                binding.salesCustomerTypeCard.visibility = View.GONE
+//                binding.salesCustomerTypeCard.visibility = View.GONE
                 binding.topItemsCard.visibility = View.GONE
                 binding.topCustomersCard.visibility = View.GONE
 
@@ -204,17 +204,17 @@ class SalesReportFragment : Fragment() {
                 binding.summaryCard.visibility = View.VISIBLE
                 binding.salesTrendCard.visibility = View.VISIBLE
                 binding.salesCategoryCard.visibility = View.VISIBLE
-                binding.salesCustomerTypeCard.visibility = View.VISIBLE
+//                binding.salesCustomerTypeCard.visibility = View.VISIBLE
                 updateSummaryUI(data)
                 updateSalesByCategoryChart(data)
-                updateSalesByCustomerTypeChart(data)
+//                updateSalesByCustomerTypeChart(data)
                 updateSalesByDateChart(data) // Update Bar chart
             } else if (viewModel.errorMessage.value.isNullOrEmpty()) {
                 // Handle case where data is null but no error (e.g., no data found)
                 binding.summaryCard.visibility = View.GONE // Hide sections if no data
                 binding.salesTrendCard.visibility = View.GONE
                 binding.salesCategoryCard.visibility = View.GONE
-                binding.salesCustomerTypeCard.visibility = View.GONE
+//                binding.salesCustomerTypeCard.visibility = View.GONE
                 // Show a general "No Data" message? Or rely on list-specific messages.
             }
         }
@@ -265,7 +265,7 @@ class SalesReportFragment : Fragment() {
         binding.totalSalesValue.text = currencyFormatter.format(data.totalSales)
         binding.totalPaidValue.text = currencyFormatter.format(data.paidAmount)
         binding.totalUnpaidValue.text = currencyFormatter.format(data.unpaidAmount)
-        binding.collectionRateValue.text = percentFormatter.format(data.collectionRate / 100.0) // Format needs 0-1
+        binding.collectionRateValue.text = percentFormatter.format(data.collectionRate) // Format needs 0-1
         binding.invoiceCountValue.text = data.invoiceCount.toString()
     }
 
@@ -315,38 +315,38 @@ class SalesReportFragment : Fragment() {
 
     }
 
-    private fun updateSalesByCustomerTypeChart(data: SalesReportData) {
-        val entries = ArrayList<PieEntry>()
-        data.salesByCustomerType.forEach {
-            if (it.amount > 0) {
-                entries.add(PieEntry(it.amount.toFloat(), it.customerType))
-            }
-        }
-
-        if (entries.isEmpty()){
-            binding.salesByCustomerTypeChart.clear()
-            binding.salesByCustomerTypeChart.setNoDataText(getString(R.string.no_customer_type_data_available))
-            binding.salesByCustomerTypeChart.invalidate()
-            return
-        }
-
-        val dataSet = PieDataSet(entries, "Sales by Customer Type")
-        // ... similar setup as category chart ...
-        dataSet.setDrawIcons(false)
-        dataSet.sliceSpace = 3f
-        dataSet.selectionShift = 5f
-        dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList() // Different colors
-
-        val pieData = PieData(dataSet)
-        pieData.setValueFormatter(PercentFormatter(binding.salesByCustomerTypeChart))
-        pieData.setValueTextSize(11f)
-        pieData.setValueTextColor(Color.BLACK)
-
-        binding.salesByCustomerTypeChart.data = pieData
-        binding.salesByCustomerTypeChart.highlightValues(null)
-        binding.salesByCustomerTypeChart.invalidate()
-        binding.salesByCustomerTypeChart.animateY(1400, Easing.EaseInOutQuad)
-    }
+//    private fun updateSalesByCustomerTypeChart(data: SalesReportData) {
+//        val entries = ArrayList<PieEntry>()
+//        data.salesByCustomerType.forEach {
+//            if (it.amount > 0) {
+//                entries.add(PieEntry(it.amount.toFloat(), it.customerType))
+//            }
+//        }
+//
+////        if (entries.isEmpty()){
+////            binding.salesByCustomerTypeChart.clear()
+////            binding.salesByCustomerTypeChart.setNoDataText(getString(R.string.no_customer_type_data_available))
+////            binding.salesByCustomerTypeChart.invalidate()
+////            return
+////        }
+//
+//        val dataSet = PieDataSet(entries, "Sales by Customer Type")
+//        // ... similar setup as category chart ...
+//        dataSet.setDrawIcons(false)
+//        dataSet.sliceSpace = 3f
+//        dataSet.selectionShift = 5f
+//        dataSet.colors = ColorTemplate.MATERIAL_COLORS.toList() // Different colors
+//
+//        val pieData = PieData(dataSet)
+//        pieData.setValueFormatter(PercentFormatter(binding.salesByCustomerTypeChart))
+//        pieData.setValueTextSize(11f)
+//        pieData.setValueTextColor(Color.BLACK)
+//
+//        binding.salesByCustomerTypeChart.data = pieData
+//        binding.salesByCustomerTypeChart.highlightValues(null)
+//        binding.salesByCustomerTypeChart.invalidate()
+//        binding.salesByCustomerTypeChart.animateY(1400, Easing.EaseInOutQuad)
+//    }
 
     private fun updateSalesByDateChart(data: SalesReportData) {
         val entries = ArrayList<BarEntry>()
@@ -529,7 +529,7 @@ class SalesReportFragment : Fragment() {
         super.onDestroyView()
         // Avoid memory leaks with charts
         binding.salesByCategoryChart.clear()
-        binding.salesByCustomerTypeChart.clear()
+//        binding.salesByCustomerTypeChart.clear()
         binding.salesByDateChart.clear()
         _binding = null
     }

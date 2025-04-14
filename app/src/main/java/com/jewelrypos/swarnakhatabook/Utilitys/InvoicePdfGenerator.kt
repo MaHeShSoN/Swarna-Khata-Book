@@ -896,7 +896,7 @@ class InvoicePdfGenerator(private val context: Context) {
                 else -> 0.0
             }
 
-            val stoneValue = 1000
+            val stoneValue = item.itemDetails.diamondPrice * item.quantity
             val itemTotal = item.price * item.quantity
 
             // Update totals
@@ -1202,7 +1202,7 @@ class InvoicePdfGenerator(private val context: Context) {
                 else -> 0.0
             }
 
-            val stoneValue = 1000
+            val stoneValue = item.itemDetails.diamondPrice * item.quantity
             val itemTotal = item.price * item.quantity
 
             // Update totals
@@ -1650,7 +1650,7 @@ class InvoicePdfGenerator(private val context: Context) {
             }
 
             // Stone value (example fixed value - can be modified based on your needs)
-            val stoneValue = 1000.0 * quantity
+            val stoneValue = item.itemDetails.diamondPrice * item.quantity
 
             // Update totals
             totalQuantity += quantity

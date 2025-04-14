@@ -84,7 +84,7 @@ class ReportsFragment : Fragment() {
                 id = "sales_report",
                 title = "Sales Report",
                 description = "View sales summary by product type, customer type, and time period",
-                iconResId = R.drawable.icon_park_outline__sales_report
+                iconResId = R.drawable.hugeicons__chart_up
             ),
             ReportType(
                 id = "inventory_valuation",
@@ -96,7 +96,7 @@ class ReportsFragment : Fragment() {
                 id = "customer_statement",
                 title = "Customer Account Statement",
                 description = "Detailed transaction history for individual customers",
-                iconResId = R.drawable.line_md__person_twotone
+                iconResId = R.drawable.f7__doc_person
             ),
             ReportType(
                 id = "gst_report",
@@ -108,7 +108,7 @@ class ReportsFragment : Fragment() {
                 id = "low_stock",
                 title = "Low Stock Report",
                 description = "Items below reorder threshold that need attention",
-                iconResId = R.drawable.basil__box_solid
+                iconResId = R.drawable.lets_icons__box_light
             )
         )
 
