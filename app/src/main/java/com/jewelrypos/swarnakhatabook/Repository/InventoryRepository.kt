@@ -9,7 +9,11 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.Companion.TAG
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.util.Calendar
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -25,7 +29,9 @@ class InventoryRepository(
     private var isLastPage = false
 
 
-
+    companion object {
+        private const val TAG = "InventoryRepository"
+    }
 
     suspend fun addJewelleryItem(jewelleryItem: JewelleryItem): Result<Unit> = try {
         val currentUser = auth.currentUser
@@ -180,6 +186,90 @@ class InventoryRepository(
             Result.failure(e)
         }
     }
+
+
+
+    suspend fun moveItemToRecycleBin(item: JewelleryItem): Result<Unit> = withContext(Dispatchers.IO) { // Ensure it runs on IO dispatcher
+        try {
+            val recycledItemsRepository = RecycledItemsRepository(firestore, auth)
+
+            val calendar = Calendar.getInstance()
+            // Use the constant directly from RecycledItemsRepository companion object
+            calendar.add(Calendar.DAY_OF_YEAR, RecycledItemsRepository.RETENTION_DAYS.toInt())
+            val expirationTime = calendar.timeInMillis
+
+            val recycledItem = RecycledItem(
+                id = item.id,
+                itemId = item.id,
+                itemType = "JEWELLERYITEM",
+                itemName = item.displayName,
+                itemData = serializeJewelleryItem(item), // This now returns Map<String, Any>
+                expiresAt = expirationTime,
+                userId = getCurrentUserPhoneNumber()
+            )
+
+            val recycleResult = recycledItemsRepository.addRecycledItem(recycledItem)
+
+            if (recycleResult.isSuccess) {
+                val deleteResult = deleteJewelleryItem(item.id)
+                if (deleteResult.isSuccess) {
+                    Result.success(Unit)
+                } else {
+                    // Attempt rollback
+                    try {
+                        // Call the suspend function directly, no .await() needed on Result
+                        val rollbackResult = recycledItemsRepository.permanentlyDeleteItem(recycledItem.id)
+                        if (rollbackResult.isFailure) {
+                            Log.e(TAG, "Rollback of recycled item failed", rollbackResult.exceptionOrNull())
+                        }
+                    } catch (rollbackError: Exception) {
+                        Log.e(TAG, "Failed to rollback recycled item after inventory delete failed", rollbackError)
+                    }
+                    Result.failure(deleteResult.exceptionOrNull() ?: Exception("Failed to delete original item after recycling"))
+                }
+            } else {
+                Result.failure(recycleResult.exceptionOrNull() ?: Exception("Failed to move item to recycle bin collection"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in moveItemToRecycleBin: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+
+    // --- Add helper function to serialize JewelleryItem ---
+    private fun serializeJewelleryItem(item: JewelleryItem): Map<String, Any> {
+        // Create a mutable map first
+        val map = mutableMapOf<String, Any?>()
+
+        map["id"] = item.id
+        map["displayName"] = item.displayName
+        map["jewelryCode"] = item.jewelryCode
+        map["itemType"] = item.itemType
+        map["category"] = item.category
+        map["grossWeight"] = item.grossWeight
+        map["netWeight"] = item.netWeight
+        map["wastage"] = item.wastage
+        map["purity"] = item.purity
+        map["makingCharges"] = item.makingCharges
+        map["makingChargesType"] = item.makingChargesType
+        map["stock"] = item.stock
+        map["stockUnit"] = item.stockUnit
+        map["location"] = item.location
+        map["diamondPrice"] = item.diamondPrice
+        map["metalRate"] = item.metalRate
+        map["metalRateOn"] = item.metalRateOn
+        map["taxRate"] = item.taxRate
+        map["totalTax"] = item.totalTax
+        // Serialize list of ExtraCharge
+        map["listOfExtraCharges"] = item.listOfExtraCharges.map { mapOf("name" to it.name, "amount" to it.amount) }
+        // Add any other relevant fields
+
+        // Filter out null values before returning
+        return map.filterValues { it != null } as Map<String, Any>
+    }
+
+
 
     /**
      * Delete a jewelry item from inventory

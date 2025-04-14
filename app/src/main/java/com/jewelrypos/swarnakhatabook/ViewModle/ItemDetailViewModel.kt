@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.ItemUsageStats
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -139,6 +140,35 @@ class ItemDetailViewModel(
                 Log.e("ItemDetailViewModel", "Error loading usage stats", e)
                 _errorMessage.value = "Failed to load usage statistics"
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun moveItemToRecycleBin(callback: (Boolean) -> Unit) {
+        val currentItem = _jewelryItem.value ?: return // Ensure we have the item data
+        _isLoading.value = true
+
+        viewModelScope.launch {
+            try {
+                // Call the repository function to move the item to the recycle bin
+                repository.moveItemToRecycleBin(currentItem).fold( // Assuming you create this function in InventoryRepository
+                    onSuccess = {
+                        _isLoading.value = false
+                        EventBus.postInventoryDeleted() // Post event
+                        callback(true) // Indicate success
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to move item to recycle bin: ${error.message}"
+                        _isLoading.value = false
+                        callback(false) // Indicate failure
+                        Log.e("ItemDetailViewModel", "Error moving item to recycle bin", error)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "An error occurred: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+                Log.e("ItemDetailViewModel", "Exception moving item to recycle bin", e)
             }
         }
     }

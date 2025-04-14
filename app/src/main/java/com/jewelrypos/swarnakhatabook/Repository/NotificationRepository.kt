@@ -7,9 +7,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
-import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.NotificationPreferences
-import com.jewelrypos.swarnakhatabook.Enums.NotificationPriority
 import com.jewelrypos.swarnakhatabook.Enums.NotificationStatus
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.DataClasses.PaymentNotification
@@ -42,7 +40,8 @@ class NotificationRepository(
      */
     suspend fun getNotifications(
         loadNextPage: Boolean = false,
-        source: Source = Source.DEFAULT
+        source: Source = Source.DEFAULT,
+        PAGE_SIZE: Int
     ): Result<List<AppNotification>> {
         return try {
             val phoneNumber = getCurrentUserPhoneNumber()
@@ -108,7 +107,7 @@ class NotificationRepository(
         } catch (e: Exception) {
             // If using cache and got an error, try from server
             if (source == Source.CACHE) {
-                return getNotifications(loadNextPage, Source.SERVER)
+                return getNotifications(loadNextPage, Source.SERVER, PAGE_SIZE)
             }
             Log.e(TAG, "Error getting notifications", e)
             Result.failure(e)

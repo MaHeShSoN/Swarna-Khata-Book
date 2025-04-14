@@ -65,7 +65,7 @@
             android:fontFamily="@font/librebaskervilleregular"
             android:maxLines="2"
             android:textColor="@color/my_light_on_surface"
-            android:textSize="12sp"
+            android:textSize="14sp"
             app:layout_constraintEnd_toStartOf="@id/actionsLayout"
             app:layout_constraintStart_toEndOf="@id/itemTypeIndicator"
             app:layout_constraintTop_toBottomOf="@id/recycledItemType"
@@ -97,12 +97,11 @@
                 android:id="@+id/deletedDateCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="38dp"
                 app:cardBackgroundColor="@color/my_light_primary_container"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="2dp"
                 app:cardUseCompatPadding="true"
-                app:layout_constraintEnd_toStartOf="@id/expiryDateCard"
+                app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_weight="1"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -112,7 +111,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
                     android:padding="8dp">
 
                     <TextView
@@ -120,6 +119,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
                         android:text="DELETED"
+                        android:layout_weight="1"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="10sp" />
 
@@ -129,8 +129,9 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
                         android:fontFamily="@font/montserratsemibold"
+                        android:gravity="end"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp"
+                        android:textSize="12sp"
                         tools:text="Yesterday" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -139,28 +140,28 @@
                 android:id="@+id/expiryDateCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
                 app:cardBackgroundColor="@color/status_unpaid_light"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="2dp"
                 app:cardUseCompatPadding="true"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintHorizontal_weight="1"
-                app:layout_constraintStart_toEndOf="@id/deletedDateCard"
-                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/deletedDateCard"
                 app:strokeColor="@color/status_unpaid"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
                     android:padding="8dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
+                        android:layout_weight="1"
                         android:text="EXPIRES"
                         android:textColor="@color/status_unpaid"
                         android:textSize="10sp" />
@@ -172,10 +173,12 @@
                         android:layout_marginTop="2dp"
                         android:fontFamily="@font/montserratsemibold"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp"
+                        android:textSize="12sp"
                         tools:text="In 29 days" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+
         </androidx.constraintlayout.widget.ConstraintLayout>
 
         <!-- Actions Layout -->

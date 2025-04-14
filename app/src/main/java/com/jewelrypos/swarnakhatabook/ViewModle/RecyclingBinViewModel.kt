@@ -75,6 +75,62 @@ class RecyclingBinViewModel(
         loadRecycledItems("INVOICE")
     }
 
+    fun restoreCustomer(recycledItemId: String) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                recycledItemsRepository.restoreCustomer(recycledItemId).fold(
+                    onSuccess = { customer ->
+                        _restoreSuccess.value = Pair(true, "Customer ${customer.firstName} ${customer.lastName} restored successfully")
+                        loadRecycledItems() // Refresh the list (or filter by type if needed)
+                        EventBus.postCustomerUpdated() // Notify other parts of the app
+                    },
+                    onFailure = { error ->
+                        Log.e("RecyclingBinVM", "Error restoring customer: ${error.message}", error) // Add logging
+                        _restoreSuccess.value = Pair(false, "Failed to restore customer: ${error.message}")
+                        _errorMessage.value = "Failed to restore customer: ${error.message}" // Also set error message
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("RecyclingBinVM", "Exception during customer restore: ${e.message}", e) // Add logging
+                _restoreSuccess.value = Pair(false, "Unexpected error restoring customer: ${e.message}")
+                _errorMessage.value = "Unexpected error: ${e.message}" // Also set error message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun restoreJewelleryItem(recycledItemId: String) {
+        _isLoading.value = true // Indicate loading state
+        viewModelScope.launch { // Launch coroutine in ViewModel scope
+            try {
+                // Call the repository function to restore the item
+                recycledItemsRepository.restoreJewelleryItem(recycledItemId).fold(
+                    onSuccess = { jewelleryItem ->
+                        // On success, update LiveData to notify UI
+                        _restoreSuccess.value = Pair(true, "Item '${jewelleryItem.displayName}' restored successfully")
+                        loadRecycledItems() // Refresh the list of recycled items
+                        EventBus.postInventoryUpdated() // Notify other parts of the app about inventory change
+                    },
+                    onFailure = { error ->
+                        // On failure, log the error and update LiveData
+                        Log.e("RecyclingBinVM", "Error restoring jewellery item: ${error.message}", error)
+                        _restoreSuccess.value = Pair(false, "Failed to restore item: ${error.message}")
+                        _errorMessage.value = "Failed to restore item: ${error.message}" // Set error message for UI
+                    }
+                )
+            } catch (e: Exception) {
+                // Catch any unexpected exceptions during the process
+                Log.e("RecyclingBinVM", "Exception during jewellery item restore: ${e.message}", e)
+                _restoreSuccess.value = Pair(false, "Unexpected error restoring item: ${e.message}")
+                _errorMessage.value = "Unexpected error: ${e.message}" // Set error message for UI
+            } finally {
+                _isLoading.value = false // End loading state regardless of outcome
+            }
+        }
+    }
+
     fun restoreInvoice(recycledItemId: String) {
         _isLoading.value = true
         viewModelScope.launch {
@@ -97,21 +153,23 @@ class RecyclingBinViewModel(
         }
     }
 
+    // Modify permanentlyDeleteItem if it needs type-specific logic (unlikely)
     fun permanentlyDeleteItem(recycledItemId: String) {
+        // ... (existing implementation is likely okay) ...
         _isLoading.value = true
         viewModelScope.launch {
             try {
                 recycledItemsRepository.permanentlyDeleteItem(recycledItemId).fold(
                     onSuccess = {
                         _restoreSuccess.value = Pair(true, "Item permanently deleted")
-                        loadRecycledInvoices() // Refresh the list
+                        loadRecycledItems() // Refresh the list after permanent deletion
                     },
                     onFailure = { error ->
-                        _restoreSuccess.value = Pair(false, "Failed to delete item: ${error.message}")
+                        _restoreSuccess.value = Pair(false, "Failed to delete item permanently: ${error.message}")
                     }
                 )
             } catch (e: Exception) {
-                _restoreSuccess.value = Pair(false, "Unexpected error: ${e.message}")
+                _restoreSuccess.value = Pair(false, "Unexpected error deleting item permanently: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

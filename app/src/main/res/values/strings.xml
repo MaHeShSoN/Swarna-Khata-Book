@@ -91,6 +91,10 @@
     <string name="error_list_data_not_loaded">Report list data not loaded.</string>
     <string name="report_exported_success">Report exported successfully.</string>
     <string name="error_exporting_report">Error exporting report</string>
+    <string name="restore">Restore</string>
+    <string name="cancel">Cancel</string>
+    <string name="restore_confirmation_message">Are you sure you want to restore this %1$s? It will be moved back to your active list.</string>
+    <string name="dialog_info_message">Items you delete are moved to the Recycling Bin for 30 days...</string>
 
 
 </resources>

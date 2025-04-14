@@ -134,21 +134,43 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
     }
 
     // Add to CustomerDetailFragment.kt
+//    private fun deleteCustomer(customer: Customer) {
+//        binding.progressBar.visibility = View.VISIBLE
+//
+//        customerViewModel.deleteCustomer(customer.id).observe(viewLifecycleOwner) { result ->
+//            binding.progressBar.visibility = View.GONE
+//
+//            result.fold(
+//                onSuccess = {
+//                    Toast.makeText(requireContext(), "Customer deleted successfully", Toast.LENGTH_SHORT).show()
+//                    EventBus.postCustomerDeleted()
+//                    // Navigate back to customer list
+//                    findNavController().navigateUp()
+//                },
+//                onFailure = { error ->
+//                    Toast.makeText(requireContext(), "Error deleting customer: ${error.message}", Toast.LENGTH_SHORT).show()
+//                }
+//            )
+//        }
+//    }
+
+    // Update in CustomerDetailFragment
     private fun deleteCustomer(customer: Customer) {
         binding.progressBar.visibility = View.VISIBLE
 
-        customerViewModel.deleteCustomer(customer.id).observe(viewLifecycleOwner) { result ->
+        // Change this to use moveCustomerToRecycleBin instead of deleteCustomer
+        customerViewModel.moveCustomerToRecycleBin(customer.id).observe(viewLifecycleOwner) { result ->
             binding.progressBar.visibility = View.GONE
 
             result.fold(
                 onSuccess = {
-                    Toast.makeText(requireContext(), "Customer deleted successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Customer moved to recycling bin", Toast.LENGTH_SHORT).show()
                     EventBus.postCustomerDeleted()
                     // Navigate back to customer list
                     findNavController().navigateUp()
                 },
                 onFailure = { error ->
-                    Toast.makeText(requireContext(), "Error deleting customer: ${error.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Error moving customer to recycling bin: ${error.message}", Toast.LENGTH_SHORT).show()
                 }
             )
         }

@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "1.7"
+        versionCode = 8
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -79,7 +79,7 @@ dependencies {
 
     // Coroutines for Play Services (you already have base coroutines)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    implementation ("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
 
     //Signature
@@ -113,11 +113,11 @@ dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation ("androidx.biometric:biometric-ktx:1.4.0-alpha02")
+    implementation("androidx.biometric:biometric-ktx:1.4.0-alpha02")
 
-    implementation ("com.android.billingclient:billing:6.0.1")
-    implementation ("com.android.billingclient:billing-ktx:6.0.1")
+    implementation("com.android.billingclient:billing:6.0.1")
+    implementation("com.android.billingclient:billing-ktx:6.0.1")
 
-    implementation ("org.apache.poi:poi:5.2.3")
-    implementation ("org.apache.poi:poi-ooxml:5.2.3")
+    implementation("org.apache.poi:poi:5.2.3")
+    implementation("org.apache.poi:poi-ooxml:5.2.3")
 }

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -19,11 +18,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -34,18 +33,18 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Contact Information"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Contact Information"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <!-- Customer name and type -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -56,8 +55,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Name"
                             android:fontFamily="@font/montserratsemibold"
+                            android:text="Name"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="12sp" />
 
@@ -74,14 +73,14 @@
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:gravity="end">
+                        android:gravity="end"
+                        android:orientation="vertical">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Type"
                             android:fontFamily="@font/montserratsemibold"
+                            android:text="Type"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="12sp" />
 
@@ -89,11 +88,11 @@
                             android:id="@+id/customerType"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:textColor="@color/cream_background"
                             android:background="@drawable/rounded_badge_background"
+                            android:fontFamily="@font/montserratregular"
                             android:paddingHorizontal="8dp"
                             android:paddingVertical="2dp"
+                            android:textColor="@color/cream_background"
                             android:textSize="14sp"
                             tools:text="Consumer" />
                     </LinearLayout>
@@ -103,8 +102,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Phone"
                     android:fontFamily="@font/montserratsemibold"
+                    android:text="Phone"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="12sp" />
 
@@ -112,17 +111,18 @@
                     android:id="@+id/customerPhone"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface"
+                    android:textIsSelectable="true"
                     android:textSize="14sp"
-                    android:layout_marginBottom="8dp"
                     tools:text="+91 9876543210" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Email"
                     android:fontFamily="@font/montserratsemibold"
+                    android:text="Email"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="12sp" />
 
@@ -132,6 +132,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface"
+                    android:textIsSelectable="true"
                     android:textSize="14sp"
                     tools:text="john.smith@example.com" />
             </LinearLayout>
@@ -142,11 +143,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -157,11 +158,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Address"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Address"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <TextView
                     android:id="@+id/customerAddress"
@@ -181,11 +182,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -196,25 +197,25 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Financial Information"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Financial Information"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <!-- Balance Type -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Account Type"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Account Type"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -222,8 +223,8 @@
                         android:id="@+id/balanceTypeText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
                         android:background="@drawable/rounded_badge_background"
+                        android:fontFamily="@font/montserratregular"
                         android:paddingHorizontal="8dp"
                         android:paddingVertical="2dp"
                         android:textColor="@color/cream_background"
@@ -235,15 +236,15 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Current Balance"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Current Balance"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -261,15 +262,15 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Opening Balance"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Opening Balance"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -295,11 +296,11 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Notes"
+                        android:layout_marginBottom="4dp"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Notes"
                         android:textColor="@color/my_light_secondary"
-                        android:textSize="14sp"
-                        android:layout_marginBottom="4dp" />
+                        android:textSize="14sp" />
 
                     <TextView
                         android:id="@+id/balanceNotesText"
@@ -319,12 +320,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            android:visibility="gone"
             tools:visibility="visible">
 
             <LinearLayout
@@ -336,18 +337,18 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Business Information"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Business Information"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <!-- Business Name -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Business Name"
                     android:fontFamily="@font/montserratsemibold"
+                    android:text="Business Name"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="12sp" />
 
@@ -355,18 +356,18 @@
                     android:id="@+id/businessName"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="14sp"
-                    android:layout_marginBottom="8dp"
                     tools:text="Luxury Jewels Pvt. Ltd." />
 
                 <!-- GST Number -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="GST Number"
                     android:fontFamily="@font/montserratsemibold"
+                    android:text="GST Number"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="12sp" />
 
@@ -374,18 +375,18 @@
                     android:id="@+id/gstNumber"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="14sp"
-                    android:layout_marginBottom="8dp"
                     tools:text="27AADCB2230M1ZS" />
 
                 <!-- Tax ID -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tax ID"
                     android:fontFamily="@font/montserratsemibold"
+                    android:text="Tax ID"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="12sp" />
 
@@ -405,11 +406,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -420,25 +421,25 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Relationship Information"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Relationship Information"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <!-- Customer Since -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Customer Since"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Customer Since"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -462,8 +463,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Referred By"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Referred By"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -485,12 +486,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            android:visibility="gone"
             tools:visibility="visible">
 
             <LinearLayout
@@ -502,26 +503,26 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Important Dates"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Important Dates"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <!-- Birthday -->
                 <LinearLayout
                     android:id="@+id/birthdayContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="8dp"
+                    android:orientation="horizontal">
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Birthday"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Birthday"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -546,8 +547,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Anniversary"
                         android:fontFamily="@font/montserratsemibold"
+                        android:text="Anniversary"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp" />
 
@@ -569,11 +570,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp"
-            app:cardBackgroundColor="@color/my_light_surface">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -584,11 +585,11 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Notes"
+                    android:layout_marginBottom="8dp"
                     android:fontFamily="@font/librebaskervilleregular"
+                    android:text="Notes"
                     android:textColor="@color/my_light_primary"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="18sp" />
 
                 <TextView
                     android:id="@+id/customerNotes"

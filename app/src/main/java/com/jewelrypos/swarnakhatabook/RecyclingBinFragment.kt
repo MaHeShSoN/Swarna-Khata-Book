@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -57,6 +58,8 @@ class RecyclingBinFragment : Fragment() {
         setupSwipeRefresh()
         setupObservers()
 
+        binding.topAppBar.overflowIcon =
+            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
         // Initially load all recycled items
         viewModel.loadRecycledItems()
     }
@@ -72,10 +75,12 @@ class RecyclingBinFragment : Fragment() {
                     showEmptyBinConfirmation()
                     true
                 }
+
                 R.id.action_help -> {
-//                    showHelpDialog()
+                    showHelpDialog()
                     true
                 }
+
                 else -> false
             }
         }
@@ -85,7 +90,33 @@ class RecyclingBinFragment : Fragment() {
         adapter = RecycledItemsAdapter(viewModel)
         adapter.setOnItemActionListener(object : RecycledItemsAdapter.OnItemActionListener {
             override fun onRestoreItem(item: RecycledItem) {
-                showRestoreConfirmation(item)
+                when (item.itemType.uppercase()) { // Use uppercase for comparison
+                    "INVOICE" -> {
+                        showRestoreConfirmation(item, "Invoice") {
+                            viewModel.restoreInvoice(item.itemId) // Use itemId which is invoiceNumber here
+                        }
+                    }
+
+                    "CUSTOMER" -> {
+                        showRestoreConfirmation(item, "Customer") {
+                            viewModel.restoreCustomer(item.itemId) // itemId is customerId here
+                        }
+                    }
+
+                    "JEWELLERYITEM" -> { // *** ADD THIS CASE ***
+                        showRestoreConfirmation(item, "Inventory Item") {
+                            viewModel.restoreJewelleryItem(item.itemId) // itemId is JewelleryItem id
+                        }
+                    }
+
+                    else -> {
+                        Toast.makeText(
+                            requireContext(),
+                            "Restore not supported for this item type",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
             }
 
             override fun onDeleteItem(item: RecycledItem) {
@@ -149,24 +180,40 @@ class RecyclingBinFragment : Fragment() {
         }
     }
 
-    private fun showRestoreConfirmation(item: RecycledItem) {
+
+    private fun showRestoreConfirmation(
+        item: RecycledItem,
+        itemTypeName: String,
+        restoreAction: () -> Unit
+    ) {
         ThemedM3Dialog(requireContext())
-            .setTitle("Restore Item")
-            .setLayout(R.layout.dialog_confirmation) // Use the existing confirmation dialog layout
+            .setTitle("Restore $itemTypeName")
+            .setLayout(R.layout.dialog_confirmation) // Ensure this layout exists and has confirmationMessage TextView
             .apply {
-                // Find and set the message text in the custom layout
+                // Set the confirmation message dynamically
                 findViewById<TextView>(R.id.confirmationMessage)?.text =
-                    "Are you sure you want to restore this item? It will be moved back to your active items."
+                    getString(
+                        R.string.restore_confirmation_message,
+                        itemTypeName.lowercase()
+                    ) // Use string resource
+                // Example string resource: <string name="restore_confirmation_message">Are you sure you want to restore this %1$s? It will be moved back to your active list.</string>
+
+                // Fallback if string resource or TextView is not found
+                if (findViewById<TextView>(R.id.confirmationMessage)?.text.isNullOrEmpty()) {
+                    findViewById<TextView>(R.id.confirmationMessage)?.text =
+                        "Are you sure you want to restore this ${itemTypeName.lowercase()}? It will be moved back to your active items."
+                }
             }
-            .setPositiveButton("Restore") { dialog, _ ->
-                viewModel.restoreInvoice(item.itemId)
+            .setPositiveButton(getString(R.string.restore)) { dialog, _ -> // Use string resource
+                restoreAction() // Execute the restore logic
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog -> // Use string resource
                 dialog.dismiss()
             }
             .show()
     }
+
     private fun showDeleteConfirmation(item: RecycledItem) {
         ThemedM3Dialog(requireContext())
             .setTitle("Delete Permanently")
@@ -208,23 +255,23 @@ class RecyclingBinFragment : Fragment() {
             .show()
     }
 
-//    private fun showHelpDialog() {
-//        ThemedM3Dialog(requireContext())
-//            .setLayout(R.layout.dialog_information) // You might need a different layout for longer text
-//            .setTitle("Recycling Bin Help")
-//            .apply {
-//                findViewById<TextView>(R.id.informationMessage)?.text =
-//                    "Items you delete are moved to the Recycling Bin for 30 days before being permanently deleted.\n\n" +
-//                            "• You can restore items by tapping the restore icon\n" +
-//                            "• You can permanently delete items by tapping the delete icon\n" +
-//                            "• Items are automatically removed after 30 days\n\n" +
-//                            "Currently, only invoices are supported in the Recycling Bin."
-//            }
-//            .setPositiveButton("OK") { dialog, _ ->
-//                dialog.dismiss()
-//            }
-//            .show()
-//    }
+    private fun showHelpDialog() {
+        ThemedM3Dialog(requireContext())
+            .setLayout(R.layout.dialog_information) // You might need a different layout for longer text
+            .setTitle("Recycling Bin Help")
+            .apply {
+                findViewById<TextView>(R.id.informationMessage)?.text =
+                    "Items you delete are moved to the Recycling Bin for 30 days before being permanently deleted.\n\n" +
+                            "• You can restore items by tapping the restore icon\n" +
+                            "• You can permanently delete items by tapping the delete icon\n" +
+                            "• Items are automatically removed after 30 days\n\n" +
+                            "Currently, only invoices are supported in the Recycling Bin."
+            }
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

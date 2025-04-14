@@ -90,7 +90,7 @@ class ReportsFragment : Fragment() {
                 id = "inventory_valuation",
                 title = "Inventory Valuation",
                 description = "Current inventory value and stock levels by product category",
-                iconResId = R.drawable.mingcute__inventory_fill
+                iconResId = R.drawable.mingcute__inventory_line
             ),
             ReportType(
                 id = "customer_statement",

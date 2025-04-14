@@ -4,6 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -46,18 +47,34 @@ class RecycledItemsAdapter(
         private val expiryTextView: TextView = itemView.findViewById(R.id.expiryDate)
         private val restoreButton: MaterialButton = itemView.findViewById(R.id.restoreButton)
         private val deleteButton: MaterialButton = itemView.findViewById(R.id.deleteButton)
+        private val itemTypeIcon: ImageView = itemView.findViewById(R.id.itemTypeIcon)
+
 
         fun bind(item: RecycledItem) {
             itemNameTextView.text = item.itemName
 
-            // Display item type with icon
-            val typeText = when (item.itemType) {
-                "INVOICE" -> "Invoice"
-                "CUSTOMER" -> "Customer"
-                "INVENTORY" -> "Inventory Item"
-                else -> item.itemType
+            // Set item type text and icon
+            val iconResId: Int
+            val typeText = when (item.itemType.uppercase()) {
+                "INVOICE" -> {
+                    iconResId = R.drawable.tabler__file_invoice // Use your invoice icon
+                    "Invoice"
+                }
+                "CUSTOMER" -> {
+                    iconResId = R.drawable.line_md__person_twotone // Use your customer icon
+                    "Customer"
+                }
+                "JEWELLERYITEM" -> { // *** ADD THIS CASE ***
+                    iconResId = R.drawable.uil__gold // Use your inventory/jewelry icon
+                    "Inventory Item"
+                }
+                else -> {
+                    iconResId = R.drawable.mingcute__question_line // Default icon
+                    item.itemType // Display raw type if unknown
+                }
             }
             itemTypeTextView.text = typeText
+            itemTypeIcon.setImageResource(iconResId) // Set the icon
 
             // Format and display dates
             deletedDateTextView.text = "Deleted: ${viewModel.formatDeletedDate(item.deletedAt)}"

@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -8,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,7 +31,9 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.PdfSettings
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoicePdfSettingsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,10 +58,14 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     private var pageNumber = 0
     private var isZoomedIn = false
 
+    private lateinit var userSubscriptionManager: UserSubscriptionManager // Add this
+
+
     // Flag to prevent multiple concurrent preview generations
     private var isGeneratingPreview = false
 
     private var hasUnsavedChanges = false
+
     // Add a flag to track if we're currently loading settings
     private var isLoadingSettings = false
 
@@ -116,7 +124,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         binding.topAppBar.overflowIcon =
             ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
 
-
+        userSubscriptionManager = UserSubscriptionManager(requireContext()) // Initialize
         return binding.root
     }
 
@@ -144,12 +152,27 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
         // Generate initial preview
         updatePdfPreview()
+        checkForPremiumStatus()
 
         // Add the callback
         requireActivity().onBackPressedDispatcher.addCallback(
             viewLifecycleOwner,
             backPressedCallback
         )
+    }
+
+    private fun checkForPremiumStatus() {
+        lifecycleScope.launch { // Launch coroutine inside the listener
+            val isPremium = userSubscriptionManager.isPremiumUser()
+            withContext(Dispatchers.Main) { // Switch back to main thread for UI actions
+                if (isPremium) {
+                    binding.premiumBadge.visibility = View.GONE
+                } else {
+                    binding.premiumBadge.visibility = View.VISIBLE
+                }
+            }
+        }
+
     }
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -300,9 +323,20 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
     private fun setupColorPickers() {
         // New template selection button
+
         binding.selectTemplateButton.setOnClickListener {
-            navigateToTemplateSelection()
+            lifecycleScope.launch { // Launch coroutine inside the listener
+                val isPremium = userSubscriptionManager.isPremiumUser()
+                withContext(Dispatchers.Main) { // Switch back to main thread for UI actions
+                    if (isPremium) {
+                        navigateToTemplateSelection()
+                    } else {
+                        showPremiumFeatureDialog("Advanced invoice templates & colors") // Updated message slightly
+                    }
+                }
+            }
         }
+
 
         // Setup color picker views
         val colorOptions = listOf(
@@ -313,6 +347,23 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             R.color.status_unpaid,
             android.R.color.black
         )
+    }
+
+    private fun showPremiumFeatureDialog(featureName: String) {
+        ThemedM3Dialog(requireContext()).setTitle("✨ Unlock Premium ✨")
+            .setLayout(R.layout.dialog_confirmation) // Assuming you have a simple layout
+            .apply {
+                findViewById<TextView>(R.id.confirmationMessage)?.text =
+                    "Unlock powerful features like '$featureName' by upgrading to Premium!"
+            }
+            .setPositiveButton("Upgrade Now") { dialog, _ ->
+                startActivity(Intent(requireContext(), UpgradeActivity::class.java))
+                dialog.dismiss()
+            }
+            .setNegativeButton("Maybe Later") { dialog ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun setupSwitches() {

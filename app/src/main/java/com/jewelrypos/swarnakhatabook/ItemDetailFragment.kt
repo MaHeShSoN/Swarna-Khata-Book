@@ -362,22 +362,25 @@ class ItemDetailFragment : Fragment() {
     private fun showItemInUseWarning(usageCount: Int) {
         AlertDialog.Builder(requireContext())
             .setTitle("Item In Use")
-            .setMessage("This item is used in $usageCount ${if (usageCount == 1) "invoice" else "invoices"}. Deleting it may affect existing invoices. Do you want to proceed?")
-            .setPositiveButton("Delete Anyway") { _, _ ->
-                deleteItem()
+            .setMessage("This item is used in $usageCount ${if (usageCount == 1) "invoice" else "invoices"}. Moving it to the recycling bin might affect invoice details if restored later. Do you want to proceed?") // Updated message
+            .setPositiveButton("Move to Bin") { _, _ -> // Updated button text
+                deleteItem() // Calls the function which now uses moveItemToRecycleBin
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun deleteItem() {
-        viewModel.deleteItem { success ->
+    private fun deleteItem() { // Rename this function if desired
+        // Change this call:
+        // viewModel.deleteItem { success -> ... }
+        // To this:
+        viewModel.moveItemToRecycleBin { success -> // Call the new function
             if (success) {
-                EventBus.postInventoryDeleted()
-                Toast.makeText(context, "Item deleted successfully", Toast.LENGTH_SHORT).show()
+                // EventBus is posted from ViewModel now
+                Toast.makeText(context, "Item moved to recycling bin", Toast.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             } else {
-                Toast.makeText(context, "Failed to delete item", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to move item to recycling bin", Toast.LENGTH_SHORT).show()
             }
         }
     }

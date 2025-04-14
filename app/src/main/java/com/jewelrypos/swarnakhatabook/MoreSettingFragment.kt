@@ -77,44 +77,39 @@ class MoreSettingFragment : Fragment() {
                     title = "Shop Details",
                     subtitle = "Configure your shop information for invoices",
                     iconResId = R.drawable.stash__shop_light
-                ),
-                SettingsItem(
-                    id = "reports",
-                    title = "Reports",
-                    subtitle = "View and export business reports and analytics",
-                    iconResId = R.drawable.icon_park_outline__sales_report,
-                    badgeText = if (!isPremium) "PREMIUM" else null  // Add PREMIUM badge for non-premium users
-                ),
-                SettingsItem(
+                ), SettingsItem(
                     id = "invoice_format",
                     title = "Invoice PDF Format",
                     subtitle = "Customize the appearance of your invoice PDFs",
-                    iconResId = R.drawable.ic_invoice
+                    iconResId = R.drawable.mdi__invoice_text_edit_outline
                 ), SettingsItem(
                     id = "invoice_template",
                     title = "Invoice Template",
                     subtitle = "Choose from multiple professional templates",
                     iconResId = R.drawable.ic_template,
                     badgeText = if (!isPremium) "PREMIUM" else null
-                ),
-                SettingsItem(
-                    id = "account_settings",
-                    title = "Account Settings",
-                    subtitle = "Manage app lock, security and account options",
-                    iconResId = R.drawable.material_symbols__account_circle_outline
-                ),
-                SettingsItem(
-                    id = "app_updates",
-                    title = "App Updates",
-                    subtitle = "Manage automatic updates and check for new versions",
-                    iconResId = R.drawable.material_symbols__refresh_rounded
-                ),
-                SettingsItem(
+                ), SettingsItem(
+                    id = "reports",
+                    title = "Reports",
+                    subtitle = "View and export business reports and analytics",
+                    iconResId = R.drawable.icon_park_outline__sales_report,
+                    badgeText = if (!isPremium) "PREMIUM" else null  // Add PREMIUM badge for non-premium users
+                ), SettingsItem(
                     id = "recycling_bin",
                     title = "Recycling Bin",
                     subtitle = "Recover deleted invoices, customers, and items",
                     iconResId = R.drawable.solar__trash_bin_trash_line_duotone,
                     badgeText = if (!isPremium) "PREMIUM" else null
+                ), SettingsItem(
+                    id = "account_settings",
+                    title = "Account Settings",
+                    subtitle = "Manage app lock, security and account options",
+                    iconResId = R.drawable.material_symbols__account_circle_outline
+                ), SettingsItem(
+                    id = "app_updates",
+                    title = "App Updates",
+                    subtitle = "Manage automatic updates and check for new versions",
+                    iconResId = R.drawable.material_symbols__refresh_rounded
                 )
             )
 
@@ -198,7 +193,7 @@ class MoreSettingFragment : Fragment() {
                                 mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
                             } else {
                                 // Show premium feature dialog
-                                showPremiumFeatureDialog("Business reports")
+                                showPremiumFeatureDialog("Recycling Bin")
                             }
                         }
                     }
@@ -219,14 +214,11 @@ class MoreSettingFragment : Fragment() {
 
     // Replace the existing showPremiumFeatureDialog function with this one:
     private fun showPremiumFeatureDialog(featureName: String) {
-        ThemedM3Dialog(requireContext())
-            .setTitle("✨ Unlock Premium ✨")
-            .setLayout(R.layout.dialog_confirmation)
-            .apply {
+        ThemedM3Dialog(requireContext()).setTitle("✨ Unlock Premium ✨")
+            .setLayout(R.layout.dialog_confirmation).apply {
                 findViewById<TextView>(R.id.confirmationMessage)?.text =
                     "Unlock powerful features like '$featureName' by upgrading to Premium! Enhance your business management today."
-            }
-            .setPositiveButton("Upgrade Now") { dialog, _ -> // Positive button can take two args
+            }.setPositiveButton("Upgrade Now") { dialog, _ -> // Positive button can take two args
                 startActivity(Intent(requireContext(), UpgradeActivity::class.java))
                 dialog.dismiss()
             }

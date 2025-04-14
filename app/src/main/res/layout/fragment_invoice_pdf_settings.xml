@@ -17,8 +17,8 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:menu="@menu/invoice_setting_menu"
-            app:popupTheme="@style/CustomPopupMenu"
             app:navigationIcon="@drawable/famicons__arrow_back"
+            app:popupTheme="@style/CustomPopupMenu"
             app:title="Invoice PDF Settings"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
@@ -90,13 +90,36 @@
                         android:orientation="vertical"
                         android:padding="16dp">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/librebaskervillebold"
-                            android:text="Template Settings"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="18sp" />
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/templateSettingsTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/librebaskervillebold"
+                                android:text="Template Settings"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:id="@+id/premiumBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/premium_badge_background"
+                                android:fontFamily="@font/montserratbold"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="PREMIUM"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+                        </LinearLayout>
 
                         <TextView
                             android:layout_width="match_parent"
@@ -113,14 +136,14 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
-                            android:text="Select Template"
+                            android:text="Select Template &amp; Color"
                             android:textColor="@color/my_light_primary"
                             app:icon="@drawable/ic_template"
                             app:iconTint="@color/my_light_primary"
                             app:strokeColor="@color/my_light_primary" />
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
                 <!-- Branding Settings Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/brandingCard"

@@ -11,9 +11,10 @@
         android:id="@+id/action_generate_receipt"
         android:title="Generate Receipt"
         app:showAsAction="never" />
+
     <item
         android:id="@+id/action_archive"
-        android:title="Archive Invoice"
+        android:title="Open Invoice"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_save_pdf"

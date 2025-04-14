@@ -212,6 +212,25 @@ class CustomerViewModel(
         }
     }
 
+    fun moveCustomerToRecycleBin(customerId: String): LiveData<Result<Unit>> {
+        val resultLiveData = MutableLiveData<Result<Unit>>()
+        _isLoading.value = true
+        viewModelScope.launch {
+            repository.moveCustomerToRecycleBin(customerId).fold(
+                onSuccess = {
+                    resultLiveData.value = Result.success(Unit)
+                    refreshData()
+                },
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = error.message
+                    _isLoading.value = false
+                }
+            )
+        }
+        return resultLiveData
+    }
+
     fun addCustomer(customer: Customer): LiveData<Result<Customer>> {
         val resultLiveData = MutableLiveData<Result<Customer>>()
         viewModelScope.launch {

@@ -220,6 +220,110 @@ class CustomerRepository(
         Result.failure(e)
     }
 
+    /**
+     * Moves a customer to the recycling bin instead of permanently deleting
+     */
+    suspend fun moveCustomerToRecycleBin(customerId: String): Result<Unit> {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
 
+            // First, get the customer to be recycled
+            val customerDoc = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("customers")
+                .document(customerId)
+                .get()
+                .await()
+
+            if (!customerDoc.exists()) {
+                return Result.failure(Exception("Customer not found"))
+            }
+
+            val customer = customerDoc.toObject(Customer::class.java)
+                ?: return Result.failure(Exception("Failed to convert document to Customer"))
+
+            // Update any invoices to mark them as having a deleted customer (same as before)
+            val invoices = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("invoices")
+                .whereEqualTo("customerId", customerId)
+                .get()
+                .await()
+
+            // For each invoice, we'll keep the customer name but mark the customerId as deleted
+            invoices.documents.forEach { doc ->
+                try {
+                    // Get the current notes value
+                    val currentNotes = doc.getString("notes") ?: ""
+
+                    // Create the new notes by appending the deletion information
+                    val updatedNotes = if (currentNotes.isNotEmpty()) {
+                        "$currentNotes\nCustomer was deleted on ${java.util.Date()}"
+                    } else {
+                        "Customer was deleted on ${java.util.Date()}"
+                    }
+
+                    // Update the document with the correct string format
+                    firestore.collection("users")
+                        .document(phoneNumber)
+                        .collection("invoices")
+                        .document(doc.id)
+                        .update(
+                            mapOf(
+                                "customerId" to "DELETED",
+                                "notes" to updatedNotes
+                            )
+                        )
+                        .await()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error updating invoice notes on customer deletion: ${e.message}")
+                }
+            }
+
+            // Create a RecycledItemsRepository instance
+            val recycledItemsRepository = RecycledItemsRepository(firestore, auth)
+
+            // Move the customer to recycling bin
+            val result = recycledItemsRepository.moveCustomerToRecycleBin(customer)
+
+            if (result.isSuccess) {
+                // Delete the customer from the active collection
+                firestore.collection("users")
+                    .document(phoneNumber)
+                    .collection("customers")
+                    .document(customerId)
+                    .delete()
+                    .await()
+
+                Result.success(Unit)
+            } else {
+                Result.failure(result.exceptionOrNull() ?: Exception("Failed to move customer to recycling bin"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Permanently deletes a customer without using the recycling bin
+     * This should only be used in special cases
+     */
+    suspend fun permanentlyDeleteCustomer(customerId: String): Result<Unit> = try {
+        val phoneNumber = getCurrentUserPhoneNumber()
+
+        // Original delete logic here
+        // (Keeping the invoice update code)
+
+        firestore.collection("users")
+            .document(phoneNumber)
+            .collection("customers")
+            .document(customerId)
+            .delete()
+            .await()
+
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
 
 }

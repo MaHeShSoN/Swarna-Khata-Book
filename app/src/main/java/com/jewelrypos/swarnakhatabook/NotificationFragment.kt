@@ -32,18 +32,25 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentNotificationBinding
 class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActionListener {
 
     private var _binding: FragmentNotificationBinding? = null
-    private val binding get() = _binding!!
+    private val binding get() = _binding!! // Use this only between onCreateView and onDestroyView
 
     private lateinit var adapter: NotificationAdapter
     private val TAG = "NotificationFragment"
 
+    // Handler for delayed operations
+    private val handler = Handler(Looper.getMainLooper())
+    private var navigationRunnable: Runnable? = null
+
+    // ViewModel initialization using Factory
     private val viewModel: NotificationViewModel by viewModels {
+        // Ensure context is available during ViewModel creation
+        val safeContext = requireContext().applicationContext // Use application context if possible
         val repository = NotificationRepository(
             FirebaseFirestore.getInstance(),
             FirebaseAuth.getInstance()
         )
         val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            safeContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         NotificationViewModelFactory(repository, connectivityManager)
     }
 
@@ -52,18 +59,21 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         NotificationPermissionHelper.createPermissionLauncher(
             this,
             onPermissionResult = { isGranted ->
-                if (isGranted) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Notification permission granted",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Notification permission denied. You may miss important alerts.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                // Use context safely after permission result
+                context?.let { safeContext ->
+                    if (isGranted) {
+                        Toast.makeText(
+                            safeContext,
+                            "Notification permission granted",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            safeContext,
+                            "Notification permission denied. You may miss important alerts.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
         )
@@ -93,15 +103,21 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     }
 
     private fun checkNotificationPermission() {
-        if (!NotificationPermissionHelper.hasNotificationPermission(requireContext())) {
-            // Request permission using the activity result launcher
-            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        // Use context safely
+        context?.let { safeContext ->
+            if (!NotificationPermissionHelper.hasNotificationPermission(safeContext)) {
+                // Request permission using the activity result launcher
+                notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 
     private fun setupToolbar() {
         binding.topAppBar.setNavigationOnClickListener {
-            findNavController().navigateUp()
+            // Use findNavController safely within the fragment's lifecycle
+            if (isAdded) {
+                findNavController().navigateUp()
+            }
         }
 
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
@@ -123,63 +139,68 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     }
 
     private fun navigateToNotificationSettings() {
+        // Check fragment state before navigating
+        if (!isAdded || context == null) {
+            Log.w(TAG, "navigateToNotificationSettings: Fragment not attached or context is null.")
+            return
+        }
         try {
-            // Check if the destination is valid
             val navController = findNavController()
-            val currentDestination = navController.currentDestination
-            val action =
-                currentDestination?.getAction(R.id.action_notificationFragment_to_notificationSettingsFragment)
-
-            if (action != null) {
-                navController.navigate(R.id.action_notificationFragment_to_notificationSettingsFragment)
+            // Check if the current destination is still the NotificationFragment
+            if (navController.currentDestination?.id == R.id.notificationFragment) {
+                val action = NotificationFragmentDirections.actionNotificationFragmentToNotificationSettingsFragment()
+                navController.navigate(action)
             } else {
-                Log.e(TAG, "Navigation action not found")
-                Toast.makeText(
-                    requireContext(),
-                    "Settings screen not available",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Log.e(TAG, "Navigation action to settings not available from current destination: ${navController.currentDestination?.label}")
+                Toast.makeText(context, "Settings screen not available", Toast.LENGTH_SHORT).show()
             }
-        } catch (e: Exception) {
+        } catch (e: Exception) { // Catch specific exceptions if possible (IllegalStateException, IllegalArgumentException)
             Log.e(TAG, "Error navigating to settings", e)
-            Toast.makeText(requireContext(), "Error navigating to settings", Toast.LENGTH_SHORT)
-                .show()
+            context?.let { Toast.makeText(it, "Error navigating to settings", Toast.LENGTH_SHORT).show() }
         }
     }
+
 
     private fun setupRecyclerView() {
-        adapter = NotificationAdapter(emptyList())
-        adapter.setOnNotificationActionListener(this)
+        // Use context safely
+        context?.let { safeContext ->
+            adapter = NotificationAdapter(emptyList())
+            adapter.setOnNotificationActionListener(this)
 
-        binding.notificationRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = this@NotificationFragment.adapter
+            binding.notificationRecyclerView.apply {
+                layoutManager = LinearLayoutManager(safeContext)
+                adapter = this@NotificationFragment.adapter
 
-            // Pagination support
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
+                // Pagination support
+                addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                        super.onScrolled(recyclerView, dx, dy)
 
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val visibleItemCount = layoutManager.childCount
-                    val totalItemCount = layoutManager.itemCount
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+                        val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+                        val visibleItemCount = layoutManager.childCount
+                        val totalItemCount = layoutManager.itemCount
+                        val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                    // Load more when near the end
-                    if (visibleItemCount + firstVisibleItemPosition >= totalItemCount - 5
-                        && firstVisibleItemPosition >= 0
-                        && totalItemCount >= 20
-                    ) {
-                        viewModel.loadNextPage()
+                        // Load more when near the end
+                        // ** CORRECTION HERE: Access .value for LiveData **
+                        if (viewModel.isLoading.value == false && viewModel.isLastPage.value == false && // Check loading state and last page
+                            visibleItemCount + firstVisibleItemPosition >= totalItemCount - 5
+                            && firstVisibleItemPosition >= 0
+                            && totalItemCount >= viewModel.getPageSize()
+                        ) {
+                            Log.d(TAG, "Approaching end of list, loading next page.") // Add log
+                            viewModel.loadNextPage()
+                        }
                     }
-                }
-            })
-        }
+                })
+            }
+        } ?: Log.e(TAG, "Context was null during setupRecyclerView")
     }
+
 
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
-            viewModel.loadNotifications()
+            viewModel.loadNotifications() // Triggers loading state and fetches data
         }
     }
 
@@ -193,10 +214,10 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     private fun observeNotifications() {
         viewModel.notifications.observe(viewLifecycleOwner) { notifications ->
             adapter.updateNotifications(notifications)
-            binding.swipeRefreshLayout.isRefreshing = false
+            binding.swipeRefreshLayout.isRefreshing = false // Stop refresh indicator
 
-            // Show/hide empty state
-            if (notifications.isEmpty()) {
+            // Show/hide empty state based on the observed list
+            if (notifications.isEmpty() && viewModel.isLoading.value == false) { // Only show empty state if not loading
                 binding.emptyStateLayout.visibility = View.VISIBLE
                 binding.notificationRecyclerView.visibility = View.GONE
             } else {
@@ -205,59 +226,67 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
             }
         }
 
+        // Observe loading state to show/hide progress bar and manage refresh indicator
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // Show progress bar only if not refreshing via swipe
+            binding.progressBar.visibility = if (isLoading && !binding.swipeRefreshLayout.isRefreshing) View.VISIBLE else View.GONE
+            if (!isLoading) {
+                binding.swipeRefreshLayout.isRefreshing = false // Ensure refresh stops when loading finishes
+            }
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
+            // Check if errorMessage is not null or empty before showing toast
             if (!errorMessage.isNullOrEmpty()) {
-                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_SHORT).show()
-                binding.swipeRefreshLayout.isRefreshing = false
+                // Use context safely
+                context?.let { Toast.makeText(it, errorMessage, Toast.LENGTH_SHORT).show() }
+                binding.swipeRefreshLayout.isRefreshing = false // Stop refresh on error
             }
         }
     }
 
-    override fun onNotificationClick(notification: AppNotification) {
-        // Mark as read
-        viewModel.markAsRead(notification.id)
+    // --- Notification Action Callbacks ---
 
-        // Navigate to appropriate screen based on notification type and related IDs
+    override fun onNotificationClick(notification: AppNotification) {
+        viewModel.markAsRead(notification.id)
         navigateBasedOnNotification(notification, false)
     }
 
     override fun onActionButtonClick(notification: AppNotification) {
-        // Mark as read and that action was taken
         viewModel.markAsRead(notification.id)
         viewModel.markActionTaken(notification.id)
-
-        // Navigate based on notification
         navigateBasedOnNotification(notification, true)
     }
 
     override fun onDismissButtonClick(notification: AppNotification) {
-        // Mark as read
-        viewModel.markAsRead(notification.id)
-
-        // Optionally show confirmation before deletion
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Delete Notification")
-            .setMessage("Do you want to delete this notification?")
-            .setPositiveButton("Yes") { _, _ ->
-                viewModel.deleteNotification(notification.id)
-            }
-            .setNegativeButton("No", null)
-            .show()
+        // Use context safely for Dialog
+        context?.let { safeContext ->
+            MaterialAlertDialogBuilder(safeContext)
+                .setTitle("Delete Notification")
+                .setMessage("Do you want to delete this notification?")
+                .setPositiveButton("Yes") { _, _ ->
+                    viewModel.deleteNotification(notification.id)
+                }
+                .setNegativeButton("No", null)
+                .show()
+        } ?: viewModel.markAsRead(notification.id) // Mark as read even if dialog fails
     }
 
+    // --- Navigation Logic ---
+
     /**
-     * Central method to handle navigation based on notification type
-     * @param notification The notification to navigate from
-     * @param isActionButton Whether this is triggered from the action button (may affect behavior)
+     * Central method to handle navigation based on notification type.
+     * This now calls the specific safe navigation methods.
      */
     private fun navigateBasedOnNotification(
         notification: AppNotification,
         isActionButton: Boolean
     ) {
+        // Check fragment state before attempting navigation
+        if (!isAdded || context == null) {
+            Log.w(TAG, "navigateBasedOnNotification: Fragment not attached or context is null.")
+            return
+        }
         try {
             when (notification.type) {
                 NotificationType.CREDIT_LIMIT -> {
@@ -268,21 +297,19 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
 
                 NotificationType.PAYMENT_DUE,
                 NotificationType.PAYMENT_OVERDUE -> {
-                    // If we have a specific invoice ID, go to that invoice
                     if (notification.relatedInvoiceId != null) {
                         navigateToInvoiceDetail(notification.relatedInvoiceId)
                     } else if (notification.customerId.isNotEmpty()) {
-                        // Otherwise go to payment screen for this customer
                         navigateToPaymentScreen(notification.customerId)
                     }
                 }
 
                 NotificationType.GENERAL -> {
-                    // Check if this is a stock notification
                     if (notification.relatedItemId != null) {
                         navigateToItemDetail(notification.relatedItemId)
                     }
-                    // For other general notifications, no specific navigation
+                    // No specific navigation for other general types needed here
+                    // The safeNavigateToMainScreen might still be called if needed by specific logic
                 }
 
                 NotificationType.BIRTHDAY,
@@ -293,147 +320,105 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error navigating from notification", e)
-            Toast.makeText(requireContext(), "Could not navigate: ${e.message}", Toast.LENGTH_SHORT)
-                .show()
+            Log.e(TAG, "Error determining navigation path", e)
+            context?.let { Toast.makeText(it, "Could not navigate: ${e.message}", Toast.LENGTH_SHORT).show() }
         }
     }
 
-    /**
-     * Safe navigation to customer details
-     */
     private fun navigateToCustomerDetails(customerId: String) {
-        safeNavigateToMainScreen { mainNavController ->
-            val bundle = Bundle().apply {
-                putString("customerId", customerId)
-            }
-
-            // Check if the action exists
-            if (mainNavController.currentDestination?.getAction(R.id.action_mainScreenFragment_to_customerDetailFragment) != null) {
-                mainNavController.navigate(
-                    R.id.action_mainScreenFragment_to_customerDetailFragment,
-                    bundle
-                )
-            } else {
-                Log.e(TAG, "Customer details action not available from current destination")
-                Toast.makeText(requireContext(), "Navigation not available", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
+        val bundle = Bundle().apply { putString("customerId", customerId) }
+        safeNavigateToMainScreenThenNavigate(R.id.action_mainScreenFragment_to_customerDetailFragment, bundle)
     }
 
-    /**
-     * Safe navigation to invoice details
-     */
     private fun navigateToInvoiceDetail(invoiceId: String) {
-        safeNavigateToMainScreen { mainNavController ->
-            val bundle = Bundle().apply {
-                putString("invoiceId", invoiceId)
-            }
-
-            // Check if the action exists
-            if (mainNavController.currentDestination?.getAction(R.id.action_mainScreenFragment_to_invoiceDetailFragment) != null) {
-                mainNavController.navigate(
-                    R.id.action_mainScreenFragment_to_invoiceDetailFragment,
-                    bundle
-                )
-            } else {
-                Log.e(TAG, "Invoice details action not available from current destination")
-                Toast.makeText(requireContext(), "Navigation not available", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
+        val bundle = Bundle().apply { putString("invoiceId", invoiceId) }
+        safeNavigateToMainScreenThenNavigate(R.id.action_mainScreenFragment_to_invoiceDetailFragment, bundle)
     }
 
-    /**
-     * Safe navigation to item details
-     */
     private fun navigateToItemDetail(itemId: String) {
-        safeNavigateToMainScreen { mainNavController ->
-            val bundle = Bundle().apply {
-                putString("itemId", itemId)
-            }
-
-            // Check if the action exists
-            if (mainNavController.currentDestination?.getAction(R.id.action_mainScreenFragment_to_itemDetailFragment) != null) {
-                mainNavController.navigate(
-                    R.id.action_mainScreenFragment_to_itemDetailFragment,
-                    bundle
-                )
-            } else {
-                Log.e(TAG, "Item details action not available from current destination")
-                Toast.makeText(requireContext(), "Navigation not available", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
+        val bundle = Bundle().apply { putString("itemId", itemId) }
+        safeNavigateToMainScreenThenNavigate(R.id.action_mainScreenFragment_to_itemDetailFragment, bundle)
     }
 
-    /**
-     * Safe navigation to payments screen
-     */
     private fun navigateToPaymentScreen(customerId: String) {
-        safeNavigateToMainScreen { mainNavController ->
-            val bundle = Bundle().apply {
-                putString("customerId", customerId)
-            }
-
-            // Check if the action exists
-            if (mainNavController.currentDestination?.getAction(R.id.action_mainScreenFragment_to_paymentsFragment) != null) {
-                mainNavController.navigate(
-                    R.id.action_mainScreenFragment_to_paymentsFragment,
-                    bundle
-                )
-            } else {
-                Log.e(TAG, "Payments action not available from current destination")
-                Toast.makeText(requireContext(), "Navigation not available", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
+        val bundle = Bundle().apply { putString("customerId", customerId) }
+        safeNavigateToMainScreenThenNavigate(R.id.action_mainScreenFragment_to_paymentsFragment, bundle)
     }
+
 
     /**
-     * Helper method to safely navigate to main screen first, then perform additional navigation
+     * Performs the initial navigation back to the MainScreenFragment and then, after a delay,
+     * executes the final navigation step using the main activity's NavController.
+     *
+     * @param destinationActionId The action ID to navigate to FROM the MainScreenFragment.
+     * @param args Arguments to pass to the final destination.
      */
-    private fun safeNavigateToMainScreen(onMainScreenReached: (NavController) -> Unit) {
+    private fun safeNavigateToMainScreenThenNavigate(destinationActionId: Int, args: Bundle?) {
+        if (!isAdded) {
+            Log.w(TAG, "safeNavigateToMainScreenThenNavigate: Fragment not attached.")
+            return
+        }
         try {
-            // Navigate back to the main screen first
-            val action = NotificationFragmentDirections
-                .actionNotificationFragmentToMainScreenFragment()
-
-            // Create navigation options to clear the back stack when going to the main screen
+            // 1. Navigate from NotificationFragment back to MainScreenFragment
+            // This assumes MainScreenFragment is the intended intermediate step.
+            val backToMainAction = NotificationFragmentDirections.actionNotificationFragmentToMainScreenFragment()
             val navOptions = NavOptions.Builder()
-                .setPopUpTo(R.id.notificationFragment, true)
+                .setPopUpTo(R.id.notificationFragment, true) // Pop NotificationFragment off the stack
                 .build()
+            findNavController().navigate(backToMainAction, navOptions)
 
-            findNavController().navigate(action, navOptions)
+            // 2. Post the final navigation step with a delay
+            // Cancel any previous runnable first
+            navigationRunnable?.let { handler.removeCallbacks(it) }
 
-            // Add a short delay to ensure navigation completes
-            Handler(Looper.getMainLooper()).postDelayed({
-                try {
-                    val mainNavController =
-                        requireActivity().findNavController(R.id.nav_host_fragment)
-                    onMainScreenReached(mainNavController)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error accessing main nav controller", e)
-                    Toast.makeText(
-                        requireContext(),
-                        "Navigation error: ${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+            navigationRunnable = Runnable {
+                // Check if fragment is still attached and activity exists AFTER the delay
+                if (isAdded && activity != null) {
+                    try {
+                        // Get the NavController from the Activity's NavHostFragment
+                        // Ensure R.id.nav_host_fragment is the correct ID in your MainActivity layout
+                        val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+
+                        // Check if the current destination of the main NavController allows the action
+                        if (mainNavController.currentDestination?.getAction(destinationActionId) != null) {
+                            mainNavController.navigate(destinationActionId, args)
+                        } else {
+                            Log.e(TAG, "Final navigation action ID $destinationActionId not available from main NavController's current destination: ${mainNavController.currentDestination?.label}")
+                            // Show error using application context if possible, as fragment context might be risky here
+                            activity?.applicationContext?.let { appCtx ->
+                                Toast.makeText(appCtx, "Navigation failed", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: IllegalStateException) {
+                        Log.e(TAG, "Error finding/using main NavController after delay: Fragment might be detached or Activity destroyed.", e)
+                        activity?.applicationContext?.let { appCtx ->
+                            Toast.makeText(appCtx, "Navigation error (IllegalStateException)", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        Log.e(TAG, "Invalid final navigation action ID $destinationActionId or arguments.", e)
+                        activity?.applicationContext?.let { appCtx ->
+                            Toast.makeText(appCtx, "Navigation error (IllegalArgumentException)", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    Log.w(TAG, "Fragment detached or Activity null before final navigation could execute.")
                 }
-            }, 300)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error navigating to main screen", e)
-            Toast.makeText(
-                requireContext(),
-                "Error navigating to main screen: ${e.message}",
-                Toast.LENGTH_SHORT
-            ).show()
+            }
+            handler.postDelayed(navigationRunnable!!, 300) // Post the new runnable
+
+        } catch (e: Exception) { // Catch errors during the initial navigation step
+            Log.e(TAG, "Error during initial navigation to main screen", e)
+            context?.let { Toast.makeText(it, "Error navigating: ${e.message}", Toast.LENGTH_SHORT).show() }
         }
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        // Cancel any pending navigation actions when the view is destroyed
+        navigationRunnable?.let { handler.removeCallbacks(it) }
+        navigationRunnable = null
+        _binding = null // Crucial: Clear the binding reference
+        Log.d(TAG, "onDestroyView called, binding and handler callbacks cleared.")
     }
 }
