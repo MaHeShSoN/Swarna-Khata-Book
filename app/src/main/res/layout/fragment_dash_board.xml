@@ -416,12 +416,25 @@
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
 
-                        <!-- Category 1 -->
+                        <TextView
+                            android:id="@+id/noCategoryDataText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:fontFamily="@font/montserratregular"
+                            android:text="No category data available for this period."
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="12sp"
+                            android:visibility="gone" />
+
                         <LinearLayout
+                            android:id="@+id/category1Layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            tools:visibility="visible">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -457,12 +470,14 @@
                                 app:trackThickness="4dp" />
                         </LinearLayout>
 
-                        <!-- Category 2 -->
                         <LinearLayout
+                            android:id="@+id/category2Layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="4dp"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            tools:visibility="visible">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -498,11 +513,13 @@
                                 app:trackThickness="4dp" />
                         </LinearLayout>
 
-                        <!-- Category 3 -->
                         <LinearLayout
+                            android:id="@+id/category3Layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="vertical">
+                            android:orientation="vertical"
+                            android:visibility="gone"
+                            tools:visibility="visible">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -538,7 +555,6 @@
                                 app:trackThickness="4dp" />
                         </LinearLayout>
                     </LinearLayout>
-
                     <!-- Peak Business Days Chart -->
                     <LinearLayout
                         android:layout_width="match_parent"

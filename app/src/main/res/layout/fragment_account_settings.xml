@@ -1,31 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/cream_background">
+    android:fillViewport="true"
+    android:background="@color/cream_background"
+    tools:context=".AccountSettingsFragment">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/topAppBar"
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/my_light_primary"
-            app:navigationIcon="@drawable/famicons__arrow_back"
-            app:title="Account Settings"
-            app:titleTextAppearance="@style/ToolbarTitle"
-            app:titleTextColor="@color/white" />
-    </com.google.android.material.appbar.AppBarLayout>
+            android:layout_height="wrap_content">
 
-    <androidx.core.widget.NestedScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/topAppBar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/my_light_primary"
+                app:navigationIcon="@drawable/famicons__arrow_back"
+                app:title="Account Settings"
+                app:titleTextAppearance="@style/ToolbarTitle"
+                app:titleTextColor="@color/white" />
+
+        </com.google.android.material.appbar.AppBarLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,14 +35,14 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- User Info Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAccountInfo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
 
@@ -53,73 +55,145 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
+                        android:layout_marginBottom="12dp"
                         android:fontFamily="@font/librebaskervilleregular"
                         android:text="Account Information"
-                        android:textColor="@color/my_light_primary"
+                        android:textColor="@color/my_light_on_surface"
                         android:textSize="18sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/material_symbols__account_circle_outline"
+                            app:tint="@color/my_light_primary" />
+
                         <TextView
+                            android:id="@+id/textOwnerName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:text="Phone: "
+                            android:fontFamily="@font/montserratregular"
                             android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"
+                            tools:text="Owner Name: John Doe" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/ic_phone_custom"
+                            app:tint="@color/my_light_primary" />
 
                         <TextView
                             android:id="@+id/textUsername"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:text="+91 9876543210"
                             android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"
+                            tools:text="Phone: +91 12345 67890" />
                     </LinearLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:text="Shop: "
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/stash__shop_light"
+                            app:tint="@color/my_light_primary" />
 
                         <TextView
                             android:id="@+id/textShopName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:text="Your Jewelry Shop"
                             android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"
+                            tools:text="Shop: Example Jewellers" />
                     </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/hugeicons__taxes"
+                            app:tint="@color/my_light_primary" />
+
+                        <TextView
+                            android:id="@+id/textGstNumber"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            tools:text="GST: 27ABCDE1234F1Z5" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:id="@+id/iconSubscriptionStatus"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/fluent__premium_24_regular"
+                            app:tint="@color/my_light_primary" />
+
+                        <TextView
+                            android:id="@+id/textSubscriptionStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            tools:text="Subscription: Premium" />
+                    </LinearLayout>
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- App Lock Card - Modified for PIN-only -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAppLock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -129,25 +203,40 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:fontFamily="@font/librebaskervilleregular"
-                            android:text="PIN Security"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="18sp" />
+                            android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/textAppLockStatus"
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/librebaskervilleregular"
+                                android:text="App Lock"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="18sp" />
+
+                            <TextView
+                                android:id="@+id/textAppLockStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratmedium"
+                                android:textColor="@color/my_light_secondary"
+                                android:textSize="12sp"
+                                tools:text="Enabled" />
+                        </LinearLayout>
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchAppLock"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratmedium"
-                            android:text="Disabled"
-                            android:textColor="@color/my_light_secondary"
-                            android:textSize="14sp" />
+                            android:checked="true"
+                            app:thumbTint="@color/my_light_primary"
+                            app:trackTint="@color/my_light_primary_container" />
                     </LinearLayout>
 
                     <TextView
@@ -156,159 +245,92 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:fontFamily="@font/montserratregular"
-                        android:text="Enable PIN protection to secure your data. You can set a 4-digit PIN that will be required to access the app."
+                        android:lineSpacingMultiplier="1.2"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
+                        android:textSize="14sp"
+                        tools:text="PIN protection is enabled. You'll need to enter your 4-digit PIN when opening the app.\n\nSecurity feature: If you're ever forced to unlock your app against your will, enter your PIN in reverse to safely wipe all data." />
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switchAppLock"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="Enable PIN Protection"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-
-                    <!-- New info text about reverse PIN feature -->
-                    <TextView
-                        android:id="@+id/reversePinInfo"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:background="@color/my_light_primary_container"
-                        android:fontFamily="@font/montserratmedium"
-                        android:padding="8dp"
-                        android:text="Security: If you're ever forced to unlock your app under duress, entering your PIN in reverse will securely wipe all app data."
-                        android:textColor="@color/status_paid"
-                        android:textSize="12sp"
-                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Security Options Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardChangePIN"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true"
                 app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
                     android:padding="16dp">
 
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="16dp"
+                        android:src="@drawable/tabler__password_user"
+                        app:tint="@color/my_light_primary" />
+
                     <TextView
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Security Options"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="18sp" />
+                        android:layout_weight="1"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Change PIN"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
 
-                    <!-- Change PIN Option -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cardChangePIN"
-                        android:layout_width="match_parent"
+                    <ImageView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        app:cardBackgroundColor="@color/my_light_surface"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="0dp"
-                        app:rippleColor="@color/my_light_primary_container"
-                        app:strokeColor="@color/my_light_outline"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center_vertical"
-                                android:src="@drawable/tabler__password_user"
-                                app:tint="@color/my_light_primary" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="16dp"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:text="Change PIN"
-                                    android:textColor="@color/my_light_on_surface"
-                                    android:textSize="16sp" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratregular"
-                                    android:text="Change your security PIN"
-                                    android:textColor="@color/my_light_on_surface_variant"
-                                    android:textSize="14sp" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_gravity="center_vertical"
-                                android:src="@drawable/material_symbols__arrow_forward_ios_rounded"
-                                app:tint="@color/my_light_on_surface_variant" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
+                        android:src="@drawable/material_symbols__arrow_forward_ios_rounded"
+                        app:tint="@color/my_light_secondary" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/montserratbold"
+                android:text="DANGER ZONE"
+                android:textColor="@color/status_unpaid"
+                android:textSize="14sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonDeleteAllData"
                 style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginBottom="8dp"
                 android:fontFamily="@font/montserratmedium"
-                android:text="DELETE ALL MY DATA"
+                android:paddingVertical="12dp"
+                android:text="Delete All Data"
                 android:textColor="@color/status_unpaid"
-                android:textSize="14sp"
-                app:icon="@drawable/material_symbols__delete"
-                app:iconGravity="textStart"
+                app:icon="@drawable/material_symbols__delete_forever"
                 app:iconTint="@color/status_unpaid"
-                app:rippleColor="@color/status_unpaid_light"
                 app:strokeColor="@color/status_unpaid" />
 
-
-            <!-- Logout Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonLogout"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:fontFamily="@font/montserratmedium"
-                android:text="LOGOUT"
-                android:textColor="@color/status_unpaid"
-                android:textSize="14sp"
-                app:icon="@drawable/quill"
-                app:iconGravity="textStart"
-                app:iconTint="@color/status_unpaid"
-                app:rippleColor="@color/status_unpaid_light"
-                app:strokeColor="@color/status_unpaid" />
+                android:paddingVertical="12dp"
+                android:text="Logout"
+                android:textColor="@color/status_unpaid" />
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

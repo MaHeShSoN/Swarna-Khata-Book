@@ -123,16 +123,17 @@ class launcherFragment : Fragment() {
     }
 
     private fun checkPinAndProceed() {
-        // Check if PIN is set
-        if (PinSecurityManager.isPinSet(requireContext())) {
-            // PIN is set, show PIN verification dialog
+        val context = requireContext() // Get context once
+
+        // *** FIX: Check BOTH if a PIN exists AND if the lock is ENABLED ***
+        if (PinSecurityManager.hasPinBeenSetUp(context) && PinSecurityManager.isPinLockEnabled(context)) {
+            // PIN is set AND the lock is enabled, show verification dialog
             showPinVerificationDialog()
         } else {
-            // No PIN set, proceed with normal flow
+            // No PIN set OR the lock is disabled, proceed with normal flow
             startNormalFlow()
         }
     }
-
     private fun startNormalFlow() {
         // Observe navigation events
         viewModel.navigationEvent.observe(viewLifecycleOwner) { event ->

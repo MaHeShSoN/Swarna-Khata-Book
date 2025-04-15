@@ -5,6 +5,42 @@
     <string name="save_close">Save &amp; Close</string>
     <string name="save_and_add">Add More</string>
 
+    <string name="add_jewelry_item">Add Jewellery Item</string>
+    <string name="material_type">Material Type</string>
+    <string name="gold">Gold</string>
+    <string name="silver">Silver</string>
+    <string name="other">Other</string>
+    <string name="category">Category</string>
+    <string name="add_category">Add Category</string>
+    <string name="display_name">Display Name</string>
+    <string name="jewelry_code">Jewelry Code</string>
+    <string name="weight_details">Weight Details</string>
+    <string name="gross_weight">Gross Weight</string>
+    <string name="net_weight">Net Weight</string>
+    <string name="purity_hint">Purity (e.g. 91.66)</string>
+    <string name="wastage">Wastage</string>
+    <string name="inventory_information">Inventory Information</string>
+    <string name="stock_value">Stock Value</string>
+    <string name="unit">Unit</string>
+    <string name="location">Location</string>
+
+    <string name="account_phone_label">Phone: %s</string>
+    <string name="account_shop_label">Shop: %s</string>
+    <string name="account_owner_label">Owner: %s</string>
+    <string name="account_gst_label">GST: %s</string>
+    <string name="account_subscription_label">Subscription: %s</string>
+    <string name="pin_enabled_description">PIN protection is enabled. You\'ll need to enter your 4-digit PIN when opening the app.\n\nSecurity feature: If you\'re ever forced to unlock your app against your will, enter your PIN in reverse to safely wipe all data.</string>
+    <string name="pin_disabled_description">Enable PIN protection to secure your data. You can set a 4-digit PIN that will be required to access the app.</string>
+
+    <string name="pin_setup_title_enter">Set PIN</string>
+    <string name="pin_setup_reason_enter">Enter a new 4-digit PIN</string>
+    <string name="pin_setup_info_enter">Choose a PIN that\'s easy for you to remember but hard for others to guess.</string>
+    <string name="pin_setup_title_confirm">Confirm PIN</string>
+    <string name="pin_setup_reason_confirm">Re-enter your new PIN to confirm</string>
+    <string name="pin_setup_info_confirm">Important: In an emergency, entering your PIN in reverse will wipe all data to protect your privacy.</string>
+    <string name="pin_error_mismatch">PINs don\'t match. Please try again.</string>
+
+
     <string name="credit_limit_warning_title">Credit Limit Warning</string>
     <string name="proceed_anyway">Proceed Anyway</string>
     <string name="credit_limit_warning_question">Do you want to proceed with this invoice anyway?</string>
@@ -95,6 +131,34 @@
     <string name="cancel">Cancel</string>
     <string name="restore_confirmation_message">Are you sure you want to restore this %1$s? It will be moved back to your active list.</string>
     <string name="dialog_info_message">Items you delete are moved to the Recycling Bin for 30 days...</string>
+    <string name="add_new_client">Add New Client</string>
+    <string name="basic_information">Basic Information</string>
+    <string name="client_type">Client Type</string>
+    <string name="first_name">First Name*</string>
+    <string name="last_name">Last Name*</string>
+    <string name="phone_number">Phone Number*</string>
+    <string name="email_address_optional">Email Address(optional)</string>
+    <string name="address_information">Address Information</string>
+    <string name="street_address">Street Address*</string>
+    <string name="city">City*</string>
+    <string name="state_province">State/Province*</string>
+    <string name="postal_code_optional">Postal Code(optional)</string>
+    <string name="country">Country</string>
+    <string name="financial_information">Financial Information</string>
+    <string name="opening_balance_type">Opening Balance Type</string>
+    <string name="credit">Credit</string>
+    <string name="debit">Debit</string>
+    <string name="balance_notes">Balance Notes</string>
+    <string name="business_information">Business Information</string>
+    <string name="business_name">Business Name</string>
+    <string name="gst_number">GST Number</string>
+    <string name="tax_id">Tax ID</string>
+    <string name="customer_since">Customer Since</string>
+    <string name="referred_by">Referred By</string>
+    <string name="birthday">Birthday</string>
+    <string name="anniversary">Anniversary</string>
+    <string name="notes_comments">Notes/Comments</string>
+    <string name="relationship_information_optional">Relationship Information (Optional)</string>
 
 
 </resources>

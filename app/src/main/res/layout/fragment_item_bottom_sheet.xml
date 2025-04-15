@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -15,8 +16,10 @@
             android:id="@+id/titleTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Add Jewellery Item"
-            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+            android:fontFamily="@font/librebaskervilleregular"
+            android:text="@string/add_jewelry_item"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="24sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -44,9 +47,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Material Type"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/my_light_on_surface" />
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/material_type"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/itemTypeChipGroup"
@@ -57,34 +61,28 @@
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/goldChip"
-                        style="@style/Widget.Material3.Chip.Filter"
+                        style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:text="Gold"
-                        app:chipBackgroundColor="@color/chip_background"
-                        app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp" />
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/gold" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/silverChip"
-                        style="@style/Widget.Material3.Chip.Filter"
+                        style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Silver"
-                        app:chipBackgroundColor="@color/chip_background"
-                        app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp" />
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/silver" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/otherChip"
-                        style="@style/Widget.Material3.Chip.Filter"
+                        style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Other"
-                        app:chipBackgroundColor="@color/chip_background"
-                        app:chipStrokeColor="@color/my_light_primary"
-                        app:chipStrokeWidth="1dp" />
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/other" />
                 </com.google.android.material.chip.ChipGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -112,9 +110,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Basic Information"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/my_light_on_surface" />
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/basic_information"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
 
                 <!-- Category with Add Button -->
                 <LinearLayout
@@ -129,16 +128,18 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="Category"
+                        android:hint="@string/category"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
+                        app:endIconTint="@color/my_light_secondary"
                         app:hintTextColor="@color/my_light_secondary">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/categoryDropdown"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="none"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
@@ -151,7 +152,7 @@
                         android:layout_gravity="center_vertical"
                         android:layout_marginStart="8dp"
                         android:background="@drawable/gold_button_background"
-                        android:contentDescription="Add Category"
+                        android:contentDescription="@string/add_category"
                         android:padding="12dp"
                         android:src="@drawable/material_symbols__add_rounded"
                         app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
@@ -159,25 +160,20 @@
                         app:strokeWidth="1dp"
                         app:tint="@color/my_light_on_primary" />
                 </LinearLayout>
-
                 <!-- Display Name -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/displayNameInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Display Name"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary">
+                    android:hint="@string/display_name">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/displayNameEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="text|textCapWords"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -186,21 +182,17 @@
                 <!-- Jewelry Code -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/jewelryCodeInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Jewelry Code"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary">
+                    android:hint="@string/jewelry_code">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/jewelryCodeEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="textCapCharacters"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -231,29 +223,26 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Weight Details"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/my_light_on_surface" />
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/weight_details"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
 
                 <!-- Gross Weight -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/grossWeightInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Gross Weight"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary"
+                    android:hint="@string/gross_weight"
                     app:suffixText="g">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/grossWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -262,22 +251,18 @@
                 <!-- Net Weight -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/netWeightInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Net Weight"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary"
+                    android:hint="@string/net_weight"
                     app:suffixText="g">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/netWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -286,22 +271,18 @@
                 <!-- Purity -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/purityInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Purity (e.g. 91.66)"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary"
+                    android:hint="@string/purity_hint"
                     app:suffixText="%">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/purityEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -310,32 +291,25 @@
                 <!-- Wastage -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/wastageInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Wastage"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary"
+                    android:hint="@string/wastage"
                     app:suffixText="%">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/wastageEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-
 
         <!-- CARD 5: Inventory Information -->
         <com.google.android.material.card.MaterialCardView
@@ -360,9 +334,10 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Inventory Information"
-                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-                    android:textColor="@color/my_light_on_surface" />
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/inventory_information"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
 
                 <!-- Stock Info Row -->
                 <LinearLayout
@@ -374,22 +349,18 @@
                     <!-- Stock Value -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/stockInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                        style="@style/Widget.App.TextInputLayout.GoldForm"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
-                        android:hint="Stock Value"
-                        app:boxBackgroundColor="@color/my_light_surface"
-                        app:boxStrokeColor="@color/my_light_primary"
-                        app:boxStrokeWidth="1dp"
-                        app:endIconMode="clear_text"
-                        app:hintTextColor="@color/my_light_secondary">
+                        android:hint="@string/stock_value">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/stockEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="numberDecimal"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
@@ -403,18 +374,19 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:hint="Unit"
+                        android:hint="@string/unit"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
+                        app:endIconTint="@color/my_light_secondary"
                         app:hintTextColor="@color/my_light_secondary">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/stockChargesTypeEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="none"
-                            app:dropDownBackgroundTint="@color/my_light_primary_container"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
@@ -423,21 +395,17 @@
                 <!-- Location -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/locationInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Location"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary">
+                    android:hint="@string/location">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/locationEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="text|textCapWords"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -457,39 +425,29 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/inventoryCard">
 
-
             <!-- Cancel/Close Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveCloseButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.App.Button.OutlinedGold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:letterSpacing="0.01"
-                android:paddingVertical="12dp"
-                android:text="@string/save_close"
-                android:textColor="@color/my_light_primary"
-                app:rippleColor="@color/my_light_primary_container"
-                app:strokeColor="@color/my_light_primary" />
+                android:fontFamily="@font/montserratsemibold"
+                android:text="@string/save_close" />
 
             <!-- Save and Add Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveAddButton"
-                style="@style/Widget.Material3.Button"
+                style="@style/Widget.App.Button.Gold"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="24dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/my_light_primary"
-                android:letterSpacing="0.01"
-                android:paddingVertical="12dp"
-                android:text="@string/save_and_add"
-                android:textColor="@color/my_light_on_primary"
-                app:rippleColor="@color/my_light_secondary" />
-
+                android:fontFamily="@font/montserratsemibold"
+                android:text="@string/save_and_add" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
     </androidx.constraintlayout.widget.ConstraintLayout>

@@ -72,6 +72,7 @@ class SalesFragment : Fragment() {
         setUpClickListner()
         setupDateFilterChips()
         setupStatusFilterChip()
+        setupEmptyStateButtons()
 
         binding.topAppBar.overflowIcon =
             ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
@@ -565,12 +566,23 @@ class SalesFragment : Fragment() {
             salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.ALL)
             salesViewModel.searchInvoices("")
         }
+    }
 
-
-        // Add new item button in empty search state
-        binding.addNewItemButton.setOnClickListener {
-            binding.addSaleFab.performClick()
+    private fun setupEmptyStateButtons() {
+        // Button within the main empty state (no invoices at all)
+        binding.addNewInvoiceEmptyButton.setOnClickListener {
+            navigateToCreateInvoice() // Navigate using helper
         }
+
+        // Button within the empty search state
+        binding.addNewItemButton.setOnClickListener {
+            navigateToCreateInvoice() // Navigate using helper
+        }
+    }
+
+    private fun navigateToCreateInvoice() {
+        val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+        parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)
     }
 
     private fun updateUIState(isEmpty: Boolean) {

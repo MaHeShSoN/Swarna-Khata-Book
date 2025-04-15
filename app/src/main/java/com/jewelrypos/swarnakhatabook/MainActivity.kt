@@ -278,12 +278,18 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Check if app was in background and PIN security is enabled
-        if (wasInBackground && PinSecurityManager.isPinSet(this)) {
+        val context = this // Get context once
+
+        // *** FIX: Check if app was in background, PIN exists, AND lock is ENABLED ***
+        if (wasInBackground && PinSecurityManager.hasPinBeenSetUp(context) && PinSecurityManager.isPinLockEnabled(
+                context
+            )
+        ) {
+            // Only show PIN verification if lock is actually enabled
             showPinVerificationDialog()
         }
 
-        // Reset flag
+        // Reset background flag regardless of PIN check outcome
         wasInBackground = false
     }
 
@@ -363,4 +369,5 @@ class MainActivity : AppCompatActivity() {
                 finish()
             }
         )
-    }}
+    }
+}

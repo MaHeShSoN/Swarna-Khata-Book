@@ -1,38 +1,38 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.app.Dialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.view.animation.AnimationUtils
+import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Utilitys.PinCheckResult
 import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
+import com.jewelrypos.swarnakhatabook.databinding.BottomSheetPinEntryBinding // Import ViewBinding
 
 /**
- * A full-screen bottom sheet for PIN entry
+ * A full-screen bottom sheet for PIN entry (Refactored with ViewBinding and requested changes)
  */
 class PinEntryBottomSheet : BottomSheetDialogFragment() {
 
-    private lateinit var pinEditText: TextInputEditText
-    private lateinit var errorText: TextView
-    private lateinit var titleText: TextView
-    private lateinit var reasonText: TextView
+    // Use ViewBinding
+    private var _binding: BottomSheetPinEntryBinding? = null
+    private val binding get() = _binding!! // This property is only valid between onCreateView and onDestroyView.
 
     private val pinDots = arrayOfNulls<View>(4)
-    private val numberButtons = arrayOfNulls<MaterialButton>(10)
-    private lateinit var deleteButton: MaterialButton
-    private lateinit var clearButton: MaterialButton
-    private lateinit var cancelButton: MaterialButton
-    private lateinit var confirmButton: MaterialButton
 
     // Callbacks
     private var onPinConfirmedListener: ((String) -> Unit)? = null
@@ -47,144 +47,129 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.bottom_sheet_pin_entry, null)
+    ): View {
+        _binding = BottomSheetPinEntryBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Find views
-        pinEditText = view.findViewById(R.id.pinEditText)
-        errorText = view.findViewById(R.id.pin_error_text)
-        titleText = view.findViewById(R.id.pin_entry_title)
-        reasonText = view.findViewById(R.id.pin_fallback_reason)
-        cancelButton = view.findViewById(R.id.btn_cancel)
-        confirmButton = view.findViewById(R.id.btn_confirm)
+        // Initialize PIN dots using binding
+        pinDots[0] = binding.pinDot1
+        pinDots[1] = binding.pinDot2
+        pinDots[2] = binding.pinDot3
+        pinDots[3] = binding.pinDot4
 
-        // Initialize PIN dots
-        pinDots[0] = view.findViewById(R.id.pin_dot_1)
-        pinDots[1] = view.findViewById(R.id.pin_dot_2)
-        pinDots[2] = view.findViewById(R.id.pin_dot_3)
-        pinDots[3] = view.findViewById(R.id.pin_dot_4)
-
-        // Initialize number buttons
-        numberButtons[0] = view.findViewById(R.id.btn_0)
-        numberButtons[1] = view.findViewById(R.id.btn_1)
-        numberButtons[2] = view.findViewById(R.id.btn_2)
-        numberButtons[3] = view.findViewById(R.id.btn_3)
-        numberButtons[4] = view.findViewById(R.id.btn_4)
-        numberButtons[5] = view.findViewById(R.id.btn_5)
-        numberButtons[6] = view.findViewById(R.id.btn_6)
-        numberButtons[7] = view.findViewById(R.id.btn_7)
-        numberButtons[8] = view.findViewById(R.id.btn_8)
-        numberButtons[9] = view.findViewById(R.id.btn_9)
-
-        deleteButton = view.findViewById(R.id.btn_delete)
-        clearButton = view.findViewById(R.id.btn_clear)
-
-        // Set up button click listeners
+        // Set up button click listeners using binding
         setupButtonListeners()
+        setupPinInputListener() // Setup TextWatcher
 
-        // Set up cancel button
-        cancelButton.setOnClickListener {
-            onCancelListener?.invoke()
-            dismiss()
-        }
+        // Apply stored arguments and initial state
+        applyArguments()
+    }
 
-        // Set up confirm button
-        confirmButton.setOnClickListener {
-            val enteredPin = pinEditText.text.toString()
-            if (enteredPin.length == 4) {
-                onPinConfirmedListener?.invoke(enteredPin)
-            } else {
-                setError("Please enter a 4-digit PIN", true)
+    // Refactored applyArguments using ViewBinding
+    private fun applyArguments() {
+        arguments?.let { args ->
+            if (args.containsKey(ARG_TITLE)) {
+                binding.pinEntryTitle.text = args.getString(ARG_TITLE)
             }
+
+            val reason = args.getString(ARG_REASON)
+            binding.pinFallbackReason.text = reason
+            binding.pinFallbackReason.visibility = if (reason != null && args.getBoolean(ARG_REASON_VISIBLE, true))
+                View.VISIBLE else View.GONE
+
+            val error = args.getString(ARG_ERROR)
+            binding.pinErrorText.text = error
+            binding.pinErrorText.visibility = if (error != null && args.getBoolean(ARG_ERROR_VISIBLE, true))
+                View.VISIBLE else View.GONE
         }
     }
 
+    // Refactored setupButtonListeners using ViewBinding
     private fun setupButtonListeners() {
-        // Number buttons
-        for (i in 0..9) {
-            numberButtons[i]?.setOnClickListener {
-                if (pinEditText.text?.length ?: 0 < 4) {
-                    pinEditText.append(i.toString())
-                    updatePinDots()
+        val numberButtons = listOf(
+            binding.btn0, binding.btn1, binding.btn2, binding.btn3, binding.btn4,
+            binding.btn5, binding.btn6, binding.btn7, binding.btn8, binding.btn9
+        )
 
-                    // Enable confirm button when PIN is complete
-                    if (pinEditText.text?.length == 4) {
-                        confirmButton.isEnabled = true
-                    }
+        numberButtons.forEachIndexed { index, button ->
+            button.setOnClickListener {
+                if (binding.pinEditText.text?.length ?: 0 < 4) {
+                    binding.pinEditText.append(index.toString())
+                    // TextWatcher will handle the rest
                 }
             }
         }
 
-        // Delete button
-        deleteButton.setOnClickListener {
-            val text = pinEditText.text.toString()
+        binding.btnDelete.setOnClickListener {
+            val text = binding.pinEditText.text.toString()
             if (text.isNotEmpty()) {
-                pinEditText.setText(text.substring(0, text.length - 1))
-                pinEditText.setSelection(pinEditText.text?.length ?: 0)
-                updatePinDots()
-
-                // Disable confirm button if PIN is incomplete
-                if (pinEditText.text?.length ?: 0 < 4) {
-                    confirmButton.isEnabled = false
-                }
+                binding.pinEditText.setText(text.substring(0, text.length - 1))
+                binding.pinEditText.setSelection(binding.pinEditText.text?.length ?: 0)
+                // TextWatcher will update dots
             }
         }
 
-        // Clear button
-        clearButton.setOnClickListener {
-            pinEditText.setText("")
-            updatePinDots()
-            confirmButton.isEnabled = false
+        binding.btnClear.setOnClickListener {
+            binding.pinEditText.setText("")
+            // TextWatcher will update dots
         }
     }
 
-    private fun updatePinDots() {
-        val pinLength = pinEditText.text?.length ?: 0
+    // Setup TextWatcher for auto-verification
+    private fun setupPinInputListener() {
+        binding.pinEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
 
-        // Update all dots based on current PIN length
-        for (i in pinDots.indices) {
-            pinDots[i]?.background = if (i < pinLength) {
-                ContextCompat.getDrawable(requireContext(), R.drawable.pin_dot_filled)
-            } else {
-                ContextCompat.getDrawable(requireContext(), R.drawable.pin_dot_empty)
+            override fun afterTextChanged(s: Editable?) {
+                val pin = s.toString()
+                updatePinDots() // Update visual dots
+
+                // Automatically trigger verification when 4 digits are entered
+                if (pin.length == 4) {
+                    onPinConfirmedListener?.invoke(pin)
+                    // Listener should handle dismiss/clear based on verification result
+                }
             }
+        })
+    }
+
+    // Refactored updatePinDots using ViewBinding
+    private fun updatePinDots() {
+        val pinLength = binding.pinEditText.text?.length ?: 0
+
+        for (i in pinDots.indices) {
+            pinDots[i]?.background = ContextCompat.getDrawable(
+                requireContext(),
+                if (i < pinLength) R.drawable.pin_dot_filled else R.drawable.pin_dot_empty
+            )
         }
 
         // Clear any error when user starts typing again
-        if (errorText.visibility == View.VISIBLE) {
-            errorText.visibility = View.GONE
+        if (binding.pinErrorText.visibility == View.VISIBLE) {
+            binding.pinErrorText.visibility = View.GONE
         }
     }
 
-    /**
-     * Set the title text
-     */
+    // Refactored setTitle using ViewBinding
     fun setTitle(title: String): PinEntryBottomSheet {
-        if (::titleText.isInitialized) {
-            titleText.text = title
+        if (_binding != null) { // Check if binding is available
+            binding.pinEntryTitle.text = title
         } else {
-            arguments = (arguments ?: Bundle()).apply {
-                putString(ARG_TITLE, title)
-            }
+            arguments = (arguments ?: Bundle()).apply { putString(ARG_TITLE, title) }
         }
         return this
     }
 
-    /**
-     * Set the reason text
-     */
+    // Refactored setReason using ViewBinding
     fun setReason(reason: String?, isVisible: Boolean = true): PinEntryBottomSheet {
-        if (::reasonText.isInitialized) {
-            if (reason != null) {
-                reasonText.text = reason
-                reasonText.visibility = if (isVisible) View.VISIBLE else View.GONE
-            } else {
-                reasonText.visibility = View.GONE
-            }
+        if (_binding != null) {
+            binding.pinFallbackReason.text = reason
+            binding.pinFallbackReason.visibility = if (reason != null && isVisible) View.VISIBLE else View.GONE
         } else if (reason != null) {
             arguments = (arguments ?: Bundle()).apply {
                 putString(ARG_REASON, reason)
@@ -194,18 +179,23 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         return this
     }
 
-    /**
-     * Set the error text
-     */
+    // Refactored setError with animation and ViewBinding
     fun setError(error: String?, isVisible: Boolean = true): PinEntryBottomSheet {
-        if (::errorText.isInitialized) {
-            if (error != null) {
-                errorText.text = error
-                errorText.visibility = if (isVisible) View.VISIBLE else View.GONE
+        if (_binding != null) {
+            if (error != null && isVisible) {
+                binding.pinErrorText.text = error
+                binding.pinErrorText.visibility = View.VISIBLE
+                // Apply shake animation
+                try {
+                    val shakeAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.shake_animation)
+                    binding.pinDotsContainer.startAnimation(shakeAnimation) // Apply to dots container
+                } catch (e: Exception) {
+                    android.util.Log.e("PinEntryBottomSheet", "Error loading or applying animation", e)
+                }
             } else {
-                errorText.visibility = View.GONE
+                binding.pinErrorText.visibility = View.GONE
             }
-        } else if (error != null) {
+        } else if (error != null && isVisible) {
             arguments = (arguments ?: Bundle()).apply {
                 putString(ARG_ERROR, error)
                 putBoolean(ARG_ERROR_VISIBLE, isVisible)
@@ -214,57 +204,57 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         return this
     }
 
-    /**
-     * Set the PIN confirmation listener
-     */
+    // --- Make Non-Draggable ---
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+        dialog.setOnShowListener {
+            val bottomSheet = dialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            if (bottomSheet != null) {
+                val behavior = BottomSheetBehavior.from(bottomSheet)
+                behavior.isDraggable = false // Disable dragging
+                setupFullHeight(bottomSheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+        return dialog
+    }
+
+    private fun setupFullHeight(bottomSheet: View) {
+        val layoutParams = bottomSheet.layoutParams
+        layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+        bottomSheet.layoutParams = layoutParams
+    }
+
+
     fun setOnPinConfirmedListener(listener: (String) -> Unit): PinEntryBottomSheet {
         onPinConfirmedListener = listener
         return this
     }
 
-    /**
-     * Set the cancel listener
-     */
+
     fun setOnCancelListener(listener: () -> Unit): PinEntryBottomSheet {
         onCancelListener = listener
         return this
     }
 
-    /**
-     * Clear the PIN input
-     */
+    // Refactored clearPin using ViewBinding
     fun clearPin() {
-        if (::pinEditText.isInitialized) {
-            pinEditText.setText("")
-            updatePinDots()
-            confirmButton.isEnabled = false
+        if (_binding != null) {
+            binding.pinEditText.setText("")
+            // TextWatcher handles updating dots
         }
     }
 
-    override fun onStart() {
-        super.onStart()
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        onCancelListener?.invoke() // Still trigger cancel if user dismisses manually
+    }
 
-        // Apply stored arguments if available
-        arguments?.let { args ->
-            if (args.containsKey(ARG_TITLE)) {
-                titleText.text = args.getString(ARG_TITLE)
-            }
-
-            if (args.containsKey(ARG_REASON)) {
-                reasonText.text = args.getString(ARG_REASON)
-                reasonText.visibility = if (args.getBoolean(ARG_REASON_VISIBLE, true))
-                    View.VISIBLE else View.GONE
-            }
-
-            if (args.containsKey(ARG_ERROR)) {
-                errorText.text = args.getString(ARG_ERROR)
-                errorText.visibility = if (args.getBoolean(ARG_ERROR_VISIBLE, true))
-                    View.VISIBLE else View.GONE
-            }
-        }
-
-        // Initial state for confirm button
-        confirmButton.isEnabled = false
+    // Clean up ViewBinding
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
     companion object {
@@ -274,9 +264,6 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         private const val ARG_ERROR = "error"
         private const val ARG_ERROR_VISIBLE = "error_visible"
 
-        /**
-         * Create a new instance of the bottom sheet
-         */
         fun newInstance(title: String): PinEntryBottomSheet {
             return PinEntryBottomSheet().apply {
                 arguments = Bundle().apply {
@@ -285,12 +272,7 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        /**
-         * Show PIN verification using bottom sheet
-         */
-        /**
-         * Show PIN verification using bottom sheet
-         */
+        // Updated showPinVerification to use the modified setError
         fun showPinVerification(
             context: Context,
             fragmentManager: androidx.fragment.app.FragmentManager,
@@ -302,11 +284,9 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
             onReversePinEntered: () -> Unit,
             onCancelled: () -> Unit
         ) {
-            // Check security status first
             val securityStatus = PinSecurityManager.checkStatus(context)
 
             if (securityStatus is PinSecurityStatus.Locked) {
-                // Don't show PIN entry if locked out
                 val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
                 androidx.appcompat.app.AlertDialog.Builder(context)
                     .setTitle("Too Many Failed Attempts")
@@ -317,47 +297,35 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
                 return
             }
 
-            // Create the bottom sheet instance and store it in a variable
             val bottomSheet = newInstance(title)
-
-            // Configure the bottom sheet
             bottomSheet.setReason(reason)
                 .setOnPinConfirmedListener { enteredPin ->
-                    // Verify PIN
                     when (PinHashUtil.checkPin(enteredPin, prefs)) {
                         PinCheckResult.NORMAL_MATCH -> {
-                            // PIN is correct
                             bottomSheet.dismiss()
                             PinSecurityManager.resetAttempts(context)
                             onPinCorrect()
                         }
                         PinCheckResult.REVERSE_MATCH -> {
-                            // Reverse PIN entered
                             bottomSheet.dismiss()
                             onReversePinEntered()
                         }
                         PinCheckResult.NO_MATCH -> {
-                            // PIN is incorrect
                             val updatedStatus = PinSecurityManager.recordFailedAttempt(context)
-
-                            when (updatedStatus) {
-                                is PinSecurityStatus.Locked -> {
-                                    bottomSheet.dismiss()
-                                    onPinIncorrect(updatedStatus)
+                            if (updatedStatus is PinSecurityStatus.Locked) {
+                                bottomSheet.dismiss() // Dismiss before showing lockout dialog
+                                onPinIncorrect(updatedStatus)
+                            } else {
+                                // Use setError which now includes animation
+                                val attemptsLeft = (updatedStatus as? PinSecurityStatus.Limited)?.remainingAttempts
+                                val errorMsg = if (attemptsLeft != null) {
+                                    "Incorrect PIN ($attemptsLeft attempts remaining)"
+                                } else {
+                                    "Incorrect PIN"
                                 }
-                                is PinSecurityStatus.Limited -> {
-                                    bottomSheet.setError(
-                                        "Incorrect PIN (${updatedStatus.remainingAttempts} attempts remaining)",
-                                        true
-                                    )
-                                    bottomSheet.clearPin()
-                                    onPinIncorrect(updatedStatus)
-                                }
-                                else -> {
-                                    bottomSheet.setError("Incorrect PIN", true)
-                                    bottomSheet.clearPin()
-                                    onPinIncorrect(updatedStatus)
-                                }
+                                bottomSheet.setError(errorMsg, true)
+                                bottomSheet.clearPin() // Clear PIN after showing error
+                                onPinIncorrect(updatedStatus)
                             }
                         }
                     }
@@ -366,7 +334,6 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
                     onCancelled()
                 }
 
-            // Show the bottom sheet
             bottomSheet.show(fragmentManager, "PinEntryBottomSheet")
         }
     }

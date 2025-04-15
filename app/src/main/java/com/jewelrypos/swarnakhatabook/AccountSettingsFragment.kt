@@ -8,38 +8,94 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CompoundButton // Import CompoundButton
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AlertDialog // Keep for potential future use if needed
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.lifecycleScope // Import lifecycleScope
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder // Use Material 3 dialogs
+import com.google.android.material.textfield.TextInputEditText // Keep if used elsewhere
+import com.google.android.material.textfield.TextInputLayout // Keep if used elsewhere
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.jewelrypos.swarnakhatabook.BottomSheet.PinChangeBottomSheet
+import com.jewelrypos.swarnakhatabook.BottomSheet.PinEntryBottomSheet
+import com.jewelrypos.swarnakhatabook.BottomSheet.PinSetupBottomSheet
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+// Import UserSubscriptionManager
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Utilitys.DataWipeManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
-import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
+import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager // Assuming this is where the new methods are
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import com.jewelrypos.swarnakhatabook.databinding.FragmentAccountSettingsBinding
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.launch // Import launch
 
 class AccountSettingsFragment : Fragment() {
     private var _binding: FragmentAccountSettingsBinding? = null
-    private val binding get() = _binding!!
+    private val binding get() = _binding!! // Use non-null assertion carefully
 
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var userSubscriptionManager: UserSubscriptionManager // Declare manager instance
+
+    // *** Define the listener as a property to reuse it ***
+    private val appLockSwitchListener = CompoundButton.OnCheckedChangeListener { _, isChecked ->
+        // Check if the fragment is added before proceeding
+        if (!isAdded) return@OnCheckedChangeListener
+
+        // Get current actual PIN setup status *before* potentially changing it
+        val pinIsAlreadySetUp = PinSecurityManager.hasPinBeenSetUp(requireContext())
+
+        if (isChecked) {
+            // User wants to ENABLE PIN Lock
+            if (pinIsAlreadySetUp) {
+                // PIN exists, just enable the lock
+                PinSecurityManager.setPinLockEnabled(requireContext(), true)
+                updateAppLockUI(true, true) // Update UI immediately
+            } else {
+                // PIN does not exist, need to run setup flow
+                PinSetupBottomSheet.showPinSetup(
+                    context = requireContext(),
+                    fragmentManager = childFragmentManager,
+                    onCompleted = { success ->
+                        if (!isAdded || _binding == null) return@showPinSetup // Prevent crash
+                        if (success) {
+                            PinSecurityManager.setPinLockEnabled(requireContext(), true)
+                            updateAppLockUI(true, true)
+                            binding.switchAppLock.isChecked = true // Ensure switch stays checked
+                            Toast.makeText(requireContext(), "PIN protection enabled", Toast.LENGTH_SHORT).show()
+                        } else {
+                            binding.switchAppLock.isChecked = false // Reset switch
+                            updateAppLockUI(false, false)
+                        }
+                    }
+                )
+            }
+        } else {
+            // User wants to DISABLE PIN Lock
+            if (pinIsAlreadySetUp) {
+                // PIN exists, need verification to disable the lock
+                showDisablePinConfirmationDialog()
+            } else {
+                // PIN doesn't exist, just ensure lock is marked disabled
+                PinSecurityManager.setPinLockEnabled(requireContext(), false)
+                updateAppLockUI(false, false)
+            }
+        }
+    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View { // Return non-nullable View
         _binding = FragmentAccountSettingsBinding.inflate(inflater, container, false)
+        // Initialize UserSubscriptionManager here
+        userSubscriptionManager = UserSubscriptionManager(requireContext())
         return binding.root
     }
 
@@ -54,304 +110,255 @@ class AccountSettingsFragment : Fragment() {
         // Initialize SharedPreferences for app settings
         sharedPreferences = SecurePreferences.getInstance(requireContext())
 
-        // Setup UI elements with current settings
-        setupUI()
-
         // Setup click listeners for settings options
-        setupClickListeners()
+        setupClickListeners() // Listener for switch is now attached in setupUI via onResume
     }
 
-    private fun setupUI() {
-        // Set the app lock switch to current setting
-        val isPinSet = PinSecurityManager.isPinSet(requireContext())
-        binding.switchAppLock.isChecked = isPinSet
-        updateAppLockUI(isPinSet)
-
-        // Show user information
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        binding.textUsername.text = currentUser?.phoneNumber ?: "Not signed in"
-
-        // Get shop name from ShopManager to display in UI
-        ShopManager.getShop(requireContext()) { shop ->
-            if (shop != null) {
-                binding.textShopName.text = shop.shopName
-            }
+    override fun onResume() {
+        super.onResume()
+        // Setup/Refresh UI elements with current settings when fragment is resumed
+        if (_binding != null) {
+            setupUI()
         }
     }
 
-    private fun updateAppLockUI(enabled: Boolean) {
-        // Update additional UI elements based on app lock state
-        binding.textAppLockStatus.text = if (enabled) "Enabled" else "Disabled"
+    private fun setupUI() {
+        binding?.let { b ->
+            val pinIsSetUp = PinSecurityManager.hasPinBeenSetUp(requireContext())
+            val pinLockIsEnabled = PinSecurityManager.isPinLockEnabled(requireContext())
 
-        // Update the description text to include reverse PIN information when enabled
-        binding.textAppLockDesc.text = if (enabled) {
-            "PIN protection is enabled. You'll need to enter your 4-digit PIN when opening the app.\n\n" +
-                    "Security feature: If you're ever forced to unlock your app against your will, " +
-                    "enter your PIN in reverse to safely wipe all data."
-        } else {
-            "Enable PIN protection to secure your data. You can set a 4-digit PIN that will be required to access the app."
+            // *** FIX: Temporarily remove listener, set state, re-attach listener ***
+            b.switchAppLock.setOnCheckedChangeListener(null) // Remove listener
+            b.switchAppLock.isChecked = pinLockIsEnabled    // Set state without triggering listener
+            b.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener) // Re-attach listener
+
+            updateAppLockUI(pinLockIsEnabled, pinIsSetUp)
+
+            // --- Update Account Info Card ---
+            val currentUser = FirebaseAuth.getInstance().currentUser
+            b.textUsername.text = getString(R.string.account_phone_label, currentUser?.phoneNumber ?: "Not available")
+
+            ShopManager.getShop(requireContext()) { shop ->
+                if (isAdded && _binding != null) {
+                    if (shop != null) {
+                        b.textOwnerName.text = getString(R.string.account_owner_label, shop.name.takeIf { it.isNotEmpty() } ?: "Not Set")
+                        b.textShopName.text = getString(R.string.account_shop_label, shop.shopName.takeIf { it.isNotEmpty() } ?: "Not Set")
+                        b.textGstNumber.text = getString(R.string.account_gst_label, shop.gstNumber.takeIf { it.isNotEmpty() } ?: "Not Set")
+                    } else {
+                        b.textOwnerName.text = getString(R.string.account_owner_label, "Not available")
+                        b.textShopName.text = getString(R.string.account_shop_label, "Not available")
+                        b.textGstNumber.text = getString(R.string.account_gst_label, "Not available")
+                    }
+                }
+            }
+
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val isPremium = userSubscriptionManager.isPremiumUser()
+                    val isTrialExpired = userSubscriptionManager.hasTrialExpired()
+                    val isEffectivelyActive = isPremium || !isTrialExpired
+
+                    if(isAdded && _binding != null) {
+                        b.textSubscriptionStatus.text = getString(
+                            R.string.account_subscription_label,
+                            if (isEffectivelyActive) {
+                                if (isPremium) "Premium" else "Trial (${userSubscriptionManager.getDaysRemaining()} days left)"
+                            } else {
+                                "Expired"
+                            }
+                        )
+                        b.iconSubscriptionStatus.imageTintList = ContextCompat.getColorStateList(
+                            requireContext(),
+                            if (isPremium) R.color.premium_color else R.color.my_light_secondary
+                        )
+                        b.iconSubscriptionStatus.visibility = if (isPremium) View.VISIBLE else View.GONE
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("AccountSettingsFragment", "Error checking subscription status", e)
+                    if(isAdded && _binding != null) {
+                        b.textSubscriptionStatus.text = getString(R.string.account_subscription_label, "Error")
+                        b.iconSubscriptionStatus.visibility = View.GONE
+                    }
+                }
+            }
+            // --- End Update Account Info Card ---
+        }
+    }
+
+
+    private fun updateAppLockUI(lockIsEnabled: Boolean, pinIsSetUp: Boolean) {
+        binding?.let { b ->
+            b.textAppLockStatus.text = if (lockIsEnabled) "Enabled" else "Disabled"
+            b.textAppLockDesc.text = if (pinIsSetUp) {
+                getString(R.string.pin_enabled_description)
+            } else {
+                getString(R.string.pin_disabled_description)
+            }
+            b.cardChangePIN.visibility = if (pinIsSetUp) View.VISIBLE else View.GONE
         }
     }
 
     private fun setupClickListeners() {
-        // App Lock switch
-        binding.switchAppLock.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                // If PIN not set, show setup dialog
-                if (!PinSecurityManager.isPinSet(requireContext())) {
-                    showPinSetupDialog()
-                }
-                // If already enabled, do nothing
-            } else {
-                // Disable PIN protection - show confirmation dialog first
-                showDisablePinConfirmationDialog()
+        binding?.let { b -> // Use safe call
+            // *** App Lock switch listener is now attached in setupUI ***
+            // b.switchAppLock.setOnCheckedChangeListener { ... } // REMOVED FROM HERE
+
+            // Change PIN option
+            b.cardChangePIN.setOnClickListener {
+                showChangePINDialog()
             }
-        }
 
-        // Change PIN option
-        binding.cardChangePIN.setOnClickListener {
-            showChangePINDialog()
-        }
+            // Delete All Data button
+            b.buttonDeleteAllData.setOnClickListener {
+                if (PinSecurityManager.hasPinBeenSetUp(requireContext())) {
+                    showDeleteDataConfirmationDialog()
+                } else {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Delete All Data")
+                        .setMessage("Are you sure you want to delete ALL your data? This action cannot be undone. (No PIN required as App Lock is not set up)")
+                        .setPositiveButton("Delete All") { _, _ ->
+                            DataWipeManager.performEmergencyWipe(requireContext()) {
+                                DataWipeManager.restartApp(requireContext())
+                            }
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+            }
 
-        // Delete All Data button
-        binding.buttonDeleteAllData.setOnClickListener {
-            showDeleteDataConfirmationDialog()
-        }
-
-        // Logout button
-        binding.buttonLogout.setOnClickListener {
-            showLogoutConfirmationDialog()
+            // Logout button
+            b.buttonLogout.setOnClickListener {
+                showLogoutConfirmationDialog()
+            }
         }
     }
 
     private fun showDisablePinConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Disable PIN Protection")
-            .setMessage("Are you sure you want to disable PIN protection? Your data will no longer be secured.")
-            .setPositiveButton("Disable") { _, _ ->
-                // First verify current PIN before disabling
+        if (!isAdded) return // Prevent crash
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Disable PIN Lock")
+            .setMessage("Are you sure you want to disable the PIN lock? You can re-enable it later without setting up a new PIN.")
+            .setPositiveButton("Disable Lock") { _, _ ->
                 showPinVerificationForDisable()
             }
-            .setNegativeButton("Cancel") { _, _ ->
-                // Reset switch state since operation was cancelled
-                binding.switchAppLock.isChecked = true
+            .setNegativeButton("Cancel") { dialog, _ ->
+                if(isAdded && _binding != null) {
+                    // *** FIX: Reset switch visually without triggering listener ***
+                    binding.switchAppLock.setOnCheckedChangeListener(null)
+                    binding.switchAppLock.isChecked = true // User cancelled, reset switch state
+                    binding.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener)
+
+                    // Update UI elements accordingly (lock enabled, pin IS set up)
+                    updateAppLockUI(true, PinSecurityManager.hasPinBeenSetUp(requireContext()))
+                }
+                dialog.dismiss()
             }
+            .setCancelable(false)
             .show()
     }
 
     private fun showPinVerificationForDisable() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = requireActivity().layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
-        val pinEditText = dialogView.findViewById<TextInputEditText>(R.id.pinEditText)
+        if (!isAdded) return // Prevent crash
 
-        builder.setView(dialogView)
-            .setTitle("Verify PIN")
-            .setMessage("Enter your current PIN to disable PIN protection")
-            .setPositiveButton("Submit", null) // Set below
-            .setNegativeButton("Cancel") { _, _ ->
-                // Reset switch state since operation was cancelled
-                binding.switchAppLock.isChecked = true
+        PinEntryBottomSheet.showPinVerification(
+            context = requireContext(),
+            fragmentManager = childFragmentManager,
+            prefs = sharedPreferences,
+            title = "Verify PIN",
+            reason = "Enter your PIN to disable the lock",
+            onPinCorrect = {
+                if(isAdded) {
+                    disablePinLock() // Call the function to disable the lock
+                }
+            },
+            onPinIncorrect = { status ->
+                if (!isAdded || _binding == null) return@showPinVerification
+                if (status is PinSecurityStatus.Locked) {
+                    val minutes = (status.remainingLockoutTimeMs / 60000).toInt() + 1
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Too Many Failed Attempts")
+                        .setMessage("PIN entry has been disabled for $minutes minutes.")
+                        .setPositiveButton("OK", null)
+                        .setCancelable(true)
+                        .show()
+                }
+                // *** FIX: Reset switch visually without triggering listener ***
+                binding.switchAppLock.setOnCheckedChangeListener(null)
+                binding.switchAppLock.isChecked = true // Reset switch state
+                binding.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener)
+
+                updateAppLockUI(true, true) // Pin is still set up, lock should be shown as enabled
+            },
+            onReversePinEntered = {
+                if(isAdded) {
+                    DataWipeManager.performEmergencyWipe(requireContext()) {
+                        DataWipeManager.restartApp(requireContext())
+                    }
+                }
+            },
+            onCancelled = {
+                if(isAdded && _binding != null) {
+                    // *** FIX: Reset switch visually without triggering listener ***
+                    binding.switchAppLock.setOnCheckedChangeListener(null)
+                    binding.switchAppLock.isChecked = true // User cancelled, reset switch state
+                    binding.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener)
+
+                    updateAppLockUI(true, true) // Pin is still set up
+                }
             }
-
-        val dialog = builder.create()
-        dialog.show()
-
-        // Override the positive button click to validate PIN
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val enteredPin = pinEditText.text.toString()
-
-            if (PinHashUtil.verifyPin(enteredPin, sharedPreferences)) {
-                // PIN is correct, proceed to disable
-                dialog.dismiss()
-                disablePinProtection()
-            } else {
-                // PIN is incorrect
-                pinEditText.error = "Incorrect PIN"
-                pinEditText.text?.clear()
-            }
-        }
+        )
     }
 
-    private fun disablePinProtection() {
-        // Remove PIN hash and salt from preferences
-        sharedPreferences.edit()
-            .remove("pin_hash")
-            .remove("pin_salt")
-            .apply()
+    private fun disablePinLock() {
+        if (!isAdded || _binding == null) return
 
-        // Update UI
-        binding.switchAppLock.isChecked = false
-        updateAppLockUI(false)
+        // Only set the enabled flag to false
+        PinSecurityManager.setPinLockEnabled(requireContext(), false)
 
-        Toast.makeText(requireContext(), "PIN protection disabled", Toast.LENGTH_SHORT).show()
+        // Update UI (lock disabled, but PIN is still set up)
+        // *** FIX: Set switch visually without triggering listener ***
+        binding.switchAppLock.setOnCheckedChangeListener(null)
+        binding.switchAppLock.isChecked = false // Ensure switch is off
+        binding.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener)
+
+        updateAppLockUI(false, true) // Update text and card visibility
+
+        Toast.makeText(requireContext(), "PIN lock disabled", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showPinSetupDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = requireActivity().layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_pin_setup, null)
-
-        // Hide current PIN field since no PIN is set yet
-        val currentPinEditText = dialogView.findViewById<TextInputEditText>(R.id.currentPinEditText)
-        val newPinEditText = dialogView.findViewById<TextInputEditText>(R.id.newPinEditText)
-        val confirmPinEditText = dialogView.findViewById<TextInputEditText>(R.id.confirmPinEditText)
-        val currentPinLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPinLayout)
-        currentPinLayout.visibility = View.GONE
-
-        // Add information about reverse PIN
-        val infoTextView = TextView(requireContext())
-        infoTextView.text = "Important security feature: If you're ever forced to unlock your app against your will, entering your PIN in reverse will securely wipe all app data."
-        infoTextView.setPadding(32, 32, 32, 32)
-        infoTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
-
-        val container = dialogView.findViewById<ViewGroup>(R.id.pin_dialog_container)
-        container.addView(infoTextView, container.childCount - 1) // Add above buttons but below other fields
-
-        builder.setView(dialogView)
-            .setTitle("Set PIN")
-            .setMessage("Create a 4-digit PIN to protect your app")
-            .setPositiveButton("Save", null) // Will be set below
-            .setNegativeButton("Cancel") { _, _ ->
-                // Reset switch state since operation was cancelled
-                binding.switchAppLock.isChecked = false
-            }
-
-        val dialog = builder.create()
-        dialog.show()
-
-        // Override the positive button click to validate inputs
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val newPin = newPinEditText.text.toString()
-            val confirmPin = confirmPinEditText.text.toString()
-
-            var isValid = true
-
-            // Validate new PIN
-            if (newPin.length < 4) {
-                newPinEditText.error = "PIN must be at least 4 digits"
-                isValid = false
-            }
-
-            // Validate confirmation PIN
-            if (newPin != confirmPin) {
-                confirmPinEditText.error = "PINs do not match"
-                isValid = false
-            }
-
-            if (isValid) {
-                // Store PIN securely
-                PinHashUtil.storePin(newPin, sharedPreferences)
-
-                dialog.dismiss()
-                updateAppLockUI(true)
-                Toast.makeText(
-                    requireContext(),
-                    "PIN protection enabled",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
 
     private fun showChangePINDialog() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = requireActivity().layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_pin_setup, null)
+        if (!isAdded) return // Prevent crash
 
-        val currentPinEditText = dialogView.findViewById<TextInputEditText>(R.id.currentPinEditText)
-        val newPinEditText = dialogView.findViewById<TextInputEditText>(R.id.newPinEditText)
-        val confirmPinEditText = dialogView.findViewById<TextInputEditText>(R.id.confirmPinEditText)
-        val currentPinLayout = dialogView.findViewById<TextInputLayout>(R.id.currentPinLayout)
+        PinChangeBottomSheet.showPinChange(
+            context = requireContext(),
+            fragmentManager = childFragmentManager,
+            onCompleted = { success ->
+                if (!isAdded || _binding == null) return@showPinChange
+                if (success) {
+                    Toast.makeText(requireContext(), "PIN updated successfully", Toast.LENGTH_SHORT).show()
+                    // *** FIX: Set switch visually without triggering listener ***
+                    binding.switchAppLock.setOnCheckedChangeListener(null)
+                    binding.switchAppLock.isChecked = true // Assume lock should be enabled
+                    binding.switchAppLock.setOnCheckedChangeListener(appLockSwitchListener)
 
-        // Get secure preferences
-        val securePrefs = SecurePreferences.getInstance(requireContext())
-
-        // Check if PIN exists
-        val hasPinSet = securePrefs.contains("pin_hash") && securePrefs.contains("pin_salt")
-
-        // Hide current PIN field if no PIN is set yet
-        if (!hasPinSet) {
-            currentPinLayout.visibility = View.GONE
-            builder.setTitle("Set PIN")
-            builder.setMessage("Please create a PIN for app security")
-        } else {
-            builder.setTitle("Change PIN")
-            builder.setMessage("Enter your current PIN and then set a new one")
-        }
-
-        // Add information about reverse PIN
-        val infoTextView = TextView(requireContext())
-        infoTextView.text = "Remember: In case of emergency, entering your PIN in reverse will securely wipe all app data."
-        infoTextView.setPadding(32, 32, 32, 32)
-        infoTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
-
-        val container = dialogView.findViewById<ViewGroup>(R.id.pin_dialog_container)
-        container.addView(infoTextView, container.childCount - 1) // Add above buttons but below other fields
-
-        builder.setView(dialogView)
-            .setPositiveButton("Save", null) // Will be set below
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-
-        val dialog = builder.create()
-        dialog.show()
-
-        // Override the positive button click to validate inputs
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val enteredCurrentPin = currentPinEditText.text.toString()
-            val newPin = newPinEditText.text.toString()
-            val confirmPin = confirmPinEditText.text.toString()
-
-            var isValid = true
-
-            // Validate current PIN if required
-            if (hasPinSet && currentPinLayout.visibility == View.VISIBLE) {
-                if (!PinHashUtil.verifyPin(enteredCurrentPin, securePrefs)) {
-                    currentPinEditText.error = "Current PIN is incorrect"
-                    isValid = false
+                    PinSecurityManager.setPinLockEnabled(requireContext(), true) // Mark as enabled
+                    updateAppLockUI(true, true)
                 }
             }
-
-            // Validate new PIN
-            if (newPin.length < 4) {
-                newPinEditText.error = "PIN must be at least 4 digits"
-                isValid = false
-            }
-
-            // Validate confirmation PIN
-            if (newPin != confirmPin) {
-                confirmPinEditText.error = "PINs do not match"
-                isValid = false
-            }
-
-            if (isValid) {
-                // Start background operation
-                lifecycleScope.launch {
-                    // Store PIN securely
-                    PinHashUtil.storePin(newPin, securePrefs)
-
-                    // Update UI
-                    binding.switchAppLock.isChecked = true
-                    updateAppLockUI(true)
-
-                    dialog.dismiss()
-                    Toast.makeText(
-                        requireContext(),
-                        "PIN updated successfully",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
+        )
     }
 
+    // Dialog shown when user clicks delete and PIN *is* set up
     private fun showDeleteDataConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
+        if (!isAdded) return // Prevent crash
+
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Delete All Data")
-            .setMessage("Are you sure you want to delete all your data? This action cannot be undone and all your business data will be permanently deleted.")
-            .setPositiveButton("Delete") { _, _ ->
+            .setMessage("Are you sure you want to delete ALL your data? This action requires PIN confirmation and cannot be undone.")
+            .setPositiveButton("Delete All") { _, _ ->
                 showPinConfirmationForDataDeletion()
             }
             .setNegativeButton("Cancel", null)
@@ -359,79 +366,68 @@ class AccountSettingsFragment : Fragment() {
     }
 
     private fun showPinConfirmationForDataDeletion() {
-        val builder = AlertDialog.Builder(requireContext())
-        val inflater = requireActivity().layoutInflater
-        val dialogView = inflater.inflate(R.layout.dialog_pin_input, null)
-        val pinEditText = dialogView.findViewById<TextInputEditText>(R.id.pinEditText)
+        if (!isAdded) return // Prevent crash
 
-        // Add warning text
-        val messageTextView = dialogView.findViewById<TextView>(R.id.pin_fallback_reason)
-        if (messageTextView != null) {
-            messageTextView.text = "This operation will permanently delete all your data"
-            messageTextView.setTextColor(requireContext().getColor(R.color.status_unpaid))
-            messageTextView.visibility = View.VISIBLE
+        val securityStatus = PinSecurityManager.checkStatus(requireContext())
+
+        if (securityStatus is PinSecurityStatus.Locked) {
+            val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Too Many Failed Attempts")
+                .setMessage("PIN entry has been disabled for $minutes minutes.")
+                .setPositiveButton("OK", null)
+                .setCancelable(true)
+                .show()
+            return
         }
 
-        builder.setView(dialogView)
-            .setTitle("Confirm with PIN")
-            .setMessage("Please enter your PIN to confirm data deletion")
-            .setPositiveButton("Confirm", null) // Will be set below
-            .setNegativeButton("Cancel", null)
-
-        val dialog = builder.create()
-        dialog.show()
-
-        // Override the positive button click to validate PIN
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val enteredPin = pinEditText.text.toString()
-            val securePrefs = SecurePreferences.getInstance(requireContext())
-
-            // Use secure PIN verification
-            if (PinHashUtil.verifyPin(enteredPin, securePrefs)) {
-                // PIN is correct, proceed with data deletion
-                dialog.dismiss()
-
-                // Perform complete data wipe
-                DataWipeManager.performEmergencyWipe(requireContext()) {
-                    // Restart app after wipe is complete
-                    DataWipeManager.restartApp(requireContext())
+        PinEntryBottomSheet.showPinVerification(
+            context = requireContext(),
+            fragmentManager = childFragmentManager,
+            prefs = sharedPreferences,
+            title = "Confirm Delete",
+            reason = "Enter your PIN to confirm data deletion",
+            onPinCorrect = {
+                if(isAdded) {
+                    DataWipeManager.performEmergencyWipe(requireContext()) {
+                        DataWipeManager.restartApp(requireContext())
+                    }
                 }
-            } else {
-                // Track failed attempt
-                val securityStatus = PinSecurityManager.recordFailedAttempt(requireContext())
-
-                when (securityStatus) {
-                    is PinSecurityStatus.Locked -> {
-                        dialog.dismiss()
-                        // Show lockout dialog
-                        val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
-                        AlertDialog.Builder(requireContext())
-                            .setTitle("Too Many Failed Attempts")
-                            .setMessage("PIN entry has been disabled for $minutes minutes.")
-                            .setPositiveButton("OK", null)
-                            .setCancelable(true)
-                            .show()
+            },
+            onPinIncorrect = { status ->
+                if (!isAdded) return@showPinVerification
+                if (status is PinSecurityStatus.Locked) {
+                    val minutes = (status.remainingLockoutTimeMs / 60000).toInt() + 1
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Too Many Failed Attempts")
+                        .setMessage("PIN entry has been disabled for $minutes minutes.")
+                        .setPositiveButton("OK", null)
+                        .setCancelable(true)
+                        .show()
+                }
+            },
+            onReversePinEntered = {
+                if(isAdded) {
+                    DataWipeManager.performEmergencyWipe(requireContext()) {
+                        DataWipeManager.restartApp(requireContext())
                     }
-
-                    is PinSecurityStatus.Limited -> {
-                        pinEditText.error =
-                            "Incorrect PIN (${securityStatus.remainingAttempts} attempts remaining)"
-                        pinEditText.text?.clear()
-                    }
-
-                    else -> {
-                        pinEditText.error = "Incorrect PIN"
-                        pinEditText.text?.clear()
-                    }
+                }
+            },
+            onCancelled = {
+                // Check isAdded before showing Toast
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Data deletion cancelled", Toast.LENGTH_SHORT).show()
                 }
             }
-        }
+        )
     }
 
     private fun showLogoutConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
+        if (!isAdded) return // Prevent crash
+
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Logout")
-            .setMessage("Are you sure you want to logout? You will need to login again to access your account.")
+            .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Logout") { _, _ ->
                 logout()
             }
@@ -440,24 +436,29 @@ class AccountSettingsFragment : Fragment() {
     }
 
     private fun logout() {
-        // Sign out from Firebase
-        FirebaseAuth.getInstance().signOut()
+        // Check if fragment is still attached before proceeding
+        if (!isAdded) return
 
-        // Clear local shop data
+        FirebaseAuth.getInstance().signOut()
         ShopManager.clearLocalShop(requireContext())
 
-        // Clear any app-specific data you want to remove on logout
-        // ...
+        // Clear PIN data on logout
+        sharedPreferences.edit()
+            .remove(PinHashUtil.KEY_PIN_HASH)
+            .remove(PinHashUtil.KEY_PIN_SALT)
+            .remove(PinSecurityManager.KEY_PIN_LOCK_ENABLED)
+            .apply()
 
-        // Redirect to the launcher or login screen
-        val intent = Intent(requireContext(), MainActivity::class.java)
+        // Use requireActivity() safely
+        val activity = activity ?: return // Exit if activity is null
+        val intent = Intent(activity, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
-        requireActivity().finish()
+        activity.finishAffinity()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        _binding = null // Important to null out binding
     }
 }

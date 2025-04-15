@@ -707,7 +707,7 @@ class InvoiceDetailFragment : Fragment() {
             binding.paymentsSectionTitle.text = "Payments to Supplier"
             binding.amountPaidLabel.text = "Amount Paid to Supplier:"
             binding.balanceDueLabel.text = "Balance to Pay:"
-            binding.addPaymentButton.text = "Add Payment to Supplier"
+            binding.addPaymentButton.text = "+ Add Payment"
 
             // Apply wholesaler-specific colors
             binding.topAppBar.setBackgroundColor(

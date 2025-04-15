@@ -4,20 +4,21 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/cream_background"
     tools:context=".GetDetailsFragment">
-
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/welcomeText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/playfairsemibold"
+        android:fontFamily="@font/librebaskervillebold"
         android:paddingStart="16dp"
-        android:paddingTop="16dp"
+        android:paddingTop="24dp"
         android:paddingEnd="16dp"
         android:paddingBottom="8dp"
         android:text="Welcome"
-        android:textSize="24dp"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -26,158 +27,173 @@
         android:id="@+id/text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/playfairregular"
+        android:fontFamily="@font/librebaskervilleregular"
         android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp"
         android:text="Complete Your Profile"
-        android:textSize="22dp"
+        android:textColor="@color/my_light_primary"
+        android:textSize="20sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/welcomeText" />
 
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/nameOfOwner"
-        style="@style/Widget.App.TextInputLayout.GoldForm"
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/formCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:fontFamily="@font/playfairregular"
-        android:hint="Name *"
-        android:paddingHorizontal="16dp"
-        app:endIconMode="clear_text"
+        android:layout_marginHorizontal="16dp"
+        app:cardBackgroundColor="@color/my_light_surface"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="3dp"
+        app:strokeColor="@color/my_light_outline"
+        app:strokeWidth="1dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/text">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/nameOfOwnerText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/ralewaymedium"
-            android:inputType="textCapWords" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/nameOfOwner"
+                style="@style/Widget.App.TextInputLayout.GoldForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Name *"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/line_md__person_twotone"
+                app:startIconTint="@color/my_light_primary">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/numberOfOwner"
-        style="@style/Widget.App.TextInputLayout.GoldForm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:fontFamily="@font/ralewaymedium"
-        android:hint="Number *"
-        android:paddingHorizontal="16dp"
-        app:endIconMode="clear_text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/nameOfOwner">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/nameOfOwnerText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="textCapWords"
+                    android:textColor="@color/my_light_on_surface" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/numberOfOwnerText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/ralewaymedium"
-            android:inputType="phone"
-            android:maxLength="10" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/numberOfOwner"
+                style="@style/Widget.App.TextInputLayout.GoldForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Number *"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/baseline_phone_24"
+                app:startIconTint="@color/my_light_primary">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/shopName"
-        style="@style/Widget.App.TextInputLayout.GoldForm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:fontFamily="@font/ralewaymedium"
-        android:hint="Shop Name *"
-        android:paddingHorizontal="16dp"
-        app:endIconMode="clear_text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/numberOfOwner">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/numberOfOwnerText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="phone"
+                    android:maxLength="10"
+                    android:textColor="@color/my_light_on_surface" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/ralewaymedium"
-            android:inputType="textCapWords" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-    </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/shopName"
+                style="@style/Widget.App.TextInputLayout.GoldForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Shop Name *"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/ic_store"
+                app:startIconTint="@color/my_light_primary">
 
+                <com.google.android.material.textfield.TextInputEditText
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="textCapWords"
+                    android:textColor="@color/my_light_on_surface" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/shopAddress"
-        style="@style/Widget.App.TextInputLayout.GoldForm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:fontFamily="@font/ralewaymedium"
-        android:hint="Shop Address *"
-        android:paddingHorizontal="16dp"
-        app:endIconMode="clear_text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/shopName">
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/shopAddressText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/ralewaymedium"
-            android:inputType="textMultiLine|textCapWords"
-            android:minLines="2" />
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/shopAddress"
+                style="@style/Widget.App.TextInputLayout.GoldForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Shop Address *"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/material_symbols__edit_rounded"
+                app:startIconTint="@color/my_light_primary">
 
-    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/shopAddressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="textMultiLine|textCapWords"
+                    android:minLines="2"
+                    android:textColor="@color/my_light_on_surface" />
 
+            </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- GST Checkbox -->
-    <CheckBox
-        android:id="@+id/hasGstCheckBox"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="16dp"
-        android:fontFamily="@font/ralewaymedium"
-        android:text="Have GST Number?"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/shopAddress" />
+            <!-- GST Checkbox -->
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/hasGstCheckBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:buttonTint="@color/my_light_primary"
+                android:fontFamily="@font/montserratmedium"
+                android:text="Have GST Number?"
+                android:textColor="@color/my_light_on_surface" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/gstNumber"
+                style="@style/Widget.App.TextInputLayout.GoldForm"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="GST Number"
+                android:visibility="gone"
+                app:endIconMode="clear_text"
+                app:startIconDrawable="@drawable/material_symbols__upi_pay"
+                app:startIconTint="@color/my_light_primary">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/gstNumber"
-        style="@style/Widget.App.TextInputLayout.GoldForm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="GST Number"
-        android:paddingHorizontal="16dp"
-        android:visibility="gone"
-        app:endIconMode="clear_text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/hasGstCheckBox">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/gstNumberText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="textCapCharacters"
+                    android:maxLength="15"
+                    android:textColor="@color/my_light_on_surface" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/gstNumberText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="@font/ralewaymedium"
-            android:inputType="textCapCharacters"
-            android:maxLength="15" />
-
-    </com.google.android.material.textfield.TextInputLayout>
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <!-- Submit Button -->
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/submitButton"
+        style="@style/Widget.App.Button.Gold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        android:fontFamily="@font/ralewaybold"
-        android:text="Submit"
+        android:layout_marginTop="24dp"
+        android:fontFamily="@font/montserratmedium"
+        android:paddingVertical="12dp"
+        android:text="SUBMIT"
+        android:textAllCaps="true"
+        android:textColor="@color/my_light_on_primary"
+        app:cornerRadius="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gstNumber" />
+        app:layout_constraintTop_toBottomOf="@+id/formCard" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

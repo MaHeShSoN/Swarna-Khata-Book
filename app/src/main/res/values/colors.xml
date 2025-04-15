@@ -13,6 +13,7 @@
     </color>        <!-- Muted purple - good contrast with gold -->
     <color name="my_light_error">#C43E00</color>           <!-- Warm orange-red -->
     <color name="my_light_surface">#FFFBF0</color>         <!-- Extremely light cream for cards -->
+    <color name="premium_color">#FFC107</color>         <!-- Extremely light cream for cards -->
 
     <!-- Additional variations for components -->
     <color name="my_light_on_primary">#2C2200</color>      <!-- Dark text on gold components -->

@@ -14,8 +14,8 @@ object PinHashUtil {
     private const val HASH_ALGORITHM = "SHA-256"
     private const val SALT_LENGTH = 16 // bytes
 
-    private const val KEY_PIN_HASH = "pin_hash"
-    private const val KEY_PIN_SALT = "pin_salt"
+     const val KEY_PIN_HASH = "pin_hash"
+     const val KEY_PIN_SALT = "pin_salt"
 
     /**
      * Generates a cryptographically secure random salt

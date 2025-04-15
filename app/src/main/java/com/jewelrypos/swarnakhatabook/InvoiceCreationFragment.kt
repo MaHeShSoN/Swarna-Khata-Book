@@ -272,7 +272,7 @@ class InvoiceCreationFragment : Fragment() {
             // Update section titles and labels for wholesaler (supplier)
             binding.titleTextView.text = "Create Purchase Order"
             binding.customerSectionTitle.text = "Supplier Details"
-            binding.itemsSectionTitle.text = "Items Purchased From Supplier"
+            binding.itemsSectionTitle.text = "Items Purchased"
             binding.paymentsSectionTitle.text = "Payments To Supplier"
             binding.amountPaidLabel.text = "Amount Paid To Supplier:"
             binding.balanceDueLabel.text = "Balance To Pay:"

@@ -110,9 +110,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Set up the inventory items observer
-//        setupInventoryObserver()
-
         // Initialize repository directly
         initializeRepository()
 
@@ -175,17 +172,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
 
-    // Setup observer for inventory items
-    private fun setupInventoryObserver() {
-        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner, Observer { items ->
-            inventoryItems = items
-            setupInventoryDropdown()
-        })
-
-        // Load inventory items
-        inventoryViewModel.searchItems("")
-    }
-
     private fun setupTaxFields() {
         // Create tax rate input field if it doesn't exist
         if (binding.taxRateInputLayout == null) {
@@ -234,34 +220,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         bottomSheet.layoutParams = layoutParams
     }
 
-    // Custom adapter for inventory items dropdown
-//    private inner class InventoryItemAdapter(
-//        context: android.content.Context,
-//        private val items: List<JewelleryItem>
-//    ) : ArrayAdapter<JewelleryItem>(context, R.layout.dropdown_item_inventory, items), Filterable {
-//
-//        private var filteredItems: List<JewelleryItem> = items
-//
-//        override fun getCount(): Int = filteredItems.size
-//
-//        override fun getItem(position: Int): JewelleryItem = filteredItems[position]
-//
-//        // This is the method that determines what appears in the TextView when an item is selected
-//        override fun getItemId(position: Int): Long = position.toLong()
-//
-//        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-//            val view = convertView ?: LayoutInflater.from(context)
-//                .inflate(R.layout.dropdown_item_inventory, parent, false)
-//
-//            val item = getItem(position)
-//            val primaryText = view.findViewById<TextView>(R.id.primary_text)
-//            val secondaryText = view.findViewById<TextView>(R.id.secondary_text)
-//
-//            primaryText.text = item.displayName
-//            secondaryText.text = "Category: ${item.category} | Type: ${item.itemType}"
-//
-//            return view
-//        }
+
     private inner class DetailedInventoryItemAdapter(
         context: android.content.Context,
         private val items: List<JewelleryItem>
@@ -366,16 +325,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    // Fill form fields from selected inventory item
-//    private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
-//        binding.grossWeightEditText.setText(item.grossWeight.toString())
-//        binding.netWeightEditText.setText(item.netWeight.toString())
-//        binding.wastageEditText.setText(item.wastage.toString())
-//        binding.purityEditText.setText(item.purity)
-//
-//        // Update calculated fields
-//        updateCalculatedFields()
-//    }
 
     private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
         // Fill all available fields
@@ -384,9 +333,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.wastageEditText.setText(item.wastage.toString())
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType,false)
         binding.goldRateEditText.setText(item.metalRate.toString())
-        binding.goldRateOnEditText.setText(item.metalRateOn)
+        binding.goldRateOnEditText.setText(item.metalRateOn,false)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString())
 
         // Set tax rate and update checkbox
@@ -426,9 +375,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.wastageEditText.setText(item.wastage.toString())
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType)
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType,false)
         binding.goldRateEditText.setText(item.metalRate.toString() ?: "0.0")
-        binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight")
+        binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight",false)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString() ?: "0.0")
 
 
@@ -1223,5 +1172,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         fun newInstance(): ItemSelectionBottomSheet {
             return ItemSelectionBottomSheet()
         }
+    }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null // Add this line
     }
 }

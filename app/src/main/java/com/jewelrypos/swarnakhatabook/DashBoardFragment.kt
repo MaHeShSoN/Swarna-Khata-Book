@@ -12,7 +12,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import com.github.mikephil.charting.animation.Easing
 import com.github.mikephil.charting.components.XAxis
@@ -24,8 +26,10 @@ import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
@@ -44,18 +48,30 @@ import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentDashBoardBinding
+import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Calendar
 import java.util.Locale
 
 
-class DashBoardFragment : Fragment() {
+class DashBoardFragment : Fragment(),
+    CustomerBottomSheetFragment.CustomerOperationListener,
+    ItemBottomSheetFragment.OnItemAddedListener {
 
     private var _binding: FragmentDashBoardBinding? = null
     private val binding get() = _binding!!
 
-    private val salesViewModel: SalesViewModel by viewModels {
+    private val customerViewModel: CustomerViewModel by activityViewModels {
+        // Create the repository and pass it to the factory
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val repository = CustomerRepository(firestore, auth)
+        val connectivityManager =
+            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        CustomerViewModelFactory(repository, connectivityManager)
+    }
+    private val salesViewModel: SalesViewModel by activityViewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = InvoiceRepository(firestore, auth)
@@ -63,15 +79,13 @@ class DashBoardFragment : Fragment() {
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         SalesViewModelFactory(repository, connectivityManager)
     }
-
-
-    private val customerViewModel: CustomerViewModel by viewModels {
+    private val inventoryViewModel: InventoryViewModel by activityViewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth)
+        val repository = InventoryRepository(firestore, auth)
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        CustomerViewModelFactory(repository, connectivityManager)
+        InventoryViewModelFactory(repository, connectivityManager)
     }
 
     private val notificationViewModel: NotificationViewModel by viewModels {
@@ -153,6 +167,7 @@ class DashBoardFragment : Fragment() {
         // Refresh the unread count
         notificationViewModel.refreshUnreadCount()
     }
+
     private fun setupPeriodSelector() {
         // Set up time period spinner
         val periods = arrayOf("Today", "This Week", "This Month", "All Time")
@@ -388,40 +403,67 @@ class DashBoardFragment : Fragment() {
     }
 
     private fun updatePopularCategories(invoices: List<Invoice>) {
-        // Group items by category and calculate total quantity sold
+        // Group items by category (handle null/empty) and calculate total quantity sold
         val categorySales = invoices.flatMap { invoice ->
             invoice.items.map { item ->
-                item.itemDetails.category to item.quantity
+                // Use "Uncategorized" if category is null or empty
+                val categoryName =
+                    item.itemDetails?.category?.takeIf { it.isNotEmpty() } ?: "Uncategorized"
+                categoryName to item.quantity
             }
-        }.groupBy({ it.first }, { it.second })
+        }.groupBy({ it.first }, { it.second }) // Group by category name, sum quantities
             .mapValues { it.value.sum() }
             .toList()
-            .sortedByDescending { it.second }
-            .take(3)
+            .sortedByDescending { it.second } // Sort by quantity descending
+            .take(3) // Take top 3
 
-        // Calculate percentages
-        val totalSales = categorySales.sumOf { it.second }
-        val categoryPercentages = categorySales.map {
-            it.first to (it.second.toFloat() / totalSales * 100)
+        // Calculate total quantity for percentage calculation (use Double for safety)
+        val totalQuantitySold =
+            categorySales.sumOf { it.second }.toDouble() // Use Double for division
+
+        // Get references to the UI layout containers and the "No Data" text view
+        val categoryLayouts =
+            listOf(binding.category1Layout, binding.category2Layout, binding.category3Layout)
+        val categoryNames =
+            listOf(binding.category1Name, binding.category2Name, binding.category3Name)
+        val categoryPercentagesText = listOf(
+            binding.category1Percentage,
+            binding.category2Percentage,
+            binding.category3Percentage
+        )
+        val categoryProgressBars =
+            listOf(binding.category1Progress, binding.category2Progress, binding.category3Progress)
+        val noDataTextView = binding.noCategoryDataText // Assuming ID from previous step
+
+
+        // --- Visibility Logic ---
+        if (categorySales.isEmpty() || totalQuantitySold <= 0) {
+            // No data or zero total quantity, hide all category layouts and show "No Data" text
+            categoryLayouts.forEach { it.visibility = View.GONE }
+            noDataTextView.visibility = View.VISIBLE
+            return // Exit the function early
         }
 
-        // Update UI for each category
-        categoryPercentages.getOrNull(0)?.let { (category, percentage) ->
-            binding.category1Name.text = category
-            binding.category1Percentage.text = String.format("%.1f%%", percentage)
-            binding.category1Progress.progress = percentage.toInt()
+        // Data exists, hide the "No Data" text
+        noDataTextView.visibility = View.GONE
+
+        // --- Update UI for categories with data ---
+        categorySales.forEachIndexed { index, (category, quantity) ->
+            if (index < categoryLayouts.size) { // Ensure we don't exceed available UI elements
+                val percentage =
+                    (quantity.toDouble() / totalQuantitySold * 100) // Use Double for calculation
+                categoryLayouts[index].visibility = View.VISIBLE // Make the layout visible
+                categoryNames[index].text = category // Set category name
+                categoryPercentagesText[index].text =
+                    String.format(Locale.getDefault(), "%.1f%%", percentage) // Set percentage text
+                categoryProgressBars[index].progress = percentage.toInt() // Set progress bar value
+            }
         }
 
-        categoryPercentages.getOrNull(1)?.let { (category, percentage) ->
-            binding.category2Name.text = category
-            binding.category2Percentage.text = String.format("%.1f%%", percentage)
-            binding.category2Progress.progress = percentage.toInt()
-        }
-
-        categoryPercentages.getOrNull(2)?.let { (category, percentage) ->
-            binding.category3Name.text = category
-            binding.category3Percentage.text = String.format("%.1f%%", percentage)
-            binding.category3Progress.progress = percentage.toInt()
+        // --- Hide layouts for ranks that don't have data ---
+        // (e.g., if only 1 or 2 categories exist, hide the 2nd/3rd or 3rd layout)
+        for (i in categorySales.size until categoryLayouts.size) {
+            categoryLayouts[i].visibility = View.GONE // Hide unused layouts
         }
     }
 
@@ -507,7 +549,8 @@ class DashBoardFragment : Fragment() {
 
             // Calculate and show percentage change
             if (newCustomersLastMonth > 0) {
-                val percentageChange = ((newCustomersThisMonth - newCustomersLastMonth).toFloat() / newCustomersLastMonth * 100)
+                val percentageChange =
+                    ((newCustomersThisMonth - newCustomersLastMonth).toFloat() / newCustomersLastMonth * 100)
                 val changeText = String.format("%+.1f%%", percentageChange)
                 binding.newCustomersChange.apply {
                     text = changeText
@@ -684,10 +727,11 @@ class DashBoardFragment : Fragment() {
 
         // Then show the customer bottom sheet
         val customerBottomSheet =
-            com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.newInstance()
+            CustomerBottomSheetFragment.newInstance()
+        customerBottomSheet.setCustomerOperationListener(this)
         customerBottomSheet.show(
             parentFragmentManager,
-            com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.TAG
+            CustomerBottomSheetFragment.TAG
         )
     }
 
@@ -696,6 +740,7 @@ class DashBoardFragment : Fragment() {
         navigateToInventoryTab()
 
         val bottomSheetFragment = ItemBottomSheetFragment.newInstance()
+        bottomSheetFragment.setOnItemAddedListener(this)
         bottomSheetFragment.show(parentFragmentManager, bottomSheetFragment.tag)
 
     }
@@ -739,5 +784,30 @@ class DashBoardFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    override fun onCustomerAdded(customer: Customer) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            customerViewModel.addCustomer(customer)
+            Snackbar.make(binding.root, "Customer added successfully", Snackbar.LENGTH_SHORT).show()
+            // fetchDashboardData() // Optional: Refresh if needed
+        }
+    }
+
+    override fun onCustomerUpdated(customer: Customer) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onItemAdded(item: JewelleryItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            inventoryViewModel.addJewelleryItem(item)
+            Snackbar.make(binding.root, "Item added successfully", Snackbar.LENGTH_SHORT).show()
+            // Optionally refresh top items if desired
+            // salesViewModel.fetchTopSellingItems(5)
+        }
+    }
+
+    override fun onItemUpdated(item: JewelleryItem) {
+        TODO("Not yet implemented")
     }
 }

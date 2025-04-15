@@ -101,6 +101,7 @@ class GetDetailsFragment : Fragment() {
 
             else -> {
                 binding.numberOfOwner.error = null
+                binding.numberOfOwner.isErrorEnabled = false
                 true
             }
         }

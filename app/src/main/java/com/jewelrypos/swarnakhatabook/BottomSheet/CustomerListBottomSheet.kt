@@ -10,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.ImageView
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -20,6 +21,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.CustomerAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
+import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetCustomerSelectionBinding
@@ -52,7 +54,7 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = BottomsheetCustomerSelectionBinding.inflate(inflater, container, false)
-//        setStyle(BottomSheetDialogFragment.STYLE_NORMAL, R.style.CustomBottomSheetDialogTheme)
+        setStyle(BottomSheetDialogFragment.STYLE_NORMAL, R.style.CustomBottomSheetDialogTheme)
         return binding.root
     }
 
@@ -95,6 +97,8 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         setupNewCustomerButton()
         setupObservers()
 
+        binding.searchView.requestFocus()
+
     }
 
     private fun setupRecyclerView() {
@@ -112,6 +116,18 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun setupSearchView() {
+        // Remove the search icon from the left side
+        binding.searchView.setIconifiedByDefault(false)
+
+        // Get the search icon and hide it
+        val searchIcon = binding.searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_mag_icon)
+        searchIcon?.visibility = View.GONE
+
+        // Remove any left margin on the search text field to use the full width
+        val searchPlate = binding.searchView.findViewById<View>(androidx.appcompat.R.id.search_src_text)
+        val params = searchPlate.layoutParams as ViewGroup.MarginLayoutParams
+        params.leftMargin = 0
+
         binding.searchView.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 customerViewModel.searchCustomers(query ?: "")
@@ -124,7 +140,6 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
             }
         })
     }
-
     private fun setupNewCustomerButton() {
         binding.btnAddNewCustomer.setOnClickListener {
             showCustomerCreationBottomSheet()

@@ -1,20 +1,35 @@
-
-
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
+import android.Manifest
 import android.app.DatePickerDialog
 import android.app.Dialog
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.Context
+import android.content.pm.PackageManager
+import android.database.Cursor
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log // Added Log import
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView // Added import
+import android.widget.FilterQueryProvider // Added import
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.RadioButton
+import android.widget.SimpleCursorAdapter // Added import
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog // Added import for rationale dialog
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -38,6 +53,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private var listener: CustomerOperationListener? = null
     private var calledFromInvoiceCreation = false
     private var calledFromCustomerDetails = false
+
+    // Adapter for contact suggestions
+    private var contactsAdapter: SimpleCursorAdapter? = null
 
     interface CustomerOperationListener {
         fun onCustomerAdded(customer: Customer)
@@ -69,6 +87,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         setupFormValidation()
         setupActionButtons()
         setupBalanceTypeRadioButtons()
+
+        // Check permission and setup contacts autocomplete
+        checkContactsPermission() // This will call setupContactsAutocomplete if permission is granted
 
         // Toggle visibility of business fields based on customer type
         binding.customerTypeDropdown.addTextChangedListener {
@@ -108,6 +129,288 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
+    // --- Contact Permission and Autocomplete Logic ---
+
+    private val requestContactsPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            setupContactsAutocomplete()
+        } else {
+            Toast.makeText(context, "Contacts permission denied. Cannot suggest contacts.", Toast.LENGTH_SHORT).show()
+            // Optionally disable the autocomplete feature or specific fields
+        }
+    }
+
+    private fun checkContactsPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.READ_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission already granted
+                setupContactsAutocomplete()
+            }
+
+            shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS) -> {
+                // Show rationale dialog explaining why we need contacts permission
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Permission Needed")
+                    .setMessage("This app needs permission to read your contacts to suggest customer names and numbers as you type.")
+                    .setPositiveButton("OK") { _, _ ->
+                        requestContactsPermission.launch(Manifest.permission.READ_CONTACTS)
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+
+            else -> {
+                // Directly request the permission
+                requestContactsPermission.launch(Manifest.permission.READ_CONTACTS)
+            }
+        }
+    }
+
+    /**
+     * Sets up the AutoCompleteTextView for the first name field
+     * to suggest contacts with names and phone numbers using a custom layout.
+     */
+    private fun setupContactsAutocomplete() {
+        // Ensure the view exists and is an AutoCompleteTextView
+        val autoCompleteView = binding.etFirstName as? AutoCompleteTextView
+        if (autoCompleteView == null) {
+            Log.e(TAG, "setupContactsAutocomplete: etFirstName is not an AutoCompleteTextView or is null.")
+            return
+        }
+
+        // --- Define columns and view IDs for mapping ---
+        // Columns to retrieve from the cursor (including the number now)
+        val fromColumns = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, // Column for contact name
+            ContactsContract.CommonDataKinds.Phone.NUMBER        // Column for phone number
+        )
+        // View IDs in your custom layout (item_contact_suggestion.xml)
+        val toViews = intArrayOf(
+            R.id.contactNameTextView,  // Map DISPLAY_NAME to this TextView
+            R.id.contactNumberTextView // Map NUMBER to this TextView
+        )
+
+        // Create the SimpleCursorAdapter using the custom layout
+        contactsAdapter = SimpleCursorAdapter(
+            requireContext(),
+            R.layout.item_contact_suggestion, // Use the custom layout file
+            null, // Cursor will be provided by FilterQueryProvider
+            fromColumns,
+            toViews,
+            0 // No flags needed
+        )
+
+        // Set the adapter to the AutoCompleteTextView
+        autoCompleteView.apply {
+            setDropDownBackgroundResource(R.color.cream_background)
+            setAdapter(contactsAdapter)
+        }
+        autoCompleteView.threshold = 1 // Start suggesting after 1 character
+
+        // --- Setup FilterQueryProvider (Modified Query) ---
+        contactsAdapter?.filterQueryProvider = FilterQueryProvider { constraint ->
+            if (constraint.isNullOrEmpty()) {
+                return@FilterQueryProvider null
+            }
+
+            val contentResolver: ContentResolver = requireContext().contentResolver
+            // Query the Phone content URI to get numbers directly
+            val uri: Uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+
+            // Projection: Columns needed for display and selection logic
+            val projection = arrayOf(
+                ContactsContract.CommonDataKinds.Phone._ID,           // Needed for unique ID per row
+                ContactsContract.CommonDataKinds.Phone.CONTACT_ID,    // To link back to the contact if needed
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,  // Name for display
+                ContactsContract.CommonDataKinds.Phone.NUMBER         // Number for display and selection
+                // Add ContactsContract.CommonDataKinds.Phone.PHOTO_THUMBNAIL_URI here if you want to show photos
+            )
+
+            // Selection: Filter by display name OR phone number containing the constraint
+            // Using '?' placeholders for safe argument binding
+            val selection =
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ? OR " +
+                        "${ContactsContract.CommonDataKinds.Phone.NUMBER} LIKE ?"
+            // Selection arguments: The constraint with wildcards for both name and number search
+            val selectionArgs = arrayOf("%$constraint%", "%$constraint%")
+
+            // Sort order: Alphabetical by display name
+            val sortOrder = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC"
+
+            // Perform the query
+            try {
+                return@FilterQueryProvider contentResolver.query(
+                    uri,
+                    projection,
+                    selection,
+                    selectionArgs,
+                    sortOrder
+                )
+            } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException during contact phone query.", e)
+                Toast.makeText(context, "Permission error accessing contacts.", Toast.LENGTH_SHORT).show()
+                return@FilterQueryProvider null
+            }
+        }
+
+        // --- Setup CursorToStringConverter ---
+        // This defines how a selected item is converted to a String for the AutoCompleteTextView itself
+        contactsAdapter?.cursorToStringConverter = SimpleCursorAdapter.CursorToStringConverter { cursor ->
+            // Display only the name in the AutoCompleteTextView after selection
+            val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+            if (nameIndex != -1) {
+                cursor.getString(nameIndex)
+            } else {
+                ""
+            }
+        }
+
+
+        // --- Handle contact selection ---
+        autoCompleteView.setOnItemClickListener { parent, _, position, _ ->
+            val cursor = contactsAdapter?.getItem(position) as? Cursor
+            cursor?.let {
+                // Get data directly from the cursor using column names from the Phone table
+                val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val contactIdIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID) // Get Contact ID index
+
+                if (nameIndex != -1 && numberIndex != -1 && contactIdIndex != -1) { // Check contactIdIndex too
+                    val contactName = it.getString(nameIndex)
+                    val rawPhoneNumber = it.getString(numberIndex)
+                    val contactId = it.getString(contactIdIndex) // Retrieve Contact ID
+
+                    // Split the name
+                    val nameParts = contactName.split(" ", limit = 2)
+                    val firstName = nameParts.getOrNull(0) ?: contactName
+                    val lastName = nameParts.getOrNull(1) ?: ""
+
+                    // Format the phone number
+                    val formattedNumber = formatPhoneNumber(rawPhoneNumber)
+
+                    // Set the text fields
+                    binding.etFirstName.setText(firstName, false) // Set name without triggering filter
+                    binding.etLastName.setText(lastName)
+                    binding.phoneNumberField.setText(formattedNumber) // Set formatted number
+
+                    // Optionally load photo using contactId
+                    // loadContactPhoto(contactId)
+
+                    // Hide keyboard
+                    val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(autoCompleteView.windowToken, 0)
+
+                } else {
+                    Log.e(TAG, "Could not find DISPLAY_NAME, NUMBER, or CONTACT_ID columns in cursor.")
+                }
+            }
+        }
+
+        // --- Handle focus for scrolling ---
+        binding.etFirstName.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                binding.scrollView?.post {
+                    binding.scrollView.smoothScrollTo(0, binding.firstNameLayout.top)
+                } ?: Log.w(TAG, "ScrollView not found in binding.")
+            }
+        }
+    }
+
+
+    /**
+     * Loads the primary phone number for a given contact ID and formats it.
+     * NOTE: This function is now primarily used only AFTER a contact is selected
+     * to ensure the number in the main field is formatted, as the list now gets
+     * the number directly from the initial query.
+     * Kept for potential future use or if direct ID lookup is needed elsewhere.
+     */
+    private fun loadContactPhoneNumber(contactId: String) {
+        // This function might still be useful if you need to re-verify the number
+        // or fetch other details based *only* on the contact ID later.
+        // However, for simply populating the fields after selection, the data
+        // is already available in the cursor within setOnItemClickListener.
+        Log.d(TAG, "loadContactPhoneNumber called for ID: $contactId (may be redundant now)")
+
+        // Example: If you needed to fetch the number again (less efficient):
+        val contentResolver: ContentResolver = requireContext().contentResolver
+        var rawPhoneNumber: String? = null
+        val phoneUri: Uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER)
+        val selection = "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?"
+        val selectionArgs = arrayOf(contactId)
+        val phoneCursor: Cursor? = try {
+            contentResolver.query(phoneUri, projection, selection, selectionArgs, null)
+        } catch (e: SecurityException) { null }
+
+        phoneCursor?.use {
+            if (it.moveToFirst()) {
+                val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                if (numberIndex != -1) rawPhoneNumber = it.getString(numberIndex)
+            }
+        }
+        if (rawPhoneNumber != null) {
+            val formattedNumber = formatPhoneNumber(rawPhoneNumber)
+            // Avoid overwriting if the number is already correct from the click listener
+            if (binding.phoneNumberField.text.toString() != formattedNumber) {
+                binding.phoneNumberField.setText(formattedNumber)
+            }
+        }
+    }
+
+    /**
+     * Helper function to format phone numbers.
+     * Removes common prefixes (+91, 91, 0) to aim for a 10-digit number.
+     * Also removes non-digit characters except '+'.
+     */
+    private fun formatPhoneNumber(phone: String?): String {
+        if (phone.isNullOrBlank()) {
+            return ""
+        }
+        // 1. Remove spaces, hyphens, parentheses etc. Keep digits and '+'
+        var cleanedNumber = phone.filter { it.isDigit() || it == '+' }
+
+        // 2. Handle prefixes (prioritize +91, then 91, then 0)
+        if (cleanedNumber.startsWith("+91") && cleanedNumber.length > 3) {
+            val potentialNumber = cleanedNumber.substring(3)
+            // Check if remaining part looks like a valid number start (e.g., 10 digits)
+            if (potentialNumber.length >= 10 && potentialNumber.all { it.isDigit() }) {
+                cleanedNumber = potentialNumber
+            }
+        } else if (cleanedNumber.startsWith("91") && cleanedNumber.length > 2) {
+            val potentialNumber = cleanedNumber.substring(2)
+            if (potentialNumber.length >= 10 && potentialNumber.all { it.isDigit() }) {
+                cleanedNumber = potentialNumber
+            }
+        } else if (cleanedNumber.startsWith("0") && cleanedNumber.length > 1) {
+            val potentialNumber = cleanedNumber.substring(1)
+            if (potentialNumber.length >= 10 && potentialNumber.all { it.isDigit() }) {
+                cleanedNumber = potentialNumber
+            }
+        }
+
+        // Return the cleaned number, ensuring only digits remain if no '+' was present initially
+        // or if prefixes were stripped.
+        return cleanedNumber.filter { it.isDigit() }
+    }
+
+
+    /**
+     * Placeholder function to load contact photo.
+     */
+    private fun loadContactPhoto(contactId: String) {
+        Log.d(TAG, "Placeholder: Load photo for contact ID $contactId")
+        // Implementation would involve getting PHOTO_THUMBNAIL_URI or PHOTO_URI
+        // and using an image loading library (Glide, Coil)
+    }
+
+
+    // --- Other Setup Functions (Unchanged) ---
+
     private fun setupBalanceTypeRadioButtons() {
         binding.creditRadioButton.isChecked = true // Default to credit
     }
@@ -118,208 +421,236 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
         binding.customerTypeDropdown.apply {
             setAdapter(adapter)
-            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            try {
+                setDropDownBackgroundResource(R.color.cream_background) // Ensure this color exists
+            } catch (e: Exception) {
+                Log.e(TAG, "Error setting dropdown background resource", e)
+            }
         }
-
     }
 
     private fun setupCountryDropdown() {
-        val items = listOf("India", "United States", "United Kingdom", "Canada", "Australia") // Add more countries as needed
+        val items = listOf("India", "United States", "United Kingdom", "Canada", "Australia")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
         binding.countryDropdown.setAdapter(adapter)
-        binding.countryDropdown.setText("India", false) // Set default to India
+        if (binding.countryDropdown.text.isNullOrEmpty()) {
+            binding.countryDropdown.setText("India", false)
+        }
     }
 
     private fun setupDatePickers() {
-        // Customer since date (default to current date)
         val calendar = Calendar.getInstance()
-        binding.customerSinceDateField.setText(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time))
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
 
-        val dateSetListener = DatePickerDialog.OnDateSetListener { _, year, month, day ->
+        // --- Customer Since Date ---
+        if (binding.customerSinceDateField.text.isNullOrEmpty()) {
+            binding.customerSinceDateField.setText(dateFormat.format(calendar.time))
+        }
+        val customerSinceListener = DatePickerDialog.OnDateSetListener { _, year, month, day ->
             calendar.set(Calendar.YEAR, year)
             calendar.set(Calendar.MONTH, month)
             calendar.set(Calendar.DAY_OF_MONTH, day)
-            val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
-            binding.customerSinceDateField.setText(date)
+            binding.customerSinceDateField.setText(dateFormat.format(calendar.time))
         }
-
         binding.customerSinceDateField.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                dateSetListener,
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            val currentDateStr = binding.customerSinceDateField.text.toString()
+            try {
+                dateFormat.parse(currentDateStr)?.let { calendar.time = it }
+            } catch (e: Exception) { Log.w(TAG, "Error parsing customerSinceDate: $currentDateStr", e) }
+            DatePickerDialog(requireContext(), customerSinceListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
         }
 
-        // Setup for birthday picker
+        // --- Birthday Picker ---
         binding.birthdayField.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, day ->
-                    calendar.set(Calendar.YEAR, year)
-                    calendar.set(Calendar.MONTH, month)
-                    calendar.set(Calendar.DAY_OF_MONTH, day)
-                    val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
-                    binding.birthdayField.setText(date)
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            val birthdayListener = DatePickerDialog.OnDateSetListener { _, year, month, day ->
+                calendar.set(Calendar.YEAR, year)
+                calendar.set(Calendar.MONTH, month)
+                calendar.set(Calendar.DAY_OF_MONTH, day)
+                binding.birthdayField.setText(dateFormat.format(calendar.time))
+            }
+            val currentBirthdayStr = binding.birthdayField.text.toString()
+            try {
+                dateFormat.parse(currentBirthdayStr)?.let { calendar.time = it }
+            } catch (e: Exception) { Log.w(TAG, "Error parsing birthday: $currentBirthdayStr", e) }
+            DatePickerDialog(requireContext(), birthdayListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
         }
 
-        // Setup for anniversary picker
+        // --- Anniversary Picker ---
         binding.anniversaryField.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, day ->
-                    calendar.set(Calendar.YEAR, year)
-                    calendar.set(Calendar.MONTH, month)
-                    calendar.set(Calendar.DAY_OF_MONTH, day)
-                    val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.time)
-                    binding.anniversaryField.setText(date)
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            val anniversaryListener = DatePickerDialog.OnDateSetListener { _, year, month, day ->
+                calendar.set(Calendar.YEAR, year)
+                calendar.set(Calendar.MONTH, month)
+                calendar.set(Calendar.DAY_OF_MONTH, day)
+                binding.anniversaryField.setText(dateFormat.format(calendar.time))
+            }
+            val currentAnniversaryStr = binding.anniversaryField.text.toString()
+            try {
+                dateFormat.parse(currentAnniversaryStr)?.let { calendar.time = it }
+            } catch (e: Exception) { Log.w(TAG, "Error parsing anniversary: $currentAnniversaryStr", e) }
+            DatePickerDialog(requireContext(), anniversaryListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
         }
     }
 
+
     private fun setupFormValidation() {
-        // Fix for error spacing - ensure the error doesn't leave space when it's gone
         class ErrorClearingTextWatcher(private val textInputLayout: com.google.android.material.textfield.TextInputLayout) : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (textInputLayout.error != null) {
-                    textInputLayout.isErrorEnabled = true
-                } else {
-                    textInputLayout.isErrorEnabled = false // This removes the space
+                if (s.toString().isNotEmpty() && textInputLayout.error != null) {
+                    textInputLayout.error = null
+                    textInputLayout.isErrorEnabled = false
                 }
             }
         }
 
-        // Phone number validation with improved error handling
         binding.phoneNumberField.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (s.toString().isNotEmpty() && !isValidPhoneNumber(s.toString())) {
-                    binding.phoneNumberLayout.isErrorEnabled = true
-                    binding.phoneNumberLayout.error = "Invalid phone number format"
+                val phone = s.toString()
+                if (phone.isNotEmpty()) {
+                    if (!isValidPhoneNumber(phone)) {
+                        binding.phoneNumberLayout.error = "Invalid phone number format (10 digits)"
+                        binding.phoneNumberLayout.isErrorEnabled = true
+                    } else {
+                        binding.phoneNumberLayout.error = null
+                        binding.phoneNumberLayout.isErrorEnabled = false
+                    }
                 } else {
+                    binding.phoneNumberLayout.error = null
                     binding.phoneNumberLayout.isErrorEnabled = false
                 }
             }
         })
 
-        // Email validation with improved error handling
         binding.emailField.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (s.toString().isNotEmpty() && !isValidEmail(s.toString())) {
-                    binding.emailLayout.isErrorEnabled = true
-                    binding.emailLayout.error = "Invalid email format"
+                val email = s.toString()
+                if (email.isNotEmpty()) {
+                    if (!isValidEmail(email)) {
+                        binding.emailLayout.error = "Invalid email format"
+                        binding.emailLayout.isErrorEnabled = true
+                    } else {
+                        binding.emailLayout.error = null
+                        binding.emailLayout.isErrorEnabled = false
+                    }
                 } else {
+                    binding.emailLayout.error = null
                     binding.emailLayout.isErrorEnabled = false
                 }
             }
         })
 
-        // Add error clearing for other required fields
-        binding.firstNameField.addTextChangedListener(ErrorClearingTextWatcher(binding.firstNameLayout))
-        binding.lastNameField.addTextChangedListener(ErrorClearingTextWatcher(binding.lastNameLayout))
+        binding.etFirstName.addTextChangedListener(ErrorClearingTextWatcher(binding.firstNameLayout))
+        binding.etLastName.addTextChangedListener(ErrorClearingTextWatcher(binding.lastNameLayout))
         binding.streetAddressField.addTextChangedListener(ErrorClearingTextWatcher(binding.streetAddressLayout))
         binding.cityField.addTextChangedListener(ErrorClearingTextWatcher(binding.cityLayout))
         binding.stateField.addTextChangedListener(ErrorClearingTextWatcher(binding.stateLayout))
         binding.customerTypeDropdown.addTextChangedListener(ErrorClearingTextWatcher(binding.customerTypeLayout))
+        binding.businessNameField.addTextChangedListener(ErrorClearingTextWatcher(binding.businessNameLayout))
     }
 
     private fun setupActionButtons() {
         binding.saveAndCloseButton.setOnClickListener {
             if (validateForm()) {
                 saveCustomer(true)
-                dismiss()
+            } else {
+                Toast.makeText(context, "Please fix the errors above", Toast.LENGTH_SHORT).show()
+                findAndFocusFirstError()
             }
         }
 
         binding.saveAndAddButton.setOnClickListener {
             if (validateForm()) {
                 saveCustomer(false)
-                clearForm()
+            } else {
+                Toast.makeText(context, "Please fix the errors above", Toast.LENGTH_SHORT).show()
+                findAndFocusFirstError()
             }
         }
     }
 
+    private fun findAndFocusFirstError() {
+        val layoutsAndFields = listOfNotNull(
+            binding.firstNameLayout to binding.etFirstName,
+            binding.lastNameLayout to binding.etLastName,
+            binding.phoneNumberLayout to binding.phoneNumberField,
+            binding.customerTypeLayout to binding.customerTypeDropdown,
+            binding.streetAddressLayout to binding.streetAddressField,
+            binding.cityLayout to binding.cityField,
+            binding.stateLayout to binding.stateField,
+            if (binding.businessInfoCard.isVisible) binding.businessNameLayout to binding.businessNameField else null,
+            binding.emailLayout to binding.emailField // Added email for error check focus
+            // Add other validated fields here...
+        )
+
+        for ((layout, field) in layoutsAndFields) {
+            // Check layout directly, field might be null if added conditionally
+            if (layout != null && layout.error != null && layout.isErrorEnabled) {
+                binding.scrollView?.post {
+                    binding.scrollView.smoothScrollTo(0, layout.top)
+                }
+                field?.requestFocus() // Request focus on the associated field
+                val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
+                break
+            }
+        }
+    }
+
+
     private fun validateForm(): Boolean {
         var isValid = true
-
-        // Validate required fields (marked with *)
-        if (binding.firstNameField.text.isNullOrEmpty()) {
-            binding.firstNameLayout.isErrorEnabled = true
-            binding.firstNameLayout.error = "Required"
-            isValid = false
+        fun validateRequiredField(field: android.widget.EditText?, layout: com.google.android.material.textfield.TextInputLayout?, fieldName: String): Boolean {
+            if (field == null || layout == null) return true
+            return if (field.text.isNullOrBlank()) {
+                layout.error = "$fieldName is required"; layout.isErrorEnabled = true; false
+            } else {
+                layout.error = null; layout.isErrorEnabled = false; true
+            }
+        }
+        fun validateRequiredDropdown(field: AutoCompleteTextView?, layout: com.google.android.material.textfield.TextInputLayout?, fieldName: String): Boolean {
+            if (field == null || layout == null) return true
+            return if (field.text.isNullOrBlank()) {
+                layout.error = "$fieldName is required"; layout.isErrorEnabled = true; false
+            } else {
+                layout.error = null; layout.isErrorEnabled = false; true
+            }
         }
 
-        if (binding.lastNameField.text.isNullOrEmpty()) {
-            binding.lastNameLayout.isErrorEnabled = true
-            binding.lastNameLayout.error = "Required"
-            isValid = false
-        }
-
-        if (binding.phoneNumberField.text.isNullOrEmpty()) {
-            binding.phoneNumberLayout.isErrorEnabled = true
-            binding.phoneNumberLayout.error = "Required"
+        if (!validateRequiredField(binding.etFirstName, binding.firstNameLayout, "First Name")) isValid = false
+        if (!validateRequiredField(binding.etLastName, binding.lastNameLayout, "Last Name")) isValid = false
+        if (!validateRequiredField(binding.phoneNumberField, binding.phoneNumberLayout, "Phone Number")) {
             isValid = false
         } else if (!isValidPhoneNumber(binding.phoneNumberField.text.toString())) {
+            binding.phoneNumberLayout.error = "Invalid phone number format (10 digits)"
             binding.phoneNumberLayout.isErrorEnabled = true
-            binding.phoneNumberLayout.error = "Invalid phone number format"
             isValid = false
         }
+        if (!validateRequiredDropdown(binding.customerTypeDropdown, binding.customerTypeLayout, "Customer Type")) isValid = false
+        if (!validateRequiredField(binding.streetAddressField, binding.streetAddressLayout, "Street Address")) isValid = false
+        if (!validateRequiredField(binding.cityField, binding.cityLayout, "City")) isValid = false
+        if (!validateRequiredField(binding.stateField, binding.stateLayout, "State")) isValid = false
 
-        if (binding.customerTypeDropdown.text.isNullOrEmpty()) {
-            binding.customerTypeLayout.isErrorEnabled = true
-            binding.customerTypeLayout.error = "Required"
-            isValid = false
+        val email = binding.emailField.text.toString()
+        if (email.isNotEmpty() && !isValidEmail(email)) {
+            binding.emailLayout.error = "Invalid email format"; binding.emailLayout.isErrorEnabled = true; isValid = false
+        } else if (binding.emailLayout.error != null){
+            binding.emailLayout.error = null; binding.emailLayout.isErrorEnabled = false
         }
 
-        // Address validation
-        if (binding.streetAddressField.text.isNullOrEmpty()) {
-            binding.streetAddressLayout.isErrorEnabled = true
-            binding.streetAddressLayout.error = "Required"
-            isValid = false
-        }
-
-        if (binding.cityField.text.isNullOrEmpty()) {
-            binding.cityLayout.isErrorEnabled = true
-            binding.cityLayout.error = "Required"
-            isValid = false
-        }
-
-        if (binding.stateField.text.isNullOrEmpty()) {
-            binding.stateLayout.isErrorEnabled = true
-            binding.stateLayout.error = "Required"
-            isValid = false
-        }
-
-        // Validate business fields if customer is a wholesaler
         if (binding.customerTypeDropdown.text.toString() == "Wholesaler") {
-            if (binding.businessNameField.text.isNullOrEmpty()) {
-                binding.businessNameLayout.isErrorEnabled = true
-                binding.businessNameLayout.error = "Required for wholesalers"
-                isValid = false
-            }
+            if (!validateRequiredField(binding.businessNameField, binding.businessNameLayout, "Business Name")) isValid = false
         }
 
         return isValid
     }
 
     private fun isValidPhoneNumber(phone: String): Boolean {
-        return phone.matches(Regex("^[6-9]\\d{9}$")) // Example for Indian phone numbers
+        return phone.matches(Regex("^[6-9]\\d{9}$"))
     }
 
     private fun isValidEmail(email: String): Boolean {
@@ -327,21 +658,23 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun saveCustomer(shouldClose: Boolean) {
-        // Create customer object from form fields
         val customer = createCustomerFromForm()
-
-        if (isEditMode) {
-            // Return the updated customer through the listener
-            listener?.onCustomerUpdated(customer)
-        } else {
-            // Return the new customer through the listener
-            listener?.onCustomerAdded(customer)
-        }
-
-        if (shouldClose) {
-            dismiss()
-        } else {
-            clearForm()
+        try {
+            if (isEditMode) {
+                listener?.onCustomerUpdated(customer)
+                Toast.makeText(context, "Customer updated successfully", Toast.LENGTH_SHORT).show()
+            } else {
+                listener?.onCustomerAdded(customer)
+                Toast.makeText(context, "Customer added successfully", Toast.LENGTH_SHORT).show()
+            }
+            if (shouldClose) {
+                dismissAllowingStateLoss()
+            } else {
+                clearForm()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving customer", e)
+            Toast.makeText(context, "Error saving customer: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -349,113 +682,103 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private fun createCustomerFromForm(): Customer {
         val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
         val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
+        var calculatedCurrentBalance = openingBalance
 
-        // Determine the current balance properly
-        val currentBalance = if (isEditMode && existingCustomerId != null) {
-            // For edited customers, we need to preserve their current balance to maintain
-            // the accumulated invoice history
-            arguments?.let {
-                val customer = it.getSerializable(ARG_CUSTOMER) as? Customer
-                if (customer != null) {
-                    // If opening balance is changed in the form but we have an existing customer,
-                    // we need to adjust the current balance by the same amount
-                    val balanceDifference = openingBalance - customer.openingBalance
-                    customer.currentBalance + balanceDifference
-                } else {
-                    openingBalance
-                }
-            } ?: openingBalance
-        } else {
-            // For new customers, set currentBalance equal to openingBalance
-            openingBalance
+        if (isEditMode) {
+            arguments?.getSerializable(ARG_CUSTOMER)?.let { arg ->
+                if (arg is Customer) {
+                    val originalCustomer = arg
+                    val openingBalanceDifference = openingBalance - originalCustomer.openingBalance
+                    calculatedCurrentBalance = originalCustomer.currentBalance + openingBalanceDifference
+                } else { Log.e(TAG, "Argument ARG_CUSTOMER is not of type Customer.") }
+            } ?: Log.w(TAG, "Edit mode active but original customer data not found.")
         }
+
+        if (balanceType == "Debit" && calculatedCurrentBalance > 0) calculatedCurrentBalance *= -1
+        else if (balanceType == "Credit" && calculatedCurrentBalance < 0) calculatedCurrentBalance *= -1
 
         return Customer(
             id = existingCustomerId ?: "",
             customerType = binding.customerTypeDropdown.text.toString(),
-            firstName = binding.firstNameField.text.toString(),
-            lastName = binding.lastNameField.text.toString(),
-            phoneNumber = binding.phoneNumberField.text.toString(),
-            email = binding.emailField.text.toString(),
-            streetAddress = binding.streetAddressField.text.toString(),
-            city = binding.cityField.text.toString(),
-            state = binding.stateField.text.toString(),
-            postalCode = binding.postalCodeField.text.toString(),
+            firstName = binding.etFirstName.text.toString().trim(),
+            lastName = binding.etLastName.text.toString().trim(),
+            phoneNumber = binding.phoneNumberField.text.toString().trim(),
+            email = binding.emailField.text.toString().trim(),
+            streetAddress = binding.streetAddressField.text.toString().trim(),
+            city = binding.cityField.text.toString().trim(),
+            state = binding.stateField.text.toString().trim(),
+            postalCode = binding.postalCodeField.text.toString().trim(),
             country = binding.countryDropdown.text.toString(),
             balanceType = balanceType,
             openingBalance = openingBalance,
-            currentBalance = currentBalance, // Use the properly calculated current balance
-            balanceNotes = binding.balanceNotesField.text.toString(),
-            businessName = binding.businessNameField.text.toString(),
-            gstNumber = binding.gstNumberField.text.toString(),
-            taxId = binding.taxIdField.text.toString(),
+            currentBalance = calculatedCurrentBalance,
+            balanceNotes = binding.balanceNotesField.text.toString().trim(),
+            businessName = binding.businessNameField.text.toString().trim(),
+            gstNumber = binding.gstNumberField.text.toString().trim(),
+            taxId = binding.taxIdField.text.toString().trim(),
             customerSince = binding.customerSinceDateField.text.toString(),
-            referredBy = binding.referredByField.text.toString(),
+            referredBy = binding.referredByField.text.toString().trim(),
             birthday = binding.birthdayField.text.toString(),
             anniversary = binding.anniversaryField.text.toString(),
-            notes = binding.notesField.text.toString(),
+            notes = binding.notesField.text.toString().trim(),
             lastUpdatedAt = System.currentTimeMillis()
         )
     }
 
 
     private fun populateFormWithCustomerData(customer: Customer) {
-        // Basic Information
         binding.customerTypeDropdown.setText(customer.customerType, false)
-        binding.firstNameField.setText(customer.firstName)
-        binding.lastNameField.setText(customer.lastName)
+        binding.etFirstName.setText(customer.firstName)
+        binding.etLastName.setText(customer.lastName)
         binding.phoneNumberField.setText(customer.phoneNumber)
-        binding.emailField.setText(customer.email)
-
-        // Address Information
+        binding.emailField.setText(customer.email ?: "")
         binding.streetAddressField.setText(customer.streetAddress)
         binding.cityField.setText(customer.city)
         binding.stateField.setText(customer.state)
-        binding.postalCodeField.setText(customer.postalCode)
+        binding.postalCodeField.setText(customer.postalCode ?: "")
         binding.countryDropdown.setText(customer.country, false)
-
-        // Financial Information
-        if (customer.balanceType == "Credit") {
-            binding.creditRadioButton.isChecked = true
-        } else {
-            binding.debitRadioButton.isChecked = true
-        }
-        binding.openingBalanceField.setText(customer.openingBalance.toString())
-        binding.balanceNotesField.setText(customer.balanceNotes)
-
-        // Business Information
-        binding.businessNameField.setText(customer.businessName)
-        binding.gstNumberField.setText(customer.gstNumber)
-        binding.taxIdField.setText(customer.taxId)
-
-        // Relationship Information
-        binding.customerSinceDateField.setText(customer.customerSince)
-        binding.referredByField.setText(customer.referredBy)
-        binding.birthdayField.setText(customer.birthday)
-        binding.anniversaryField.setText(customer.anniversary)
-        binding.notesField.setText(customer.notes)
+        if (customer.balanceType == "Credit") binding.creditRadioButton.isChecked = true
+        else binding.debitRadioButton.isChecked = true
+        binding.openingBalanceField.setText(String.format(Locale.US, "%.2f", customer.openingBalance))
+        binding.balanceNotesField.setText(customer.balanceNotes ?: "")
+        val isBusinessCustomer = customer.customerType == "Wholesaler"
+        binding.businessInfoCard.isVisible = isBusinessCustomer
+        binding.businessInfoCardText.isVisible = isBusinessCustomer
+        binding.businessNameField.setText(customer.businessName ?: "")
+        binding.gstNumberField.setText(customer.gstNumber ?: "")
+        binding.taxIdField.setText(customer.taxId ?: "")
+        binding.customerSinceDateField.setText(customer.customerSince ?: "")
+        binding.referredByField.setText(customer.referredBy ?: "")
+        binding.birthdayField.setText(customer.birthday ?: "")
+        binding.anniversaryField.setText(customer.anniversary ?: "")
+        binding.notesField.setText(customer.notes ?: "")
+        binding.saveAndCloseButton.text = "Update"
+        binding.saveAndAddButton.visibility = View.GONE
+        val layoutParams = binding.saveAndCloseButton.layoutParams as LinearLayout.LayoutParams
+        layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT
+        layoutParams.weight = 0f
+        binding.saveAndCloseButton.layoutParams = layoutParams
     }
 
     private fun clearForm() {
-        binding.firstNameField.text = null
-        binding.lastNameField.text = null
+        binding.etFirstName.text = null
+        binding.etLastName.text = null
         binding.phoneNumberField.text = null
         binding.emailField.text = null
-
+        binding.customerTypeDropdown.text = null
         binding.streetAddressField.text = null
         binding.cityField.text = null
         binding.stateField.text = null
         binding.postalCodeField.text = null
         binding.countryDropdown.setText("India", false)
-
         binding.creditRadioButton.isChecked = true
         binding.openingBalanceField.setText("0.00")
         binding.balanceNotesField.text = null
         binding.businessNameField.text = null
         binding.gstNumberField.text = null
         binding.taxIdField.text = null
-
-        // Keep today's date for customer since
+        binding.businessInfoCard.isVisible = false
+        binding.businessInfoCardText.isVisible = false
         val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Calendar.getInstance().time)
         binding.customerSinceDateField.setText(today)
         binding.referredByField.text = null
@@ -463,75 +786,93 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.anniversaryField.text = null
         binding.notesField.text = null
 
-        // Reset error states
-        binding.firstNameLayout.isErrorEnabled = false
-        binding.lastNameLayout.isErrorEnabled = false
-        binding.phoneNumberLayout.isErrorEnabled = false
-        binding.emailLayout.isErrorEnabled = false
-        binding.customerTypeLayout.isErrorEnabled = false
-        binding.streetAddressLayout.isErrorEnabled = false
-        binding.cityLayout.isErrorEnabled = false
-        binding.stateLayout.isErrorEnabled = false
-        binding.businessNameLayout.isErrorEnabled = false
+        val layoutsToReset = listOf(
+            binding.firstNameLayout, binding.lastNameLayout, binding.phoneNumberLayout,
+            binding.emailLayout, binding.customerTypeLayout, binding.streetAddressLayout,
+            binding.cityLayout, binding.stateLayout, binding.postalCodeLayout,
+            binding.countryLayout, binding.openingBalanceLayout, binding.businessNameLayout,
+            binding.gstNumberLayout, binding.taxIdLayout, binding.balanceNotesLayout,
+            binding.customerSinceDateLayout, binding.referredByLayout, binding.birthdayLayout,
+            binding.anniversaryLayout, binding.notesLayout
+        )
+        layoutsToReset.forEach { layout -> layout?.error = null; layout?.isErrorEnabled = false }
+
+        binding.etFirstName.requestFocus()
+        isEditMode = false
+        existingCustomerId = null
+        binding.saveAndCloseButton.text = "Save & Close"
+
+        if (!calledFromInvoiceCreation && !calledFromCustomerDetails) {
+            binding.saveAndAddButton.visibility = View.VISIBLE
+            val closeParams = binding.saveAndCloseButton.layoutParams as? LinearLayout.LayoutParams
+            val addParams = binding.saveAndAddButton.layoutParams as? LinearLayout.LayoutParams
+            if (closeParams != null && addParams != null) {
+                closeParams.width = 0; addParams.width = 0
+                closeParams.weight = 1f; addParams.weight = 1f
+                binding.saveAndCloseButton.layoutParams = closeParams
+                binding.saveAndAddButton.layoutParams = addParams
+            }
+        } else {
+            binding.saveAndAddButton.visibility = View.GONE
+            val closeParams = binding.saveAndCloseButton.layoutParams as? LinearLayout.LayoutParams
+            if (closeParams != null) {
+                closeParams.width = LinearLayout.LayoutParams.MATCH_PARENT
+                closeParams.weight = 0f
+                binding.saveAndCloseButton.layoutParams = closeParams
+            }
+            if(calledFromCustomerDetails) binding.saveAndCloseButton.text = "Update"
+        }
     }
 
     fun setCalledFromInvoiceCreation(fromInvoice: Boolean) {
         calledFromInvoiceCreation = fromInvoice
     }
-    fun setCalledFromCustomerDetails(fromInvoice: Boolean) {
-        calledFromCustomerDetails = fromInvoice
+    fun setCalledFromCustomerDetails(fromDetails: Boolean) {
+        calledFromCustomerDetails = fromDetails
     }
 
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
-
         dialog.setOnShowListener { dialogInterface ->
             val bottomSheetDialog = dialogInterface as BottomSheetDialog
-            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
-                com.google.android.material.R.id.design_bottom_sheet
-            )
+            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheet?.let { sheet ->
                 val behavior = BottomSheetBehavior.from(sheet)
                 setupFullHeight(sheet)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 behavior.skipCollapsed = true
                 behavior.isDraggable = true
-
             }
         }
-
         return dialog
     }
+
     private fun setupFullHeight(bottomSheet: View) {
         val layoutParams = bottomSheet.layoutParams
         layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
         bottomSheet.layoutParams = layoutParams
     }
 
-
-
-
     override fun onDestroyView() {
         super.onDestroyView()
+        contactsAdapter?.changeCursor(null)
+        contactsAdapter = null
         _binding = null
     }
 
     companion object {
-        const val TAG = "CustomerBottomSheetFragment"
+        val TAG = CustomerBottomSheetFragment::class.java.simpleName
         private const val ARG_CUSTOMER = "customer_object"
 
-        fun newInstance(): CustomerBottomSheetFragment {
-            return CustomerBottomSheetFragment()
-        }
+        fun newInstance(): CustomerBottomSheetFragment = CustomerBottomSheetFragment()
 
         fun newInstance(customer: Customer): CustomerBottomSheetFragment {
-            val fragment = CustomerBottomSheetFragment()
-            val args = Bundle()
-            // We need to put the customer as a serializable
-            args.putSerializable(ARG_CUSTOMER, customer)
-            fragment.arguments = args
-            return fragment
+            return CustomerBottomSheetFragment().apply {
+                arguments = Bundle().apply {
+                    putSerializable(ARG_CUSTOMER, customer)
+                }
+            }
         }
     }
 }
