@@ -33,10 +33,10 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     private val inventoryViewModel: InventoryViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth)
+        val repository = InventoryRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        InventoryViewModelFactory(repository, connectivityManager)
+        InventoryViewModelFactory(repository, connectivityManager, requireContext())
     }
     private lateinit var adapter: JewelleryAdapter
     private var isSearchActive = false // Track search state

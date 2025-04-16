@@ -7,6 +7,8 @@ import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -23,6 +25,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.BottomSheet.PinEntryBottomSheet
+import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.DataWipeManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
@@ -34,6 +37,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
@@ -65,6 +69,12 @@ class MainActivity : AppCompatActivity() {
 
         // Initialize SharedPreferences
         sharedPreferences = SecurePreferences.getInstance(this)
+
+        // Initialize SessionManager
+        SessionManager.initialize(this)
+
+        // Initialize ShopManager
+        ShopManager.initialize(this)
 
         // Request notification permission if needed (for Android 13+)
         requestNotificationPermission()
@@ -257,6 +267,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun logoutUser() {
+        // Clear active shop session
+        SessionManager.clearSession(this)
+        
         // Sign out from Firebase
         FirebaseAuth.getInstance().signOut()
 
@@ -291,6 +304,9 @@ class MainActivity : AppCompatActivity() {
 
         // Reset background flag regardless of PIN check outcome
         wasInBackground = false
+        
+        // Invalidate options menu to update shop switching visibility
+        invalidateOptionsMenu()
     }
 
     override fun onPause() {
@@ -312,9 +328,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Shows PIN verification dialog when app is resumed
-     */
     /**
      * Shows PIN verification dialog when app is resumed
      */

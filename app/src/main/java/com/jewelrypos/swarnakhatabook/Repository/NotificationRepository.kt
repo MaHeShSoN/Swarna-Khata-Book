@@ -134,6 +134,29 @@ class NotificationRepository(
         Result.failure(e)
     }
 
+    suspend fun getUnreadNotificationCountSafe(): Int {
+        return try {
+            val phoneNumber = getCurrentUserPhoneNumber()
+
+            val count = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("notifications")
+                .whereEqualTo("status", NotificationStatus.UNREAD.name)
+                .get()
+                .await()
+                .size()
+
+            count
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Just re-throw cancellation exceptions
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting unread count", e)
+            // Return -1 to indicate error
+            -1
+        }
+    }
+
     /**
      * Marks a notification as read
      */

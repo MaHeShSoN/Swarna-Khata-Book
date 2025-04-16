@@ -66,7 +66,8 @@
                 android:hint="Name *"
                 app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/line_md__person_twotone"
-                app:startIconTint="@color/my_light_primary">
+                app:startIconTint="@color/my_light_primary"
+                >
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/nameOfOwnerText"
@@ -74,7 +75,8 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratregular"
                     android:inputType="textCapWords"
-                    android:textColor="@color/my_light_on_surface" />
+                    android:textColor="@color/my_light_on_surface"
+                    />
 
             </com.google.android.material.textfield.TextInputLayout>
 
@@ -86,7 +88,7 @@
                 android:layout_marginBottom="12dp"
                 android:hint="Number *"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/baseline_phone_24"
+                app:startIconDrawable="@drawable/ic_phone_custom"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -108,7 +110,7 @@
                 android:layout_marginBottom="12dp"
                 android:hint="Shop Name *"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/ic_store"
+                app:startIconDrawable="@drawable/stash__shop"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -128,7 +130,7 @@
                 android:layout_marginBottom="12dp"
                 android:hint="Shop Address *"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/material_symbols__edit_rounded"
+                app:startIconDrawable="@drawable/system_uicons__location"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -162,7 +164,7 @@
                 android:hint="GST Number"
                 android:visibility="gone"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/material_symbols__upi_pay"
+                app:startIconDrawable="@drawable/fluent__tag_percent_24_regular"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText

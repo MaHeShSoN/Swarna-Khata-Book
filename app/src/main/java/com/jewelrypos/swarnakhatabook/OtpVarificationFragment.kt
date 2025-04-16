@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.android.gms.auth.api.phone.SmsRetriever
@@ -25,9 +26,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthProvider
-import com.jewelrypos.swarnakhatabook.DataClasses.Shop
+import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
+import com.jewelrypos.swarnakhatabook.DataClasses.UserProfile
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentOtpVarificationBinding
+import kotlinx.coroutines.launch
 import java.util.regex.Pattern
 
 class OtpVarificationFragment : Fragment() {
@@ -81,6 +85,9 @@ class OtpVarificationFragment : Fragment() {
 
         // Initialize ShopManager if not already initialized
         ShopManager.initialize(requireContext())
+
+        // Initialize SessionManager
+        SessionManager.initialize(requireContext())
 
         // Display the phone number
         binding.tvPhoneNumber.text = args.phoneNumber
@@ -265,8 +272,8 @@ class OtpVarificationFragment : Fragment() {
                     val user = auth.currentUser
 
                     if (user != null) {
-                        // Save user data using ShopManager
-                        saveUserDataWithShopManager(user.uid)
+                        // Create a user profile in Firestore
+                        saveUserProfile(user.uid)
                     } else {
                         Toast.makeText(requireContext(), "Authentication failed", Toast.LENGTH_SHORT).show()
                     }
@@ -285,35 +292,96 @@ class OtpVarificationFragment : Fragment() {
             }
     }
 
-    private fun saveUserDataWithShopManager(userId: String) {
-        // Create a Shop object with user data
-        val shop = Shop(
-            shopName = args.shopName,
-            phoneNumber = args.phoneNumber,
-            name = args.name,
-            hasGst = args.gstNumber.isNotEmpty(),
-            gstNumber = args.gstNumber,
-            address = args.address,
-            createdAt = Timestamp.now()
-        )
+    private fun saveUserProfile(userId: String) {
+        lifecycleScope.launch {
+            try {
+                // Create UserProfile
+                val userProfile = UserProfile(
+                    userId = userId,
+                    name = args.name,
+                    phoneNumber = args.phoneNumber,
+                    createdAt = Timestamp.now()
+                )
 
-        // Save shop data using ShopManager
-        ShopManager.saveShop(shop, requireContext()) { success, error ->
-            if (success) {
-                Log.d(TAG, "User data saved successfully")
-                navigateToMainScreen()
-            } else {
-                Log.w(TAG, "Error saving user data", error)
-                Toast.makeText(requireContext(), "Failed to save data: ${error?.message}",
-                    Toast.LENGTH_SHORT).show()
+                // Save UserProfile to Firestore
+                val result = ShopManager.saveUserProfile(userProfile)
+                
+                if (result.isSuccess) {
+                    // Check if shop details were provided
+                    if (args.shopName.isNotEmpty()) {
+                        // Create the first shop for the user
+                        createInitialShop(userId)
+                    } else {
+                        // Navigate to create shop screen
+                        navigateToCreateShop()
+                    }
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Failed to save user profile")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error saving user profile", e)
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to save user profile: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun createInitialShop(userId: String) {
+        lifecycleScope.launch {
+            try {
+                // Create ShopDetails
+                val shopDetails = ShopDetails(
+                    shopName = args.shopName,
+                    address = args.address,
+                    hasGst = args.gstNumber.isNotEmpty(),
+                    gstNumber = if (args.gstNumber.isNotEmpty()) args.gstNumber else null,
+                    createdAt = Timestamp.now()
+                )
+
+                // Create shop and get shopId
+                val result = ShopManager.createShop(userId, shopDetails)
+                
+                if (result.isSuccess) {
+                    val shopId = result.getOrNull()
+                    if (shopId != null) {
+                        // Set active shop ID
+                        context?.let {
+                            SessionManager.setActiveShopId(it, shopId)
+                        }
+                        
+                        // Navigate to main screen
+                        navigateToMainScreen()
+                    } else {
+                        throw Exception("Failed to get shop ID")
+                    }
+                } else {
+                    throw result.exceptionOrNull() ?: Exception("Failed to create shop")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating shop", e)
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to create shop: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+                
+                // If shop creation fails, navigate to create shop screen as fallback
+                navigateToCreateShop()
             }
         }
     }
 
     private fun navigateToMainScreen() {
         Toast.makeText(requireContext(), "Registration successful!", Toast.LENGTH_SHORT).show()
-        // Navigate to your main activity or dashboard fragment
         findNavController().navigate(R.id.action_otpVarificationFragment_to_mainScreenFragment)
+    }
+    
+    private fun navigateToCreateShop() {
+        Toast.makeText(requireContext(), "Please create your shop", Toast.LENGTH_SHORT).show()
+        findNavController().navigate(R.id.action_otpVarificationFragment_to_createShopFragment)
     }
 
     private fun setLoading(isLoading: Boolean) {

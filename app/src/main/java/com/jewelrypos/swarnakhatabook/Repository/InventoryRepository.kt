@@ -1,15 +1,16 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
-import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.Companion.TAG
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -20,7 +21,8 @@ import kotlin.coroutines.suspendCoroutine
 
 class InventoryRepository(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val context: Context
 ) {
 
     // Add these properties to InventoryRepository class
@@ -33,15 +35,24 @@ class InventoryRepository(
         private const val TAG = "InventoryRepository"
     }
 
-    suspend fun addJewelleryItem(jewelleryItem: JewelleryItem): Result<Unit> = try {
-        val currentUser = auth.currentUser
+    // Get current active shop ID from SessionManager
+    private fun getCurrentShopId(): String {
+        return SessionManager.getActiveShopId(context)
+            ?: throw ShopNotSelectedException("No active shop selected.")
+    }
+
+    // Get current user ID for validation
+    fun getCurrentUserId(): String {
+        return auth.currentUser?.uid
             ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
+    }
+
+    suspend fun addJewelleryItem(jewelleryItem: JewelleryItem): Result<Unit> = try {
+        getCurrentUserId() // Validate user is authenticated
 
         // Create a reference with auto-generated ID
-        val docRef = firestore.collection("users")
-            .document(phoneNumber)
+        val docRef = firestore.collection("shopData")
+            .document(getCurrentShopId())
             .collection("inventory")
             .document()
 
@@ -53,20 +64,15 @@ class InventoryRepository(
 
         Result.success(Unit)
     } catch (e: Exception) {
+        Log.e(TAG, "Error adding jewelry item", e)
         Result.failure(e)
     }
 
-    // Add this method to fetch paginated data
     suspend fun fetchJewelleryItemsPaginated(
         loadNextPage: Boolean = false,
-        source: Source = Source.DEFAULT // Source.DEFAULT, Source.CACHE, or Source.SERVER
+        source: Source = Source.DEFAULT
     ): Result<List<JewelleryItem>> {
-        return try {
-            val currentUser = auth.currentUser
-                ?: throw UserNotAuthenticatedException("User not authenticated.")
-            val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-                ?: throw PhoneNumberInvalidException("User phone number not available.")
-
+        try {
             // Reset pagination if not loading next page
             if (!loadNextPage) {
                 lastDocumentSnapshot = null
@@ -79,18 +85,17 @@ class InventoryRepository(
             }
 
             // Build query with pagination
-            var query = firestore.collection("users")
-                .document(phoneNumber)
+            var query = firestore.collection("shopData")
+                .document(getCurrentShopId())
                 .collection("inventory")
-                .orderBy("displayName", Query.Direction.ASCENDING)
                 .limit(pageSize.toLong())
 
-            // Add start after clause if we have a previous page
+            // Add startAfter for pagination if needed
             if (loadNextPage && lastDocumentSnapshot != null) {
                 query = query.startAfter(lastDocumentSnapshot!!)
             }
 
-            // Get data with the specified source
+            // Execute query
             val snapshot = query.get(source).await()
 
             // Update pagination state
@@ -98,52 +103,56 @@ class InventoryRepository(
                 isLastPage = true
             }
 
-            // Save the last document for next page query
+            // Save the last document for next page
             if (snapshot.documents.isNotEmpty()) {
                 lastDocumentSnapshot = snapshot.documents.last()
             }
 
             val items = snapshot.toObjects(JewelleryItem::class.java)
-            Result.success(items)
+            return Result.success(items)
         } catch (e: Exception) {
             // If using cache and got an error, try from server
             if (source == Source.CACHE) {
                 return fetchJewelleryItemsPaginated(loadNextPage, Source.SERVER)
             }
-            Result.failure(e)
+            return Result.failure(e)
         }
     }
 
+
     suspend fun updateJewelleryItem(item: JewelleryItem) = suspendCoroutine<Unit> { continuation ->
-        val currentUser = auth.currentUser ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
-
-        // Use the same collection path as in addJewelleryItem
-        firestore.collection("users")
-            .document(phoneNumber)
-            .collection("inventory")  // Use "inventory" instead of "jewelryItems"
-            .document(item.id)
-            .set(item)
-            .addOnSuccessListener {
-                continuation.resume(Unit)
-            }
-            .addOnFailureListener { e ->
-                continuation.resumeWithException(e)
-            }
+        getCurrentUserId() // Validate user is authenticated
+        
+        try {
+            val shopId = getCurrentShopId()
+            
+            // Use shopData collection path
+            firestore.collection("shopData")
+                .document(shopId)
+                .collection("inventory")
+                .document(item.id)
+                .set(item)
+                .addOnSuccessListener {
+                    continuation.resume(Unit)
+                }
+                .addOnFailureListener { e ->
+                    continuation.resumeWithException(e)
+                }
+        } catch (e: Exception) {
+            continuation.resumeWithException(e)
+        }
     }
-    // Add these methods to your existing InventoryRepository class
-
+    
     /**
      * Get a jewelry item by its ID
      */
     suspend fun getJewelleryItemById(itemId: String, source: Source = Source.DEFAULT): Result<JewelleryItem> {
         return try {
-            val phoneNumber = getCurrentUserPhoneNumber()
+            val shopId = getCurrentShopId()
 
             val documentSnapshot = firestore
-                .collection("users")
-                .document(phoneNumber)
+                .collection("shopData")
+                .document(shopId)
                 .collection("inventory")
                 .document(itemId)
                 .get(source)
@@ -170,11 +179,11 @@ class InventoryRepository(
      */
     suspend fun updateItemStock(itemId: String, newStock: Double): Result<Unit> {
         return try {
-            val phoneNumber = getCurrentUserPhoneNumber()
+            val shopId = getCurrentShopId()
 
             firestore
-                .collection("users")
-                .document(phoneNumber)
+                .collection("shopData")
+                .document(shopId)
                 .collection("inventory")
                 .document(itemId)
                 .update("stock", newStock)
@@ -187,55 +196,38 @@ class InventoryRepository(
         }
     }
 
-
-
-    suspend fun moveItemToRecycleBin(item: JewelleryItem): Result<Unit> = withContext(Dispatchers.IO) { // Ensure it runs on IO dispatcher
+    suspend fun moveItemToRecycleBin(item: JewelleryItem): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val recycledItemsRepository = RecycledItemsRepository(firestore, auth)
+            val recycledItemsRepository = RecycledItemsRepository(firestore, auth, context)
 
             val calendar = Calendar.getInstance()
             // Use the constant directly from RecycledItemsRepository companion object
             calendar.add(Calendar.DAY_OF_YEAR, RecycledItemsRepository.RETENTION_DAYS.toInt())
             val expirationTime = calendar.timeInMillis
 
+            // First, move to recycle bin
             val recycledItem = RecycledItem(
                 id = item.id,
                 itemId = item.id,
-                itemType = "JEWELLERYITEM",
+                itemType = "JEWELLERYITEM", 
                 itemName = item.displayName,
-                itemData = serializeJewelleryItem(item), // This now returns Map<String, Any>
+                itemData = serializeJewelleryItem(item),
                 expiresAt = expirationTime,
-                userId = getCurrentUserPhoneNumber()
+                userId = getCurrentUserId()
             )
 
-            val recycleResult = recycledItemsRepository.addRecycledItem(recycledItem)
-
-            if (recycleResult.isSuccess) {
-                val deleteResult = deleteJewelleryItem(item.id)
-                if (deleteResult.isSuccess) {
-                    Result.success(Unit)
-                } else {
-                    // Attempt rollback
-                    try {
-                        // Call the suspend function directly, no .await() needed on Result
-                        val rollbackResult = recycledItemsRepository.permanentlyDeleteItem(recycledItem.id)
-                        if (rollbackResult.isFailure) {
-                            Log.e(TAG, "Rollback of recycled item failed", rollbackResult.exceptionOrNull())
-                        }
-                    } catch (rollbackError: Exception) {
-                        Log.e(TAG, "Failed to rollback recycled item after inventory delete failed", rollbackError)
-                    }
-                    Result.failure(deleteResult.exceptionOrNull() ?: Exception("Failed to delete original item after recycling"))
-                }
+            val result = recycledItemsRepository.addRecycledItem(recycledItem)
+            if (result.isSuccess) {
+                // Then delete from main inventory
+                return@withContext deleteJewelleryItem(item.id)
             } else {
-                Result.failure(recycleResult.exceptionOrNull() ?: Exception("Failed to move item to recycle bin collection"))
+                return@withContext Result.failure(result.exceptionOrNull() ?: Exception("Failed to move item to recycle bin"))
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in moveItemToRecycleBin: ${e.message}", e)
-            Result.failure(e)
+            Log.e(TAG, "Error moving item to recycle bin", e)
+            return@withContext Result.failure(e)
         }
     }
-
 
     // --- Add helper function to serialize JewelleryItem ---
     private fun serializeJewelleryItem(item: JewelleryItem): Map<String, Any> {
@@ -269,18 +261,16 @@ class InventoryRepository(
         return map.filterValues { it != null } as Map<String, Any>
     }
 
-
-
     /**
      * Delete a jewelry item from inventory
      */
     suspend fun deleteJewelleryItem(itemId: String): Result<Unit> {
         return try {
-            val phoneNumber = getCurrentUserPhoneNumber()
+            val shopId = getCurrentShopId()
 
             firestore
-                .collection("users")
-                .document(phoneNumber)
+                .collection("shopData")
+                .document(shopId)
                 .collection("inventory")
                 .document(itemId)
                 .delete()
@@ -295,11 +285,11 @@ class InventoryRepository(
 
     suspend fun getAllInventoryItems(source: Source = Source.DEFAULT): Result<List<JewelleryItem>> {
         return try {
-            val userPhoneNumber = getCurrentUserId()
+            val shopId = getCurrentShopId()
 
             // This query gets all items without pagination
-            val snapshot = firestore.collection("users")
-                .document(userPhoneNumber)
+            val snapshot = firestore.collection("shopData")
+                .document(shopId)
                 .collection("inventory")
                 .get(source)
                 .await()
@@ -319,18 +309,8 @@ class InventoryRepository(
         }
     }
 
-    /**
-     * Get the current user ID (phone number)
-     */
-    fun getCurrentUserId(): String {
-        return getCurrentUserPhoneNumber()
-    }
-
-    private fun getCurrentUserPhoneNumber(): String {
-        val currentUser = auth.currentUser
-            ?: throw UserNotAuthenticatedException("User not authenticated.")
-        val phoneNumber = currentUser.phoneNumber?.replace("+", "")
-            ?: throw PhoneNumberInvalidException("User phone number not available.")
-        return phoneNumber
-    }
+    // Custom exceptions
+    class UserNotAuthenticatedException(message: String) : Exception(message)
+    class PhoneNumberInvalidException(message: String) : Exception(message)  
+    class ShopNotSelectedException(message: String) : Exception(message)
 }

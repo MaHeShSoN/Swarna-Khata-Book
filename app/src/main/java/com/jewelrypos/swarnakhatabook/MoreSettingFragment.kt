@@ -9,20 +9,23 @@ import android.widget.TextView
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog // Import your custom dialog
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.lifecycle.lifecycleScope // Ensure this is imported
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.SettingsAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.SettingsItem
 import com.jewelrypos.swarnakhatabook.databinding.FragmentMoreSettingBinding
+import kotlinx.coroutines.Dispatchers // Import Dispatchers
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.withContext // Import withContext
 
 class MoreSettingFragment : Fragment() {
     private var _binding: FragmentMoreSettingBinding? = null
     private val binding get() = _binding!!
 
+    // Use the optimized adapter if you applied the previous suggestion
+    // Make sure the adapter constructor matches the one you are using
+    // (e.g., if you adopted the optimized one, it might not need isPremium passed directly)
     private lateinit var settingsAdapter: SettingsAdapter
 
     override fun onCreateView(
@@ -37,25 +40,35 @@ class MoreSettingFragment : Fragment() {
         setupSettingsList() // Call setup function
     }
 
+    // --- Fixed setupSettingsList ---
     private fun setupSettingsList() {
-        // Launch coroutine to check premium status asynchronously
-        lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
-            val isPremium = subscriptionManager.isPremiumUser() // Fetch premium status
-            val daysRemaining = subscriptionManager.getDaysRemaining()
+        // Launch coroutine on the main thread initially
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Show a loading indicator (optional but recommended)
+            binding.settingsRecyclerView.visibility = View.GONE
 
-            val subscriptionBadgeText = if (isPremium) {
-                "PREMIUM"
-            } else if (daysRemaining <= 3 && daysRemaining > 0) { // Show days left only if > 0
-                "$daysRemaining DAYS LEFT"
-            } else if (daysRemaining == 0 && !isPremium) {
-                "EXPIRED" // Show expired if 0 days left and not premium
-            } else {
-                "TRIAL" // Otherwise, show TRIAL
+            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
+
+            // Perform potentially slow operations on the IO dispatcher
+            val (isPremium, daysRemaining) = withContext(Dispatchers.IO) {
+                // isPremiumUser involves a network call, getDaysRemaining reads prefs (fast)
+                val premiumStatus = subscriptionManager.isPremiumUser()
+                val remainingDays = subscriptionManager.getDaysRemaining()
+                // Return both results as a Pair
+                Pair(premiumStatus, remainingDays)
             }
 
+            // Now that background work is done, create the list (fast)
+            val subscriptionBadgeText = if (isPremium) {
+                "PREMIUM"
+            } else if (daysRemaining <= 3 && daysRemaining > 0) {
+                "$daysRemaining DAYS LEFT"
+            } else if (daysRemaining == 0 && !isPremium) {
+                "EXPIRED"
+            } else {
+                "TRIAL"
+            }
 
-            // Create settings items list
             val settingsItems = mutableListOf(
                 SettingsItem(
                     id = "debug_subscription",
@@ -109,23 +122,32 @@ class MoreSettingFragment : Fragment() {
                 )
             )
 
-            // Update the UI on the main thread
-            requireActivity().runOnUiThread {
-                // Pass the fetched premium status to the adapter
-                settingsAdapter =
-                    SettingsAdapter(settingsItems, isPremium) { item -> // Pass isPremium here
-                        handleNavigation(item, isPremium) // Pass isPremium to handler
-                    }
+            // Switch back to the Main dispatcher to update the UI
+            // No need for runOnUiThread here as we are already back on Main
+            // after withContext finishes (unless launch started on a different dispatcher)
+            // but explicitly using withContext(Dispatchers.Main) is clearer.
 
-                binding.settingsRecyclerView.apply {
-                    layoutManager = LinearLayoutManager(context)
-                    adapter = settingsAdapter
-                }
+            // Note: If using the optimized SettingsAdapter, you might not need 'isPremium' here.
+            // Adjust the adapter instantiation based on the adapter version you are using.
+            // Example using the optimized adapter constructor:
+            settingsAdapter = SettingsAdapter(settingsItems, isPremium) { item -> // Pass isPremium if still needed by adapter or click handler
+                handleNavigation(item, isPremium) // Pass isPremium to handler
             }
+
+            binding.settingsRecyclerView.apply {
+                layoutManager = LinearLayoutManager(context)
+                adapter = settingsAdapter
+            }
+
+            // Hide loading indicator and show RecyclerView
+            binding.settingsRecyclerView.visibility = View.VISIBLE
         }
     }
+    // --- End of Fixed setupSettingsList ---
+
 
     // Function to handle navigation based on item clicked
+    // (Pass isPremium fetched in the background)
     fun handleNavigation(item: SettingsItem, isPremium: Boolean) {
         val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
         when (item.id) {
@@ -203,6 +225,6 @@ class MoreSettingFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        _binding = null // Prevent memory leaks
     }
 }

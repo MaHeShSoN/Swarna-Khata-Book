@@ -17,8 +17,8 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:menu="@menu/shop_setting_meun"
-            app:popupTheme="@style/CustomPopupMenu"
             app:navigationIcon="@drawable/famicons__arrow_back"
+            app:popupTheme="@style/CustomPopupMenu"
             app:title="Shop Settings"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
@@ -47,8 +47,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="3dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
 
@@ -72,14 +72,19 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Shop Name">
+                        android:hint="Shop Name"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="Shop Icon"
+                        app:startIconDrawable="@drawable/stash__shop"
+                        app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/shopNameEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:inputType="text" />
+                            android:inputType="textCapWords"
+                            android:textColor="@color/my_light_on_surface" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -88,15 +93,20 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Shop Address">
+                        android:hint="Shop Address"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="Address Icon"
+                        app:startIconDrawable="@drawable/system_uicons__location"
+                        app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/addressEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:inputType="textMultiLine"
-                            android:minLines="2" />
+                            android:inputType="textMultiLine|textCapSentences"
+                            android:minLines="2"
+                            android:textColor="@color/my_light_on_surface" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -105,14 +115,23 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Phone Number">
+                        android:hint="Phone Number (Read-only)"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="Phone Icon"
+                        app:startIconDrawable="@drawable/ic_phone_custom"
+                        app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/phoneEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:enabled="false"
+                            android:focusable="false"
                             android:fontFamily="@font/montserratregular"
-                            android:inputType="phone" />
+                            android:inputType="phone"
+                            android:longClickable="false"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textIsSelectable="false" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -121,14 +140,19 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="Email Address">
+                        android:hint="Email Address"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="GST Icon"
+                        app:startIconDrawable="@drawable/eva__email_outline"
+                        app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/emailEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:inputType="textEmailAddress" />
+                            android:inputType="textEmailAddress"
+                            android:textColor="@color/my_light_on_surface" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -137,14 +161,19 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:hint="GST Number">
+                        android:hint="GST Number"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="GST Icon"
+                        app:startIconDrawable="@drawable/fluent__tag_percent_24_regular"
+                        app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/gstNumberEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
-                            android:inputType="text" />
+                            android:inputType="textCapCharacters"
+                            android:textColor="@color/my_light_on_surface" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

@@ -8,8 +8,11 @@ import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
+import kotlinx.coroutines.launch
 
 // SplashViewModel.kt
 class SplashViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,11 +37,58 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
         val currentUser = auth.currentUser
 
         if (currentUser != null) {
-            // User is authenticated, navigate to dashboard
-            _navigationEvent.value = NavigationEvent.NavigateToDashboard
+            // User is authenticated, check for shops
+            checkUserShops(currentUser.uid)
         } else {
             // User is not authenticated, navigate to registration
             _navigationEvent.value = NavigationEvent.NavigateToRegistration
+        }
+    }
+
+    private fun checkUserShops(userId: String) {
+        viewModelScope.launch {
+            try {
+                // Get the user's managed shops
+                val managedShopsResult = ShopManager.getManagedShops(userId)
+                
+                if (managedShopsResult.isSuccess) {
+                    val managedShops = managedShopsResult.getOrNull() ?: emptyMap()
+                    
+                    when {
+                        // No shops, navigate to create shop
+                        managedShops.isEmpty() -> {
+                            _navigationEvent.value = NavigationEvent.NavigateToCreateShop
+                        }
+                        
+                        // Single shop, set it as active and navigate to dashboard
+                        managedShops.size == 1 -> {
+                            val shopId = managedShops.keys.first()
+                            SessionManager.setActiveShopId(getApplication(), shopId)
+                            _navigationEvent.value = NavigationEvent.NavigateToDashboard
+                        }
+                        
+                        // Multiple shops, navigate to shop selection
+                        else -> {
+                            // Check if there's already an active shop ID
+                            val activeShopId = SessionManager.getActiveShopId(getApplication())
+                            
+                            if (activeShopId != null && managedShops.containsKey(activeShopId)) {
+                                // If active shop exists and is in user's shops, go to dashboard
+                                _navigationEvent.value = NavigationEvent.NavigateToDashboard
+                            } else {
+                                // Otherwise, let user select a shop
+                                _navigationEvent.value = NavigationEvent.NavigateToShopSelection
+                            }
+                        }
+                    }
+                } else {
+                    // Failed to get shops, default to registration
+                    _navigationEvent.value = NavigationEvent.NavigateToRegistration
+                }
+            } catch (e: Exception) {
+                // Error occurred, default to registration
+                _navigationEvent.value = NavigationEvent.NavigateToRegistration
+            }
         }
     }
 
@@ -63,6 +113,8 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
     sealed class NavigationEvent {
         object NavigateToDashboard : NavigationEvent()
         object NavigateToRegistration : NavigationEvent()
+        object NavigateToCreateShop : NavigationEvent()
+        object NavigateToShopSelection : NavigationEvent()
         object NoInternet : NavigationEvent()
     }
 }

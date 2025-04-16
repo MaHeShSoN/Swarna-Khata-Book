@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.ViewModle
 
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
@@ -28,7 +29,8 @@ import java.util.Locale
 
 class SalesViewModel(
     private val repository: InvoiceRepository,
-    private val connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager,
+    private val context: Context
 ) : ViewModel() {
 
     // --- LiveData for UI State ---

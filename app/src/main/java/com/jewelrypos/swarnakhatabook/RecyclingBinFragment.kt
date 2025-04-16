@@ -25,6 +25,9 @@ import com.jewelrypos.swarnakhatabook.Factorys.RecyclingBinViewModelFactory
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.RecyclingBinViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentRecyclingBinBinding
+import androidx.lifecycle.ViewModelProvider
+import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import com.jewelrypos.swarnakhatabook.Repository.RecycledItemsRepository
 
 class RecyclingBinFragment : Fragment() {
 
@@ -34,9 +37,11 @@ class RecyclingBinFragment : Fragment() {
     private val viewModel: RecyclingBinViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        RecyclingBinViewModelFactory(firestore, auth, connectivityManager)
+        val recycledItemsRepository = RecycledItemsRepository(firestore, auth, requireContext())
+        val invoiceRepository = InvoiceRepository(firestore, auth, requireContext())
+        val connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        RecyclingBinViewModelFactory(recycledItemsRepository, invoiceRepository, connectivityManager)
     }
 
     private lateinit var adapter: RecycledItemsAdapter

@@ -35,7 +35,7 @@ class CustomerDashboardFragment : Fragment() {
         // Use the same factory as in your CustomerFragment
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth)
+        val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         CustomerViewModelFactory(repository, connectivityManager)

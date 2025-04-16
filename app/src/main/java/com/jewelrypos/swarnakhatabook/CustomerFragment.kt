@@ -37,7 +37,7 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     private val customerViewModel: CustomerViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth)
+        val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         CustomerViewModelFactory(repository, connectivityManager)

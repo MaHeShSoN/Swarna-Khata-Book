@@ -2,6 +2,7 @@ package com.jewelrypos.swarnakhatabook.ViewModle
 
 import android.app.Application
 import android.util.Log
+import androidx.core.content.ContentProviderCompat.requireContext
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -102,9 +103,9 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     val topCustomers: LiveData<List<CustomerSalesData>?> = _topCustomers
 
     init {
-        invoiceRepository = InvoiceRepository(firestore, auth)
-        customerRepository = CustomerRepository(firestore, auth)
-        inventoryRepository = InventoryRepository(firestore, auth)
+        invoiceRepository = InvoiceRepository(firestore, auth,application.applicationContext)
+        customerRepository = CustomerRepository(firestore, auth,application.applicationContext)
+        inventoryRepository = InventoryRepository(firestore, auth,application.applicationContext)
 
         // Set default date range to current month
         val calendar = Calendar.getInstance()

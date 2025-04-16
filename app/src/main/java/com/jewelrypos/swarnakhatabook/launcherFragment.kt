@@ -28,6 +28,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.launch
 
 class launcherFragment : Fragment() {
@@ -55,6 +56,9 @@ class launcherFragment : Fragment() {
 
         // Initialize SharedPreferences
         sharedPreferences = SecurePreferences.getInstance(requireContext())
+        
+        // Initialize SessionManager
+        SessionManager.initialize(requireContext())
 
         // Check if user is authenticated, then check subscription
         val auth = FirebaseAuth.getInstance()
@@ -115,6 +119,9 @@ class launcherFragment : Fragment() {
     }
 
     private fun logoutUser() {
+        // Clear active shop
+        SessionManager.clearSession(requireContext())
+        
         // Sign out from Firebase
         FirebaseAuth.getInstance().signOut()
 
@@ -134,6 +141,7 @@ class launcherFragment : Fragment() {
             startNormalFlow()
         }
     }
+    
     private fun startNormalFlow() {
         // Observe navigation events
         viewModel.navigationEvent.observe(viewLifecycleOwner) { event ->
@@ -144,6 +152,12 @@ class launcherFragment : Fragment() {
                     }
                     is SplashViewModel.NavigationEvent.NavigateToRegistration -> {
                         findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
+                    }
+                    is SplashViewModel.NavigationEvent.NavigateToCreateShop -> {
+                        findNavController().navigate(R.id.action_launcherFragment_to_createShopFragment)
+                    }
+                    is SplashViewModel.NavigationEvent.NavigateToShopSelection -> {
+                        findNavController().navigate(R.id.action_launcherFragment_to_shopSelectionFragment)
                     }
                     is SplashViewModel.NavigationEvent.NoInternet -> {
                         showNoInternetDialog()
@@ -172,10 +186,6 @@ class launcherFragment : Fragment() {
 
         dialog.show()
     }
-
-// Replace the showPinVerificationDialog method in launcherFragment.kt with this implementation:
-
-// Replace the showPinVerificationDialog method in launcherFragment.kt with this implementation:
 
     private fun showPinVerificationDialog() {
         // First check PIN security status
@@ -228,7 +238,9 @@ class launcherFragment : Fragment() {
                 requireActivity().finish()
             }
         )
-    }    override fun onDestroyView() {
+    }
+    
+    override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }

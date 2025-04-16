@@ -5,6 +5,8 @@ import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -42,7 +44,9 @@ import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.NotificationRepository
+import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.MainScreenNavigator
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
@@ -66,7 +70,7 @@ class DashBoardFragment : Fragment(),
         // Create the repository and pass it to the factory
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth)
+        val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         CustomerViewModelFactory(repository, connectivityManager)
@@ -74,18 +78,18 @@ class DashBoardFragment : Fragment(),
     private val salesViewModel: SalesViewModel by activityViewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InvoiceRepository(firestore, auth)
+        val repository = InvoiceRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        SalesViewModelFactory(repository, connectivityManager)
+        SalesViewModelFactory(repository, connectivityManager, requireContext())
     }
     private val inventoryViewModel: InventoryViewModel by activityViewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth)
+        val repository = InventoryRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        InventoryViewModelFactory(repository, connectivityManager)
+        InventoryViewModelFactory(repository, connectivityManager, requireContext())
     }
 
     private val notificationViewModel: NotificationViewModel by viewModels {
@@ -132,11 +136,24 @@ class DashBoardFragment : Fragment(),
                     navigateToNotifications()
                     true
                 }
+                
+                R.id.action_switch_shop -> {
+                    navigateToShopSelection()
+                    true
+                }
 
                 else -> false
             }
         }
         setupNotificationBadge()
+        
+        // Check if user has multiple shops and show/hide the switch shop menu item
+    }
+
+
+    private fun navigateToShopSelection() {
+        requireActivity().findNavController(R.id.nav_host_fragment)
+            .navigate(R.id.action_mainScreenFragment_to_shopSelectionFragment)
     }
 
     private fun setupNotificationBadge() {
@@ -779,6 +796,8 @@ class DashBoardFragment : Fragment(),
         super.onResume()
         // Refresh notification count when returning to this fragment
         notificationViewModel.refreshUnreadCount()
+        
+        // Check managed shops when returning to this fragment
     }
 
     override fun onDestroyView() {

@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.coroutines.coroutineContext
 
 
 class InvoiceDetailViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,8 +46,8 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
 
-        invoiceRepository = InvoiceRepository(firestore, auth)
-        customerRepository = CustomerRepository(firestore, auth)
+        invoiceRepository = InvoiceRepository(firestore, auth,application.applicationContext)
+        customerRepository = CustomerRepository(firestore, auth, application.applicationContext)
     }
 
     fun loadInvoice(invoiceId: String) {

@@ -46,14 +46,16 @@ class NotificationWorker(
             val phoneNumber = currentUser.phoneNumber?.replace("+", "") ?: return Result.failure()
 
             // Get notification preferences once at the beginning
-            val notificationPreferences = repository.getNotificationPreferences().getOrNull() ?: NotificationPreferences()
+            val notificationPreferences =
+                repository.getNotificationPreferences().getOrNull() ?: NotificationPreferences()
             var anySuccessfulCheck = false
             var anyFailedCheck = false
 
             // Check for payment due and overdue notifications
             try {
                 Log.d(TAG, "Checking payment due and overdue")
-                val paymentNotificationsSuccess = checkPaymentDueAndOverdue(phoneNumber, notificationPreferences)
+                val paymentNotificationsSuccess =
+                    checkPaymentDueAndOverdue(phoneNumber, notificationPreferences)
                 if (paymentNotificationsSuccess) anySuccessfulCheck = true
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking payment due/overdue", e)
@@ -118,11 +120,15 @@ class NotificationWorker(
             return Result.failure()
         }
     }
+
     /**
      * Check for payment due and overdue notifications
      * @return true if any notifications were created
      */
-    private suspend fun checkPaymentDueAndOverdue(phoneNumber: String, preferences: NotificationPreferences): Boolean {
+    private suspend fun checkPaymentDueAndOverdue(
+        phoneNumber: String,
+        preferences: NotificationPreferences
+    ): Boolean {
         // Skip if both notification types are disabled
         if (!preferences.paymentDue && !preferences.paymentOverdue) {
             Log.d(TAG, "Payment due and overdue notifications are disabled")
@@ -177,6 +183,7 @@ class NotificationWorker(
             return false
         }
     }
+
     /**
      * Check and create payment overdue notifications
      * @return true if any notifications were created
@@ -233,7 +240,10 @@ class NotificationWorker(
                     )
 
                     repository.createNotification(notification)
-                    Log.d(TAG, "Created payment overdue notification for invoice ${invoice.invoiceNumber}")
+                    Log.d(
+                        TAG,
+                        "Created payment overdue notification for invoice ${invoice.invoiceNumber}"
+                    )
                     notificationsCreated = true
                 }
             }
@@ -295,7 +305,10 @@ class NotificationWorker(
                     )
 
                     repository.createNotification(notification)
-                    Log.d(TAG, "Created payment due notification for invoice ${invoice.invoiceNumber}")
+                    Log.d(
+                        TAG,
+                        "Created payment due notification for invoice ${invoice.invoiceNumber}"
+                    )
                     notificationsCreated = true
                 }
             }
@@ -339,11 +352,24 @@ class NotificationWorker(
         if (checkBirthdays) {
             for (customer in customers) {
                 // Convert stored birthday to MM-dd format
+                // *** CORRECTED LINE: Changed date format from "yyyy-MM-dd" to "dd/MM/yyyy" ***
                 val birthdayDate = try {
-                    val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(customer.birthday)
-                    SimpleDateFormat("MM-dd", Locale.getDefault()).format(date)
+                    // Ensure customer.birthday is not null or empty before parsing
+                    if (customer.birthday.isNullOrEmpty()) {
+                        null
+                    } else {
+                        val date = SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            Locale.getDefault()
+                        ).parse(customer.birthday)
+                        SimpleDateFormat("MM-dd", Locale.getDefault()).format(date)
+                    }
                 } catch (e: Exception) {
-                    null
+                    Log.e(
+                        "NotificationWorker",
+                        "Error parsing birthday ${customer.birthday} for ${customer.id}: ${e.message}"
+                    )
+                    null // Handle parsing errors gracefully
                 }
 
                 // If today is the customer's birthday, create a notification
@@ -376,11 +402,25 @@ class NotificationWorker(
         // Similarly check anniversaries
         if (checkAnniversaries) {
             for (customer in customers) {
+                // Convert stored anniversary to MM-dd format
+                // *** CORRECTED LINE: Changed date format from "yyyy-MM-dd" to "dd/MM/yyyy" ***
                 val anniversaryDate = try {
-                    val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(customer.anniversary)
-                    SimpleDateFormat("MM-dd", Locale.getDefault()).format(date)
+                    // Ensure customer.anniversary is not null or empty before parsing
+                    if (customer.anniversary.isNullOrEmpty()) {
+                        null
+                    } else {
+                        val date = SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            Locale.getDefault()
+                        ).parse(customer.anniversary)
+                        SimpleDateFormat("MM-dd", Locale.getDefault()).format(date)
+                    }
                 } catch (e: Exception) {
-                    null
+                    Log.e(
+                        "NotificationWorker",
+                        "Error parsing anniversary ${customer.anniversary} for ${customer.id}: ${e.message}"
+                    )
+                    null // Handle parsing errors gracefully
                 }
 
                 if (anniversaryDate == today) {
@@ -560,7 +600,11 @@ class NotificationWorker(
         💰 Total Sales: ₹${formatter.format(overview.totalSales)}
         🏆 Top Customer: ${overview.topCustomer}
         📉 Pending Invoices: ${overview.pendingInvoices.size}
-        🚨 Low Stock Items: ${if (overview.lowStockItems.isNotEmpty()) overview.lowStockItems.joinToString(", ") else "None"}
+        🚨 Low Stock Items: ${
+            if (overview.lowStockItems.isNotEmpty()) overview.lowStockItems.joinToString(
+                ", "
+            ) else "None"
+        }
         """.trimIndent()
     }
 
@@ -568,7 +612,10 @@ class NotificationWorker(
      * Check for and send low stock alerts
      * @return true if any low stock notifications were created
      */
-    private suspend fun sendLowStockAlerts(phoneNumber: String, preferences: NotificationPreferences): Boolean {
+    private suspend fun sendLowStockAlerts(
+        phoneNumber: String,
+        preferences: NotificationPreferences
+    ): Boolean {
         if (!preferences.lowStock) {
             return false
         }

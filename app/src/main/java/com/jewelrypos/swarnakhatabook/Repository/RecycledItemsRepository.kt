@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -10,38 +11,43 @@ import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 class RecycledItemsRepository(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    private val context: Context
 ) {
     companion object {
         private const val COLLECTION_NAME = "recycledItems"
         private const val TAG = "RecycledItemsRepository"
         const val RETENTION_DAYS = 30L // Number of days items are kept in recycling bin
     }
-
-    // Get authenticated user's phone number
-    private fun getCurrentUserPhoneNumber(): String {
-        val currentUser = auth.currentUser
-            ?: throw Exception("User not authenticated.")
-        return currentUser.phoneNumber?.replace("+", "")
-            ?: throw Exception("User phone number not available.")
+    
+    // Get current active shop ID from SessionManager
+    private fun getCurrentShopId(): String {
+        return SessionManager.getActiveShopId(context)
+            ?: throw ShopNotSelectedException("No active shop selected.")
     }
 
-    // Get user collection reference
-    private fun getUserCollection(collectionName: String) = firestore.collection("users")
-        .document(getCurrentUserPhoneNumber())
+    // Get current user ID for validation
+    private fun getCurrentUserId(): String {
+        return auth.currentUser?.uid
+            ?: throw UserNotAuthenticatedException("User not authenticated.")
+    }
+
+    // Get shop collection reference
+    private fun getShopCollection(collectionName: String) = firestore.collection("shopData")
+        .document(getCurrentShopId())
         .collection(collectionName)
 
     suspend fun addRecycledItem(item: RecycledItem): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(item.id) // Use the original item ID as the document ID here too
                 .set(item)
                 .await()
@@ -56,7 +62,7 @@ class RecycledItemsRepository(
     suspend fun restoreJewelleryItem(recycledItemId: String): Result<JewelleryItem> = withContext(Dispatchers.IO) {
         try {
             // Get the recycled item document
-            val document = getUserCollection(COLLECTION_NAME)
+            val document = getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .get()
                 .await()
@@ -76,24 +82,27 @@ class RecycledItemsRepository(
             val jewelleryItem = deserializeJewelleryItem(recycledItem.itemData)
 
             // Save the JewelleryItem back to the inventory collection
-            getUserCollection("inventory") // Use the correct collection name "inventory"
-                .document(jewelleryItem.id) // Use the item's original ID
+            getShopCollection("inventory")
+                .document(jewelleryItem.id)
                 .set(jewelleryItem)
                 .await()
 
             // Delete from recycling bin
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .delete()
                 .await()
 
             Result.success(jewelleryItem)
         } catch (e: Exception) {
-            Log.e(TAG, "Error restoring Jewellery Item: ${e.message}", e)
+            Log.e(TAG, "Error restoring jewellery item: ${e.message}", e)
             Result.failure(e)
         }
     }
-
+    
+    // Custom exceptions
+    class UserNotAuthenticatedException(message: String) : Exception(message)
+    class ShopNotSelectedException(message: String) : Exception(message)
 
     // --- Add this helper function ---
     private fun deserializeJewelleryItem(data: Map<String, Any>): JewelleryItem {
@@ -136,8 +145,6 @@ class RecycledItemsRepository(
         )
     }
 
-
-
     /**
      * Moves an invoice to the recycling bin instead of permanently deleting it
      */
@@ -158,11 +165,11 @@ class RecycledItemsRepository(
                 itemName = "Invoice #${invoice.invoiceNumber} - ${invoice.customerName}",
                 itemData = serializeInvoice(invoice),
                 expiresAt = expirationTime,
-                userId = getCurrentUserPhoneNumber()
+                userId = getCurrentUserId()
             )
 
             // Save to recycledItems collection
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(invoice.invoiceNumber)
                 .set(recycledItem)
                 .await()
@@ -180,7 +187,7 @@ class RecycledItemsRepository(
      */
     suspend fun getRecycledItems(): Result<List<RecycledItem>> = withContext(Dispatchers.IO) {
         try {
-            val snapshot = getUserCollection(COLLECTION_NAME)
+            val snapshot = getShopCollection(COLLECTION_NAME)
                 .orderBy("deletedAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
@@ -198,7 +205,7 @@ class RecycledItemsRepository(
      */
     suspend fun getRecycledItemsByType(itemType: String): Result<List<RecycledItem>> = withContext(Dispatchers.IO) {
         try {
-            val snapshot = getUserCollection(COLLECTION_NAME)
+            val snapshot = getShopCollection(COLLECTION_NAME)
                 .whereEqualTo("itemType", itemType)
                 .orderBy("deletedAt", Query.Direction.DESCENDING)
                 .get()
@@ -218,7 +225,7 @@ class RecycledItemsRepository(
     suspend fun restoreInvoice(recycledItemId: String): Result<Invoice> = withContext(Dispatchers.IO) {
         try {
             // Get the recycled item
-            val document = getUserCollection(COLLECTION_NAME)
+            val document = getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .get()
                 .await()
@@ -238,13 +245,13 @@ class RecycledItemsRepository(
             val invoice = deserializeInvoice(recycledItem.itemData)
 
             // Save the invoice back to the invoices collection
-            getUserCollection("invoices")
+            getShopCollection("invoices")
                 .document(invoice.invoiceNumber)
                 .set(invoice)
                 .await()
 
             // Delete from recycling bin
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .delete()
                 .await()
@@ -261,7 +268,7 @@ class RecycledItemsRepository(
      */
     suspend fun permanentlyDeleteItem(recycledItemId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .delete()
                 .await()
@@ -280,7 +287,7 @@ class RecycledItemsRepository(
         try {
             val currentTime = System.currentTimeMillis()
 
-            val snapshot = getUserCollection(COLLECTION_NAME)
+            val snapshot = getShopCollection(COLLECTION_NAME)
                 .whereLessThan("expiresAt", currentTime)
                 .get()
                 .await()
@@ -368,11 +375,11 @@ class RecycledItemsRepository(
                 itemName = "${customer.firstName} ${customer.lastName}",
                 itemData = serializeCustomer(customer),
                 expiresAt = expirationTime,
-                userId = getCurrentUserPhoneNumber()
+                userId = getCurrentUserId()
             )
 
             // Save to recycledItems collection
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(customer.id)
                 .set(recycledItem)
                 .await()
@@ -460,7 +467,7 @@ class RecycledItemsRepository(
     suspend fun restoreCustomer(recycledItemId: String): Result<Customer> = withContext(Dispatchers.IO) {
         try {
             // Get the recycled item
-            val document = getUserCollection(COLLECTION_NAME)
+            val document = getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .get()
                 .await()
@@ -480,13 +487,13 @@ class RecycledItemsRepository(
             val customer = deserializeCustomer(recycledItem.itemData)
 
             // Save the customer back to the customers collection
-            getUserCollection("customers")
+            getShopCollection("customers")
                 .document(customer.id)
                 .set(customer)
                 .await()
 
             // Delete from recycling bin
-            getUserCollection(COLLECTION_NAME)
+            getShopCollection(COLLECTION_NAME)
                 .document(recycledItemId)
                 .delete()
                 .await()

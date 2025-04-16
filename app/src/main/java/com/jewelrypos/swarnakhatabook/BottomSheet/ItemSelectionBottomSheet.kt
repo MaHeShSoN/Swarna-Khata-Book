@@ -76,10 +76,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private val inventoryViewModel: InventoryViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth)
+        val repository = InventoryRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        InventoryViewModelFactory(repository, connectivityManager)
+        InventoryViewModelFactory(repository, connectivityManager,requireContext())
     }
     private lateinit var inventoryRepository: InventoryRepository
 
@@ -131,7 +131,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private fun initializeRepository() {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        inventoryRepository = InventoryRepository(firestore, auth)
+        inventoryRepository = InventoryRepository(firestore, auth,requireContext())
     }
 
     // Load all inventory items for the dropdown

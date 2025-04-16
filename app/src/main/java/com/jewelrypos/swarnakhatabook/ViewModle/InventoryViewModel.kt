@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.ViewModle
 
+import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
@@ -18,7 +19,8 @@ import kotlinx.coroutines.withContext
 
 class InventoryViewModel(
     private val repository: InventoryRepository,
-    private val connectivityManager: ConnectivityManager
+    private val connectivityManager: ConnectivityManager,
+    private val context: Context
 ) : ViewModel() {
 
     // Original list of all items

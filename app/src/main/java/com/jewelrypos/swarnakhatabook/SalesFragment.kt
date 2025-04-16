@@ -46,10 +46,10 @@ class SalesFragment : Fragment() {
     private val salesViewModel: SalesViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InvoiceRepository(firestore, auth)
+        val repository = InvoiceRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        SalesViewModelFactory(repository, connectivityManager)
+        SalesViewModelFactory(repository, connectivityManager, requireContext())
     }
 
     private lateinit var adapter: InvoicesAdapter

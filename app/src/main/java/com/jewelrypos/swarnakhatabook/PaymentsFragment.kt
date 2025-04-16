@@ -35,7 +35,7 @@ class PaymentsFragment : Fragment(), PaymentWithContextAdapter.OnPaymentClickLis
     private val paymentsViewModel: PaymentsViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InvoiceRepository(firestore, auth)
+        val repository = InvoiceRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         PaymentsViewModelFactory(repository, connectivityManager)

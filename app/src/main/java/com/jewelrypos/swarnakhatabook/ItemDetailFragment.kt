@@ -36,7 +36,7 @@ class ItemDetailFragment : Fragment() {
     private val viewModel: ItemDetailViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth)
+        val repository = InventoryRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         ItemDetailViewModelFactory(repository, connectivityManager)
