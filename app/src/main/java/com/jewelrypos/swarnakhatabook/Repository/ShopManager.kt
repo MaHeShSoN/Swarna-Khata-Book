@@ -19,6 +19,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Shop
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopInvoiceDetails
 import com.jewelrypos.swarnakhatabook.DataClasses.UserProfile
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.tasks.await
 import java.lang.reflect.Type
 import java.util.UUID
@@ -228,85 +229,176 @@ object ShopManager {
 
     // ======== ORIGINAL METHODS (MAINTAINED FOR BACKWARD COMPATIBILITY) ========
 
-    // Save shop data to both Firebase and SharedPreferences
-    fun saveShop(shop: Shop, context: Context, onComplete: (Boolean, Exception?) -> Unit) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
-            ?: return onComplete(false, Exception("User not logged in"))
+    // Save shop data to Firestore and SharedPreferences
+    fun saveShop(
+        shop: Shop,
+        context: Context,
+        onComplete: (Boolean, Exception?) -> Unit
+    ) {
+        // Update the local cache first
+        saveShopLocally(shop, context)
 
-        val shopData = hashMapOf(
-            "name" to shop.name,
-            "phoneNumber" to shop.phoneNumber,
-            "shopName" to shop.shopName,
-            "address" to shop.address,
-            "gstNumber" to shop.gstNumber,
-            "hasGST" to shop.hasGst,
-            "createdAt" to shop.createdAt,
-            "email" to shop.email,
-            "logo" to shop.logo,
-            "signature" to shop.signature
+        // Get the current user ID and active shop ID
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val shopId = SessionManager.getActiveShopId(context)
+        
+        if (userId == null || shopId == null) {
+            onComplete(false, Exception("User not authenticated or no active shop"))
+            return
+        }
+
+        // Create ShopDetails object from legacy Shop
+        val shopDetails = ShopDetails(
+            shopId = shopId,
+            ownerUserId = userId,
+            shopName = shop.shopName,
+            address = shop.address,
+            gstNumber = if (shop.hasGst) shop.gstNumber else null,
+            hasGst = shop.hasGst,
+            logoUrl = shop.logo,
+            signatureUrl = shop.signature,
+            createdAt = shop.createdAt
         )
 
-        // Save to Firebase
-        FirebaseFirestore.getInstance().collection("users").document(userId)
-            .set(shopData)
+        // Save shop details to the shops collection
+        FirebaseFirestore.getInstance().collection("shops")
+            .document(shopId)
+            .set(shopDetails)
             .addOnSuccessListener {
-                // Save to SharedPreferences after successful Firebase save
-                saveShopLocally(shop, context)
-                onComplete(true, null)
+                // Now update user information (phone, name, email) in the user document
+                val userUpdates = hashMapOf<String, Any>()
+                
+                // Only update non-empty fields
+                if (shop.phoneNumber.isNotEmpty()) {
+                    userUpdates["phoneNumber"] = shop.phoneNumber
+                }
+                if (shop.name.isNotEmpty()) {
+                    userUpdates["name"] = shop.name
+                }
+                if (shop.email.isNotEmpty()) {
+                    userUpdates["email"] = shop.email
+                }
+                
+                // If we have user fields to update
+                if (userUpdates.isNotEmpty()) {
+                    FirebaseFirestore.getInstance().collection("users")
+                        .document(userId)
+                        .update(userUpdates)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "User profile updated successfully")
+                            onComplete(true, null)
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Error updating user profile", e)
+                            // Still consider the operation successful if only the user update fails
+                            onComplete(true, null)
+                        }
+                } else {
+                    Log.d(TAG, "Shop details updated successfully")
+                    onComplete(true, null)
+                }
             }
             .addOnFailureListener { e ->
+                Log.e(TAG, "Error updating shop details", e)
                 onComplete(false, e)
             }
     }
 
     // Get shop data (first from SharedPreferences, then Firebase if needed)
-    fun getShop(
-        context: Context,
-        forceRefresh: Boolean = false,
-        onComplete: (Shop?) -> Unit
-    ) {
+    fun getShop(context: Context, forceRefresh: Boolean = false, callback: (Shop?) -> Unit) {
         if (!forceRefresh) {
-            // Try to get from SharedPreferences first
+            // Try to get from local cache first
             val localShop = getShopFromLocal(context)
             if (localShop != null) {
-                onComplete(localShop)
+                callback(localShop)
                 return
             }
         }
 
-        // If we need to refresh or don't have local data, get from Firebase
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
-        if (userId == null) {
-            onComplete(null)
+        // If not in cache or force refresh, fetch from Firestore
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            callback(null)
             return
         }
 
-        FirebaseFirestore.getInstance().collection("users").document(userId)
+        // Get the active shop ID and user ID
+        val shopId = SessionManager.getActiveShopId(context)
+        val userId = currentUser.uid
+        
+        if (shopId == null) {
+            callback(null)
+            return
+        }
+        
+        // Fetch from /shops/{shopId} instead of the user document
+        FirebaseFirestore.getInstance().collection("shops")
+            .document(shopId)
             .get()
             .addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    val shop = Shop(
-                        name = document.getString("name") ?: "",
-                        phoneNumber = document.getString("phoneNumber") ?: "",
-                        shopName = document.getString("shopName") ?: "",
-                        address = document.getString("address") ?: "",
-                        gstNumber = document.getString("gstNumber") ?: "",
-                        hasGst = document.getBoolean("hasGST") ?: false,
-                        createdAt = document.getTimestamp("createdAt") ?: Timestamp.now(),
-                        email = document.getString("email") ?: "",
-                        logo = document.getString("logo"),
-                        signature = document.getString("signature")
-                    )
-
-                    // Save fetched data to SharedPreferences
-                    saveShopLocally(shop, context)
-                    onComplete(shop)
+                if (document.exists()) {
+                    try {
+                        // Convert ShopDetails to legacy Shop format
+                        val shopDetails = ShopDetails(
+                            shopId = shopId,
+                            ownerUserId = document.getString("ownerUserId") ?: "",
+                            shopName = document.getString("shopName") ?: "",
+                            address = document.getString("address") ?: "",
+                            gstNumber = document.getString("gstNumber"),
+                            hasGst = document.getBoolean("hasGst") ?: false,
+                            logoUrl = document.getString("logoUrl"),
+                            signatureUrl = document.getString("signatureUrl"),
+                            createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
+                        )
+                        
+                        // Now get the user profile to get the phone number
+                        FirebaseFirestore.getInstance().collection("users")
+                            .document(userId)
+                            .get()
+                            .addOnSuccessListener { userDoc ->
+                                val phoneNumber = userDoc.getString("phoneNumber") ?: ""
+                                val email = userDoc.getString("email") ?: ""
+                                val name = userDoc.getString("name") ?: ""
+                                
+                                // Create the Shop object with user data
+                                val shop = Shop(
+                                    shopName = shopDetails.shopName,
+                                    phoneNumber = phoneNumber,
+                                    name = name,
+                                    hasGst = shopDetails.hasGst,
+                                    gstNumber = shopDetails.gstNumber ?: "",
+                                    address = shopDetails.address,
+                                    createdAt = shopDetails.createdAt,
+                                    email = email,
+                                    logo = shopDetails.logoUrl,
+                                    signature = shopDetails.signatureUrl
+                                )
+                                
+                                // Save to local cache
+                                saveShopLocally(shop, context)
+                                
+                                callback(shop)
+                            }
+                            .addOnFailureListener { e ->
+                                Log.e(TAG, "Error getting user profile", e)
+                                
+                                // Fall back to just the shop details without phone number
+                                val shop = convertToLegacyShop(shopDetails)
+                                saveShopLocally(shop, context)
+                                callback(shop)
+                            }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing shop data", e)
+                        callback(null)
+                    }
                 } else {
-                    onComplete(null)
+                    Log.d(TAG, "Shop document does not exist for ID: $shopId")
+                    callback(null)
                 }
             }
-            .addOnFailureListener {
-                onComplete(null)
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error getting shop from Firestore", e)
+                callback(null)
             }
     }
 
@@ -454,6 +546,19 @@ object ShopManager {
         ): Timestamp {
             val millis = json!!.asLong
             return Timestamp(java.util.Date(millis))
+        }
+    }
+
+    // Add a new method to get the active shop's details
+    suspend fun getActiveShopDetails(context: Context): Result<ShopDetails?> {
+        return try {
+            val shopId = SessionManager.getActiveShopId(context)
+                ?: return Result.failure(Exception("No active shop selected"))
+            
+            getShopDetails(shopId)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting active shop details", e)
+            Result.failure(e)
         }
     }
 }

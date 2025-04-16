@@ -218,6 +218,7 @@ class ShopSettingsFragment : Fragment() {
         val phone = binding.phoneEditText.text.toString().trim()
         val email = binding.emailEditText.text.toString().trim()
         val gstNumber = binding.gstNumberEditText.text.toString().trim()
+        val hasGst = gstNumber.isNotEmpty()
 
         // --- Validation (Keep your existing validation) ---
         if (shopName.isEmpty()) {
@@ -243,8 +244,8 @@ class ShopSettingsFragment : Fragment() {
                 address = address,
                 phoneNumber = phone,
                 email = email,
-                gstNumber = gstNumber,
-                hasGst = gstNumber.isNotEmpty(),
+                gstNumber = gstNumber, 
+                hasGst = hasGst,
                 // Add logo/signature URIs if implemented
                 // logo = logoUri?.toString() ?: currentShop.logo,
                 // signature = signatureUri?.toString() ?: currentShop.signature
