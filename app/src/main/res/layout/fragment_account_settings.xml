@@ -120,7 +120,7 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:layout_marginEnd="12dp"
-                            android:src="@drawable/stash__shop_light"
+                            android:src="@drawable/stash__shop"
                             app:tint="@color/my_light_primary" />
 
                         <TextView

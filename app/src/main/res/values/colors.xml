@@ -12,6 +12,7 @@
     <color name="my_light_tertiary">#6B5B95
     </color>        <!-- Muted purple - good contrast with gold -->
     <color name="my_light_error">#C43E00</color>           <!-- Warm orange-red -->
+    <!-- Warm orange-red -->
     <color name="my_light_surface">#FFFBF0</color>         <!-- Extremely light cream for cards -->
     <color name="premium_color">#FFC107</color>         <!-- Extremely light cream for cards -->
 
@@ -150,5 +151,16 @@
     <color name="dark_supplier_badge_color">#BA68C8</color>   <!-- Brighter purple badge -->
     <color name="dark_supplier_text_color">#F5F0E1</color>    <!-- Light text for dark theme -->
 
+
+    <color name="my_background_light_pink_color">#FDAAB4</color>
+    <color name="my_background_light_gold_color">#FACC46</color>
+    <color name="my_background_light_green_color">#1CC02B</color>
+    <color name="my_background_light_purple_color">#9A72EB</color>
+    <color name="my_background_light_orange_color">#F1C173</color>
+    <color name="my_background_light_teal_color">#7FE2DD</color>
+    <color name="my_background_light_grey_color">#FADFDF</color>
+    <color name="my_background_light_red_color">#ff6666</color>
+    <color name="my_background_light_blue_color">#6BB4F1</color>
+    <color name="my_background_light_yellow_color">#EFC958</color>
 
 </resources>

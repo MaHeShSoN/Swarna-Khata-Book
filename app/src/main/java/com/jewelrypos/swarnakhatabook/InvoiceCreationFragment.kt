@@ -61,6 +61,7 @@ class InvoiceCreationFragment : Fragment() {
     private var _binding: FragmentInvoiceCreationBinding? = null
     private val binding get() = _binding!!
 
+    private var selectedDueDate: Long? = null
     private var selectedInvoiceDate = System.currentTimeMillis()
     private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
@@ -99,7 +100,11 @@ class InvoiceCreationFragment : Fragment() {
         initializeViews()
         setupListeners()
         setupDatePicker()
+        setupDueDatePicker() // Setup due date picker
         observePayments()
+
+        // Set default due date (15 days from invoice date)
+        setDefaultDueDate()
 
         // Check for a customer ID passed as an argument first
         val passedCustomerId = arguments?.getString("customerId")
@@ -129,6 +134,17 @@ class InvoiceCreationFragment : Fragment() {
                 CustomerSelectionManager.selectedCustomerId = null
             }
         }
+    }
+
+    private fun setDefaultDueDate() {
+        // Set due date 15 days from invoice date
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = selectedInvoiceDate
+        calendar.add(Calendar.DAY_OF_YEAR, 15)
+        selectedDueDate = calendar.timeInMillis
+
+        // Update UI to display the default due date
+        binding.dueDateText.text = dateFormat.format(Date(selectedDueDate!!))
     }
 
     private fun observePayments() {
@@ -260,6 +276,10 @@ class InvoiceCreationFragment : Fragment() {
 
         binding.saveButton.setOnClickListener {
             saveInvoice()
+        }
+
+        binding.cancelButton.setOnClickListener {
+            findNavController().navigateUp()
         }
     }
 
@@ -409,6 +429,48 @@ class InvoiceCreationFragment : Fragment() {
         customerListBottomSheet.show(parentFragmentManager, CustomerListBottomSheet.TAG)
     }
 
+    private fun setupDueDatePicker() {
+        // Initialize due date UI
+        if (selectedDueDate != null) {
+            binding.dueDateText.text = dateFormat.format(Date(selectedDueDate!!))
+        }
+
+        // Set up click listener for the due date picker button
+        binding.selectDueDateButton.setOnClickListener {
+            showDueDatePicker()
+        }
+    }
+
+    private fun showDueDatePicker() {
+        val calendar = Calendar.getInstance()
+
+        // If a due date is already selected, use it as the default
+        if (selectedDueDate != null) {
+            calendar.timeInMillis = selectedDueDate!!
+        } else {
+            // Otherwise, set a default of 15 days from invoice date
+            calendar.timeInMillis = selectedInvoiceDate
+            calendar.add(Calendar.DAY_OF_YEAR, 15)
+        }
+
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val newCalendar = Calendar.getInstance()
+                newCalendar.set(year, month, dayOfMonth)
+                selectedDueDate = newCalendar.timeInMillis
+
+                // Update UI to display selected date
+                binding.dueDateText.text = dateFormat.format(Date(selectedDueDate!!))
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+
+        datePickerDialog.show()
+    }
+
     private fun setupDatePicker() {
         // Initialize with current date
         updateDateDisplay()
@@ -436,6 +498,9 @@ class InvoiceCreationFragment : Fragment() {
                 calendar.set(selectedYear, selectedMonth, selectedDay)
                 selectedInvoiceDate = calendar.timeInMillis
                 updateDateDisplay()
+
+                // When invoice date changes, update due date to be 15 days later
+                updateDueDateBasedOnInvoiceDate()
             },
             year, month, day
         )
@@ -446,6 +511,17 @@ class InvoiceCreationFragment : Fragment() {
         datePickerDialog.datePicker.maxDate = today.timeInMillis
 
         datePickerDialog.show()
+    }
+
+    private fun updateDueDateBasedOnInvoiceDate() {
+        // Set due date 15 days from the new invoice date
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = selectedInvoiceDate
+        calendar.add(Calendar.DAY_OF_YEAR, 15)
+        selectedDueDate = calendar.timeInMillis
+
+        // Update the UI
+        binding.dueDateText.text = dateFormat.format(Date(selectedDueDate!!))
     }
 
     private fun selectItems() {
@@ -661,6 +737,7 @@ class InvoiceCreationFragment : Fragment() {
                 customerPhone = customer.phoneNumber,
                 customerAddress = address,
                 invoiceDate = selectedInvoiceDate,
+                dueDate = selectedDueDate,
                 items = invoiceItems,
                 payments = payments,
                 totalAmount = totalAmount,

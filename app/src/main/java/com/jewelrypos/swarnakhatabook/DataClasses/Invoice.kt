@@ -8,6 +8,7 @@ data class Invoice(
     val customerPhone: String = "",        // Add this
     val customerAddress: String = "",      // Add this
     val invoiceDate: Long = System.currentTimeMillis(),
+    val dueDate: Long? = null,
     val items: List<InvoiceItem> = listOf(),
     val payments: List<Payment> = listOf(),
     val totalAmount: Double = 0.0,

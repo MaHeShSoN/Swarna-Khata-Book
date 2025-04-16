@@ -1,3 +1,4 @@
+// main/java/com/jewelrypos/swarnakhatabook/MoreSettingFragment.kt
 package com.jewelrypos.swarnakhatabook
 
 import android.content.Intent
@@ -9,7 +10,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog // Import your cus
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.lifecycleScope // Ensure this is imported
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.SettingsAdapter
@@ -28,43 +29,39 @@ class MoreSettingFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         _binding = FragmentMoreSettingBinding.inflate(inflater, container, false)
-
-
-        // Inflate the layout for this fragment
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Setup settings list
-        setupSettingsList()
+        setupSettingsList() // Call setup function
     }
 
     private fun setupSettingsList() {
+        // Launch coroutine to check premium status asynchronously
         lifecycleScope.launch {
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
-
-            // Check subscription status
-            val isPremium = subscriptionManager.isPremiumUser()
+            val isPremium = subscriptionManager.isPremiumUser() // Fetch premium status
             val daysRemaining = subscriptionManager.getDaysRemaining()
 
-            // Prepare subscription badge text
             val subscriptionBadgeText = if (isPremium) {
                 "PREMIUM"
-            } else if (daysRemaining <= 3) {
+            } else if (daysRemaining <= 3 && daysRemaining > 0) { // Show days left only if > 0
                 "$daysRemaining DAYS LEFT"
+            } else if (daysRemaining == 0 && !isPremium) {
+                "EXPIRED" // Show expired if 0 days left and not premium
             } else {
-                "TRIAL"
+                "TRIAL" // Otherwise, show TRIAL
             }
 
-            // Create settings items list with subscription status
+
+            // Create settings items list
             val settingsItems = mutableListOf(
                 SettingsItem(
                     id = "debug_subscription",
                     title = "Debug Subscription",
                     subtitle = "Developer tools for testing subscription features",
-                    iconResId = R.drawable.ic_order
+                    iconResId = R.drawable.ic_order // Example icon
                 ), SettingsItem(
                     id = "subscription_status",
                     title = if (isPremium) "Premium Subscription" else "Free Trial",
@@ -76,24 +73,23 @@ class MoreSettingFragment : Fragment() {
                     id = "shop_details",
                     title = "Shop Details",
                     subtitle = "Configure your shop information for invoices",
-                    iconResId = R.drawable.stash__shop_light
+                    iconResId = R.drawable.stash__shop
                 ), SettingsItem(
                     id = "invoice_format",
                     title = "Invoice PDF Format",
                     subtitle = "Customize the appearance of your invoice PDFs",
                     iconResId = R.drawable.mdi__invoice_text_edit_outline
-                ), SettingsItem(
-                    id = "invoice_template",
-                    title = "Invoice Template",
-                    subtitle = "Choose from multiple professional templates",
-                    iconResId = R.drawable.ic_template,
+                ), SettingsItem( // Keep invoice_template separate from invoice_format
+                    id = "invoice_template", title = "Invoice Template & Color", // Updated title
+                    subtitle = "Choose template and theme color", // Updated subtitle
+                    iconResId = R.drawable.ic_template, // Specific icon for templates/colors
                     badgeText = if (!isPremium) "PREMIUM" else null
                 ), SettingsItem(
                     id = "reports",
                     title = "Reports",
                     subtitle = "View and export business reports and analytics",
                     iconResId = R.drawable.icon_park_outline__sales_report,
-                    badgeText = if (!isPremium) "PREMIUM" else null  // Add PREMIUM badge for non-premium users
+                    badgeText = if (!isPremium) "PREMIUM" else null
                 ), SettingsItem(
                     id = "recycling_bin",
                     title = "Recycling Bin",
@@ -115,89 +111,11 @@ class MoreSettingFragment : Fragment() {
 
             // Update the UI on the main thread
             requireActivity().runOnUiThread {
-                settingsAdapter = SettingsAdapter(settingsItems) { item ->
-                    when (item.id) {
-                        "debug_subscription" -> {
-                            val mainNavController =
-                                requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_subscriptionDebugActivity)
-                        }
-
-
-                        "subscription_status" -> {
-                            if (!isPremium) {
-                                // Navigate to upgrade screen
-                                val mainNavController =
-                                    requireActivity().findNavController(R.id.nav_host_fragment)
-                                mainNavController.navigate(R.id.action_mainScreenFragment_to_upgradeActivity)
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "You already have a premium subscription",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-
-                        "shop_details" -> {
-                            val mainNavController =
-                                requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_shopSettingsFragment)
-                        }
-
-                        "invoice_format" -> {
-                            val mainNavController =
-                                requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_invoicePdfSettingsFragment)
-                        }
-
-                        "invoice_template" -> {
-                            if (isPremium) {
-                                val mainNavController =
-                                    requireActivity().findNavController(R.id.nav_host_fragment)
-                                mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
-                            } else {
-                                // Show premium feature dialog
-                                showPremiumFeatureDialog("Advanced invoice templates")
-                            }
-                        }
-
-                        "account_settings" -> {
-                            val mainNavController =
-                                requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_accountSettingsFragment)
-                        }
-
-                        "app_updates" -> {
-                            val mainNavController =
-                                requireActivity().findNavController(R.id.nav_host_fragment)
-                            mainNavController.navigate(R.id.action_mainScreenFragment_to_updateSettingsFragment)
-                        }
-
-                        "reports" -> {
-                            if (isPremium) {
-                                val mainNavController =
-                                    requireActivity().findNavController(R.id.nav_host_fragment)
-                                mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
-                            } else {
-                                // Show premium feature dialog
-                                showPremiumFeatureDialog("Business reports")
-                            }
-                        }
-
-                        "recycling_bin" -> {
-                            // Navigate to RecyclingBinFragment
-                            if (isPremium) {
-                                val mainNavController =
-                                    requireActivity().findNavController(R.id.nav_host_fragment)
-                                mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
-                            } else {
-                                // Show premium feature dialog
-                                showPremiumFeatureDialog("Recycling Bin")
-                            }
-                        }
+                // Pass the fetched premium status to the adapter
+                settingsAdapter =
+                    SettingsAdapter(settingsItems, isPremium) { item -> // Pass isPremium here
+                        handleNavigation(item, isPremium) // Pass isPremium to handler
                     }
-                }
 
                 binding.settingsRecyclerView.apply {
                     layoutManager = LinearLayoutManager(context)
@@ -207,28 +125,81 @@ class MoreSettingFragment : Fragment() {
         }
     }
 
-    // Inside MoreSettingFragment.kt
+    // Function to handle navigation based on item clicked
+    fun handleNavigation(item: SettingsItem, isPremium: Boolean) {
+        val mainNavController = requireActivity().findNavController(R.id.nav_host_fragment)
+        when (item.id) {
+            "debug_subscription" -> {
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_subscriptionDebugActivity)
+            }
 
-// Import necessary classes if not already imported
+            "subscription_status" -> {
+                // Navigate based on current status, not just the badge text
+                if (!isPremium) {
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_upgradeActivity)
+                } else {
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_subscriptionStatusFragment) // Navigate to status screen if premium
+                }
+            }
 
+            "shop_details" -> {
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_shopSettingsFragment)
+            }
 
-    // Replace the existing showPremiumFeatureDialog function with this one:
+            "invoice_format" -> {
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_invoicePdfSettingsFragment)
+            }
+
+            "invoice_template" -> {
+                // Check premium status directly
+                if (isPremium) {
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
+                } else {
+                    showPremiumFeatureDialog("Advanced invoice templates & colors")
+                }
+            }
+
+            "account_settings" -> {
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_accountSettingsFragment)
+            }
+
+            "app_updates" -> {
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_updateSettingsFragment)
+            }
+
+            "reports" -> {
+                if (isPremium) {
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
+                } else {
+                    showPremiumFeatureDialog("Business reports")
+                }
+            }
+
+            "recycling_bin" -> {
+                if (isPremium) {
+                    mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
+                } else {
+                    showPremiumFeatureDialog("Recycling Bin")
+                }
+            }
+        }
+    }
+
     private fun showPremiumFeatureDialog(featureName: String) {
         ThemedM3Dialog(requireContext()).setTitle("✨ Unlock Premium ✨")
-            .setLayout(R.layout.dialog_confirmation).apply {
+            .setLayout(R.layout.dialog_confirmation) // Use a layout with a TextView
+            .apply {
+                // Set the message in the custom layout
                 findViewById<TextView>(R.id.confirmationMessage)?.text =
                     "Unlock powerful features like '$featureName' by upgrading to Premium! Enhance your business management today."
-            }.setPositiveButton("Upgrade Now") { dialog, _ -> // Positive button can take two args
+            }.setPositiveButton("Upgrade Now") { dialog, _ ->
                 startActivity(Intent(requireContext(), UpgradeActivity::class.java))
                 dialog.dismiss()
-            }
-            // --- CORRECTED LAMBDA SIGNATURE ---
-            .setNegativeButton("Maybe Later") { dialog -> // Only one parameter: dialog
+            }.setNegativeButton("Maybe Later") { dialog ->
                 dialog.dismiss()
-            }
-            // --- END CORRECTION ---
-            .show()
+            }.show()
     }
+
 
     override fun onDestroyView() {
         super.onDestroyView()

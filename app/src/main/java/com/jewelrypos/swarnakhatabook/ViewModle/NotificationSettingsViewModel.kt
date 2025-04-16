@@ -84,6 +84,20 @@ class NotificationSettingsViewModel(
         savePreferences(updatedPrefs)
     }
 
+    fun updatePaymentDueReminderDays(days: Int) {
+        val currentPrefs = _preferences.value ?: NotificationPreferences()
+        val updatedPrefs = currentPrefs.copy(paymentDueReminderDays = days)
+        _preferences.value = updatedPrefs
+        savePreferences(updatedPrefs)
+    }
+
+    fun updatePaymentOverdueAlertDays(days: Int) {
+        val currentPrefs = _preferences.value ?: NotificationPreferences()
+        val updatedPrefs = currentPrefs.copy(paymentOverdueAlertDays = days)
+        _preferences.value = updatedPrefs
+        savePreferences(updatedPrefs)
+    }
+
     private fun savePreferences(prefs: NotificationPreferences) {
         if (!isOnline()) {
             _errorMessage.value = "Cannot save changes while offline."

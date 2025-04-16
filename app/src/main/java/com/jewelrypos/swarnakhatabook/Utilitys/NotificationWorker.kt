@@ -38,6 +38,7 @@ class NotificationWorker(
         NotificationRepository(firestore, auth)
     }
 
+    // Modify the doWork() method in NotificationWorker.kt to include payment due/overdue checks
     override suspend fun doWork(): Result {
         try {
             // Get current user information
@@ -49,7 +50,18 @@ class NotificationWorker(
             var anySuccessfulCheck = false
             var anyFailedCheck = false
 
-            // Check for monthly business overview
+            // Check for payment due and overdue notifications
+            try {
+                Log.d(TAG, "Checking payment due and overdue")
+                val paymentNotificationsSuccess = checkPaymentDueAndOverdue(phoneNumber, notificationPreferences)
+                if (paymentNotificationsSuccess) anySuccessfulCheck = true
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking payment due/overdue", e)
+                anyFailedCheck = true
+                // Continue with other checks
+            }
+
+            // Existing check for monthly business overview
             if (isFirstDayOfMonth() && notificationPreferences.businessInsights) {
                 try {
                     Log.d(TAG, "Checking monthly business overview")
@@ -62,7 +74,7 @@ class NotificationWorker(
                 }
             }
 
-            // Check for low stock items
+            // Existing check for low stock items
             if (notificationPreferences.lowStock) {
                 try {
                     Log.d(TAG, "Checking low stock items")
@@ -75,7 +87,7 @@ class NotificationWorker(
                 }
             }
 
-            // Check for customer special dates (birthdays, anniversaries)
+            // Existing check for customer special dates (birthdays, anniversaries)
             val shouldCheckBirthdays = notificationPreferences.customerBirthday
             val shouldCheckAnniversaries = notificationPreferences.customerAnniversary
 
@@ -106,6 +118,192 @@ class NotificationWorker(
             return Result.failure()
         }
     }
+    /**
+     * Check for payment due and overdue notifications
+     * @return true if any notifications were created
+     */
+    private suspend fun checkPaymentDueAndOverdue(phoneNumber: String, preferences: NotificationPreferences): Boolean {
+        // Skip if both notification types are disabled
+        if (!preferences.paymentDue && !preferences.paymentOverdue) {
+            Log.d(TAG, "Payment due and overdue notifications are disabled")
+            return false
+        }
+
+        try {
+            // Query unpaid invoices with due dates
+            val invoicesSnapshot = firestore.collection("users")
+                .document(phoneNumber)
+                .collection("invoices")
+                .whereNotEqualTo("dueDate", null)
+                .get()
+                .await()
+
+            val unpaidInvoices = invoicesSnapshot.toObjects(Invoice::class.java)
+                .filter { it.paidAmount < it.totalAmount } // Only unpaid or partially paid invoices
+
+            if (unpaidInvoices.isEmpty()) {
+                Log.d(TAG, "No unpaid invoices with due dates found")
+                return false
+            }
+
+            Log.d(TAG, "Found ${unpaidInvoices.size} unpaid invoices with due dates")
+            var notificationsCreated = false
+
+            // Get current date at the start of day (midnight)
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val today = calendar.timeInMillis
+
+            // Check for payment due notifications
+            if (preferences.paymentDue) {
+                notificationsCreated = checkPaymentDueNotifications(
+                    phoneNumber, unpaidInvoices, today, preferences.paymentDueReminderDays
+                ) || notificationsCreated
+            }
+
+            // Check for payment overdue notifications
+            if (preferences.paymentOverdue) {
+                notificationsCreated = checkPaymentOverdueNotifications(
+                    phoneNumber, unpaidInvoices, today, preferences.paymentOverdueAlertDays
+                ) || notificationsCreated
+            }
+
+            return notificationsCreated
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking payment due/overdue", e)
+            return false
+        }
+    }
+    /**
+     * Check and create payment overdue notifications
+     * @return true if any notifications were created
+     */
+    private suspend fun checkPaymentOverdueNotifications(
+        phoneNumber: String,
+        unpaidInvoices: List<Invoice>,
+        today: Long,
+        alertDays: Int
+    ): Boolean {
+        var notificationsCreated = false
+
+        for (invoice in unpaidInvoices) {
+            val dueDate = invoice.dueDate ?: continue
+
+            // Only consider if today is past the due date
+            if (today <= dueDate) continue
+
+            // Calculate target overdue alert date (dueDate + alertDays)
+            val calendar = Calendar.getInstance()
+            calendar.timeInMillis = dueDate
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.add(Calendar.DAY_OF_YEAR, alertDays)
+            val overdueAlertDate = calendar.timeInMillis
+
+            // Check if today is the overdue alert date
+            if (today == overdueAlertDate) {
+                // Check if notification already exists
+                val notificationExists = doesNotificationExist(
+                    phoneNumber,
+                    NotificationType.PAYMENT_OVERDUE,
+                    invoice.id // Use invoice ID as entity ID for checking
+                )
+
+                if (!notificationExists) {
+                    // Format due date for display
+                    val formattedDueDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                        .format(Date(dueDate))
+
+                    // Create notification
+                    val notification = AppNotification(
+                        customerId = invoice.customerId,
+                        customerName = invoice.customerName,
+                        title = "Payment Overdue",
+                        message = "Payment for Invoice ${invoice.invoiceNumber} to ${invoice.customerName} was due on $formattedDueDate.",
+                        type = NotificationType.PAYMENT_OVERDUE,
+                        status = NotificationStatus.UNREAD,
+                        priority = NotificationPriority.HIGH,
+                        amount = invoice.totalAmount - invoice.paidAmount,
+                        relatedInvoiceId = invoice.id
+                    )
+
+                    repository.createNotification(notification)
+                    Log.d(TAG, "Created payment overdue notification for invoice ${invoice.invoiceNumber}")
+                    notificationsCreated = true
+                }
+            }
+        }
+
+        return notificationsCreated
+    }
+
+    /**
+     * Check and create payment due notifications
+     * @return true if any notifications were created
+     */
+    private suspend fun checkPaymentDueNotifications(
+        phoneNumber: String,
+        unpaidInvoices: List<Invoice>,
+        today: Long,
+        reminderDays: Int
+    ): Boolean {
+        var notificationsCreated = false
+
+        for (invoice in unpaidInvoices) {
+            val dueDate = invoice.dueDate ?: continue
+
+            // Calculate target reminder date (dueDate - reminderDays)
+            val calendar = Calendar.getInstance()
+            calendar.timeInMillis = dueDate
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            calendar.add(Calendar.DAY_OF_YEAR, -reminderDays)
+            val reminderDate = calendar.timeInMillis
+
+            // Check if today is the reminder date
+            if (today == reminderDate) {
+                // Check if notification already exists
+                val notificationExists = doesNotificationExist(
+                    phoneNumber,
+                    NotificationType.PAYMENT_DUE,
+                    invoice.id // Use invoice ID as entity ID for checking
+                )
+
+                if (!notificationExists) {
+                    // Format due date for display
+                    val formattedDueDate = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                        .format(Date(dueDate))
+
+                    // Create notification
+                    val notification = AppNotification(
+                        customerId = invoice.customerId,
+                        customerName = invoice.customerName,
+                        title = "Payment Due Soon",
+                        message = "Payment for Invoice ${invoice.invoiceNumber} to ${invoice.customerName} is due on $formattedDueDate.",
+                        type = NotificationType.PAYMENT_DUE,
+                        status = NotificationStatus.UNREAD,
+                        priority = NotificationPriority.NORMAL,
+                        amount = invoice.totalAmount - invoice.paidAmount,
+                        relatedInvoiceId = invoice.id
+                    )
+
+                    repository.createNotification(notification)
+                    Log.d(TAG, "Created payment due notification for invoice ${invoice.invoiceNumber}")
+                    notificationsCreated = true
+                }
+            }
+        }
+
+        return notificationsCreated
+    }
+
 
     /**
      * Check if today is the first day of the month

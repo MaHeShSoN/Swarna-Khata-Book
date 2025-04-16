@@ -133,7 +133,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         )
         binding.stockChargesTypeEditText.apply {
             setAdapter(adapter3)
-            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            setDropDownBackgroundResource(R.color.cream_background)
         }
 
     }

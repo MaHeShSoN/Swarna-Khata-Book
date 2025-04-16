@@ -68,6 +68,8 @@
                 android:textColor="@color/my_light_primary"
                 android:textSize="16sp" />
 
+
+
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchPaymentDue"
                 android:layout_width="match_parent"
@@ -77,6 +79,39 @@
                 android:text="Payment Due Reminders"
                 android:textColor="@color/my_light_on_surface" />
 
+            <LinearLayout
+                android:id="@+id/paymentDueSettingsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="horizontal"
+                android:visibility="visible">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/montserratregular"
+                    android:text="Remind days before due date:"
+                    android:textColor="@color/my_light_on_background"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/dueDaysInput"
+                    android:layout_width="50dp"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="number"
+                    android:maxLength="2"
+                    android:text="3"
+                    android:textAlignment="center"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
+
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchPaymentOverdue"
                 android:layout_width="match_parent"
@@ -85,6 +120,38 @@
                 android:fontFamily="@font/montserratregular"
                 android:text="Payment Overdue Alerts"
                 android:textColor="@color/my_light_on_surface" />
+            <LinearLayout
+                android:id="@+id/paymentOverdueSettingsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="32dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:orientation="horizontal"
+                android:visibility="visible">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/montserratregular"
+                    android:text="Alert days after due date:"
+                    android:textColor="@color/my_light_on_background"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/overdueDaysInput"
+                    android:layout_width="50dp"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:inputType="number"
+                    android:maxLength="2"
+                    android:text="1"
+                    android:textAlignment="center"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="14sp" />
+
+            </LinearLayout>
 
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switchCreditLimit"

@@ -72,6 +72,13 @@ class NotificationSettingsFragment : Fragment() {
             // Customer events
             binding.switchBirthday.isChecked = prefs.customerBirthday
             binding.switchAnniversary.isChecked = prefs.customerAnniversary
+
+            binding.dueDaysInput.setText(prefs.paymentDueReminderDays.toString())
+            binding.overdueDaysInput.setText(prefs.paymentOverdueAlertDays.toString())
+
+            binding.paymentDueSettingsContainer.visibility = if (prefs.paymentDue) View.VISIBLE else View.GONE
+            binding.paymentOverdueSettingsContainer.visibility = if (prefs.paymentOverdue) View.VISIBLE else View.GONE
+
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
@@ -89,13 +96,6 @@ class NotificationSettingsFragment : Fragment() {
 
     private fun setupSwitches() {
         // Payment notifications
-        binding.switchPaymentDue.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.updatePreference(NotificationType.PAYMENT_DUE, isChecked)
-        }
-
-        binding.switchPaymentOverdue.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.updatePreference(NotificationType.PAYMENT_OVERDUE, isChecked)
-        }
 
         binding.switchCreditLimit.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updatePreference(NotificationType.CREDIT_LIMIT, isChecked)
@@ -118,6 +118,43 @@ class NotificationSettingsFragment : Fragment() {
 
         binding.switchAnniversary.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updatePreference(NotificationType.ANNIVERSARY, isChecked)
+        }
+
+        binding.switchPaymentDue.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.updatePreference(NotificationType.PAYMENT_DUE, isChecked)
+            binding.paymentDueSettingsContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        binding.switchPaymentOverdue.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.updatePreference(NotificationType.PAYMENT_OVERDUE, isChecked)
+            binding.paymentOverdueSettingsContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
+        }
+
+        // Add setup for EditText focus changes
+        binding.dueDaysInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val daysText = binding.dueDaysInput.text.toString()
+                val days = daysText.toIntOrNull() ?: 3
+                if (days < 1) {
+                    binding.dueDaysInput.setText("1")
+                    viewModel.updatePaymentDueReminderDays(1)
+                } else {
+                    viewModel.updatePaymentDueReminderDays(days)
+                }
+            }
+        }
+
+        binding.overdueDaysInput.setOnFocusChangeListener { _, hasFocus ->
+            if (!hasFocus) {
+                val daysText = binding.overdueDaysInput.text.toString()
+                val days = daysText.toIntOrNull() ?: 1
+                if (days < 1) {
+                    binding.overdueDaysInput.setText("1")
+                    viewModel.updatePaymentOverdueAlertDays(1)
+                } else {
+                    viewModel.updatePaymentOverdueAlertDays(days)
+                }
+            }
         }
     }
 
