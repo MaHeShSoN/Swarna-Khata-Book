@@ -67,6 +67,27 @@
                         android:textSize="18sp" />
 
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/ownerNameInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:hint="Owner Name"
+                        app:endIconMode="clear_text"
+                        app:startIconContentDescription="Shop Icon"
+                        app:startIconDrawable="@drawable/line_md__person_twotone"
+                        app:startIconTint="@color/my_light_primary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/ownerNameEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="textCapWords"
+                            android:textColor="@color/my_light_on_surface" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/shopNameInputLayout"
                         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"

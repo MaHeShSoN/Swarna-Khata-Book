@@ -21,7 +21,7 @@
         android:layout_marginBottom="8dp"
         android:fontFamily="@font/librebaskervilleregular"
         android:gravity="center"
-        android:text="Trial Period Expired"
+        android:text="@string/trial_period_expired"
         android:textColor="@color/my_light_on_surface"
         android:textSize="20sp" />
 
@@ -32,7 +32,7 @@
         android:layout_marginBottom="16dp"
         android:fontFamily="@font/montserratregular"
         android:gravity="center"
-        android:text="Your 10-day trial period has expired. Please upgrade to continue using Swarna Khata Book."
+        android:text="@string/trial_period_expired_message"
         android:textColor="@color/my_light_on_background"
         android:textSize="16sp" />
 
@@ -49,7 +49,7 @@
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:fontFamily="@font/montserratmedium"
-            android:text="Log Out"
+            android:text="@string/log_out"
             android:textColor="@color/my_light_primary" />
 
         <com.google.android.material.button.MaterialButton
@@ -61,7 +61,7 @@
             android:layout_weight="1"
             android:backgroundTint="@color/my_light_primary"
             android:fontFamily="@font/montserratmedium"
-            android:text="Upgrade Now"
+            android:text="@string/upgrade_now"
             android:textColor="@color/white" />
     </LinearLayout>
 

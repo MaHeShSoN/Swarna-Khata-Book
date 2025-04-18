@@ -66,7 +66,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratmedium"
-            android:text="Balance"
+            android:text="@string/balance"
             android:textColor="@color/my_light_secondary"
             android:textSize="10sp"
             app:layout_constraintStart_toStartOf="parent"

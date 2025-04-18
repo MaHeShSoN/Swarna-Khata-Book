@@ -114,7 +114,7 @@
                                 android:fontFamily="@font/montserratbold"
                                 android:paddingHorizontal="6dp"
                                 android:paddingVertical="2dp"
-                                android:text="PREMIUM"
+                                android:text="@string/premium"
                                 android:textColor="@color/white"
                                 android:textSize="10sp"
                                 android:visibility="gone"
@@ -126,7 +126,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:fontFamily="@font/montserratregular"
-                            android:text="Choose from multiple professional invoice templates and customize colors"
+                            android:text="@string/choose_from_multiple_professional_invoice_templates_and_customize_colors"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
 
@@ -136,7 +136,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
-                            android:text="Select Template &amp; Color"
+                            android:text="@string/select_template_amp_color"
                             android:textColor="@color/my_light_primary"
                             app:icon="@drawable/ic_template"
                             app:iconTint="@color/my_light_primary"
@@ -166,7 +166,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/librebaskervillebold"
-                            android:text="Branding Settings"
+                            android:text="@string/branding_settings"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="18sp" />
 
@@ -183,7 +183,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Shop Logo"
+                                android:text="@string/shop_logo"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="16sp" />
 
@@ -200,7 +200,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Upload Logo"
+                            android:text="@string/upload_logo"
                             android:textColor="@color/my_light_primary"
                             app:strokeColor="@color/my_light_primary" />
 
@@ -242,7 +242,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Watermark"
+                                android:text="@string/watermark"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="16sp" />
 
@@ -260,7 +260,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:enabled="false"
-                            android:text="Upload Watermark"
+                            android:text="@string/upload_watermark"
                             android:textColor="@color/my_light_primary"
                             app:strokeColor="@color/my_light_primary" />
 
@@ -276,7 +276,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratregular"
-                                android:text="Watermark Preview:"
+                                android:text="@string/watermark_preview"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="14sp" />
 
@@ -303,7 +303,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Signature"
+                                android:text="@string/signature"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="16sp" />
 
@@ -320,7 +320,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:text="Create Signature"
+                            android:text="@string/create_signature"
                             android:textColor="@color/my_light_primary"
                             app:strokeColor="@color/my_light_primary" />
 
@@ -336,7 +336,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratregular"
-                                android:text="Signature Preview:"
+                                android:text="@string/signature_preview"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="14sp" />
 
@@ -373,7 +373,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/librebaskervillebold"
-                            android:text="Content Settings"
+                            android:text="@string/content_settings"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="18sp" />
 
@@ -390,7 +390,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="UPI Payment QR Code"
+                                android:text="@string/upi_payment_qr_code"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="16sp" />
 
@@ -407,7 +407,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:hint="UPI ID">
+                            android:hint="@string/upi_id">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/upiIdEditText"
@@ -423,7 +423,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="16dp"
                             android:fontFamily="@font/montserratmedium"
-                            android:text="Terms &amp; Conditions"
+                            android:text="@string/terms_amp_conditions"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
 
@@ -433,7 +433,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
-                            android:hint="Terms &amp; Conditions">
+                            android:hint="@string/terms_amp_conditions">
 
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/termsEditText"

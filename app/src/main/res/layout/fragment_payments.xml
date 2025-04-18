@@ -28,8 +28,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:indeterminate="true"
-            android:paddingLeft="2dp"
-            android:paddingRight="2dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
             android:paddingTop="0dp"
             android:visibility="gone"/>
     </com.google.android.material.appbar.AppBarLayout>
@@ -72,7 +72,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Total Collected"
+                            android:text="@string/total_collected"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp" />
 
@@ -118,7 +118,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Payment Breakdown"
+                        android:text="@string/payment_breakdown"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp" />
 
@@ -148,7 +148,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Cash"
+                                android:text="@string/cash"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="11sp" />
 
@@ -187,7 +187,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="UPI"
+                                android:text="@string/upi"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="11sp" />
 
@@ -226,7 +226,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Card"
+                                android:text="@string/card"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="11sp" />
 
@@ -264,7 +264,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Other"
+                                android:text="@string/other"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="11sp" />
 
@@ -305,7 +305,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Payment Entries"
+                        android:text="@string/payment_entries"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp" />
 
@@ -331,7 +331,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratmedium"
-                            android:text="No payments recorded"
+                            android:text="@string/no_payments_recorded"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
                     </LinearLayout>

@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserratmedium"
-            android:text="Invoice #"
+            android:text="@string/invoice_number"
             android:textColor="@color/my_light_secondary"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
@@ -85,7 +85,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="@font/montserratregular"
-            android:text="Items: "
+            android:text="@string/items_label"
             android:textColor="@color/my_light_secondary"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
@@ -108,7 +108,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="@font/montserratregular"
-            android:text="Date: "
+            android:text="@string/date_label"
             android:textColor="@color/my_light_secondary"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
@@ -138,7 +138,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/montserratbold"
-                android:text="Total: "
+                android:text="@string/total_label"
                 android:textColor="@color/my_light_primary"
                 android:textSize="16sp" />
 
@@ -157,7 +157,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/montserratregular"
-                android:text="Balance: "
+                android:text="@string/balance_label"
                 android:textColor="@color/my_light_secondary"
                 android:textSize="14sp" />
 

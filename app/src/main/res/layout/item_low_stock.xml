@@ -78,7 +78,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratmedium"
-                    android:text="CURRENT STOCK"
+                    android:text="@string/current_stock"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="10sp"
                     android:textAllCaps="true" />
@@ -103,7 +103,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratmedium"
-                    android:text="REORDER LEVEL"
+                    android:text="@string/reorder_level"
                     android:textColor="@color/my_light_secondary"
                     android:textSize="10sp"
                     android:textAllCaps="true" />

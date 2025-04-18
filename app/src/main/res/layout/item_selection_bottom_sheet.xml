@@ -17,7 +17,7 @@
             android:id="@+id/titleTextView"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Add Jewellery Item"
+            android:text="@string/add_jewellery_item"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -52,7 +52,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Basic Information"
+                        android:text="@string/basic_information"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="@color/my_light_on_surface" />
 
@@ -64,7 +64,7 @@
                         android:layout_gravity="center_vertical"
                         android:contentDescription="Add Item"
                         android:gravity="top"
-                        android:text="+ Add Item"
+                        android:text="@string/add_item"
                         android:textColor="@color/my_light_primary" />
                 </LinearLayout>
 
@@ -96,9 +96,9 @@
                     android:layout_height="wrap_content"
                     android:indeterminate="true"
                     android:layout_marginTop="2dp"
-                    android:paddingLeft="2dp"
+                    android:paddingStart="2dp"
                     android:paddingTop="0dp"
-                    android:paddingRight="2dp"
+                    android:paddingEnd="2dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/itemNameInputLayout" />
@@ -128,7 +128,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Weight Details"
+                    android:text="@string/weight_details"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
 
@@ -254,7 +254,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Diamond Pricing"
+                    android:text="@string/diamond_pricing"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
 
@@ -316,7 +316,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pricing Information"
+                    android:text="@string/pricing_information"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
 
@@ -528,7 +528,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Extra Charges"
+                        android:text="@string/extra_charges"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="@color/my_light_on_surface" />
 
@@ -540,7 +540,7 @@
                         android:layout_gravity="center_vertical"
                         android:contentDescription="Add Extra Charge"
                         android:gravity="top"
-                        android:text="+ Add Charge"
+                        android:text="@string/add_charge"
                         android:textColor="@color/my_light_primary" />
                 </LinearLayout>
 
@@ -559,7 +559,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="No extra charges added"
+                    android:text="@string/no_extra_charges"
                     android:textAlignment="center"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="14sp"
@@ -622,7 +622,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Tax Information"
+                        android:text="@string/tax_information"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="@color/my_light_on_surface" />
 
@@ -630,7 +630,7 @@
                         android:id="@+id/taxApplicableCheckbox"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Tax Applicable"
+                        android:text="@string/tax_applicable"
                         android:textColor="@color/my_light_on_surface" />
                 </LinearLayout>
 

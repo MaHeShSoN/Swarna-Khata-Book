@@ -4,8 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:id="@+id/contentLayout"
     android:background="@color/cream_background"
-    tools:context=".GetDetailsFragment">
+    >
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/welcomeText"
@@ -18,7 +19,7 @@
         android:paddingBottom="8dp"
         android:text="Welcome"
         android:textColor="@color/my_light_on_surface"
-        android:textSize="24sp"
+        android:textSize="28sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -29,16 +30,30 @@
         android:layout_height="wrap_content"
         android:fontFamily="@font/librebaskervilleregular"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp"
-        android:text="Complete Your Profile"
+        android:paddingBottom="8dp"
+        android:text="Enter your phone number to continue"
         android:textColor="@color/my_light_primary"
-        android:textSize="20sp"
+        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/welcomeText" />
 
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/subText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/montserratregular"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="24dp"
+        android:text="We will send you a verification code"
+        android:textColor="@color/my_light_on_surface"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/text" />
+
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/formCard"
+        android:id="@+id/phoneCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
@@ -49,7 +64,7 @@
         app:strokeWidth="1dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/text">
+        app:layout_constraintTop_toBottomOf="@+id/subText">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -58,41 +73,22 @@
             android:padding="16dp">
 
             <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/nameOfOwner"
+                android:id="@+id/phoneNumberLayout"
                 style="@style/Widget.App.TextInputLayout.GoldForm"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Name *"
+                android:hint="Phone Number"
+                app:helperText="Enter 10-digit mobile number"
+                app:helperTextEnabled="true"
                 app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/line_md__person_twotone"
-                app:startIconTint="@color/my_light_primary"
-                >
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/nameOfOwnerText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:inputType="textCapWords"
-                    android:textColor="@color/my_light_on_surface"
-                    />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/numberOfOwner"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Number *"
-                app:endIconMode="clear_text"
+                app:prefixText="+91"
+                app:counterEnabled="true"
+                app:counterMaxLength="10"
                 app:startIconDrawable="@drawable/ic_phone_custom"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/numberOfOwnerText"
+                    android:id="@+id/phoneNumberText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratregular"
@@ -101,88 +97,12 @@
                     android:textColor="@color/my_light_on_surface" />
 
             </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/shopName"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Shop Name *"
-                app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/stash__shop"
-                app:startIconTint="@color/my_light_primary">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:inputType="textCapWords"
-                    android:textColor="@color/my_light_on_surface" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/shopAddress"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Shop Address *"
-                app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/system_uicons__location"
-                app:startIconTint="@color/my_light_primary">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/shopAddressText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:inputType="textMultiLine|textCapWords"
-                    android:minLines="2"
-                    android:textColor="@color/my_light_on_surface" />
-
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- GST Checkbox -->
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/hasGstCheckBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:buttonTint="@color/my_light_primary"
-                android:fontFamily="@font/montserratmedium"
-                android:text="Have GST Number?"
-                android:textColor="@color/my_light_on_surface" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/gstNumber"
-                style="@style/Widget.App.TextInputLayout.GoldForm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="GST Number"
-                android:visibility="gone"
-                app:endIconMode="clear_text"
-                app:startIconDrawable="@drawable/fluent__tag_percent_24_regular"
-                app:startIconTint="@color/my_light_primary">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/gstNumberText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:inputType="textCapCharacters"
-                    android:maxLength="15"
-                    android:textColor="@color/my_light_on_surface" />
-
-            </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Submit Button -->
+    <!-- Continue Button -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/submitButton"
+        android:id="@+id/continueButton"
         style="@style/Widget.App.Button.Gold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -190,12 +110,27 @@
         android:layout_marginTop="24dp"
         android:fontFamily="@font/montserratmedium"
         android:paddingVertical="12dp"
-        android:text="SUBMIT"
+        android:text="CONTINUE"
         android:textAllCaps="true"
         android:textColor="@color/my_light_on_primary"
         app:cornerRadius="12dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/formCard" />
+        app:layout_constraintTop_toBottomOf="@+id/phoneCard" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/privacyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:fontFamily="@font/montserratregular"
+        android:gravity="center"
+        android:paddingHorizontal="32dp"
+        android:text="By continuing, you agree to our Terms of Service and Privacy Policy"
+        android:textColor="@color/my_light_on_surface_variant"
+        android:textSize="12sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/continueButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,16 +1,25 @@
 package com.jewelrypos.swarnakhatabook.Adapters
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
+import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.databinding.ItemShopSelectionBinding
 
 class ShopSelectionAdapter(
     private val onShopSelected: (String) -> Unit
 ) : ListAdapter<ShopDetails, ShopSelectionAdapter.ShopViewHolder>(ShopDiffCallback()) {
+
+    private var activeShopId: String? = null
+
+    fun setActiveShopId(shopId: String?) {
+        this.activeShopId = shopId
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ShopViewHolder {
         val binding = ItemShopSelectionBinding.inflate(
@@ -48,6 +57,13 @@ class ShopSelectionAdapter(
                 binding.textViewGstNumber.text = "GSTIN: ${shop.gstNumber}"
             } else {
                 binding.textViewGstNumber.text = "No GST"
+            }
+
+            // Show check icon if this is the active shop
+            if (shop.shopId == activeShopId) {
+                binding.imageViewSelected.visibility = View.VISIBLE
+            } else {
+                binding.imageViewSelected.visibility = View.GONE
             }
         }
     }

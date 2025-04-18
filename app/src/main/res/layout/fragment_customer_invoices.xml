@@ -62,7 +62,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No Invoices Yet"
+            android:text="@string/no_invoices_yet"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -73,7 +73,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="This customer has no invoices yet"
+            android:text="@string/customer_has_no_invoices"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -85,7 +85,7 @@
             android:layout_marginTop="24dp"
             android:backgroundTint="@color/my_light_primary"
             android:fontFamily="@font/montserratmedium"
-            android:text="CREATE INVOICE"
+            android:text="@string/create_invoice"
             android:textColor="@color/my_light_on_primary"
             android:textSize="14sp" />
     </LinearLayout>

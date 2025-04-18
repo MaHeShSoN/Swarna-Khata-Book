@@ -44,7 +44,8 @@ class MoreSettingFragment : Fragment() {
     private fun setupSettingsList() {
         // Launch coroutine on the main thread initially
         viewLifecycleOwner.lifecycleScope.launch {
-            // Show a loading indicator (optional but recommended)
+            // Only access binding if view is attached
+            if (_binding == null) return@launch
             binding.settingsRecyclerView.visibility = View.GONE
 
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
@@ -58,15 +59,17 @@ class MoreSettingFragment : Fragment() {
                 Pair(premiumStatus, remainingDays)
             }
 
+            // Only access binding if view is attached
+            if (_binding == null) return@launch
             // Now that background work is done, create the list (fast)
             val subscriptionBadgeText = if (isPremium) {
-                "PREMIUM"
+                getString(R.string.premium)
             } else if (daysRemaining <= 3 && daysRemaining > 0) {
                 "$daysRemaining DAYS LEFT"
             } else if (daysRemaining == 0 && !isPremium) {
-                "EXPIRED"
+                getString(R.string.expired)
             } else {
-                "TRIAL"
+                getString(R.string.trial)
             }
 
             val settingsItems = mutableListOf(
@@ -77,48 +80,54 @@ class MoreSettingFragment : Fragment() {
                     iconResId = R.drawable.ic_order // Example icon
                 ), SettingsItem(
                     id = "subscription_status",
-                    title = if (isPremium) "Premium Subscription" else "Free Trial",
-                    subtitle = if (isPremium) "You have access to all premium features"
+                    title = if (isPremium) getString(R.string.premium_subscription) else getString(R.string.free_trial),
+                    subtitle = if (isPremium) getString(R.string.you_have_access_to_all_premium_features)
                     else "Trial ends in $daysRemaining days",
                     iconResId = R.drawable.fluent__premium_24_regular,
                     badgeText = subscriptionBadgeText
                 ), SettingsItem(
                     id = "shop_details",
-                    title = "Shop Details",
-                    subtitle = "Configure your shop information for invoices",
+                    title = getString(R.string.shop_details),
+                    subtitle = getString(R.string.configure_your_shop_information_for_invoices),
                     iconResId = R.drawable.stash__shop
                 ), SettingsItem(
                     id = "invoice_format",
-                    title = "Invoice PDF Format",
-                    subtitle = "Customize the appearance of your invoice PDFs",
+                    title = getString(R.string.invoice_pdf_format),
+                    subtitle = getString(R.string.customize_the_appearance_of_your_invoice_pdfs),
                     iconResId = R.drawable.mdi__invoice_text_edit_outline
                 ), SettingsItem( // Keep invoice_template separate from invoice_format
-                    id = "invoice_template", title = "Invoice Template & Color", // Updated title
-                    subtitle = "Choose template and theme color", // Updated subtitle
+                    id = "invoice_template",
+                    title = getString(R.string.invoice_template_color), // Updated title
+                    subtitle = getString(R.string.choose_template_and_theme_color), // Updated subtitle
                     iconResId = R.drawable.ic_template, // Specific icon for templates/colors
-                    badgeText = if (!isPremium) "PREMIUM" else null
+                    badgeText = if (!isPremium) getString(R.string.premium) else null
                 ), SettingsItem(
                     id = "reports",
-                    title = "Reports",
-                    subtitle = "View and export business reports and analytics",
+                    title = getString(R.string.reports),
+                    subtitle = getString(R.string.view_and_export_business_reports_and_analytics),
                     iconResId = R.drawable.icon_park_outline__sales_report,
-                    badgeText = if (!isPremium) "PREMIUM" else null
+                    badgeText = if (!isPremium) getString(R.string.premium) else null
                 ), SettingsItem(
                     id = "recycling_bin",
-                    title = "Recycling Bin",
-                    subtitle = "Recover deleted invoices, customers, and items",
+                    title = getString(R.string.recycling_bin),
+                    subtitle = getString(R.string.recover_deleted_invoices_customers_and_items),
                     iconResId = R.drawable.solar__trash_bin_trash_line_duotone,
-                    badgeText = if (!isPremium) "PREMIUM" else null
+                    badgeText = if (!isPremium) getString(R.string.premium) else null
                 ), SettingsItem(
                     id = "account_settings",
-                    title = "Account Settings",
-                    subtitle = "Manage app lock, security and account options",
+                    title = getString(R.string.account_settings),
+                    subtitle = getString(R.string.manage_app_lock_security_and_account_options),
                     iconResId = R.drawable.material_symbols__account_circle_outline
                 ), SettingsItem(
                     id = "app_updates",
-                    title = "App Updates",
-                    subtitle = "Manage automatic updates and check for new versions",
+                    title = getString(R.string.app_updates),
+                    subtitle = getString(R.string.manage_automatic_updates_and_check_for_new_versions),
                     iconResId = R.drawable.material_symbols__refresh_rounded
+                ), SettingsItem(
+                    id = "about_language",
+                    title = getString(R.string.about_language),
+                    subtitle = getString(R.string.choose_language),
+                    iconResId = R.drawable.uil__language // You may need to add a language icon drawable
                 )
             )
 
@@ -130,10 +139,14 @@ class MoreSettingFragment : Fragment() {
             // Note: If using the optimized SettingsAdapter, you might not need 'isPremium' here.
             // Adjust the adapter instantiation based on the adapter version you are using.
             // Example using the optimized adapter constructor:
-            settingsAdapter = SettingsAdapter(settingsItems, isPremium) { item -> // Pass isPremium if still needed by adapter or click handler
+            settingsAdapter = SettingsAdapter(
+                settingsItems, isPremium
+            ) { item -> // Pass isPremium if still needed by adapter or click handler
                 handleNavigation(item, isPremium) // Pass isPremium to handler
             }
 
+            // Only access binding if view is attached
+            if (_binding == null) return@launch
             binding.settingsRecyclerView.apply {
                 layoutManager = LinearLayoutManager(context)
                 adapter = settingsAdapter
@@ -204,6 +217,10 @@ class MoreSettingFragment : Fragment() {
                     showPremiumFeatureDialog("Recycling Bin")
                 }
             }
+
+            "about_language" -> {
+                showLanguageSelectionDialog()
+            }
         }
     }
 
@@ -213,15 +230,47 @@ class MoreSettingFragment : Fragment() {
             .apply {
                 // Set the message in the custom layout
                 findViewById<TextView>(R.id.confirmationMessage)?.text =
-                    "Unlock powerful features like '$featureName' by upgrading to Premium! Enhance your business management today."
-            }.setPositiveButton("Upgrade Now") { dialog, _ ->
+                    getString(
+                        R.string.unlock_powerful_features_like_by_upgrading_to_premium_enhance_your_business_management_today,
+                        featureName
+                    )
+            }.setPositiveButton(getString(R.string.upgrade_now)) { dialog, _ ->
                 startActivity(Intent(requireContext(), UpgradeActivity::class.java))
                 dialog.dismiss()
-            }.setNegativeButton("Maybe Later") { dialog ->
+            }.setNegativeButton(getString(R.string.maybe_later)) { dialog ->
                 dialog.dismiss()
             }.show()
     }
 
+    private fun showLanguageSelectionDialog() {
+        val languages =
+            arrayOf(getString(R.string.language_english), getString(R.string.language_hindi))
+        val codes = arrayOf("en", "hi")
+        val currentLang = requireContext().resources.configuration.locales[0].language
+        var selectedIdx = codes.indexOf(currentLang)
+        if (selectedIdx == -1) selectedIdx = 0
+
+        val builder = android.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.choose_language))
+            .setSingleChoiceItems(languages, selectedIdx) { dialog, which ->
+                if (codes[which] != currentLang) {
+                    setLocale(codes[which])
+                }
+                dialog.dismiss()
+            }
+        builder.show()
+    }
+
+    private fun setLocale(lang: String) {
+        val locale = java.util.Locale(lang)
+        java.util.Locale.setDefault(locale)
+        val config = resources.configuration
+        config.setLocale(locale)
+        requireActivity().baseContext.resources.updateConfiguration(
+            config, requireActivity().baseContext.resources.displayMetrics
+        )
+        requireActivity().recreate()
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

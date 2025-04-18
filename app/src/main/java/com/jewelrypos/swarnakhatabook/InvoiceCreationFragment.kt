@@ -68,16 +68,16 @@ class InvoiceCreationFragment : Fragment() {
     private val salesViewModel: SalesViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InvoiceRepository(firestore, auth,requireContext())
+        val repository = InvoiceRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        SalesViewModelFactory(repository, connectivityManager,requireContext())
+        SalesViewModelFactory(repository, connectivityManager, requireContext())
     }
 
     private val customerViewModel: CustomerViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth,requireContext())
+        val repository = CustomerRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         CustomerViewModelFactory(repository, connectivityManager)
@@ -199,12 +199,12 @@ class InvoiceCreationFragment : Fragment() {
                         val updated = salesViewModel.updateSelectedItem(updatedItem, price)
 
                         if (updated) {
-                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT)
+                            Toast.makeText(context, getString(R.string.item_updated_success), Toast.LENGTH_SHORT)
                                 .show()
                         } else {
                             Toast.makeText(
                                 context,
-                                "Failed to update item. Item not found in selection.",
+                                getString(R.string.item_update_failed),
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -263,7 +263,7 @@ class InvoiceCreationFragment : Fragment() {
 
         binding.selectAddItemForFirstTimeButton.setOnClickListener {
             if (salesViewModel.selectedCustomer.value == null) {
-                Toast.makeText(requireContext(), "Please Add Customer First", Toast.LENGTH_SHORT)
+                Toast.makeText(requireContext(), getString(R.string.please_add_customer_first), Toast.LENGTH_SHORT)
                     .show()
             } else {
                 selectItems()
@@ -275,6 +275,8 @@ class InvoiceCreationFragment : Fragment() {
         }
 
         binding.saveButton.setOnClickListener {
+            binding.saveButton.text = getString(R.string.saving)
+            binding.saveButton.isEnabled = false
             saveInvoice()
         }
 
@@ -290,19 +292,19 @@ class InvoiceCreationFragment : Fragment() {
         // Update UI elements based on customer type
         if (isWholesaler) {
             // Update section titles and labels for wholesaler (supplier)
-            binding.titleTextView.text = "Create Purchase Order"
-            binding.customerSectionTitle.text = "Supplier Details"
-            binding.itemsSectionTitle.text = "Items Purchased"
-            binding.paymentsSectionTitle.text = "Payments To Supplier"
-            binding.amountPaidLabel.text = "Amount Paid To Supplier:"
-            binding.balanceDueLabel.text = "Balance To Pay:"
-            binding.saveButton.text = "Save Purchase"
+            binding.titleTextView.text = getString(R.string.create_purchase_order)
+            binding.customerSectionTitle.text = getString(R.string.supplier_details)
+            binding.itemsSectionTitle.text = getString(R.string.items_purchased)
+            binding.paymentsSectionTitle.text = getString(R.string.payments_to_supplier)
+            binding.amountPaidLabel.text = getString(R.string.amount_paid_to_supplier)
+            binding.balanceDueLabel.text = getString(R.string.balance_to_pay)
+            binding.saveButton.text = getString(R.string.save_purchase)
             binding.saveButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
-            binding.selectCustomerButton.text = "Select Supplier"
-            binding.selectAddItemForFirstTimeButton.text = "Add Purchase Item"
-            binding.addItemButton.text = "+ Add Purchase"
-            binding.addPaymentButton.text = "+ Add Payment"
-            binding.NoTextAddedId.text = "No Items Purchased"
+            binding.selectCustomerButton.text = getString(R.string.select_supplier)
+            binding.selectAddItemForFirstTimeButton.text = getString(R.string.add_purchase_item)
+            binding.addItemButton.text = getString(R.string.add_purchase)
+            binding.addPaymentButton.text = getString(R.string.add_payment)
+            binding.NoTextAddedId.text = getString(R.string.no_items_purchased)
 
             // Optionally change colors to visually differentiate
             binding.saveButton.setBackgroundColor(
@@ -321,18 +323,18 @@ class InvoiceCreationFragment : Fragment() {
                 ContextCompat.getColorStateList(requireContext(), R.color.supplier_badge_color)
         } else {
             // Reset UI elements for normal consumer customer
-            binding.titleTextView.text = "Create Invoice"
-            binding.customerSectionTitle.text = "Customer Details"
-            binding.itemsSectionTitle.text = "Items Sold"
-            binding.paymentsSectionTitle.text = "Payments"
-            binding.amountPaidLabel.text = "Amount Paid:"
-            binding.balanceDueLabel.text = "Balance Due:"
-            binding.saveButton.text = "Save Invoice"
-            binding.selectCustomerButton.text = "Select Customer"
-            binding.selectAddItemForFirstTimeButton.text = "Add Item"
-            binding.addItemButton.text = "+ Add Item"
-            binding.addPaymentButton.text = "+ Add Payment"
-            binding.NoTextAddedId.text = "No Items Added"
+            binding.titleTextView.text = getString(R.string.create_invoice)
+            binding.customerSectionTitle.text = getString(R.string.customer_details)
+            binding.itemsSectionTitle.text = getString(R.string.items_sold)
+            binding.paymentsSectionTitle.text = getString(R.string.payments)
+            binding.amountPaidLabel.text = getString(R.string.amount_paid)
+            binding.balanceDueLabel.text = getString(R.string.balance_due)
+            binding.saveButton.text = getString(R.string.save_invoice)
+            binding.selectCustomerButton.text = getString(R.string.select_customer)
+            binding.selectAddItemForFirstTimeButton.text = getString(R.string.add_item)
+            binding.addItemButton.text = getString(R.string.add_item_with_plus)
+            binding.addPaymentButton.text = getString(R.string.add_payment)
+            binding.NoTextAddedId.text = getString(R.string.no_items_added)
 
             // Reset colors to default
             binding.saveButton.setBackgroundColor(
@@ -353,10 +355,10 @@ class InvoiceCreationFragment : Fragment() {
 
         // Update notes hint based on customer type
         binding.notesInputLayout.hint =
-            if (isWholesaler) "Add notes for this purchase" else "Add notes for this invoice"
+            if (isWholesaler) getString(R.string.purchase_notes_hint) else getString(R.string.invoice_notes_hint)
 
         // Change payment status badge text for wholesalers
-        binding.paymentStatusBadge.text = if (isWholesaler) "TO PAY" else "UNPAID"
+        binding.paymentStatusBadge.text = if (isWholesaler) getString(R.string.to_pay) else getString(R.string.unpaid)
 
         // Show customer/supplier details
         binding.noCustomerSelected.visibility = View.GONE
@@ -376,34 +378,34 @@ class InvoiceCreationFragment : Fragment() {
             customer.currentBalance != 0.0 -> {
                 when {
                     isWholesaler && customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                        "They Owe: ₹${formatter.format(customer.currentBalance)}"
+                        getString(R.string.they_owe, formatter.format(customer.currentBalance))
 
                     isWholesaler && customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                        "You Owe: ₹${formatter.format(customer.currentBalance)}"
+                        getString(R.string.you_owe, formatter.format(customer.currentBalance))
 
                     customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                        "To Receive: ₹${formatter.format(customer.currentBalance)}"
+                        getString(R.string.to_receive, formatter.format(customer.currentBalance))
 
                     customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                        "To Pay: ₹${formatter.format(customer.currentBalance)}"
+                        getString(R.string.to_pay_amount, formatter.format(customer.currentBalance))
 
-                    else -> "Balance: ₹${formatter.format(customer.currentBalance)}"
+                    else -> getString(R.string.balance_amount, formatter.format(customer.currentBalance))
                 }
             }
             // Otherwise fall back to opening balance
             isWholesaler && customer.balanceType == "Debit" && customer.openingBalance > 0 ->
-                "They Owe: ₹${formatter.format(customer.openingBalance)}"
+                getString(R.string.they_owe, formatter.format(customer.openingBalance))
 
             isWholesaler && customer.balanceType == "Credit" && customer.openingBalance > 0 ->
-                "You Owe: ₹${formatter.format(customer.openingBalance)}"
+                getString(R.string.you_owe, formatter.format(customer.openingBalance))
 
             customer.balanceType == "Credit" && customer.openingBalance > 0 ->
-                "To Receive: ₹${formatter.format(customer.openingBalance)}"
+                getString(R.string.to_receive, formatter.format(customer.openingBalance))
 
             customer.balanceType == "Debit" && customer.openingBalance > 0 ->
-                "To Pay: ₹${formatter.format(customer.openingBalance)}"
+                getString(R.string.to_pay_amount, formatter.format(customer.openingBalance))
 
-            else -> "Balance: ₹0.00"
+            else -> getString(R.string.balance_amount, formatter.format(customer.openingBalance))
         }
         binding.customerBalance.text = balanceText
 
@@ -538,7 +540,7 @@ class InvoiceCreationFragment : Fragment() {
                     salesViewModel.addSelectedItem(item, price)
                     Toast.makeText(
                         context,
-                        "Warning: Item has no stock available",
+                        getString(R.string.no_stock_available),
                         Toast.LENGTH_SHORT
                     ).show()
                 } else if (requestedQuantity > item.stock) {
@@ -546,7 +548,7 @@ class InvoiceCreationFragment : Fragment() {
                     salesViewModel.addSelectedItem(item, price)
                     Toast.makeText(
                         context,
-                        "Warning: Requested quantity exceeds available stock (${item.stock})",
+                        getString(R.string.not_enough_stock, item.stock),
                         Toast.LENGTH_SHORT
                     ).show()
                 } else {
@@ -558,9 +560,9 @@ class InvoiceCreationFragment : Fragment() {
             override fun onItemUpdated(item: JewelleryItem, price: Double) {
                 val updated = salesViewModel.updateSelectedItem(item, price)
                 if (updated) {
-                    Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.item_updated_success), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.item_update_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         })
@@ -573,13 +575,13 @@ class InvoiceCreationFragment : Fragment() {
         val dueAmount = totalAmount - paidAmount
 
         if (dueAmount <= 0) {
-            Toast.makeText(context, "Invoice is already fully paid", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.invoice_already_paid), Toast.LENGTH_SHORT).show()
             return
         }
 
         val paymentSheet = PaymentEntryBottomSheet.newInstance(totalAmount, paidAmount)
-        paymentSheet.setTitle("Add Payment")
-        paymentSheet.setDescription("Invoice Total: ₹${String.format("%.2f", totalAmount)}")
+        paymentSheet.setTitle(getString(R.string.add_payment))
+        paymentSheet.setDescription(getString(R.string.invoice_total, String.format("%.2f", totalAmount)))
         paymentSheet.setAmount(dueAmount) // Set the correct amount due
 
         paymentSheet.setOnPaymentAddedListener(object :
@@ -612,11 +614,11 @@ class InvoiceCreationFragment : Fragment() {
         val due = total - paid
 
         // Update standard values
-        binding.subtotalValue.text = "₹${String.format("%.2f", subtotal)}"
-        binding.taxValue.text = "₹${String.format("%.2f", tax)}"
-        binding.totalValue.text = "₹${String.format("%.2f", total)}"
-        binding.amountPaidValue.text = "₹${String.format("%.2f", paid)}"
-        binding.balanceDueValue.text = "₹${String.format("%.2f", due)}"
+        binding.subtotalValue.text = getString(R.string.currency, String.format("%.2f", subtotal))
+        binding.taxValue.text = getString(R.string.currency, String.format("%.2f", tax))
+        binding.totalValue.text = getString(R.string.currency, String.format("%.2f", total))
+        binding.amountPaidValue.text = getString(R.string.currency, String.format("%.2f", paid))
+        binding.balanceDueValue.text = getString(R.string.currency, String.format("%.2f", due))
 
         // Update payment status badge
         updatePaymentStatusBadge(due, paid)
@@ -653,7 +655,7 @@ class InvoiceCreationFragment : Fragment() {
             val chargeAmount = chargeView.findViewById<TextView>(R.id.extraChargeAmountText)
 
             chargeName.text = charge.first
-            chargeAmount.text = "₹${String.format("%.2f", charge.second)}"
+            chargeAmount.text = getString(R.string.currency, String.format("%.2f", charge.second))
 
             binding.extraChargesContainer.addView(chargeView)
         }
@@ -661,9 +663,9 @@ class InvoiceCreationFragment : Fragment() {
 
     private fun updatePaymentStatusBadge(due: Double, paid: Double) {
         val paymentStatus = when {
-            due <= 0 -> "PAID"
-            paid > 0 -> "PARTIAL"
-            else -> "UNPAID"
+            due <= 0 -> getString(R.string.paid)
+            paid > 0 -> getString(R.string.partial)
+            else -> getString(R.string.unpaid)
         }
 
         binding.paymentStatusBadge.text = paymentStatus
@@ -671,8 +673,8 @@ class InvoiceCreationFragment : Fragment() {
             ContextCompat.getColor(
                 requireContext(),
                 when (paymentStatus) {
-                    "PAID" -> R.color.status_paid
-                    "PARTIAL" -> R.color.status_partial
+                    getString(R.string.paid) -> R.color.status_paid
+                    getString(R.string.partial) -> R.color.status_partial
                     else -> R.color.status_unpaid
                 }
             )
@@ -714,7 +716,7 @@ class InvoiceCreationFragment : Fragment() {
 
             // Validate that we have items
             if (invoiceItems.isEmpty()) {
-                Toast.makeText(context, "Please add at least one item", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.please_add_at_least_one_item), Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -765,7 +767,7 @@ class InvoiceCreationFragment : Fragment() {
 
                     if (success) {
                         context?.let { ctx ->
-                            Toast.makeText(ctx, "Invoice saved successfully", Toast.LENGTH_SHORT)
+                            Toast.makeText(ctx, getString(R.string.invoice_saved_successfully), Toast.LENGTH_SHORT)
                                 .show()
                         }
 
@@ -801,7 +803,7 @@ class InvoiceCreationFragment : Fragment() {
                         }
                     } else {
                         context?.let { ctx ->
-                            Toast.makeText(ctx, "Failed to save invoice", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(ctx, getString(R.string.failed_to_save_invoice), Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -810,18 +812,18 @@ class InvoiceCreationFragment : Fragment() {
             // Handle any unexpected errors
             Log.e("InvoiceCreation", "Error saving invoice", e)
             binding.progressOverlay.visibility = View.GONE
-            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.error_saving_invoice, e.message), Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun validateInvoice(): Boolean {
         if (salesViewModel.selectedCustomer.value == null) {
-            Toast.makeText(context, "Please select a customer", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.please_select_a_customer), Toast.LENGTH_SHORT).show()
             return false
         }
 
         if (itemsAdapter.getItems().isEmpty()) {
-            Toast.makeText(context, "Please add at least one item", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.please_add_at_least_one_item), Toast.LENGTH_SHORT).show()
             return false
         }
 
@@ -842,10 +844,10 @@ class InvoiceCreationFragment : Fragment() {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            startActivity(Intent.createChooser(shareIntent, "Share Invoice PDF"))
+            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_invoice_pdf)))
         } catch (e: Exception) {
             Log.e("PDFSharing", "Error sharing PDF", e)
-            Toast.makeText(context, "Failed to share PDF", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.failed_to_share_pdf), Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.ShopSelectionAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentShopSelectionBinding
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ class ShopSelectionFragment : Fragment() {
     private val binding get() = _binding!!
     
     private lateinit var adapter: ShopSelectionAdapter
+    private var currentActiveShopId: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -35,9 +37,32 @@ class ShopSelectionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Initialize ShopManager and SessionManager if not already initialized
+        context?.let {
+            ShopManager.initialize(it)
+            SessionManager.initialize(it)
+        }
+        
+        // Get the current active shop ID
+        currentActiveShopId = context?.let { SessionManager.getActiveShopId(it) }
+        
+        setupUI()
+        
+        // Apply entrance animations after UI setup
+        binding.recyclerViewShops.visibility = View.INVISIBLE
+        binding.textViewEmptyState.visibility = View.INVISIBLE
+        
+        // Apply entrance animations with a slight delay to ensure views are properly laid out
+        view.post {
+            AnimationUtils.fadeIn(binding.buttonCreateNewShop, 200)
+        }
+        
+        loadShops()
+    }
+    
+    private fun setupUI() {
         setupRecyclerView()
         setupClickListeners()
-        loadShops()
     }
     
     private fun setupRecyclerView() {
@@ -45,77 +70,177 @@ class ShopSelectionFragment : Fragment() {
             selectShop(shopId)
         }
         
+        // Set the active shop ID in the adapter
+        adapter.setActiveShopId(currentActiveShopId)
+        
         binding.recyclerViewShops.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@ShopSelectionFragment.adapter
         }
+        
+        // Apply animations to RecyclerView items
+        AnimationUtils.animateRecyclerView(binding.recyclerViewShops)
     }
     
     private fun setupClickListeners() {
         binding.buttonCreateNewShop.setOnClickListener {
-            findNavController().navigate(R.id.action_shopSelectionFragment_to_createShopFragment)
+            // Apply button animation
+            AnimationUtils.pulse(it)
+            // Check the shop limit before allowing creation
+            checkShopLimitAndNavigate()
         }
     }
     
-    private fun loadShops() {
+    private fun checkShopLimitAndNavigate() {
         binding.progressBar.visibility = View.VISIBLE
-        binding.textViewEmptyState.visibility = View.GONE
         
         val userId = SessionManager.getCurrentUserId() ?: return
         
         lifecycleScope.launch {
             try {
                 val managedShopsResult = ShopManager.getManagedShops(userId)
-                
-                if (!managedShopsResult.isSuccess) {
-                    throw managedShopsResult.exceptionOrNull() ?: Exception("Failed to get shops")
-                }
-                
-                val managedShops = managedShopsResult.getOrNull() ?: emptyMap()
-                
-                if (managedShops.isEmpty()) {
-                    showEmptyState()
-                    return@launch
-                }
-                
-                val shopDetailsList = mutableListOf<ShopDetails>()
-                
-                for (shopId in managedShops.keys) {
-                    val shopDetailsResult = ShopManager.getShopDetails(shopId)
-                    
-                    if (shopDetailsResult.isSuccess) {
-                        val shopDetails = shopDetailsResult.getOrNull()
-                        if (shopDetails != null) {
-                            shopDetailsList.add(shopDetails)
-                        }
-                    }
-                }
-                
-                if (shopDetailsList.isEmpty()) {
-                    showEmptyState()
-                } else {
-                    adapter.submitList(shopDetailsList)
-                    binding.progressBar.visibility = View.GONE
-                    binding.textViewEmptyState.visibility = View.GONE
-                }
-                
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Error loading shops: ${e.message}", Toast.LENGTH_SHORT).show()
                 binding.progressBar.visibility = View.GONE
-                showEmptyState()
+                
+                if (managedShopsResult.isSuccess) {
+                    val managedShops = managedShopsResult.getOrNull() ?: emptyMap()
+                    
+                    // Check if the user has reached the shop limit (5 shops)
+                    if (managedShops.size >= 5) {
+                        Toast.makeText(
+                            requireContext(),
+                            "You can only create up to 5 shops",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        // Navigate to create shop screen
+                        findNavController().navigate(
+                            R.id.action_shopSelectionFragment_to_createShopFragment,
+                            null,
+                            AnimationUtils.getSlideNavOptions()
+                        )
+                    }
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "Error checking shop limit: ${managedShopsResult.exceptionOrNull()?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                binding.progressBar.visibility = View.GONE
+                Toast.makeText(
+                    requireContext(),
+                    "Error checking shop limit: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
     
-    private fun showEmptyState() {
+    private fun loadShops() {
+        // Show loading state
+        binding.progressBar.visibility = View.VISIBLE
+        binding.textViewEmptyState.visibility = View.GONE
+        binding.recyclerViewShops.visibility = View.GONE
+        
+        // Get the phone number from SessionManager
+        val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+        
+        if (phoneNumber == null) {
+            showEmptyState("No phone number found. Please log in again.")
+            return
+        }
+        
+        lifecycleScope.launch {
+            try {
+                // First try to get shops by phone number
+                val shopsByPhoneResult = ShopManager.getShopsByPhoneNumber(phoneNumber)
+                
+                if (shopsByPhoneResult.isSuccess) {
+                    val shopsList = shopsByPhoneResult.getOrNull() ?: emptyList()
+                    
+                    if (shopsList.isNotEmpty()) {
+                        adapter.submitList(shopsList)
+                        binding.progressBar.visibility = View.GONE
+                        binding.textViewEmptyState.visibility = View.GONE
+                        binding.recyclerViewShops.visibility = View.VISIBLE
+                        AnimationUtils.fadeIn(binding.recyclerViewShops)
+                        return@launch
+                    } else {
+                        android.util.Log.d("ShopSelectionFragment", "No shops found by phone number, trying by user ID")
+                    }
+                }
+                
+                // If no shops found by phone number, try by user ID
+                val userId = SessionManager.getCurrentUserId()
+                if (userId != null) {
+                    val shopsByUserIdResult = ShopManager.getManagedShops(userId)
+                    
+                    if (shopsByUserIdResult.isSuccess) {
+                        val shopsMap = shopsByUserIdResult.getOrNull() ?: emptyMap()
+                        
+                        if (shopsMap.isNotEmpty()) {
+                            // Convert map of shop IDs to list of ShopDetails
+                            val shopDetailsList = mutableListOf<ShopDetails>()
+                            
+                            // For each shop ID in the map, get the shop details
+                            for (shopId in shopsMap.keys) {
+                                val shopDetailsResult = ShopManager.getShopDetails(shopId)
+                                if (shopDetailsResult.isSuccess) {
+                                    val shopDetails = shopDetailsResult.getOrNull()
+                                    if (shopDetails != null) {
+                                        shopDetailsList.add(shopDetails)
+                                    }
+                                }
+                            }
+                            
+                            if (shopDetailsList.isNotEmpty()) {
+                                adapter.submitList(shopDetailsList)
+                                binding.progressBar.visibility = View.GONE
+                                binding.textViewEmptyState.visibility = View.GONE
+                                binding.recyclerViewShops.visibility = View.VISIBLE
+                                AnimationUtils.fadeIn(binding.recyclerViewShops)
+                                return@launch
+                            }
+                        }
+                    }
+                }
+                
+                // If we reach here, no shops were found
+                showEmptyState()
+                
+            } catch (e: Exception) {
+                android.util.Log.e("ShopSelectionFragment", "Error loading shops", e)
+                showEmptyState("Error loading shops: ${e.message}")
+            }
+        }
+    }
+    
+    private fun showEmptyState(message: String = "No shops found. Create your first shop!") {
         binding.progressBar.visibility = View.GONE
+        binding.recyclerViewShops.visibility = View.GONE
+        binding.textViewEmptyState.text = message
         binding.textViewEmptyState.visibility = View.VISIBLE
+        AnimationUtils.fadeIn(binding.textViewEmptyState)
     }
     
     private fun selectShop(shopId: String) {
+        // Show loading animation
+        binding.progressBar.visibility = View.VISIBLE
+        AnimationUtils.fadeIn(binding.progressBar)
+        
+        // Set the selected shop in SessionManager
         context?.let { ctx ->
             SessionManager.setActiveShopId(ctx, shopId)
-            findNavController().navigate(R.id.action_shopSelectionFragment_to_mainScreenFragment)
+            
+            // Update the adapter to show the active shop
+            adapter.setActiveShopId(shopId)
+            
+            findNavController().navigate(
+                R.id.action_shopSelectionFragment_to_mainScreenFragment,
+                null,
+                AnimationUtils.getSlideNavOptions()
+            )
         }
     }
 
@@ -123,4 +248,4 @@ class ShopSelectionFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-} 
+}

@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:checkable="true"
                 android:elevation="2dp"
-                android:text="Consumer"
+                android:text="@string/chip_consumer"
                 />
 
             <com.google.android.material.chip.Chip
@@ -92,7 +92,7 @@
                 android:layout_height="wrap_content"
                 android:checkable="true"
                 android:elevation="2dp"
-                android:text="Wholeseller"
+                android:text="@string/chip_wholeseller"
                />
         </com.google.android.material.chip.ChipGroup>
 
@@ -104,9 +104,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:indeterminate="true"
-        android:paddingLeft="2dp"
+        android:paddingStart="2dp"
         android:paddingTop="0dp"
-        android:paddingRight="2dp"
+        android:paddingEnd="2dp"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -139,7 +139,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No Clients Yet"
+            android:text="@string/no_clients_yet"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -150,7 +150,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="Start by adding your first client to manage their transactions and details"
+            android:text="@string/start_by_adding_first_client"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -162,7 +162,7 @@
             android:layout_marginTop="24dp"
             android:backgroundTint="@color/my_light_primary"
             android:fontFamily="@font/montserratmedium"
-            android:text="ADD CLIENT"
+            android:text="@string/add_client"
             android:textColor="@color/my_light_on_primary"
             android:textSize="14sp" />
     </LinearLayout>
@@ -196,7 +196,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No matching clients found"
+            android:text="@string/no_matching_clients_found"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -207,7 +207,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="We couldn't find any clients that match your search"
+            android:text="@string/no_clients_match_search"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -225,7 +225,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:fontFamily="@font/montserratmedium"
-                android:text="CLEAR SEARCH"
+                android:text="@string/clear_search"
                 android:textColor="@color/my_light_primary"
                 android:textSize="14sp"
                 app:rippleColor="@color/my_light_primary_container"
@@ -239,7 +239,7 @@
                 android:layout_marginStart="8dp"
                 android:backgroundTint="@color/my_light_primary"
                 android:fontFamily="@font/montserratmedium"
-                android:text="ADD NEW CLIENT"
+                android:text="@string/add_new_client"
                 android:textColor="@color/my_light_on_primary"
                 android:textSize="14sp" />
         </LinearLayout>

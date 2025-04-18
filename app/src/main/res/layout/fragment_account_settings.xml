@@ -27,6 +27,18 @@
                 app:titleTextAppearance="@style/ToolbarTitle"
                 app:titleTextColor="@color/white" />
 
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progressBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                android:paddingStart="2dp"
+                android:paddingTop="0dp"
+                android:paddingEnd="2dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
+
         </com.google.android.material.appbar.AppBarLayout>
 
         <LinearLayout

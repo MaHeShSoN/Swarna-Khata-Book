@@ -4,30 +4,30 @@
 
     <item
         android:id="@+id/action_mark_as_paid"
-        android:title="Mark as Paid"
+        android:title="@string/menu_mark_as_paid"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_generate_receipt"
-        android:title="Generate Receipt"
+        android:title="@string/menu_generate_receipt"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_archive"
-        android:title="Open Invoice"
+        android:title="@string/menu_open_invoice"
         app:showAsAction="never" />
     <item
         android:id="@+id/action_save_pdf"
-        android:title="Save PDF to Phone"
+        android:title="@string/menu_save_pdf_to_phone"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_duplicate"
-        android:title="Duplicate Invoice"
+        android:title="@string/menu_duplicate_invoice"
         app:showAsAction="never" />
 
     <item
         android:id="@+id/action_delete"
-        android:title="Delete Invoice"
+        android:title="@string/menu_delete_invoice"
         app:showAsAction="never" />
 </menu>

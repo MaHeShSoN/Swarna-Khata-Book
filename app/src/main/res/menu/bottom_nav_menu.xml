@@ -2,22 +2,22 @@
     <item
         android:id="@+id/dashBoardFragment"
         android:icon="@drawable/uim__graph_bar"
-        android:title="Panel"
+        android:title="@string/menu_home"
         />
     <item
         android:id="@+id/salesFragment"
         android:icon="@drawable/ri__hand_coin_fill"
-        android:title="Sales" />
+        android:title="@string/menu_sales" />
     <item
         android:id="@+id/inventoryFragment"
         android:icon="@drawable/box"
-        android:title="Stock" />
+        android:title="@string/menu_inventory" />
     <item
         android:id="@+id/customerFragment"
         android:icon="@drawable/line_md__person_twotone"
-        android:title="Client" />
+        android:title="@string/menu_customers" />
     <item
         android:id="@+id/moreSettingFragment"
-        android:icon="@drawable/ph__dots_three_outline_duotone"
-        android:title="More" />
+        android:icon="@drawable/uil__setting"
+        android:title="@string/menu_settings" />
 </menu>

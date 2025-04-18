@@ -54,7 +54,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Date Range"
+                android:text="@string/date_range"
                 android:fontFamily="@font/librebaskervilleregular"
                 android:textColor="@color/my_light_on_surface"
                 android:textSize="18sp" />
@@ -80,7 +80,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:text="Select Report Type"
+        android:text="@string/select_report_type"
         android:fontFamily="@font/librebaskervilleregular"
         android:textColor="@color/my_light_on_surface"
         android:textSize="18sp"

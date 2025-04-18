@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.MainActivity
 import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
@@ -133,6 +134,7 @@ class FirebaseNotificationService : FirebaseMessagingService() {
             val notificationType = data["type"] ?: "GENERAL"
             val title = data["title"] ?: "New Notification"
             val message = data["message"] ?: "You have a new notification"
+            val shopId = data["shopId"] // Extract shop ID if present
 
             // Create a notification builder
             val notificationBuilder = createNotificationBuilder(
@@ -157,8 +159,59 @@ class FirebaseNotificationService : FirebaseMessagingService() {
                     updateGroupSummary(groupKey)
                 }
             }
+
+            // Store the notification in Firestore for persistence
+            storeNotificationInFirestore(title, message, notificationType, data, shopId)
         } catch (e: Exception) {
             Log.e(TAG, "Error processing data message", e)
+        }
+    }
+
+    /**
+     * Store notification in Firestore for persistence and retrieval in the app
+     */
+    private fun storeNotificationInFirestore(
+        title: String,
+        message: String,
+        type: String,
+        data: Map<String, String>,
+        shopId: String?
+    ) {
+        coroutineScope.launch {
+            try {
+                val notificationType = try {
+                    NotificationType.valueOf(type)
+                } catch (e: IllegalArgumentException) {
+                    NotificationType.GENERAL
+                }
+
+                // Create notification object
+                val notification = AppNotification(
+                    id = "", // Will be set by repository
+                    title = title,
+                    message = message,
+                    type = notificationType,
+                    customerId = data["customerId"] ?: "",
+                    customerName = data["customerName"] ?: "",
+                    relatedItemId = data["itemId"],
+                    relatedInvoiceId = data["invoiceId"],
+                    amount = data["amount"]?.toDoubleOrNull(),
+                    shopId = shopId // Include shop ID in the notification
+                )
+
+                // Use repository to create the notification
+                notificationRepository.createNotification(notification, shopId)
+                    .fold(
+                        onSuccess = { id ->
+                            Log.d(TAG, "Notification stored in Firestore with ID: $id")
+                        },
+                        onFailure = { e ->
+                            Log.e(TAG, "Failed to store notification in Firestore", e)
+                        }
+                    )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error storing notification in Firestore", e)
+            }
         }
     }
 
@@ -627,6 +680,7 @@ class FirebaseNotificationService : FirebaseMessagingService() {
 
     /**
      * Send FCM token to server for targeting notifications
+     * Supports multiple devices by storing tokens in a map with device IDs as keys
      */
     private fun sendRegistrationToServer(token: String) {
         coroutineScope.launch {
@@ -645,14 +699,39 @@ class FirebaseNotificationService : FirebaseMessagingService() {
                     return@launch
                 }
 
-                // Update the token in Firestore
-                FirebaseFirestore.getInstance()
+                // Get device ID for multi-device support
+                val deviceId = android.provider.Settings.Secure.getString(
+                    applicationContext.contentResolver,
+                    android.provider.Settings.Secure.ANDROID_ID
+                )
+                
+                Log.d(TAG, "Updating FCM token for device: $deviceId")
+
+                // Reference to the user document
+                val userRef = FirebaseFirestore.getInstance()
                     .collection("users")
                     .document(phoneNumber)
-                    .update("fcmToken", token)
-                    .await()
+                
+                // Use a transaction to safely update the tokens map
+                firestore.runTransaction { transaction ->
+                    val snapshot = transaction.get(userRef)
+                    
+                    // Get existing tokens map or create a new one
+                    @Suppress("UNCHECKED_CAST")
+                    val tokens = snapshot.get("fcmTokens") as? Map<String, String> ?: mapOf()
+                    
+                    // Update with the new token for this device
+                    val updatedTokens = tokens.toMutableMap()
+                    updatedTokens[deviceId] = token
+                    
+                    // Update the document with the new tokens map
+                    transaction.update(userRef, "fcmTokens", updatedTokens)
+                    
+                    // For backward compatibility, also update the single token field
+                    transaction.update(userRef, "fcmToken", token)
+                }.await()
 
-                Log.d(TAG, "FCM token successfully updated in Firestore")
+                Log.d(TAG, "FCM token successfully updated in Firestore for device: $deviceId")
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating FCM token", e)
             }

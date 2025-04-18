@@ -76,7 +76,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="Error loading customer details"
+            android:text="@string/error_loading_customer_details"
             android:textAlignment="center"
             android:textColor="@color/my_light_error"
             android:textSize="18sp" />
@@ -87,7 +87,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Retry"
+            android:text="@string/retry"
             android:textColor="@color/white"
             app:backgroundTint="@color/my_light_primary" />
 

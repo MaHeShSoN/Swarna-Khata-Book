@@ -51,7 +51,7 @@
             android:background="@color/my_light_primary"
             app:menu="@menu/sales_menu"
             app:popupTheme="@style/CustomPopupMenu"
-            app:title="Sales"
+            app:title="@string/sales"
             app:titleTextAppearance="@style/ToolbarTitle" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -61,9 +61,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:indeterminate="true"
-        android:paddingLeft="2dp"
+        android:paddingStart="2dp"
         android:paddingTop="0dp"
-        android:paddingRight="2dp"
+        android:paddingEnd="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
@@ -96,7 +96,7 @@
                 android:layout_height="wrap_content"
                 android:elevation="2dp"
                 android:layout_marginEnd="8dp"
-                android:text="All Status"
+                android:text="@string/chip_all_status"
                 app:checkedIconVisible="false"
                 app:chipIcon="@drawable/material_symbols__arrow_drop_down_rounded"
                 app:chipIconVisible="true"
@@ -118,7 +118,7 @@
                     android:checked="true"
                     android:elevation="2dp"
                     android:layout_height="wrap_content"
-                    android:text="All Time" />
+                    android:text="@string/chip_all_time" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipToday"

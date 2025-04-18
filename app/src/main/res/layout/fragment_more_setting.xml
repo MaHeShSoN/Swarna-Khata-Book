@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
-            app:title="Invoice Settings"
+            app:title="@string/invoice_settings"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>

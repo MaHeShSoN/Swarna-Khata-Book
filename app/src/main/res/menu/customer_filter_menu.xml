@@ -2,11 +2,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/filter_consumer"
-        android:title="CONSUMER" />
+        android:title="@string/menu_consumer" />
     <item
         android:id="@+id/filter_wholesaler"
-        android:title="WHOLESALER" />
+        android:title="@string/menu_wholesaler" />
     <item
         android:id="@+id/filter_all"
-        android:title="CLEAR" />
+        android:title="@string/menu_clear" />
 </menu>

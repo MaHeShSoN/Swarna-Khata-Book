@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.10"
+        versionCode = 11
+        versionName = "1.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -24,8 +24,7 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
         }
     }
@@ -40,6 +39,9 @@ android {
         viewBinding = true
         dataBinding = true
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -49,11 +51,22 @@ dependencies {
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
     implementation("androidx.privacysandbox.tools:tools-core:1.0.0-alpha12")
+
+    //Testing
+    implementation(kotlin("test"))
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.test:runner:1.5.2")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:3.12.4")
+    testImplementation("org.robolectric:robolectric:4.8")
+    testImplementation("androidx.fragment:fragment-testing:1.8.6")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation("org.mockito:mockito-inline:3.12.4")
 
     // Firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:32.7.3"))
@@ -109,7 +122,7 @@ dependencies {
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
-    implementation("com.github.ibrahimsn98:SmoothBottomBar:1.7.9")
+    implementation("nl.joery.animatedbottombar:library:1.1.0")
 
     implementation("com.google.code.gson:gson:2.10.1")
 
@@ -121,4 +134,6 @@ dependencies {
     implementation("org.apache.poi:poi:5.2.3")
     implementation("org.apache.poi:poi-ooxml:5.2.3")
     implementation("androidx.gridlayout:gridlayout:1.1.0")
+
+
 }

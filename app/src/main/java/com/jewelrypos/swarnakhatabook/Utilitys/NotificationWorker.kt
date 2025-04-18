@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
@@ -33,79 +34,104 @@ class NotificationWorker(
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val TAG = "NotificationWorker"
+    private val SHOP_ID_KEY = "shop_id"
 
     private val repository by lazy {
-        NotificationRepository(firestore, auth)
+        NotificationRepository(firestore, auth, applicationContext)
     }
 
-    // Modify the doWork() method in NotificationWorker.kt to include payment due/overdue checks
+    // Modified doWork() method to handle the new database structure
     override suspend fun doWork(): Result {
         try {
             // Get current user information
             val currentUser = auth.currentUser ?: return Result.failure()
-            val phoneNumber = currentUser.phoneNumber?.replace("+", "") ?: return Result.failure()
-
+            val userId = currentUser.uid ?: return Result.failure()
+            
+            // Try to get shop IDs from input data
+            val shopIdsFromInput = inputData.getStringArray(SHOP_ID_KEY)
+            
+            // Get shop IDs - either from input data or by querying Firestore
+            val shopIds = if (!shopIdsFromInput.isNullOrEmpty()) {
+                Log.d(TAG, "Using shop IDs from input data: ${shopIdsFromInput.toList()}")
+                shopIdsFromInput.toList()
+            } else {
+                Log.d(TAG, "No shop IDs in input data, querying Firestore")
+                getShopIdsForUser(userId)
+            }
+            
+            if (shopIds.isEmpty()) {
+                Log.w(TAG, "No shops found for user $userId")
+                return Result.failure()
+            }
+            
+            Log.d(TAG, "Found ${shopIds.size} shops for user $userId: $shopIds")
+            
             // Get notification preferences once at the beginning
             val notificationPreferences =
                 repository.getNotificationPreferences().getOrNull() ?: NotificationPreferences()
             var anySuccessfulCheck = false
             var anyFailedCheck = false
-
-            // Check for payment due and overdue notifications
-            try {
-                Log.d(TAG, "Checking payment due and overdue")
-                val paymentNotificationsSuccess =
-                    checkPaymentDueAndOverdue(phoneNumber, notificationPreferences)
-                if (paymentNotificationsSuccess) anySuccessfulCheck = true
-            } catch (e: Exception) {
-                Log.e(TAG, "Error checking payment due/overdue", e)
-                anyFailedCheck = true
-                // Continue with other checks
-            }
-
-            // Existing check for monthly business overview
-            if (isFirstDayOfMonth() && notificationPreferences.businessInsights) {
+            
+            // Process each shop
+            for (shopId in shopIds) {
+                Log.d(TAG, "Processing notifications for shop: $shopId")
+                
+                // Check for payment due and overdue notifications
                 try {
-                    Log.d(TAG, "Checking monthly business overview")
-                    sendMonthlyBusinessOverviewNotification(phoneNumber)
-                    anySuccessfulCheck = true
+                    Log.d(TAG, "Checking payment due and overdue for shop $shopId")
+                    val paymentNotificationsSuccess =
+                        checkPaymentDueAndOverdue(shopId, notificationPreferences)
+                    if (paymentNotificationsSuccess) anySuccessfulCheck = true
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error sending business overview notification", e)
+                    Log.e(TAG, "Error checking payment due/overdue for shop $shopId", e)
                     anyFailedCheck = true
                     // Continue with other checks
                 }
-            }
 
-            // Existing check for low stock items
-            if (notificationPreferences.lowStock) {
-                try {
-                    Log.d(TAG, "Checking low stock items")
-                    val lowStockSuccess = sendLowStockAlerts(phoneNumber, notificationPreferences)
-                    if (lowStockSuccess) anySuccessfulCheck = true
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error sending low stock alerts", e)
-                    anyFailedCheck = true
-                    // Continue with other checks
+                // Existing check for monthly business overview
+                if (isFirstDayOfMonth() && notificationPreferences.businessInsights) {
+                    try {
+                        Log.d(TAG, "Checking monthly business overview for shop $shopId")
+                        sendMonthlyBusinessOverviewNotification(shopId)
+                        anySuccessfulCheck = true
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error sending business overview notification for shop $shopId", e)
+                        anyFailedCheck = true
+                        // Continue with other checks
+                    }
                 }
-            }
 
-            // Existing check for customer special dates (birthdays, anniversaries)
-            val shouldCheckBirthdays = notificationPreferences.customerBirthday
-            val shouldCheckAnniversaries = notificationPreferences.customerAnniversary
+                // Existing check for low stock items
+                if (notificationPreferences.lowStock) {
+                    try {
+                        Log.d(TAG, "Checking low stock items for shop $shopId")
+                        val lowStockSuccess = sendLowStockAlerts(shopId, notificationPreferences)
+                        if (lowStockSuccess) anySuccessfulCheck = true
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error sending low stock alerts for shop $shopId", e)
+                        anyFailedCheck = true
+                        // Continue with other checks
+                    }
+                }
 
-            if (shouldCheckBirthdays || shouldCheckAnniversaries) {
-                try {
-                    Log.d(TAG, "Checking customer special dates")
-                    val specialDatesSuccess = checkCustomerSpecialDates(
-                        phoneNumber,
-                        shouldCheckBirthdays,
-                        shouldCheckAnniversaries
-                    )
-                    if (specialDatesSuccess) anySuccessfulCheck = true
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error checking customer special dates", e)
-                    anyFailedCheck = true
-                    // Continue with other checks
+                // Existing check for customer special dates (birthdays, anniversaries)
+                val shouldCheckBirthdays = notificationPreferences.customerBirthday
+                val shouldCheckAnniversaries = notificationPreferences.customerAnniversary
+
+                if (shouldCheckBirthdays || shouldCheckAnniversaries) {
+                    try {
+                        Log.d(TAG, "Checking customer special dates for shop $shopId")
+                        val specialDatesSuccess = checkCustomerSpecialDates(
+                            shopId,
+                            shouldCheckBirthdays,
+                            shouldCheckAnniversaries
+                        )
+                        if (specialDatesSuccess) anySuccessfulCheck = true
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error checking customer special dates for shop $shopId", e)
+                        anyFailedCheck = true
+                        // Continue with other checks
+                    }
                 }
             }
 
@@ -120,13 +146,44 @@ class NotificationWorker(
             return Result.failure()
         }
     }
+    
+    /**
+     * Get all shop IDs associated with the current user
+     */
+    private suspend fun getShopIdsForUser(userId: String): List<String> {
+        try {
+            // Try to get shop IDs from userShops collection
+            val userShopsSnapshot = firestore.collection("userShops")
+                .document(userId)
+                .collection("shops")
+                .get()
+                .await()
+                
+            val shopIds = userShopsSnapshot.documents.mapNotNull { it.id }
+            
+            if (shopIds.isNotEmpty()) {
+                return shopIds
+            }
+            
+            // If no shops found in userShops collection, try to find shops where user is an owner
+            val shopsSnapshot = firestore.collection("shopData")
+                .whereEqualTo("ownerId", userId)
+                .get()
+                .await()
+                
+            return shopsSnapshot.documents.mapNotNull { it.id }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting shop IDs for user", e)
+            return emptyList()
+        }
+    }
 
     /**
      * Check for payment due and overdue notifications
      * @return true if any notifications were created
      */
     private suspend fun checkPaymentDueAndOverdue(
-        phoneNumber: String,
+        shopId: String,
         preferences: NotificationPreferences
     ): Boolean {
         // Skip if both notification types are disabled
@@ -136,9 +193,9 @@ class NotificationWorker(
         }
 
         try {
-            // Query unpaid invoices with due dates
-            val invoicesSnapshot = firestore.collection("users")
-                .document(phoneNumber)
+            // Query unpaid invoices with due dates using new path structure
+            val invoicesSnapshot = firestore.collection("shopData")
+                .document(shopId)
                 .collection("invoices")
                 .whereNotEqualTo("dueDate", null)
                 .get()
@@ -148,11 +205,11 @@ class NotificationWorker(
                 .filter { it.paidAmount < it.totalAmount } // Only unpaid or partially paid invoices
 
             if (unpaidInvoices.isEmpty()) {
-                Log.d(TAG, "No unpaid invoices with due dates found")
+                Log.d(TAG, "No unpaid invoices with due dates found for shop $shopId")
                 return false
             }
 
-            Log.d(TAG, "Found ${unpaidInvoices.size} unpaid invoices with due dates")
+            Log.d(TAG, "Found ${unpaidInvoices.size} unpaid invoices with due dates for shop $shopId")
             var notificationsCreated = false
 
             // Get current date at the start of day (midnight)
@@ -166,20 +223,20 @@ class NotificationWorker(
             // Check for payment due notifications
             if (preferences.paymentDue) {
                 notificationsCreated = checkPaymentDueNotifications(
-                    phoneNumber, unpaidInvoices, today, preferences.paymentDueReminderDays
+                    shopId, unpaidInvoices, today, preferences.paymentDueReminderDays
                 ) || notificationsCreated
             }
 
             // Check for payment overdue notifications
             if (preferences.paymentOverdue) {
                 notificationsCreated = checkPaymentOverdueNotifications(
-                    phoneNumber, unpaidInvoices, today, preferences.paymentOverdueAlertDays
+                    shopId, unpaidInvoices, today, preferences.paymentOverdueAlertDays
                 ) || notificationsCreated
             }
 
             return notificationsCreated
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking payment due/overdue", e)
+            Log.e(TAG, "Error checking payment due/overdue for shop $shopId", e)
             return false
         }
     }
@@ -189,7 +246,7 @@ class NotificationWorker(
      * @return true if any notifications were created
      */
     private suspend fun checkPaymentOverdueNotifications(
-        phoneNumber: String,
+        shopId: String,
         unpaidInvoices: List<Invoice>,
         today: Long,
         alertDays: Int
@@ -216,7 +273,7 @@ class NotificationWorker(
             if (today == overdueAlertDate) {
                 // Check if notification already exists
                 val notificationExists = doesNotificationExist(
-                    phoneNumber,
+                    shopId,
                     NotificationType.PAYMENT_OVERDUE,
                     invoice.id // Use invoice ID as entity ID for checking
                 )
@@ -239,10 +296,10 @@ class NotificationWorker(
                         relatedInvoiceId = invoice.id
                     )
 
-                    repository.createNotification(notification)
+                    repository.createNotification(notification, shopId)
                     Log.d(
                         TAG,
-                        "Created payment overdue notification for invoice ${invoice.invoiceNumber}"
+                        "Created payment overdue notification for invoice ${invoice.invoiceNumber} in shop $shopId"
                     )
                     notificationsCreated = true
                 }
@@ -257,7 +314,7 @@ class NotificationWorker(
      * @return true if any notifications were created
      */
     private suspend fun checkPaymentDueNotifications(
-        phoneNumber: String,
+        shopId: String,
         unpaidInvoices: List<Invoice>,
         today: Long,
         reminderDays: Int
@@ -281,7 +338,7 @@ class NotificationWorker(
             if (today == reminderDate) {
                 // Check if notification already exists
                 val notificationExists = doesNotificationExist(
-                    phoneNumber,
+                    shopId,
                     NotificationType.PAYMENT_DUE,
                     invoice.id // Use invoice ID as entity ID for checking
                 )
@@ -304,10 +361,10 @@ class NotificationWorker(
                         relatedInvoiceId = invoice.id
                     )
 
-                    repository.createNotification(notification)
+                    repository.createNotification(notification, shopId)
                     Log.d(
                         TAG,
-                        "Created payment due notification for invoice ${invoice.invoiceNumber}"
+                        "Created payment due notification for invoice ${invoice.invoiceNumber} in shop $shopId"
                     )
                     notificationsCreated = true
                 }
@@ -331,16 +388,16 @@ class NotificationWorker(
      * @return true if any notifications were created
      */
     private suspend fun checkCustomerSpecialDates(
-        phoneNumber: String,
+        shopId: String,
         checkBirthdays: Boolean,
         checkAnniversaries: Boolean
     ): Boolean {
         // Get today's date in MM-dd format (without year)
         val today = SimpleDateFormat("MM-dd", Locale.getDefault()).format(Date())
 
-        // Fetch customers
-        val customersSnapshot = firestore.collection("users")
-            .document(phoneNumber)
+        // Fetch customers using new path structure
+        val customersSnapshot = firestore.collection("shopData")
+            .document(shopId)
             .collection("customers")
             .get()
             .await()
@@ -352,7 +409,6 @@ class NotificationWorker(
         if (checkBirthdays) {
             for (customer in customers) {
                 // Convert stored birthday to MM-dd format
-                // *** CORRECTED LINE: Changed date format from "yyyy-MM-dd" to "dd/MM/yyyy" ***
                 val birthdayDate = try {
                     // Ensure customer.birthday is not null or empty before parsing
                     if (customer.birthday.isNullOrEmpty()) {
@@ -376,7 +432,7 @@ class NotificationWorker(
                 if (birthdayDate == today) {
                     // Check if a birthday notification already exists for this customer today
                     val existingNotification = doesNotificationExist(
-                        phoneNumber,
+                        shopId,
                         NotificationType.BIRTHDAY,
                         customer.id
                     )
@@ -392,7 +448,7 @@ class NotificationWorker(
                             priority = NotificationPriority.NORMAL
                         )
 
-                        repository.createNotification(notification)
+                        repository.createNotification(notification, shopId)
                         notificationsCreated = true
                     }
                 }
@@ -403,7 +459,6 @@ class NotificationWorker(
         if (checkAnniversaries) {
             for (customer in customers) {
                 // Convert stored anniversary to MM-dd format
-                // *** CORRECTED LINE: Changed date format from "yyyy-MM-dd" to "dd/MM/yyyy" ***
                 val anniversaryDate = try {
                     // Ensure customer.anniversary is not null or empty before parsing
                     if (customer.anniversary.isNullOrEmpty()) {
@@ -426,7 +481,7 @@ class NotificationWorker(
                 if (anniversaryDate == today) {
                     // Check if an anniversary notification already exists for this customer today
                     val existingNotification = doesNotificationExist(
-                        phoneNumber,
+                        shopId,
                         NotificationType.ANNIVERSARY,
                         customer.id
                     )
@@ -442,7 +497,7 @@ class NotificationWorker(
                             priority = NotificationPriority.NORMAL
                         )
 
-                        repository.createNotification(notification)
+                        repository.createNotification(notification, shopId)
                         notificationsCreated = true
                     }
                 }
@@ -457,7 +512,7 @@ class NotificationWorker(
      * Helps avoid duplicate notifications
      */
     private suspend fun doesNotificationExist(
-        phoneNumber: String,
+        shopId: String,
         type: NotificationType,
         entityId: String
     ): Boolean {
@@ -467,9 +522,9 @@ class NotificationWorker(
             calendar.add(Calendar.HOUR, -24)
             val timestamp = com.google.firebase.Timestamp(Date(calendar.timeInMillis))
 
-            // Query for existing notifications
-            val querySnapshot = firestore.collection("users")
-                .document(phoneNumber)
+            // Query for existing notifications using new path structure
+            val querySnapshot = firestore.collection("shopData")
+                .document(shopId)
                 .collection("notifications")
                 .whereEqualTo("type", type)
                 .whereEqualTo("customerId", entityId)
@@ -480,7 +535,7 @@ class NotificationWorker(
 
             return !querySnapshot.isEmpty
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking for existing notification", e)
+            Log.e(TAG, "Error checking for existing notification in shop $shopId", e)
             return false // If we can't check, assume no existing notification to be safe
         }
     }
@@ -488,19 +543,19 @@ class NotificationWorker(
     /**
      * Generate and send a monthly business overview notification
      */
-    private suspend fun sendMonthlyBusinessOverviewNotification(phoneNumber: String) {
+    private suspend fun sendMonthlyBusinessOverviewNotification(shopId: String) {
         // Fetch business overview data
-        val businessOverview = fetchBusinessOverviewData(phoneNumber)
+        val businessOverview = fetchBusinessOverviewData(shopId)
 
         // Check if a business overview notification was already sent today
         val existingNotification = doesNotificationExist(
-            phoneNumber,
+            shopId,
             NotificationType.GENERAL,
             "SYSTEM_MONTHLY_OVERVIEW"
         )
 
         if (existingNotification) {
-            Log.d(TAG, "Monthly business overview already sent today, skipping")
+            Log.d(TAG, "Monthly business overview already sent today for shop $shopId, skipping")
             return
         }
 
@@ -515,13 +570,13 @@ class NotificationWorker(
             priority = NotificationPriority.NORMAL
         )
 
-        repository.createNotification(notification)
+        repository.createNotification(notification, shopId)
     }
 
     /**
      * Fetch business data for the overview notification
      */
-    private suspend fun fetchBusinessOverviewData(phoneNumber: String): BusinessOverview {
+    private suspend fun fetchBusinessOverviewData(shopId: String): BusinessOverview {
         // Fetch invoices for the previous month
         val calendar = Calendar.getInstance()
         calendar.add(Calendar.MONTH, -1)
@@ -532,9 +587,9 @@ class NotificationWorker(
             set(Calendar.SECOND, 0)
         }.timeInMillis
 
-        // Fetch invoices
-        val invoicesSnapshot = firestore.collection("users")
-            .document(phoneNumber)
+        // Fetch invoices using new path structure
+        val invoicesSnapshot = firestore.collection("shopData")
+            .document(shopId)
             .collection("invoices")
             .whereGreaterThan("invoiceDate", lastMonthStart)
             .get()
@@ -542,18 +597,18 @@ class NotificationWorker(
 
         val invoices = invoicesSnapshot.toObjects(Invoice::class.java)
 
-        // Fetch inventory items
-        val inventorySnapshot = firestore.collection("users")
-            .document(phoneNumber)
+        // Fetch inventory items using new path structure
+        val inventorySnapshot = firestore.collection("shopData")
+            .document(shopId)
             .collection("inventory")
             .get()
             .await()
 
         val inventoryItems = inventorySnapshot.toObjects(JewelleryItem::class.java)
 
-        // Fetch customers
-        val customersSnapshot = firestore.collection("users")
-            .document(phoneNumber)
+        // Fetch customers using new path structure
+        val customersSnapshot = firestore.collection("shopData")
+            .document(shopId)
             .collection("customers")
             .get()
             .await()
@@ -613,16 +668,16 @@ class NotificationWorker(
      * @return true if any low stock notifications were created
      */
     private suspend fun sendLowStockAlerts(
-        phoneNumber: String,
+        shopId: String,
         preferences: NotificationPreferences
     ): Boolean {
         if (!preferences.lowStock) {
             return false
         }
 
-        // Fetch inventory items with low stock
-        val inventorySnapshot = firestore.collection("users")
-            .document(phoneNumber)
+        // Fetch inventory items with low stock using new path structure
+        val inventorySnapshot = firestore.collection("shopData")
+            .document(shopId)
             .collection("inventory")
             .get()
             .await()
@@ -638,7 +693,7 @@ class NotificationWorker(
         if (lowStockItems.size > 3) {
             // Check if a summary notification already exists for today
             val existingSummary = doesNotificationExist(
-                phoneNumber,
+                shopId,
                 NotificationType.GENERAL,
                 "LOW_STOCK_SUMMARY"
             )
@@ -655,14 +710,14 @@ class NotificationWorker(
                     relatedItemId = null // No specific item for summary
                 )
 
-                repository.createNotification(summaryNotification)
+                repository.createNotification(summaryNotification, shopId)
                 notificationsCreated = true
             }
         } else {
             // Create individual notifications for each item if they don't already exist
             for (item in lowStockItems) {
                 val existingItemAlert = doesNotificationExist(
-                    phoneNumber,
+                    shopId,
                     NotificationType.GENERAL,
                     "ITEM_${item.id}"
                 )
@@ -680,7 +735,7 @@ class NotificationWorker(
                         stockLevel = item.stock
                     )
 
-                    repository.createNotification(notification)
+                    repository.createNotification(notification, shopId)
                     notificationsCreated = true
                 }
             }

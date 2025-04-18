@@ -5,13 +5,13 @@
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/bx__search_alt_2"
-        android:title="Search"
+        android:title="@string/menu_search"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView" />
 
     <item
         android:id="@+id/action_export_excel"
-        android:title="Export to Excel"
+        android:title="@string/menu_export_to_excel"
         app:showAsAction="never" />
 
 </menu>

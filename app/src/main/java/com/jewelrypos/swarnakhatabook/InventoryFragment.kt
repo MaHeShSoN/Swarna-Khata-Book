@@ -21,6 +21,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel // Ensure correct import
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInventoryBinding
 
@@ -56,6 +57,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         _binding = FragmentInventoryBinding.inflate(inflater, container, false)
 
         binding.addItemFab.setOnClickListener {
+            AnimationUtils.pulse(it)
             addItemButton()
         }
 

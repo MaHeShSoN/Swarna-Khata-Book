@@ -30,7 +30,7 @@
                     android:layout_height="wrap_content"
                     android:background="@color/my_light_primary"
                     app:menu="@menu/dashboard_menu"
-                    app:title="Dashboard"
+                    app:title="@string/menu_home"
                     app:titleTextAppearance="@style/ToolbarTitle" />
 
             </com.google.android.material.appbar.AppBarLayout>
@@ -64,7 +64,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Quick Actions"
+                        android:text="@string/quick_actions"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp" />
 
@@ -99,7 +99,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="New Invoice"
+                                android:text="@string/new_invoice"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />
@@ -129,7 +129,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Add Client"
+                                android:text="@string/add_client"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />
@@ -159,7 +159,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Add Item"
+                                android:text="@string/add_item"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />
@@ -189,7 +189,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="Payments"
+                                android:text="@string/payments"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />
@@ -226,7 +226,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Sales Overview"
+                            android:text="@string/sales_overview"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp" />
 
@@ -264,7 +264,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Total Sales"
+                                android:text="@string/total_sales"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -294,7 +294,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Invoices"
+                                android:text="@string/invoices"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -324,7 +324,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Outstanding"
+                                android:text="@string/outstanding"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -396,7 +396,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Business Insights"
+                        android:text="@string/business_insights"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp" />
 
@@ -412,7 +412,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="8dp"
                             android:fontFamily="@font/montserratsemibold"
-                            android:text="Popular Categories"
+                            android:text="@string/popular_categories"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
 
@@ -422,7 +422,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
                             android:fontFamily="@font/montserratregular"
-                            android:text="No category data available for this period."
+                            android:text="@string/no_category_data_available_for_this_period"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="12sp"
                             android:visibility="gone" />
@@ -567,7 +567,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="8dp"
                             android:fontFamily="@font/montserratsemibold"
-                            android:text="Peak Business Days"
+                            android:text="@string/peak_business_days"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp" />
 
@@ -596,7 +596,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Total Customers"
+                                android:text="@string/total_customers"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -622,7 +622,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="New Customers"
+                                android:text="@string/new_customers"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -665,7 +665,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Sales Growth"
+                                android:text="@string/sales_growth"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 
@@ -689,7 +689,7 @@
                                     android:layout_width="16dp"
                                     android:layout_height="16dp"
                                     android:layout_marginStart="4dp"
-                                    tools:src="@drawable/ic_arrow_upward" />
+                                    tools:src="@drawable/si__arrow_upward_fill" />
                             </LinearLayout>
                         </LinearLayout>
 
@@ -705,7 +705,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Avg. Purchase Interval"
+                                android:text="@string/avg_purchase_interval"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp" />
 

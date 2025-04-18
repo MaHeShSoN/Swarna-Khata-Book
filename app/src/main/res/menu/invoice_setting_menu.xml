@@ -3,11 +3,11 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_save"
-        android:title="Save"
+        android:title="@string/menu_save"
         android:icon="@drawable/carbon__checkmark_outline"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_reset"
-        android:title="Reset to Default"
+        android:title="@string/menu_reset_to_default"
         app:showAsAction="never" />
 </menu>

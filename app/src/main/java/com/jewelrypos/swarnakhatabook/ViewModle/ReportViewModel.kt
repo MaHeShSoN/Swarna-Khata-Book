@@ -25,6 +25,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.SalesByDateItem
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
@@ -38,6 +39,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val activeShopId: String?
 
     private val invoiceRepository: InvoiceRepository
     private val customerRepository: CustomerRepository
@@ -103,9 +105,13 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     val topCustomers: LiveData<List<CustomerSalesData>?> = _topCustomers
 
     init {
-        invoiceRepository = InvoiceRepository(firestore, auth,application.applicationContext)
-        customerRepository = CustomerRepository(firestore, auth,application.applicationContext)
-        inventoryRepository = InventoryRepository(firestore, auth,application.applicationContext)
+        // Get the active shop ID from SessionManager
+        activeShopId = SessionManager.getActiveShopId(application.applicationContext)
+
+        // Initialize repositories with application context
+        invoiceRepository = InvoiceRepository(firestore, auth, application.applicationContext)
+        customerRepository = CustomerRepository(firestore, auth, application.applicationContext)
+        inventoryRepository = InventoryRepository(firestore, auth, application.applicationContext)
 
         // Set default date range to current month
         val calendar = Calendar.getInstance()
@@ -152,10 +158,16 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         val start = _startDate.value ?: return // Need dates to load
         val end = _endDate.value ?: return
 
+        // Ensure we have an active shop ID
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.postValue("No active shop selected")
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                // FIXME: Replace 'getInvoicesBetweenDates' with the actual method from your InvoiceRepository
+                // Pass the active shop ID to the repository method
                 val invoices = invoiceRepository.getInvoicesBetweenDates(start, end)
 
                 if (invoices.isNullOrEmpty()) {
@@ -173,7 +185,9 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
                     // Calculate Sales by Category
                     val salesByCategory = invoices.flatMap { it.items }
-                        .groupBy { it.itemDetails?.category ?: "Uncategorized" } // Assumes JewelleryItem has category
+                        .groupBy {
+                            it.itemDetails?.category ?: "Uncategorized"
+                        } // Assumes JewelleryItem has category
                         .mapValues { entry -> entry.value.sumOf { item -> item.price * item.quantity } }
                         .map { SalesByCategoryItem(it.key, it.value) }
 
@@ -221,7 +235,9 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                     // --- Calculate Top Selling Items ---
                     // Assuming InvoiceItem has 'itemDetails: JewelleryItem' and JewelleryItem has 'displayName: String'
                     val itemSales = invoices.flatMap { it.items }
-                        .groupBy { it.itemDetails?.displayName ?: "Unknown Item" } // Group by display name
+                        .groupBy {
+                            it.itemDetails?.displayName ?: "Unknown Item"
+                        } // Group by display name
                         .map { entry ->
                             val name = entry.key
                             val quantity = entry.value.sumOf { item -> item.quantity }
@@ -244,9 +260,14 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                             val totalValue = customerInvoices.sumOf { inv -> inv.totalAmount }
                             val count = customerInvoices.size
                             // Get customer name from the first invoice (assuming it's consistent)
-                            val name = customerInvoices.firstOrNull()?.customerName?.trim() ?: customerId
+                            val name =
+                                customerInvoices.firstOrNull()?.customerName?.trim() ?: customerId
 
-                            CustomerSalesData(name.ifBlank { customerId }, totalValue, count) // Use ID if name is blank
+                            CustomerSalesData(
+                                name.ifBlank { customerId },
+                                totalValue,
+                                count
+                            ) // Use ID if name is blank
                         }
                         .sortedByDescending { it.totalPurchaseValue } // Sort by purchase value
                         .take(5) // Take top 5
@@ -266,8 +287,14 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
     // Load customers for customer statement selection
     fun loadCustomers() {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -293,6 +320,11 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // Sales Report Generation
     fun generateSalesReport() {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -301,7 +333,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
 
                 val allInvoices = withContext(Dispatchers.IO) {
-                    // Get all invoices
+                    // Get all invoices for this shop
                     val allInvoicesList = mutableListOf<Invoice>()
                     var hasMoreInvoices = true
                     var loadNextPage = false
@@ -361,7 +393,9 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             val salesByDate = mutableMapOf<Long, Double>()
 
             // Load customers to get customer types
-            val customersResult = customerRepository.fetchCustomersPaginated(loadNextPage = false)
+            val customersResult = customerRepository.fetchCustomersPaginated(
+                loadNextPage = false
+            )
             val customers = customersResult.getOrNull() ?: emptyList()
             val customerMap = customers.associateBy { it.id }
 
@@ -420,10 +454,15 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // Inventory Valuation Report
     fun generateInventoryReport() {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                // Get all inventory items
+                // Get all inventory items for this shop
                 val result = inventoryRepository.getAllInventoryItems()
 
                 result.fold(
@@ -512,6 +551,11 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // GST Report
     fun generateGstReport() {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -520,7 +564,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
 
                 val allInvoices = withContext(Dispatchers.IO) {
-                    // Get all invoices
+                    // Get all invoices for this shop
                     val allInvoicesList = mutableListOf<Invoice>()
                     var hasMoreInvoices = true
                     var loadNextPage = false
@@ -614,13 +658,18 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // Low Stock Report
     fun generateLowStockReport() {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
                 // Define low stock threshold
                 val LOW_STOCK_THRESHOLD = 5.0
 
-                // Get all inventory items
+                // Get all inventory items for this shop
                 val result = inventoryRepository.getAllInventoryItems()
 
                 result.fold(
@@ -660,6 +709,11 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // Customer Account Statement
     fun loadCustomerStatement(customer: Customer) {
+        if (activeShopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected"
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -670,7 +724,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 val openingBalance = calculateOpeningBalance(customer, startTimestamp)
                 _openingBalance.value = openingBalance
 
-                // Get all invoices for this customer
+                // Get all invoices for this customer in this shop
                 val customerInvoices = withContext(Dispatchers.IO) {
                     // Get all invoices
                     val allInvoicesList = mutableListOf<Invoice>()

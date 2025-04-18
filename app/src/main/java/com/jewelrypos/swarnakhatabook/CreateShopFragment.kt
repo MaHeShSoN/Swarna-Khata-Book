@@ -31,13 +31,19 @@ class CreateShopFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Initialize ShopManager and SessionManager if not already initialized
+        context?.let {
+            ShopManager.initialize(it)
+            SessionManager.initialize(it)
+        }
+        
         setupListeners()
     }
     
     private fun setupListeners() {
         // Show/hide GST field based on checkbox
-        binding.checkBoxHasGst.setOnCheckedChangeListener { _, isChecked ->
-            binding.textInputLayoutGstNumber.visibility = if (isChecked) View.VISIBLE else View.GONE
+        binding.hasGstCheckBox.setOnCheckedChangeListener { _, isChecked ->
+            binding.gstNumber.visibility = if (isChecked) View.VISIBLE else View.GONE
             
             // Clear GST field when hiding it
             if (!isChecked) {
@@ -62,33 +68,33 @@ class CreateShopFragment : Fragment() {
         // Validate shop name
         val shopName = binding.editTextShopName.text.toString().trim()
         if (shopName.isEmpty()) {
-            binding.textInputLayoutShopName.error = "Shop name is required"
+            binding.shopName.error = "Shop name is required"
             isValid = false
         } else {
-            binding.textInputLayoutShopName.error = null
+            binding.shopName.error = null
         }
         
         // Validate address
         val address = binding.editTextAddress.text.toString().trim()
         if (address.isEmpty()) {
-            binding.textInputLayoutAddress.error = "Address is required"
+            binding.shopAddress.error = "Address is required"
             isValid = false
         } else {
-            binding.textInputLayoutAddress.error = null
+            binding.shopAddress.error = null
         }
         
         // Validate GST number if GST is enabled
-        if (binding.checkBoxHasGst.isChecked) {
+        if (binding.hasGstCheckBox.isChecked) {
             val gstNumber = binding.editTextGstNumber.text.toString().trim()
             
             if (gstNumber.isEmpty()) {
-                binding.textInputLayoutGstNumber.error = "GST number is required"
+                binding.gstNumber.error = "GST number is required"
                 isValid = false
             } else if (!gstNumber.matches(Regex("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"))) {
-                binding.textInputLayoutGstNumber.error = "Invalid GST format"
+                binding.gstNumber.error = "Invalid GST format"
                 isValid = false
             } else {
-                binding.textInputLayoutGstNumber.error = null
+                binding.gstNumber.error = null
             }
         }
         
@@ -102,6 +108,15 @@ class CreateShopFragment : Fragment() {
             return
         }
         
+        // Get phone number from SessionManager
+        val phoneNumber = context?.let { SessionManager.getPhoneNumber(it) }
+        if (phoneNumber == null) {
+            Toast.makeText(requireContext(), "Phone number not found", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        android.util.Log.d("CreateShopFragment", "Creating shop for user ID: $userId, phone: $phoneNumber")
+        
         // Show loading
         setLoading(true)
         
@@ -109,15 +124,16 @@ class CreateShopFragment : Fragment() {
         val shopDetails = ShopDetails(
             shopName = binding.editTextShopName.text.toString().trim(),
             address = binding.editTextAddress.text.toString().trim(),
-            hasGst = binding.checkBoxHasGst.isChecked,
-            gstNumber = if (binding.checkBoxHasGst.isChecked) binding.editTextGstNumber.text.toString().trim() else null,
+            hasGst = binding.hasGstCheckBox.isChecked,
+            gstNumber = if (binding.hasGstCheckBox.isChecked) binding.editTextGstNumber.text.toString().trim() else null,
             createdAt = Timestamp.now()
         )
         
         // Create shop in Firestore
         lifecycleScope.launch {
             try {
-                val result = ShopManager.createShop(userId, shopDetails)
+                // Pass both userId and phoneNumber to ensure proper association
+                val result = ShopManager.createShop(userId, phoneNumber, shopDetails)
                 
                 if (result.isSuccess) {
                     val shopId = result.getOrNull()
@@ -127,10 +143,15 @@ class CreateShopFragment : Fragment() {
                             SessionManager.setActiveShopId(it, shopId)
                         }
                         
+                        android.util.Log.d("CreateShopFragment", "Shop created successfully with ID: $shopId")
                         Toast.makeText(requireContext(), "Shop created successfully", Toast.LENGTH_SHORT).show()
                         
-                        // Navigate to main screen
-                        findNavController().navigate(R.id.action_createShopFragment_to_mainScreenFragment)
+                        // Navigate to main screen with popUpTo to clear the back stack
+                        findNavController().navigate(
+                            R.id.action_createShopFragment_to_mainScreenFragment,
+                            null,
+                            null
+                        )
                     } else {
                         throw Exception("Failed to get shop ID")
                     }
@@ -138,6 +159,7 @@ class CreateShopFragment : Fragment() {
                     throw result.exceptionOrNull() ?: Exception("Unknown error")
                 }
             } catch (e: Exception) {
+                android.util.Log.e("CreateShopFragment", "Failed to create shop: ${e.message}", e)
                 Toast.makeText(requireContext(), "Failed to create shop: ${e.message}", Toast.LENGTH_SHORT).show()
                 setLoading(false)
             }
@@ -151,11 +173,11 @@ class CreateShopFragment : Fragment() {
         binding.editTextShopName.isEnabled = !isLoading
         binding.editTextAddress.isEnabled = !isLoading
         binding.editTextGstNumber.isEnabled = !isLoading
-        binding.checkBoxHasGst.isEnabled = !isLoading
+        binding.hasGstCheckBox.isEnabled = !isLoading
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
-} 
+}

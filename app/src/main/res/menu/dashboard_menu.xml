@@ -4,19 +4,19 @@
 
     <item
         android:id="@+id/action_switch_shop"
-        android:title="Switch Shop"
+        android:title="@string/menu_switch_shop"
         android:icon="@drawable/mdi__shop_plus_outline"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_refresh"
         android:icon="@drawable/material_symbols__refresh_rounded"
-        android:title="Refresh"
+        android:title="@string/menu_refresh"
         app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_notifications"
-        android:title="Notifications"
+        android:title="@string/menu_notifications"
         app:showAsAction="always"
         app:actionLayout="@layout/menu_item_notification" />
 

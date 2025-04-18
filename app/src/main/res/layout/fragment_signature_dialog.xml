@@ -11,7 +11,7 @@
         android:id="@+id/titleTextView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Signature"
+        android:text="@string/signature"
         android:fontFamily="@font/montserratsemibold"
         android:textColor="@color/my_light_on_surface"
         android:textSize="18sp"
@@ -20,7 +20,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Please sign below"
+        android:text="@string/please_sign_below"
         android:fontFamily="@font/montserratregular"
         android:textColor="@color/my_light_secondary"
         android:textSize="14sp"
@@ -51,7 +51,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Clear"
+            android:text="@string/clear"
             android:textColor="@color/my_light_primary"
             app:strokeColor="@color/my_light_primary" />
 
@@ -65,7 +65,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Cancel"
+            android:text="@string/cancel"
             android:textColor="@color/my_light_error"
             app:strokeColor="@color/my_light_error" />
 
@@ -78,7 +78,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Save"
+            android:text="@string/save"
             android:backgroundTint="@color/my_light_primary"
             android:textColor="@color/my_light_on_primary" />
     </LinearLayout>

@@ -21,17 +21,20 @@ import androidx.navigation.fragment.navArgs
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
+import com.google.firebase.FirebaseException
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
-import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.DataClasses.UserProfile
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentOtpVarificationBinding
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
 class OtpVarificationFragment : Fragment() {
@@ -80,6 +83,10 @@ class OtpVarificationFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Apply entrance animations
+        AnimationUtils.fadeIn(binding.layoutOtpInputs)
+        AnimationUtils.fadeIn(binding.tvPhoneNumber, 400)
+
         // Initialize Firebase Auth
         auth = FirebaseAuth.getInstance()
 
@@ -97,14 +104,16 @@ class OtpVarificationFragment : Fragment() {
 
         // Setup Verify button
         binding.btnVerify.setOnClickListener {
+            // Apply button animation
+            AnimationUtils.pulse(it)
             verifyOtp()
         }
 
         // Setup Resend button
         binding.tvResend.setOnClickListener {
-            // Implement resend logic here
-            Toast.makeText(requireContext(), "Resending OTP...", Toast.LENGTH_SHORT).show()
-            // You would typically call your sendOTP function from the previous fragment
+            // Apply button animation
+            AnimationUtils.pulse(it)
+            resendOtp()
         }
 
         // Start SMS retriever
@@ -227,7 +236,7 @@ class OtpVarificationFragment : Fragment() {
         return otpDigits.all { it.text.isNotEmpty() }
     }
 
-    private fun getOtpFromFields(): String {
+    private fun getEnteredOtp(): String {
         val otpBuilder = StringBuilder()
         for (digit in otpDigits) {
             otpBuilder.append(digit.text)
@@ -236,27 +245,66 @@ class OtpVarificationFragment : Fragment() {
     }
 
     private fun verifyOtp() {
-        if (!isOtpComplete()) {
-            Toast.makeText(requireContext(), "Please enter the complete OTP", Toast.LENGTH_SHORT).show()
+        // Get the OTP from input fields
+        val otp = getEnteredOtp()
+        
+        if (otp.length != 6) {
+            Toast.makeText(requireContext(), "Please enter a valid 6-digit OTP", Toast.LENGTH_SHORT).show()
             return
         }
-
+        
         // Show loading state
         setLoading(true)
-
-        // Get OTP from fields
-        val otp = getOtpFromFields()
-
+        
         try {
-            // Create credential
+            // Create credential with verification ID from args and entered OTP
             val credential = PhoneAuthProvider.getCredential(args.verificationId, otp)
-
+            
             // Sign in with credential
             signInWithPhoneAuthCredential(credential)
         } catch (e: Exception) {
+            Log.e(TAG, "Error verifying OTP", e)
             setLoading(false)
-            Toast.makeText(requireContext(), "Invalid verification code", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun resendOtp() {
+        Toast.makeText(requireContext(), "Resending OTP...", Toast.LENGTH_SHORT).show()
+        
+        // Get phone number from args
+        val phoneNumber = args.phoneNumber
+        
+        // Setup callbacks
+        val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+            override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                Log.d(TAG, "onVerificationCompleted:$credential")
+                signInWithPhoneAuthCredential(credential)
+            }
+            
+            override fun onVerificationFailed(e: FirebaseException) {
+                Log.w(TAG, "onVerificationFailed", e)
+                Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+            
+            override fun onCodeSent(
+                verificationId: String,
+                token: PhoneAuthProvider.ForceResendingToken
+            ) {
+                Log.d(TAG, "onCodeSent:$verificationId")
+                Toast.makeText(requireContext(), "OTP resent successfully", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        // Configure and start phone verification
+        val options = PhoneAuthOptions.newBuilder(auth)
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(requireActivity())
+            .setCallbacks(callbacks)
+            .build()
+            
+        PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
@@ -272,7 +320,7 @@ class OtpVarificationFragment : Fragment() {
                     val user = auth.currentUser
 
                     if (user != null) {
-                        // Create a user profile in Firestore
+                        // Create a user profile in Firestore if needed
                         saveUserProfile(user.uid)
                     } else {
                         Toast.makeText(requireContext(), "Authentication failed", Toast.LENGTH_SHORT).show()
@@ -295,10 +343,10 @@ class OtpVarificationFragment : Fragment() {
     private fun saveUserProfile(userId: String) {
         lifecycleScope.launch {
             try {
-                // Create UserProfile
+                // Create or update UserProfile
                 val userProfile = UserProfile(
                     userId = userId,
-                    name = args.name,
+                    name = args.name.takeIf { it.isNotEmpty() } ?: "User",
                     phoneNumber = args.phoneNumber,
                     createdAt = Timestamp.now()
                 )
@@ -307,14 +355,8 @@ class OtpVarificationFragment : Fragment() {
                 val result = ShopManager.saveUserProfile(userProfile)
                 
                 if (result.isSuccess) {
-                    // Check if shop details were provided
-                    if (args.shopName.isNotEmpty()) {
-                        // Create the first shop for the user
-                        createInitialShop(userId)
-                    } else {
-                        // Navigate to create shop screen
-                        navigateToCreateShop()
-                    }
+                    // Navigate to shop selection
+                    navigateToShopSelection()
                 } else {
                     throw result.exceptionOrNull() ?: Exception("Failed to save user profile")
                 }
@@ -329,67 +371,30 @@ class OtpVarificationFragment : Fragment() {
         }
     }
 
-    private fun createInitialShop(userId: String) {
-        lifecycleScope.launch {
-            try {
-                // Create ShopDetails
-                val shopDetails = ShopDetails(
-                    shopName = args.shopName,
-                    address = args.address,
-                    hasGst = args.gstNumber.isNotEmpty(),
-                    gstNumber = if (args.gstNumber.isNotEmpty()) args.gstNumber else null,
-                    createdAt = Timestamp.now()
-                )
-
-                // Create shop and get shopId
-                val result = ShopManager.createShop(userId, shopDetails)
-                
-                if (result.isSuccess) {
-                    val shopId = result.getOrNull()
-                    if (shopId != null) {
-                        // Set active shop ID
-                        context?.let {
-                            SessionManager.setActiveShopId(it, shopId)
-                        }
-                        
-                        // Navigate to main screen
-                        navigateToMainScreen()
-                    } else {
-                        throw Exception("Failed to get shop ID")
-                    }
-                } else {
-                    throw result.exceptionOrNull() ?: Exception("Failed to create shop")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error creating shop", e)
-                Toast.makeText(
-                    requireContext(),
-                    "Failed to create shop: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-                
-                // If shop creation fails, navigate to create shop screen as fallback
-                navigateToCreateShop()
-            }
-        }
-    }
-
-    private fun navigateToMainScreen() {
-        Toast.makeText(requireContext(), "Registration successful!", Toast.LENGTH_SHORT).show()
-        findNavController().navigate(R.id.action_otpVarificationFragment_to_mainScreenFragment)
-    }
-    
-    private fun navigateToCreateShop() {
-        Toast.makeText(requireContext(), "Please create your shop", Toast.LENGTH_SHORT).show()
-        findNavController().navigate(R.id.action_otpVarificationFragment_to_createShopFragment)
+    private fun navigateToShopSelection() {
+        // Create login session with phone number (only once)
+        SessionManager.createLoginSession(requireContext(), args.phoneNumber)
+        
+        // Navigate to shop selection with animation
+        findNavController().navigate(
+            R.id.action_otpVarificationFragment_to_shopSelectionFragment,
+            null,
+            AnimationUtils.getSlideNavOptions()
+        )
     }
 
     private fun setLoading(isLoading: Boolean) {
         binding.btnVerify.isEnabled = !isLoading
         binding.btnVerify.text = if (isLoading) "Verifying..." else "Verify"
 
-        // Optionally, show a progress indicator
-        // binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        // Show/hide progress indicator
+//        if (isLoading) {
+//            binding.progressBar.visibility = View.VISIBLE
+//            AnimationUtils.fadeIn(binding.progressBar)
+//        } else {
+//            AnimationUtils.fadeOut(binding.progressBar)
+//            binding.progressBar.visibility = View.GONE
+//        }
     }
 
     override fun onDestroyView() {

@@ -22,7 +22,7 @@
             android:background="@color/my_light_primary"
             app:menu="@menu/notification_menu"
             app:navigationIcon="@drawable/famicons__arrow_back"
-            app:title="Notifications"
+            app:title="@string/notifications"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
 
@@ -86,7 +86,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No Notifications Yet"
+            android:text="@string/no_notifications_yet"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -96,7 +96,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="When new notifications arrive, they will appear here."
+            android:text="@string/when_new_notifications_arrive_they_will_appear_here"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -107,7 +107,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:fontFamily="@font/montserratmedium"
-            android:text="Check for Notifications"
+            android:text="@string/check_for_notifications"
             android:textColor="@color/my_light_on_primary"
             app:backgroundTint="@color/my_light_primary" />
     </LinearLayout>

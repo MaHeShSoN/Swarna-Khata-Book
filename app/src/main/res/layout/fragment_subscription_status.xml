@@ -61,7 +61,7 @@
                             android:id="@+id/subscriptionStatusIcon"
                             android:layout_width="48dp"
                             android:layout_height="48dp"
-                            android:layout_marginRight="16dp"
+                            android:layout_marginEnd="16dp"
                             android:src="@drawable/material_symbols__timer_outline"
                             app:tint="@color/my_light_primary" />
 

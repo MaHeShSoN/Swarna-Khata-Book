@@ -19,7 +19,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:navigationIcon="@drawable/famicons__arrow_back"
-            app:title="Low Stock Report"
+            app:title="@string/low_stock_report"
             app:menu="@menu/report_menu"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
@@ -65,7 +65,7 @@
                         android:id="@+id/reportDateText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:drawableStart="@drawable/material_symbols__date_range_rounded"
+                        app:drawableStartCompat="@drawable/material_symbols__date_range_rounded"
                         android:drawablePadding="8dp"
                         android:fontFamily="@font/montserratregular"
                         android:textColor="@color/my_light_on_background"
@@ -80,7 +80,7 @@
                         android:fontFamily="@font/librebaskervillebold"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp"
-                        tools:text="Items with Low Stock: 15" />
+                        tools:text="@string/items_with_low_stock_15" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -105,28 +105,28 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true"
-                        android:text="All Items" />
+                        android:text="@string/all_items" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipGold"
                         style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Gold" />
+                        android:text="@string/gold" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipSilver"
                         style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Silver" />
+                        android:text="@string/silver" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chipOther"
                         style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Other" />
+                        android:text="@string/other" />
 
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
@@ -162,7 +162,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="No Low Stock Items"
+                    android:text="@string/no_low_stock_items"
                     android:fontFamily="@font/librebaskervilleregular"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="20sp" />
@@ -173,7 +173,7 @@
                     android:layout_marginTop="8dp"
                     android:gravity="center"
                     android:paddingHorizontal="32dp"
-                    android:text="All items have sufficient stock levels."
+                    android:text="@string/all_items_have_sufficient_stock_levels"
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface_variant"
                     android:textSize="14sp" />

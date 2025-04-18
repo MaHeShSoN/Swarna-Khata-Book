@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="@font/montserratsemibold"
-                android:text="Current Version"
+                android:text="@string/current_version"
                 android:textColor="@color/my_light_primary"
                 android:textSize="16sp" />
 
@@ -66,7 +66,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:fontFamily="@font/montserratregular"
-                android:text="Swarna Khata Book v1.0.0"
+                android:text="@string/app_version"
                 android:textColor="@color/my_light_on_surface"
                 android:textSize="14sp" />
 
@@ -76,7 +76,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Check for Updates"
+                android:text="@string/check_for_updates"
                 android:textColor="@color/white"
                 app:backgroundTint="@color/my_light_primary" />
 
@@ -86,7 +86,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:fontFamily="@font/montserratsemibold"
-                android:text="Update Settings"
+                android:text="@string/update_settings"
                 android:textColor="@color/my_light_primary"
                 android:textSize="16sp" />
 
@@ -96,7 +96,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:fontFamily="@font/montserratregular"
-                android:text="Check for updates automatically"
+                android:text="@string/check_updates_auto"
                 android:textColor="@color/my_light_on_surface" />
 
             <TextView
@@ -104,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="52dp"
                 android:fontFamily="@font/montserratregular"
-                android:text="Automatically check for app updates in the background"
+                android:text="@string/check_updates_auto_desc"
                 android:textColor="@color/my_light_on_surface_variant"
                 android:textSize="12sp" />
 
@@ -113,7 +113,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="Download updates on Wi-Fi only"
+                android:text="@string/download_wifi_only"
                 android:textAppearance="@style/TextAppearance.App.Body"
                 app:thumbTint="@color/my_light_primary"
                 app:trackTint="@color/my_light_primary_container" />
@@ -123,7 +123,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="52dp"
                 android:fontFamily="@font/montserratregular"
-                android:text="Save mobile data by downloading updates only when connected to Wi-Fi"
+                android:text="@string/download_wifi_only_desc"
                 android:textColor="@color/my_light_on_surface_variant"
                 android:textSize="12sp" />
 
@@ -148,7 +148,7 @@
                         android:drawableStart="@drawable/material_symbols_warning_rounded"
                         android:drawablePadding="8dp"
                         android:fontFamily="@font/montserratsemibold"
-                        android:text="About App Updates"
+                        android:text="@string/about_app_updates"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp" />
 
@@ -157,7 +157,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:fontFamily="@font/montserratregular"
-                        android:text="App updates provide new features, improvements, and important security fixes. Some updates may be required to continue using the app."
+                        android:text="@string/app_updates_desc"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="12sp" />
                 </LinearLayout>

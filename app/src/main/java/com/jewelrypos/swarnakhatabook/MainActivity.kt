@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
             Log.d("MainActivity", "Notification permission denied")
             Toast.makeText(
                 this,
-                "Notification permission denied. You may miss important alerts.",
+                getString(R.string.notification_permission_denied),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -225,14 +225,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTrialExpiredDialog() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Trial Period Expired")
-            .setMessage("Your 10-day trial period has expired. Please upgrade to continue using Swarna Khata Book.")
+            .setTitle(getString(R.string.trial_expired_title))
+            .setMessage(getString(R.string.trial_expired_message))
             .setCancelable(false)
-            .setPositiveButton("Upgrade") { _, _ ->
+            .setPositiveButton(getString(R.string.upgrade)) { _, _ ->
                 // Navigate to upgrade screen
                 navigateToUpgradeScreen()
             }
-            .setNegativeButton("Log Out") { _, _ ->
+            .setNegativeButton(getString(R.string.log_out)) { _, _ ->
                 // Log out the user
                 logoutUser()
             }
@@ -241,13 +241,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun showTrialReminderDialog(daysRemaining: Int) {
         MaterialAlertDialogBuilder(this)
-            .setTitle("Trial Period Ending Soon")
-            .setMessage("Your trial period will expire in $daysRemaining day${if (daysRemaining > 1) "s" else ""}. Upgrade now to continue using all features.")
-            .setPositiveButton("Upgrade") { _, _ ->
+            .setTitle(getString(R.string.trial_ending_soon_title))
+            .setMessage(getString(R.string.trial_ending_soon_message, daysRemaining, if (daysRemaining > 1) "s" else ""))
+            .setPositiveButton(getString(R.string.upgrade)) { _, _ ->
                 // Navigate to upgrade screen
                 navigateToUpgradeScreen()
             }
-            .setNegativeButton("Remind Later") { dialog, _ ->
+            .setNegativeButton(getString(R.string.remind_later)) { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -255,13 +255,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun navigateToUpgradeScreen() {
         // In a real app, this would navigate to your subscription/payment screen
-        Toast.makeText(this, "Navigate to upgrade screen", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.navigate_to_upgrade), Toast.LENGTH_SHORT).show()
 
         // For testing purposes only - this would be replaced with actual purchase flow
         lifecycleScope.launch {
             val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
             if (success) {
-                Toast.makeText(this@MainActivity, "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, getString(R.string.upgraded_to_premium), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -339,9 +339,9 @@ class MainActivity : AppCompatActivity() {
             // Show lockout dialog
             val minutes = (securityStatus.remainingLockoutTimeMs / 60000).toInt() + 1
             AlertDialog.Builder(this)
-                .setTitle("Too Many Failed Attempts")
-                .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
-                .setPositiveButton("OK") { _, _ -> finish() }
+                .setTitle(getString(R.string.too_many_attempts_title))
+                .setMessage(getString(R.string.too_many_attempts_message, minutes))
+                .setPositiveButton(getString(R.string.ok)) { _, _ -> finish() }
                 .setCancelable(false)
                 .show()
             return
@@ -352,8 +352,8 @@ class MainActivity : AppCompatActivity() {
             context = this,
             fragmentManager = supportFragmentManager,
             prefs = sharedPreferences,
-            title = "Verify PIN",
-            reason = "Please enter your PIN to continue",
+            title = getString(R.string.verify_pin),
+            reason = getString(R.string.please_enter_your_pin),
             onPinCorrect = {
                 // PIN correct, continue app
                 wasInBackground = false
@@ -363,9 +363,9 @@ class MainActivity : AppCompatActivity() {
                 if (status is PinSecurityStatus.Locked) {
                     val minutes = (status.remainingLockoutTimeMs / 60000).toInt() + 1
                     AlertDialog.Builder(this)
-                        .setTitle("Too Many Failed Attempts")
-                        .setMessage("PIN entry has been disabled for $minutes minutes due to multiple failed attempts.")
-                        .setPositiveButton("OK") { _, _ -> finish() }
+                        .setTitle(getString(R.string.too_many_attempts_title))
+                        .setMessage(getString(R.string.too_many_attempts_message, minutes))
+                        .setPositiveButton(getString(R.string.ok)) { _, _ -> finish() }
                         .setCancelable(false)
                         .show()
                 }

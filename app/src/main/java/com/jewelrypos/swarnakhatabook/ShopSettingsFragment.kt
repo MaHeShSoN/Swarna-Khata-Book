@@ -35,8 +35,6 @@ class ShopSettingsFragment : Fragment() {
 
     private var shop: Shop? = null
 
-    private var logoUri: Uri? = null
-    private var signatureUri: Uri? = null
     private var hasUnsavedChanges = false
 
     override fun onCreateView(
@@ -126,6 +124,7 @@ class ShopSettingsFragment : Fragment() {
     private fun updateUI(shop: Shop) {
         removeChangeListeners()
         // Populate fields with shop data
+        binding.ownerNameEditText.setText(shop.name)
         binding.shopNameEditText.setText(shop.shopName)
         binding.addressEditText.setText(shop.address)
         binding.phoneEditText.setText(shop.phoneNumber)
@@ -168,6 +167,7 @@ class ShopSettingsFragment : Fragment() {
 
     private fun setupChangeListeners() {
         binding.shopNameEditText.addTextChangedListener(textWatcher)
+        binding.ownerNameEditText.addTextChangedListener(textWatcher)
         binding.addressEditText.addTextChangedListener(textWatcher)
         binding.phoneEditText.addTextChangedListener(textWatcher)
         binding.emailEditText.addTextChangedListener(textWatcher)
@@ -177,6 +177,7 @@ class ShopSettingsFragment : Fragment() {
 
     private fun removeChangeListeners() {
         binding.shopNameEditText.removeTextChangedListener(textWatcher)
+        binding.ownerNameEditText.removeTextChangedListener(textWatcher)
         binding.addressEditText.removeTextChangedListener(textWatcher)
         binding.phoneEditText.removeTextChangedListener(textWatcher)
         binding.emailEditText.removeTextChangedListener(textWatcher)
@@ -212,7 +213,9 @@ class ShopSettingsFragment : Fragment() {
             }
             .show() // Show the themed dialog
     }
+
     private fun saveShopDetails() {
+        val ownerName = binding.ownerNameEditText.text.toString().trim()
         val shopName = binding.shopNameEditText.text.toString().trim()
         val address = binding.addressEditText.text.toString().trim()
         val phone = binding.phoneEditText.text.toString().trim()
@@ -220,26 +223,51 @@ class ShopSettingsFragment : Fragment() {
         val gstNumber = binding.gstNumberEditText.text.toString().trim()
         val hasGst = gstNumber.isNotEmpty()
 
-        // --- Validation (Keep your existing validation) ---
+        // --- Enhanced Validation ---
+        var isValid = true
+
+        // Shop name validation
         if (shopName.isEmpty()) {
             binding.shopNameInputLayout.error = "Shop name is required"
-            return
+            isValid = false
         } else binding.shopNameInputLayout.error = null
 
+        // Shop name validation
+        if (ownerName.isEmpty()) {
+            binding.shopNameInputLayout.error = "Owner name is required"
+            isValid = false
+        } else binding.shopNameInputLayout.error = null
+
+        // Address validation
         if (address.isEmpty()) {
             binding.addressInputLayout.error = "Address is required"
-            return
+            isValid = false
         } else binding.addressInputLayout.error = null
 
+        // Phone validation
         if (phone.isEmpty()) {
             binding.phoneInputLayout.error = "Phone number is required"
-            return
+            isValid = false
         } else binding.phoneInputLayout.error = null
-        // --- End Validation ---
 
+        // Email validation
+        if (email.isNotEmpty() && !isValidEmail(email)) {
+            binding.emailInputLayout.error = "Please enter a valid email address"
+            isValid = false
+        } else binding.emailInputLayout.error = null
+
+        // GST number validation
+        if (gstNumber.isNotEmpty() && !isValidGSTNumber(gstNumber)) {
+            binding.gstNumberInputLayout.error = "Please enter a valid 15-digit GST number"
+            isValid = false
+        } else binding.gstNumberInputLayout.error = null
+
+        if (!isValid) return
+        // --- End Enhanced Validation ---
 
         shop?.let { currentShop ->
             val updatedShop = currentShop.copy(
+                name = ownerName,
                 shopName = shopName,
                 address = address,
                 phoneNumber = phone,
@@ -281,6 +309,41 @@ class ShopSettingsFragment : Fragment() {
             }
         }
     }
+
+    /**
+     * Validates if the provided string is a valid email address
+     */
+    private fun isValidEmail(email: String): Boolean {
+        val emailPattern = "[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+"
+        return email.matches(emailPattern.toRegex())
+    }
+
+    /**
+     * Validates if the provided string is a valid GST number
+     * GST number format: 2 digit state code + 10 digit PAN + 1 digit entity number + 1 digit check digit + Z
+     */
+    private fun isValidGSTNumber(gstNumber: String): Boolean {
+        // GST number should be 15 characters long
+        if (gstNumber.length != 15) return false
+        
+        // First 2 digits should be a valid state code (01-37)
+        val stateCode = gstNumber.substring(0, 2).toIntOrNull() ?: return false
+        if (stateCode < 1 || stateCode > 37) return false
+        
+        // Next 10 characters should be alphanumeric (PAN)
+        val panPart = gstNumber.substring(2, 12)
+        if (!panPart.matches("[A-Z0-9]{10}".toRegex())) return false
+        
+        // 13th digit should be a number (entity number)
+        if (!gstNumber[12].isDigit()) return false
+        
+        // 14th digit should be a letter or number (check digit)
+        if (!gstNumber[13].isLetterOrDigit()) return false
+        
+        // Last character should be 'Z'
+        return gstNumber[14] == 'Z'
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         removeChangeListeners()

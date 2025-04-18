@@ -88,7 +88,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:elevation="2dp"
-                    android:text="Gold"
+                    android:text="@string/chip_gold"
                     app:chipIcon="@drawable/uil__gold" />
 
                 <com.google.android.material.chip.Chip
@@ -97,7 +97,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:elevation="2dp"
-                    android:text="Silver" />
+                    android:text="@string/chip_silver" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipOther"
@@ -105,7 +105,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:elevation="2dp"
-                    android:text="Other" />
+                    android:text="@string/chip_other" />
 
             </com.google.android.material.chip.ChipGroup>
 
@@ -116,7 +116,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:elevation="2dp"
-                android:text="Low Stock"
+                android:text="@string/chip_low_stock"
                 app:chipBackgroundColor="@color/status_unpaid_light"
                 app:chipIconTint="@color/status_unpaid"
                 app:chipStrokeColor="@color/status_unpaid" />
@@ -128,9 +128,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:indeterminate="true"
-        android:paddingLeft="2dp"
+        android:paddingStart="2dp"
         android:paddingTop="0dp"
-        android:paddingRight="2dp"
+        android:paddingEnd="2dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
@@ -162,7 +162,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No Inventory Items Yet"
+            android:text="@string/no_inventory_items_yet"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -173,7 +173,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="Start by adding your first inventory item to manage your stock"
+            android:text="@string/start_by_adding_first_inventory_item"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -185,7 +185,7 @@
             android:layout_marginTop="24dp"
             android:backgroundTint="@color/my_light_primary"
             android:fontFamily="@font/montserratmedium"
-            android:text="ADD ITEM"
+            android:text="@string/add_item"
             android:textColor="@color/my_light_on_primary"
             android:textSize="14sp" />
     </LinearLayout>
@@ -219,7 +219,7 @@
             android:layout_gravity="center"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No matching jewelry found"
+            android:text="@string/no_matching_jewelry_found"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -230,7 +230,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="We couldn't find any jewelry items that match your search"
+            android:text="@string/no_jewelry_match_search"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
 
@@ -248,7 +248,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
                 android:fontFamily="@font/montserratmedium"
-                android:text="CLEAR SEARCH"
+                android:text="@string/clear_search"
                 android:textColor="@color/my_light_primary"
                 android:textSize="14sp"
                 app:rippleColor="@color/my_light_primary_container"
@@ -262,7 +262,7 @@
                 android:layout_marginStart="8dp"
                 android:backgroundTint="@color/my_light_primary"
                 android:fontFamily="@font/montserratmedium"
-                android:text="ADD NEW ITEM"
+                android:text="@string/add_new_item"
                 android:textColor="@color/my_light_on_primary"
                 android:textSize="14sp" />
         </LinearLayout>

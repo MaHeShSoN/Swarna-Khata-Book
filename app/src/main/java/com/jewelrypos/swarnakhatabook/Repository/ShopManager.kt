@@ -72,6 +72,121 @@ object ShopManager {
         }
     }
 
+    // Get user profile by phone number
+    suspend fun getUserProfileByPhoneNumber(phoneNumber: String): Result<UserProfile?> {
+        return try {
+            val querySnapshot = FirebaseFirestore.getInstance()
+                .collection("users")
+                .whereEqualTo("phoneNumber", phoneNumber)
+                .get()
+                .await()
+
+            if (!querySnapshot.isEmpty) {
+                val document = querySnapshot.documents[0]
+                val userId = document.id
+                val userProfile = UserProfile(
+                    userId = userId,
+                    name = document.getString("name") ?: "",
+                    phoneNumber = document.getString("phoneNumber") ?: "",
+                    managedShops = document.get("managedShops") as? Map<String, Boolean> ?: emptyMap(),
+                    createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
+                )
+                Result.success(userProfile)
+            } else {
+                Result.success(null)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting user profile by phone number", e)
+            Result.failure(e)
+        }
+    }
+
+    // Get shops by phone number
+    suspend fun getShopsByPhoneNumber(phoneNumber: String): Result<List<ShopDetails>> {
+        return try {
+            Log.d(TAG, "Getting shops for phone number: $phoneNumber")
+            
+            // First try to get shops from the phone_shops collection
+            val shopDetailsList = mutableListOf<ShopDetails>()
+            
+            try {
+                val phoneShopsSnapshot = FirebaseFirestore.getInstance()
+                    .collection("phone_shops")
+                    .document(phoneNumber.replace("+", ""))
+                    .collection("shops")
+                    .get()
+                    .await()
+                
+                Log.d(TAG, "Found ${phoneShopsSnapshot.documents.size} shops in phone_shops collection")
+                
+                if (!phoneShopsSnapshot.isEmpty) {
+                    for (document in phoneShopsSnapshot.documents) {
+                        val shopId = document.getString("shopId") ?: continue
+                        
+                        val shopDetailsResult = getShopDetails(shopId)
+                        if (shopDetailsResult.isSuccess) {
+                            val shopDetails = shopDetailsResult.getOrNull()
+                            if (shopDetails != null) {
+                                shopDetailsList.add(shopDetails)
+                                Log.d(TAG, "Added shop from phone_shops: ${shopDetails.shopName}")
+                            }
+                        }
+                    }
+                    
+                    if (shopDetailsList.isNotEmpty()) {
+                        return Result.success(shopDetailsList)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting shops from phone_shops collection", e)
+                // Continue to try the old method
+            }
+            
+            // If no shops found in phone_shops, try the old method with user profile
+            val userProfileResult = getUserProfileByPhoneNumber(phoneNumber)
+            
+            if (!userProfileResult.isSuccess) {
+                Log.e(TAG, "Failed to get user profile by phone number: ${userProfileResult.exceptionOrNull()?.message}")
+                return Result.failure(userProfileResult.exceptionOrNull() ?: Exception("Unknown error"))
+            }
+            
+            val userProfile = userProfileResult.getOrNull()
+            if (userProfile == null) {
+                Log.d(TAG, "No user profile found for phone number: $phoneNumber")
+                return Result.success(emptyList())
+            }
+            
+            Log.d(TAG, "Found user profile for phone: $phoneNumber, userId: ${userProfile.userId}")
+            
+            val managedShops = userProfile.managedShops
+            if (managedShops.isEmpty()) {
+                Log.d(TAG, "User has no managed shops")
+                return Result.success(emptyList())
+            }
+            
+            Log.d(TAG, "User has ${managedShops.size} managed shops: ${managedShops.keys}")
+            
+            for (shopId in managedShops.keys) {
+                val shopDetailsResult = getShopDetails(shopId)
+                
+                if (shopDetailsResult.isSuccess) {
+                    val shopDetails = shopDetailsResult.getOrNull()
+                    if (shopDetails != null) {
+                        shopDetailsList.add(shopDetails)
+                        Log.d(TAG, "Added shop from user profile: ${shopDetails.shopName}")
+                    }
+                } else {
+                    Log.e(TAG, "Failed to get shop details for shopId: $shopId")
+                }
+            }
+            
+            Result.success(shopDetailsList)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting shops by phone number", e)
+            Result.failure(e)
+        }
+    }
+
     // Save user profile
     suspend fun saveUserProfile(userProfile: UserProfile): Result<Unit> {
         return try {
@@ -97,8 +212,10 @@ object ShopManager {
     }
 
     // Create a new shop and add it to the user's managed shops
-    suspend fun createShop(userId: String, shopDetails: ShopDetails): Result<String> {
+    suspend fun createShop(userId: String, phoneNumber: String, shopDetails: ShopDetails): Result<String> {
         return try {
+            Log.d(TAG, "Creating shop for userId: $userId, phoneNumber: $phoneNumber")
+            
             // Generate a new shop ID
             val shopId = UUID.randomUUID().toString()
 
@@ -123,6 +240,7 @@ object ShopManager {
                 // If user profile doesn't exist, create a new one
                 UserProfile(
                     userId = userId,
+                    phoneNumber = phoneNumber,
                     managedShops = emptyMap()
                 )
             }
@@ -131,9 +249,40 @@ object ShopManager {
             val updatedManagedShops = userProfile.managedShops.toMutableMap()
             updatedManagedShops[shopId] = true
             
-            // Save the updated user profile
-            val updatedUserProfile = userProfile.copy(managedShops = updatedManagedShops)
-            saveUserProfile(updatedUserProfile)
+            // Save the updated user profile with phone number
+            val updatedUserProfile = userProfile.copy(
+                phoneNumber = phoneNumber,
+                managedShops = updatedManagedShops
+            )
+            
+            Log.d(TAG, "Saving user profile with phone: $phoneNumber, shops: ${updatedManagedShops.keys}")
+            val saveResult = saveUserProfile(updatedUserProfile)
+            
+            if (!saveResult.isSuccess) {
+                Log.e(TAG, "Failed to save user profile: ${saveResult.exceptionOrNull()?.message}")
+            }
+            
+            // Also associate shop with phone number in a separate collection for easier lookup
+            try {
+                val phoneShopMap = hashMapOf(
+                    "userId" to userId,
+                    "shopId" to shopId,
+                    "createdAt" to Timestamp.now()
+                )
+                
+                FirebaseFirestore.getInstance()
+                    .collection("phone_shops")
+                    .document(phoneNumber.replace("+", ""))
+                    .collection("shops")
+                    .document(shopId)
+                    .set(phoneShopMap)
+                    .await()
+                
+                Log.d(TAG, "Associated shop with phone number in phone_shops collection")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error associating shop with phone number", e)
+                // Continue even if this fails
+            }
 
             Result.success(shopId)
         } catch (e: Exception) {

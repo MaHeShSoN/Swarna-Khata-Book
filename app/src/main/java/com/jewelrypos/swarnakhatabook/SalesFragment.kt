@@ -30,6 +30,7 @@ import com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.EnhancedCsvExportUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
@@ -523,6 +524,7 @@ class SalesFragment : Fragment() {
 
     private fun setUpClickListner() {
         binding.addSaleFab.setOnClickListener {
+            AnimationUtils.pulse(it)
             // Navigate to the InvoiceCreationFragment
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
             parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)

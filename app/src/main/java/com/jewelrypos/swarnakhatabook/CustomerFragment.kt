@@ -24,6 +24,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerBinding
@@ -57,6 +58,7 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         super.onViewCreated(view, savedInstanceState)
 
         binding.addCustomerFab.setOnClickListener {
+            AnimationUtils.pulse(it)
             addCustomerButton()
         }
 

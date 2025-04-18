@@ -2,14 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/status_all"
-        android:title="All Status" />
+        android:title="@string/menu_all_status" />
     <item
         android:id="@+id/status_paid"
-        android:title="Paid" />
+        android:title="@string/menu_paid" />
     <item
         android:id="@+id/status_partial"
-        android:title="Partial" />
+        android:title="@string/menu_partial" />
     <item
         android:id="@+id/status_unpaid"
-        android:title="Unpaid" />
+        android:title="@string/menu_unpaid" />
 </menu>

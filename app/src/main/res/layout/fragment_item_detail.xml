@@ -19,7 +19,7 @@
             android:background="@color/my_light_primary"
             app:navigationIcon="@drawable/famicons__arrow_back"
             app:popupTheme="@style/CustomPopupMenu"
-            app:title="Item Details"
+            app:title="@string/item_details"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white"
             app:menu="@menu/item_detail_menu" />
@@ -32,13 +32,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:indeterminate="true"
-        android:paddingLeft="2dp"
+        android:paddingStart="2dp"
         android:paddingTop="0dp"
-        android:paddingRight="2dp"
+        android:paddingEnd="2dp"
         app:layout_anchor="@id/appBarLayout"
         app:layout_anchorGravity="bottom"
         />
-
 
 
     <androidx.core.widget.NestedScrollView
@@ -74,7 +73,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Basic Information"
+                        android:text="@string/basic_information"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp"
                         android:layout_marginBottom="16dp"/>
@@ -103,7 +102,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Item Code"
+                                android:text="@string/item_code"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -127,7 +126,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Category"
+                                android:text="@string/category"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -159,7 +158,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Item Type"
+                                android:text="@string/item_type"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -183,7 +182,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Purity"
+                                android:text="@string/purity"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -214,7 +213,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Location"
+                                android:text="@string/location"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -252,7 +251,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Weight Information"
+                        android:text="@string/weight_information"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp"
                         android:layout_marginBottom="16dp"/>
@@ -274,7 +273,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Gross Weight"
+                                android:text="@string/gross_weight"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -298,7 +297,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Net Weight"
+                                android:text="@string/net_weight"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -329,7 +328,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Wastage"
+                                android:text="@string/wastage"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -375,7 +374,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Stock Information"
+                            android:text="@string/stock_information"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp"/>
 
@@ -418,7 +417,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Current Stock"
+                                android:text="@string/current_stock"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -437,7 +436,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratsemibold"
-                        android:text="Stock Adjustment"
+                        android:text="@string/stock_adjustment"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="14sp"
                         android:layout_marginBottom="8dp"/>
@@ -474,7 +473,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratmedium"
-                            android:text="PCS"
+                            android:text="@string/pcs"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp"
                             android:layout_marginEnd="8dp"/>
@@ -505,7 +504,7 @@
                         style="@style/Widget.Material3.Button"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Apply Adjustment"
+                        android:text="@string/apply_adjustment"
                         android:visibility="gone"
                         app:backgroundTint="@color/my_light_primary"
                         app:cornerRadius="8dp"/>
@@ -533,7 +532,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Pricing Information"
+                        android:text="@string/pricing_information"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp"
                         android:layout_marginBottom="16dp"/>
@@ -550,7 +549,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/montserratsemibold"
-                            android:text="Gold Rate"
+                            android:text="@string/gold_rate"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp"/>
 
@@ -576,7 +575,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/montserratsemibold"
-                            android:text="Making Charges"
+                            android:text="@string/making_charges"
                             android:textColor="@color/my_light_secondary"
                             android:textSize="14sp"/>
 
@@ -614,7 +613,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="Extra Charges"
+                        android:text="@string/extra_charges"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp"
                         android:layout_marginBottom="16dp"/>
@@ -656,7 +655,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:fontFamily="@font/librebaskervilleregular"
-                            android:text="Usage Statistics"
+                            android:text="@string/usage_statistics"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp"/>
 
@@ -685,7 +684,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Invoices Used In"
+                                android:text="@string/invoices_used_in"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -709,7 +708,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Quantity Sold"
+                                android:text="@string/quantity_sold"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -740,7 +739,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Total Revenue"
+                                android:text="@string/total_revenue"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -764,7 +763,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Last Sold"
+                                android:text="@string/last_sold"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 
@@ -793,7 +792,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/montserratsemibold"
-                                android:text="Top Customer"
+                                android:text="@string/top_customer"
                                 android:textColor="@color/my_light_secondary"
                                 android:textSize="12sp"/>
 

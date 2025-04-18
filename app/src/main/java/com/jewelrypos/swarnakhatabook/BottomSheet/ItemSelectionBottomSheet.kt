@@ -43,7 +43,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
 
     // UI Components
-    private var _binding: ItemSelectionBottomSheetBinding? = null
+    internal var _binding: ItemSelectionBottomSheetBinding? = null
     val binding get() = _binding!!
 
     private var itemSelectedListener: OnItemSelectedListener? = null
@@ -81,7 +81,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         InventoryViewModelFactory(repository, connectivityManager,requireContext())
     }
-    private lateinit var inventoryRepository: InventoryRepository
+    internal lateinit var inventoryRepository: InventoryRepository
 
     // Store inventory items for dropdown
     private var inventoryItems: List<JewelleryItem> = emptyList()
@@ -658,7 +658,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     /**
      * Calculates the total making charges based on the type and weight
      */
-    private fun calculateMakingCharges(): Double {
+    internal fun calculateMakingCharges(): Double {
         val makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
         val makingChargesType = binding.mackingChargesTypeEditText.text.toString()
         val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -683,7 +683,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
      * Calculates the total gold value based on weight, wastage, and gold rate
      * Now supports "Fine" calculation based on purity percentage
      */
-    private fun calculateGoldValue(): Double {
+    internal fun calculateGoldValue(): Double {
         val goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0
         val goldRateOn = binding.goldRateOnEditText.text.toString()
         val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -717,7 +717,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     /**
      * Calculates the total charges by adding gold value, making charges, and diamond price
      */
-    private fun calculateTotalCharges(): Double {
+    internal fun calculateTotalCharges(): Double {
         val goldValue = calculateGoldValue()
         val makingCharges = calculateMakingCharges()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -726,7 +726,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         return goldValue + makingCharges + diamondPrice
     }
 
-    private fun calculateTotalTexCharges(): Double {
+    internal fun calculateTotalTexCharges(): Double {
         val goldValue = calculateGoldValue()
         val makingCharges = calculateMakingCharges()
         val diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -819,7 +819,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         updateCalculatedFields()
     }
 
-    private fun setUpInitalRecyclerView() {
+    internal fun setUpInitalRecyclerView() {
         chargeAdapter = ExtraChargeAdapter()
         binding.chargesRecyclerView.apply {
             adapter = chargeAdapter
@@ -1044,7 +1044,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             .show()
     }
 
-    private fun addCharge(name: String, amount: Double) {
+    internal fun addCharge(name: String, amount: Double) {
         val newCharge = ExtraCharge(name = name, amount = amount)
         chargeAdapter.addCharge(newCharge)
     }
@@ -1081,7 +1081,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         selectedItem = item
     }
 
-    private fun saveJewelryItem(closeAfterSave: Boolean) {
+    internal fun saveJewelryItem(closeAfterSave: Boolean) {
         // Get the display name from the dropdown
         val displayName = binding.itemNameDropdown.text.toString().trim()
 

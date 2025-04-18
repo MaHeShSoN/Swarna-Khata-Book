@@ -25,7 +25,9 @@ import com.jewelrypos.swarnakhatabook.DataClasses.AppNotification
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.Factorys.NotificationViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.NotificationRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentNotificationBinding
 
@@ -90,11 +92,29 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         setupRecyclerView()
         setupSwipeRefresh()
         setupEmptyState()
+        
+        // Set the current shop ID for filtering notifications
+        setupShopFiltering()
+
+        // Apply entrance animation
+        AnimationUtils.fadeIn(binding.root)
 
         // Observe ViewModel data
         observeNotifications()
+    }
 
-
+    private fun setupShopFiltering() {
+        // Get the active shop ID from SessionManager
+        val activeShopId = SessionManager.getActiveShopId(requireContext())
+        
+        // Set the shop ID in the ViewModel for filtering
+        viewModel.setCurrentShop(activeShopId)
+        
+        // Observe changes to the active shop ID
+        SessionManager.activeShopIdLiveData.observe(viewLifecycleOwner) { shopId ->
+            Log.d(TAG, "Active shop ID changed to: $shopId")
+            viewModel.setCurrentShop(shopId)
+        }
     }
 
     private fun checkNotificationPermission() {
@@ -194,6 +214,9 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                 })
             }
         } ?: Log.e(TAG, "Context was null during setupRecyclerView")
+        
+        // Apply animations to RecyclerView items
+        AnimationUtils.animateRecyclerView(binding.notificationRecyclerView)
     }
 
 
@@ -211,17 +234,21 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     }
 
     private fun observeNotifications() {
+        // Observe notifications list
         viewModel.notifications.observe(viewLifecycleOwner) { notifications ->
             adapter.updateNotifications(notifications)
             binding.swipeRefreshLayout.isRefreshing = false // Stop refresh indicator
 
             // Show/hide empty state based on the observed list
             if (notifications.isEmpty() && viewModel.isLoading.value == false) { // Only show empty state if not loading
+                AnimationUtils.fadeIn(binding.emptyStateLayout)
                 binding.emptyStateLayout.visibility = View.VISIBLE
                 binding.notificationRecyclerView.visibility = View.GONE
             } else {
+                AnimationUtils.fadeOut(binding.emptyStateLayout)
                 binding.emptyStateLayout.visibility = View.GONE
                 binding.notificationRecyclerView.visibility = View.VISIBLE
+                AnimationUtils.fadeIn(binding.notificationRecyclerView)
             }
         }
 
@@ -233,6 +260,12 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
             if (!isLoading) {
                 binding.swipeRefreshLayout.isRefreshing =
                     false // Ensure refresh stops when loading finishes
+            }
+            
+            if (isLoading) {
+                AnimationUtils.fadeIn(binding.progressBar)
+            } else {
+                AnimationUtils.fadeOut(binding.progressBar)
             }
         }
 
@@ -258,11 +291,17 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     override fun onNotificationClick(notification: AppNotification) {
         // Just call ViewModel method, it will handle the status change and navigation
         viewModel.handleNotificationClick(notification, false)
+        
+        // Apply animation to the clicked item
+        AnimationUtils.pulse(binding.notificationRecyclerView)
     }
 
     override fun onActionButtonClick(notification: AppNotification) {
         // Just call ViewModel method, it will handle the status change and navigation
         viewModel.handleNotificationClick(notification, true)
+        
+        // Apply animation to the clicked item
+        AnimationUtils.pulse(binding.notificationRecyclerView)
     }
 
     override fun onDismissButtonClick(notification: AppNotification) {

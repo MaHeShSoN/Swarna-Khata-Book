@@ -165,6 +165,7 @@
                     android:id="@+id/displayNameInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
+                    app:endIconMode="clear_text"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/display_name">
@@ -185,6 +186,7 @@
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    app:endIconMode="clear_text"
                     android:layout_marginTop="16dp"
                     android:hint="@string/jewelry_code">
 
@@ -234,6 +236,7 @@
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    app:endIconMode="clear_text"
                     android:layout_marginTop="16dp"
                     android:hint="@string/gross_weight"
                     app:suffixText="g">
@@ -253,6 +256,7 @@
                     android:id="@+id/netWeightInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
+                    app:endIconMode="clear_text"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/net_weight"
@@ -272,6 +276,7 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/purityInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
+                    app:endIconMode="clear_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
@@ -293,6 +298,7 @@
                     android:id="@+id/wastageInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
+                    app:endIconMode="clear_text"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/wastage"
@@ -352,6 +358,7 @@
                         style="@style/Widget.App.TextInputLayout.GoldForm"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        app:endIconMode="clear_text"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:hint="@string/stock_value">
@@ -373,6 +380,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
+                        app:endIconMode="clear_text"
                         android:layout_weight="1"
                         android:hint="@string/unit"
                         app:boxBackgroundColor="@color/my_light_surface"
@@ -397,6 +405,7 @@
                     android:id="@+id/locationInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
+                    app:endIconMode="clear_text"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/location">

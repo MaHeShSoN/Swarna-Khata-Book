@@ -2,14 +2,14 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/filter_gold"
-        android:title="GOLD" />
+        android:title="@string/menu_gold" />
     <item
         android:id="@+id/filter_silver"
-        android:title="SILVER" />
+        android:title="@string/menu_silver" />
     <item
         android:id="@+id/filter_other"
-        android:title="OTHER" />
+        android:title="@string/menu_other" />
     <item
         android:id="@+id/filter_all"
-        android:title="CLEAR" />
+        android:title="@string/menu_clear" />
 </menu>

@@ -32,6 +32,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.PinHashUtil
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityManager // Assuming this is where the new methods are
 import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentAccountSettingsBinding
 import kotlinx.coroutines.launch // Import launch
 
@@ -67,7 +68,11 @@ class AccountSettingsFragment : Fragment() {
                             PinSecurityManager.setPinLockEnabled(requireContext(), true)
                             updateAppLockUI(true, true)
                             binding.switchAppLock.isChecked = true // Ensure switch stays checked
-                            Toast.makeText(requireContext(), "PIN protection enabled", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                requireContext(),
+                                "PIN protection enabled",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         } else {
                             binding.switchAppLock.isChecked = false // Reset switch
                             updateAppLockUI(false, false)
@@ -136,18 +141,28 @@ class AccountSettingsFragment : Fragment() {
 
             // --- Update Account Info Card ---
             val currentUser = FirebaseAuth.getInstance().currentUser
-            b.textUsername.text = getString(R.string.account_phone_label, currentUser?.phoneNumber ?: "Not available")
+            b.textUsername.text =
+                getString(R.string.account_phone_label, currentUser?.phoneNumber ?: "Not available")
 
             ShopManager.getShop(requireContext()) { shop ->
                 if (isAdded && _binding != null) {
                     if (shop != null) {
-                        b.textOwnerName.text = getString(R.string.account_owner_label, shop.name.takeIf { it.isNotEmpty() } ?: "Not Set")
-                        b.textShopName.text = getString(R.string.account_shop_label, shop.shopName.takeIf { it.isNotEmpty() } ?: "Not Set")
-                        b.textGstNumber.text = getString(R.string.account_gst_label, shop.gstNumber.takeIf { it.isNotEmpty() } ?: "Not Set")
+                        b.textOwnerName.text = getString(
+                            R.string.account_owner_label,
+                            shop.name.takeIf { it.isNotEmpty() } ?: "Not Set")
+                        b.textShopName.text = getString(
+                            R.string.account_shop_label,
+                            shop.shopName.takeIf { it.isNotEmpty() } ?: "Not Set")
+                        b.textGstNumber.text = getString(
+                            R.string.account_gst_label,
+                            shop.gstNumber.takeIf { it.isNotEmpty() } ?: "Not Set")
                     } else {
-                        b.textOwnerName.text = getString(R.string.account_owner_label, "Not available")
-                        b.textShopName.text = getString(R.string.account_shop_label, "Not available")
-                        b.textGstNumber.text = getString(R.string.account_gst_label, "Not available")
+                        b.textOwnerName.text =
+                            getString(R.string.account_owner_label, "Not available")
+                        b.textShopName.text =
+                            getString(R.string.account_shop_label, "Not available")
+                        b.textGstNumber.text =
+                            getString(R.string.account_gst_label, "Not available")
                     }
                 }
             }
@@ -158,7 +173,7 @@ class AccountSettingsFragment : Fragment() {
                     val isTrialExpired = userSubscriptionManager.hasTrialExpired()
                     val isEffectivelyActive = isPremium || !isTrialExpired
 
-                    if(isAdded && _binding != null) {
+                    if (isAdded && _binding != null) {
                         b.textSubscriptionStatus.text = getString(
                             R.string.account_subscription_label,
                             if (isEffectivelyActive) {
@@ -171,13 +186,15 @@ class AccountSettingsFragment : Fragment() {
                             requireContext(),
                             if (isPremium) R.color.premium_color else R.color.my_light_secondary
                         )
-                        b.iconSubscriptionStatus.visibility = if (isPremium) View.VISIBLE else View.GONE
+                        b.iconSubscriptionStatus.visibility =
+                            if (isPremium) View.VISIBLE else View.GONE
                     }
 
                 } catch (e: Exception) {
                     Log.e("AccountSettingsFragment", "Error checking subscription status", e)
-                    if(isAdded && _binding != null) {
-                        b.textSubscriptionStatus.text = getString(R.string.account_subscription_label, "Error")
+                    if (isAdded && _binding != null) {
+                        b.textSubscriptionStatus.text =
+                            getString(R.string.account_subscription_label, "Error")
                         b.iconSubscriptionStatus.visibility = View.GONE
                     }
                 }
@@ -218,8 +235,94 @@ class AccountSettingsFragment : Fragment() {
                         .setTitle("Delete All Data")
                         .setMessage("Are you sure you want to delete ALL your data? This action cannot be undone. (No PIN required as App Lock is not set up)")
                         .setPositiveButton("Delete All") { _, _ ->
-                            DataWipeManager.performEmergencyWipe(requireContext()) {
-                                DataWipeManager.restartApp(requireContext())
+                            // Show loading indicator
+
+
+                            // Get the current user's phone number
+                            val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+
+                            if (phoneNumber != null) {
+                                // Use lifecycleScope to launch a coroutine
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    try {
+                                        // Get all shops for this user
+                                        val shopsByPhoneResult =
+                                            ShopManager.getShopsByPhoneNumber(phoneNumber)
+
+                                        if (shopsByPhoneResult.isSuccess) {
+                                            val shopsList =
+                                                shopsByPhoneResult.getOrNull() ?: emptyList()
+
+                                            if (shopsList.size > 1) {
+                                                // Multi-shop user - delete only current shop
+                                                val currentShopId =
+                                                    SessionManager.getActiveShopId(requireContext())
+
+                                                if (currentShopId != null) {
+                                                    // Delete only the current shop's data
+                                                    val result =
+                                                        DataWipeManager.deleteSingleShopData(
+                                                            requireContext(),
+                                                            currentShopId
+                                                        )
+
+                                                    if (result.isSuccess) {
+                                                        // Hide loading indicator
+
+
+                                                        // Show success message
+                                                        Toast.makeText(
+                                                            requireContext(),
+                                                            "Current shop data deleted successfully",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+
+                                                        // Navigate to ShopSelectionFragment
+                                                        findNavController().navigate(
+                                                            R.id.action_accountSettingsFragment_to_shopSelectionFragment,
+                                                            null,
+                                                            androidx.navigation.navOptions {
+                                                                popUpTo(R.id.mainScreenFragment) {
+                                                                    inclusive = true
+                                                                }
+                                                            }
+                                                        )
+                                                    } else {
+                                                        // Hide loading indicator
+
+
+                                                        // Show error message
+                                                        Toast.makeText(
+                                                            requireContext(),
+                                                            "Error deleting shop data: ${result.exceptionOrNull()?.message}",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                } else {
+                                                    // No active shop ID, fall back to full wipe
+
+                                                    performFullDataWipe()
+                                                }
+                                            } else {
+                                                // Single shop user - perform full wipe
+
+                                                performFullDataWipe()
+                                            }
+                                        } else {
+                                            // Error getting shops, fall back to full wipe
+
+                                            performFullDataWipe()
+                                        }
+                                    } catch (e: Exception) {
+                                        // Error in coroutine, fall back to full wipe
+
+                                        performFullDataWipe()
+                                    }
+                                }
+                            } else {
+                                // No phone number, fall back to full wipe
+
+                                performFullDataWipe()
                             }
                         }
                         .setNegativeButton("Cancel", null)
@@ -244,7 +347,7 @@ class AccountSettingsFragment : Fragment() {
                 showPinVerificationForDisable()
             }
             .setNegativeButton("Cancel") { dialog, _ ->
-                if(isAdded && _binding != null) {
+                if (isAdded && _binding != null) {
                     // *** FIX: Reset switch visually without triggering listener ***
                     binding.switchAppLock.setOnCheckedChangeListener(null)
                     binding.switchAppLock.isChecked = true // User cancelled, reset switch state
@@ -269,7 +372,7 @@ class AccountSettingsFragment : Fragment() {
             title = "Verify PIN",
             reason = "Enter your PIN to disable the lock",
             onPinCorrect = {
-                if(isAdded) {
+                if (isAdded) {
                     disablePinLock() // Call the function to disable the lock
                 }
             },
@@ -292,14 +395,14 @@ class AccountSettingsFragment : Fragment() {
                 updateAppLockUI(true, true) // Pin is still set up, lock should be shown as enabled
             },
             onReversePinEntered = {
-                if(isAdded) {
+                if (isAdded) {
                     DataWipeManager.performEmergencyWipe(requireContext()) {
                         DataWipeManager.restartApp(requireContext())
                     }
                 }
             },
             onCancelled = {
-                if(isAdded && _binding != null) {
+                if (isAdded && _binding != null) {
                     // *** FIX: Reset switch visually without triggering listener ***
                     binding.switchAppLock.setOnCheckedChangeListener(null)
                     binding.switchAppLock.isChecked = true // User cancelled, reset switch state
@@ -338,7 +441,8 @@ class AccountSettingsFragment : Fragment() {
             onCompleted = { success ->
                 if (!isAdded || _binding == null) return@showPinChange
                 if (success) {
-                    Toast.makeText(requireContext(), "PIN updated successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "PIN updated successfully", Toast.LENGTH_SHORT)
+                        .show()
                     // *** FIX: Set switch visually without triggering listener ***
                     binding.switchAppLock.setOnCheckedChangeListener(null)
                     binding.switchAppLock.isChecked = true // Assume lock should be enabled
@@ -388,9 +492,93 @@ class AccountSettingsFragment : Fragment() {
             title = "Confirm Delete",
             reason = "Enter your PIN to confirm data deletion",
             onPinCorrect = {
-                if(isAdded) {
-                    DataWipeManager.performEmergencyWipe(requireContext()) {
-                        DataWipeManager.restartApp(requireContext())
+                if (isAdded) {
+                    // Show loading indicator
+
+
+                    // Get the current user's phone number
+                    val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+
+                    if (phoneNumber != null) {
+                        // Use lifecycleScope to launch a coroutine
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            try {
+                                // Get all shops for this user
+                                val shopsByPhoneResult =
+                                    ShopManager.getShopsByPhoneNumber(phoneNumber)
+
+                                if (shopsByPhoneResult.isSuccess) {
+                                    val shopsList = shopsByPhoneResult.getOrNull() ?: emptyList()
+
+                                    if (shopsList.size > 1) {
+                                        // Multi-shop user - delete only current shop
+                                        val currentShopId =
+                                            SessionManager.getActiveShopId(requireContext())
+
+                                        if (currentShopId != null) {
+                                            // Delete only the current shop's data
+                                            val result = DataWipeManager.deleteSingleShopData(
+                                                requireContext(),
+                                                currentShopId
+                                            )
+
+                                            if (result.isSuccess) {
+                                                // Hide loading indicator
+
+
+                                                // Show success message
+                                                Toast.makeText(
+                                                    requireContext(),
+                                                    "Current shop data deleted successfully",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+
+                                                // Navigate to ShopSelectionFragment
+                                                findNavController().navigate(
+                                                    R.id.action_accountSettingsFragment_to_shopSelectionFragment,
+                                                    null,
+                                                    androidx.navigation.navOptions {
+                                                        popUpTo(R.id.mainScreenFragment) {
+                                                            inclusive = true
+                                                        }
+                                                    }
+                                                )
+                                            } else {
+                                                // Hide loading indicator
+
+
+                                                // Show error message
+                                                Toast.makeText(
+                                                    requireContext(),
+                                                    "Error deleting shop data: ${result.exceptionOrNull()?.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        } else {
+                                            // No active shop ID, fall back to full wipe
+
+                                            performFullDataWipe()
+                                        }
+                                    } else {
+                                        // Single shop user - perform full wipe
+
+                                        performFullDataWipe()
+                                    }
+                                } else {
+                                    // Error getting shops, fall back to full wipe
+
+                                    performFullDataWipe()
+                                }
+                            } catch (e: Exception) {
+                                // Error in coroutine, fall back to full wipe
+
+                                performFullDataWipe()
+                            }
+                        }
+                    } else {
+                        // No phone number, fall back to full wipe
+
+                        performFullDataWipe()
                     }
                 }
             },
@@ -407,19 +595,25 @@ class AccountSettingsFragment : Fragment() {
                 }
             },
             onReversePinEntered = {
-                if(isAdded) {
-                    DataWipeManager.performEmergencyWipe(requireContext()) {
-                        DataWipeManager.restartApp(requireContext())
-                    }
+                if (isAdded) {
+                    performFullDataWipe()
                 }
             },
             onCancelled = {
                 // Check isAdded before showing Toast
                 if (isAdded) {
-                    Toast.makeText(requireContext(), "Data deletion cancelled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Data deletion cancelled", Toast.LENGTH_SHORT)
+                        .show()
                 }
             }
         )
+    }
+
+    // Helper method to perform full data wipe
+    private fun performFullDataWipe() {
+        DataWipeManager.performEmergencyWipe(requireContext()) {
+            DataWipeManager.restartApp(requireContext())
+        }
     }
 
     private fun showLogoutConfirmationDialog() {
