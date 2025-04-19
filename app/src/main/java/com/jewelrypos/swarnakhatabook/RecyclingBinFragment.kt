@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
@@ -23,16 +24,24 @@ import com.jewelrypos.swarnakhatabook.Adapters.RecycledItemsAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
 import com.jewelrypos.swarnakhatabook.Factorys.RecyclingBinViewModelFactory
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
+import com.jewelrypos.swarnakhatabook.Utilitys.PremiumFeatureHelper
 import com.jewelrypos.swarnakhatabook.ViewModle.RecyclingBinViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentRecyclingBinBinding
 import androidx.lifecycle.ViewModelProvider
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.RecycledItemsRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class RecyclingBinFragment : Fragment() {
 
     private var _binding: FragmentRecyclingBinBinding? = null
     private val binding get() = _binding!!
+
+    // Track premium status
+    private var isPremiumUser = false
 
     private val viewModel: RecyclingBinViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
@@ -62,6 +71,19 @@ class RecyclingBinFragment : Fragment() {
         setupTabLayout()
         setupSwipeRefresh()
         setupObservers()
+        
+        // Check premium status
+        PremiumFeatureHelper.isPremiumUser(this) { premium ->
+            isPremiumUser = premium
+            // Show a non-blocking message that restore feature requires premium
+            if (!isPremiumUser) {
+                Toast.makeText(
+                    requireContext(),
+                    "Upgrade to Premium to restore items from the Recycling Bin",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
 
         binding.topAppBar.overflowIcon =
             ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
@@ -95,33 +117,36 @@ class RecyclingBinFragment : Fragment() {
         adapter = RecycledItemsAdapter(viewModel)
         adapter.setOnItemActionListener(object : RecycledItemsAdapter.OnItemActionListener {
             override fun onRestoreItem(item: RecycledItem) {
-                when (item.itemType.uppercase()) { // Use uppercase for comparison
-                    "INVOICE" -> {
-                        showRestoreConfirmation(item, "Invoice") {
-                            viewModel.restoreInvoice(item.itemId) // Use itemId which is invoiceNumber here
-                        }
-                    }
-
-                    "CUSTOMER" -> {
-                        showRestoreConfirmation(item, "Customer") {
-                            viewModel.restoreCustomer(item.itemId) // itemId is customerId here
-                        }
-                    }
-
-                    "JEWELLERYITEM" -> { // *** ADD THIS CASE ***
-                        showRestoreConfirmation(item, "Inventory Item") {
-                            viewModel.restoreJewelleryItem(item.itemId) // itemId is JewelleryItem id
-                        }
-                    }
-
-                    else -> {
-                        Toast.makeText(
-                            requireContext(),
-                            "Restore not supported for this item type",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                val itemTypeName = when (item.itemType.uppercase()) {
+                    "INVOICE" -> "Invoice"
+                    "CUSTOMER" -> "Customer"
+                    "JEWELLERYITEM" -> "Inventory Item"
+                    else -> "Item"
                 }
+                
+                // Use the helper to handle premium access for restore operation
+                PremiumFeatureHelper.checkPremiumAccess(
+                    fragment = this@RecyclingBinFragment,
+                    featureName = "Restoring items from Recycling Bin",
+                    premiumAction = {
+                        // This block executes only for premium users
+                        showRestoreConfirmation(item, itemTypeName) {
+                            when (item.itemType.uppercase()) {
+                                "INVOICE" -> viewModel.restoreInvoice(item.itemId)
+                                "CUSTOMER" -> viewModel.restoreCustomer(item.itemId)
+                                "JEWELLERYITEM" -> viewModel.restoreJewelleryItem(item.itemId)
+                                else -> {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Restore not supported for this item type",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+                    // No nonPremiumAction specified - helper will show upgrade dialog by default
+                )
             }
 
             override fun onDeleteItem(item: RecycledItem) {
@@ -184,7 +209,6 @@ class RecyclingBinFragment : Fragment() {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
     }
-
 
     private fun showRestoreConfirmation(
         item: RecycledItem,

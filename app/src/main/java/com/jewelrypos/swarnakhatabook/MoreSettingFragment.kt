@@ -186,7 +186,8 @@ class MoreSettingFragment : Fragment() {
             }
 
             "invoice_template" -> {
-                // Check premium status directly
+                // Still check premium status for template customization
+                // but don't block navigation
                 if (isPremium) {
                     mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
                 } else {
@@ -203,19 +204,15 @@ class MoreSettingFragment : Fragment() {
             }
 
             "reports" -> {
-                if (isPremium) {
-                    mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
-                } else {
-                    showPremiumFeatureDialog("Business reports")
-                }
+                // Always allow navigation to reports
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
+                // Premium status will be checked within the fragment
             }
 
             "recycling_bin" -> {
-                if (isPremium) {
-                    mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
-                } else {
-                    showPremiumFeatureDialog("Recycling Bin")
-                }
+                // Always allow navigation to recycling bin
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_recyclingBinFragment)
+                // Premium status will be checked within the fragment for restore operations
             }
 
             "about_language" -> {

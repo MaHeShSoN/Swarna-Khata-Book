@@ -309,6 +309,26 @@ class InventoryRepository(
         }
     }
 
+    /**
+     * Get the total count of inventory items
+     */
+    suspend fun getTotalInventoryCount(): Result<Int> {
+        return try {
+            val shopId = getCurrentShopId()
+
+            val snapshot = firestore.collection("shopData")
+                .document(shopId)
+                .collection("inventory")
+                .get()
+                .await()
+
+            Result.success(snapshot.size())
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting inventory count", e)
+            Result.failure(e)
+        }
+    }
+
     // Custom exceptions
     class UserNotAuthenticatedException(message: String) : Exception(message)
     class PhoneNumberInvalidException(message: String) : Exception(message)  

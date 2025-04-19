@@ -11,6 +11,7 @@ import androidx.navigation.fragment.findNavController
 import com.google.firebase.Timestamp
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCreateShopBinding
 import kotlinx.coroutines.launch
@@ -53,7 +54,7 @@ class CreateShopFragment : Fragment() {
         
         binding.buttonCreate.setOnClickListener {
             if (validateInputs()) {
-                createShop()
+                checkShopLimit()
             }
         }
         
@@ -99,6 +100,45 @@ class CreateShopFragment : Fragment() {
         }
         
         return isValid
+    }
+    
+    /**
+     * Check if the user has reached their shop limit based on subscription plan
+     */
+    private fun checkShopLimit() {
+        lifecycleScope.launch {
+            try {
+                // Get current user ID
+                val userId = SessionManager.getCurrentUserId()
+                if (userId == null) {
+                    Toast.makeText(requireContext(), "User not logged in", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                
+                // Get user profile to check how many shops they already have
+                val userProfileResult = ShopManager.getUserProfile(userId)
+                val userProfile = userProfileResult.getOrNull()
+                
+                if (userProfile != null) {
+                    // Count existing shops
+                    val shopCount = userProfile.managedShops.size
+                    
+                    // Check if user can create another shop based on subscription
+                    context?.let { ctx ->
+                        FeatureChecker.checkShopCountLimit(ctx, shopCount) {
+                            // If within limit, proceed with shop creation
+                            createShop()
+                        }
+                    }
+                } else {
+                    // No profile found, assume first shop (should be fine to create)
+                    createShop()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("CreateShopFragment", "Error checking shop limits: ${e.message}", e)
+                Toast.makeText(requireContext(), "Error checking shop limits: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
     
     private fun createShop() {

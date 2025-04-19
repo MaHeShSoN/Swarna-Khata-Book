@@ -287,6 +287,27 @@ class CustomerRepository(
         Result.failure(e)
     }
 
+    /**
+     * Gets the total count of customers for the current shop
+     * Used to enforce subscription limits
+     */
+    suspend fun getCustomerCount(): Result<Int> = try {
+        val shopId = getCurrentShopId()
+        
+        // Use a count query to minimize data transfer
+        val snapshot = firestore.collection("shopData")
+            .document(shopId)
+            .collection("customers")
+            .get()
+            .await()
+        
+        // Return the size of the result (number of documents)
+        Result.success(snapshot.size())
+    } catch (e: Exception) {
+        Log.e(TAG, "Error getting customer count: ${e.message}")
+        Result.failure(e)
+    }
+
     // Custom exceptions for shop-related issues
     class ShopNotSelectedException(message: String) : Exception(message)
     class UserNotAuthenticatedException(message: String) : Exception(message)

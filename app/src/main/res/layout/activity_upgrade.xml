@@ -31,6 +31,7 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -50,6 +51,37 @@
                 android:text="Choose your plan"
                 android:textColor="@color/my_light_on_surface"
                 android:textSize="24sp" />
+
+            <!-- Trial info banner (only visible when in trial) -->
+            <LinearLayout
+                android:id="@+id/trialBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/box"
+                android:backgroundTint="@color/my_light_secondary_container"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="You're in Trial Mode"
+                    android:textColor="@color/my_light_secondary_container"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/trialDaysRemaining"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratregular"
+                    android:text="7 days remaining"
+                    android:textColor="@color/my_light_secondary_container"
+                    android:textSize="14sp" />
+            </LinearLayout>
 
             <TextView
                 android:layout_width="match_parent"
@@ -102,7 +134,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹199/month"
+                        android:text="₹99/month"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -149,7 +181,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹399/month"
+                        android:text="₹199/month"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -196,7 +228,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹599/month"
+                        android:text="₹299/month"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -253,7 +285,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹1,999/year"
+                        android:text="₹999/year"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -261,7 +293,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratregular"
-                        android:text="(₹167/month)"
+                        android:text="(₹83/month)"
                         android:textColor="@color/status_partial"
                         android:textSize="14sp" />
 
@@ -308,7 +340,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹3,999/year"
+                        android:text="₹1,999/year"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -316,7 +348,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratregular"
-                        android:text="(₹333/month)"
+                        android:text="(₹167/month)"
                         android:textColor="@color/status_partial"
                         android:textSize="14sp" />
 
@@ -363,7 +395,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratbold"
-                        android:text="₹5,999/year"
+                        android:text="₹2,999/year"
                         android:textColor="@color/my_light_primary"
                         android:textSize="22sp" />
 
@@ -371,7 +403,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratregular"
-                        android:text="(₹500/month)"
+                        android:text="(₹250/month)"
                         android:textColor="@color/status_partial"
                         android:textSize="14sp" />
 
@@ -395,6 +427,102 @@
                 android:text="By purchasing a subscription, you agree to our terms of service. Subscriptions will automatically renew unless cancelled at least 24 hours before the end of the current period."
                 android:textColor="@color/my_light_on_background"
                 android:textSize="12sp" />
+
+            <!-- Current Plan Indicators -->
+            <!-- These views are used for highlighting current plan -->
+            <TextView
+                android:id="@+id/basicMonthlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/standardMonthlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/premiumMonthlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/basicYearlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/standardYearlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/premiumYearlyCurrentPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Current Plan"
+                android:textColor="@color/green"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- Debug Section (Hidden in Release) -->
+            <LinearLayout
+                android:id="@+id/debugContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/box"
+                android:backgroundTint="#F0F0F0"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="DEBUG: Google Play Products"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="#E91E63"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/verifyButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Verify Product Details"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/debugText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:fontFamily="monospace"
+                    android:textColor="#000000"
+                    android:background="#FFFFFF"
+                    android:padding="8dp" />
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

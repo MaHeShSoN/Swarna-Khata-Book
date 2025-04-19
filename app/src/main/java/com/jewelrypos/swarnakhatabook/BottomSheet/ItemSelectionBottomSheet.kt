@@ -76,10 +76,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private val inventoryViewModel: InventoryViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth,requireContext())
+        val repository = InventoryRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        InventoryViewModelFactory(repository, connectivityManager,requireContext())
+        InventoryViewModelFactory(repository, connectivityManager, requireContext())
     }
     internal lateinit var inventoryRepository: InventoryRepository
 
@@ -131,7 +131,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private fun initializeRepository() {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        inventoryRepository = InventoryRepository(firestore, auth,requireContext())
+        inventoryRepository = InventoryRepository(firestore, auth, requireContext())
     }
 
     // Load all inventory items for the dropdown
@@ -331,11 +331,12 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.grossWeightEditText.setText(item.grossWeight.toString())
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
+        binding.wastageTypeDropdown.setText(item.wastageType ?: "Percentage", false)
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType,false)
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType, false)
         binding.goldRateEditText.setText(item.metalRate.toString())
-        binding.goldRateOnEditText.setText(item.metalRateOn,false)
+        binding.goldRateOnEditText.setText(item.metalRateOn, false)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString())
 
         // Set tax rate and update checkbox
@@ -373,11 +374,12 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.grossWeightEditText.setText(item.grossWeight.toString())
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
+        binding.wastageTypeDropdown.setText(item.wastageType ?: "Percentage", false)
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType,false)
+        binding.mackingChargesTypeEditText.setText(item.makingChargesType, false)
         binding.goldRateEditText.setText(item.metalRate.toString() ?: "0.0")
-        binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight",false)
+        binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight", false)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString() ?: "0.0")
 
 
@@ -423,6 +425,19 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun setUpDropDownMenus() {
+
+        //Wastage Type
+        val listOfWastageType = listOf<String>("Percentage", "Gram")
+        val adapter0 = ArrayAdapter(
+            requireContext(),
+            R.layout.dropdown_item,
+            listOfWastageType
+        )
+        binding.wastageTypeDropdown.apply {
+            setAdapter(adapter0)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+        }
+
         // Rate on list
         val listOfRatOn = listOf<String>("Net Weight", "Gross Weight", "Fine")
         val adapter = ArrayAdapter(
@@ -689,6 +704,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
         val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
         val wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val wastageType = binding.wastageTypeDropdown.text.toString()
         val purity = binding.purityEditText.text.toString().toDoubleOrNull() ?: 0.0
 
         // Calculate the weight to use based on the selection
@@ -710,8 +726,27 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             else -> netWeight // Default to net weight if something unexpected
         }
 
-        // Add wastage and multiply by gold rate
-        return (selectedWeight + wastage) * goldRate
+        val effectiveWeight = when (wastageType) {
+            "Percentage" -> {
+                // If wastageType is Percentage, calculate wastage as a percentage of netWeight
+                val wastageWeight = netWeight * (wastage / 100.0)
+                selectedWeight + wastageWeight
+            }
+
+            "Gram" -> {
+                // If wastageType is Gram, add the wastage directly to the selectedWeight
+                selectedWeight + wastage
+            }
+
+            else -> {
+                // Default to percentage calculation
+                val wastageWeight = netWeight * (wastage / 100.0)
+                selectedWeight + wastageWeight
+            }
+        }
+
+        // Multiply by gold rate
+        return effectiveWeight * goldRate
     }
 
     /**
@@ -781,6 +816,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             grossWeight = 0.0,
             netWeight = 0.0,
             wastage = 0.0,
+            wastageType = "",
             purity = "",
             makingCharges = 0.0,
             makingChargesType = "",
@@ -803,9 +839,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.netWeightEditText.setText("0.0")
         binding.grossWeightEditText.setText("0.0")
         binding.mackingChargesEditText.setText("0.0")
-
         // Pre-select dropdown values
         binding.mackingChargesTypeEditText.setText("PER GRAM", false)
+        binding.wastageTypeDropdown.setText("Percentage", false)
         binding.goldRateOnEditText.setText("Net Weight", false)
 
         // Set default tax values and visibility
@@ -866,6 +902,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.mackingChargesTypeEditText.setOnItemClickListener { _, _, _, _ ->
+            updateCalculatedFields()
+        }
+
+        binding.wastageTypeDropdown.setOnItemClickListener { _, _, _, _ ->
             updateCalculatedFields()
         }
 
@@ -1116,6 +1156,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            wastageType = binding.wastageTypeDropdown.text.toString(),  // Add this line
             purity = binding.purityEditText.text.toString(),
             makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0,
             makingChargesType = binding.mackingChargesTypeEditText.text.toString(),
@@ -1173,6 +1214,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             return ItemSelectionBottomSheet()
         }
     }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null // Add this line

@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:background="@color/my_light_primary"
             app:menu="@menu/customer_menu"
-            app:title="Clients"
+            app:title="@string/menu_customers"
             app:titleTextAppearance="@style/ToolbarTitle" />
 
     </com.google.android.material.appbar.AppBarLayout>

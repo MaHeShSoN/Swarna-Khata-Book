@@ -12,7 +12,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:fontFamily="@font/librebaskervillebold"
-        android:text="Select Client"
+        android:text="@string/select_customer"
         android:textColor="@color/my_light_on_surface"
         android:textSize="24sp"
         app:layout_constraintEnd_toEndOf="parent"
@@ -41,7 +41,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Add New Client"
+        android:text="@string/add_new_client"
         android:textColor="@color/my_light_primary"
         app:icon="@drawable/material_symbols__add_rounded"
         app:iconTint="@color/my_light_primary"
@@ -106,7 +106,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:fontFamily="@font/librebaskervilleregular"
-            android:text="No Clients Found"
+            android:text="@string/no_customer_found"
             android:textColor="@color/my_light_on_surface"
             android:textSize="20sp" />
 
@@ -116,7 +116,7 @@
             android:layout_marginTop="8dp"
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
-            android:text="Try different search terms or create a new client"
+            android:text="@string/try_different_search_terms_or_create_a_new_client"
             android:textColor="@color/my_light_on_background"
             android:textSize="14sp" />
     </LinearLayout>

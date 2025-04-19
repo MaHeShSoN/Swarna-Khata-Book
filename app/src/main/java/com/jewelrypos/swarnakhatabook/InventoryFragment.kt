@@ -4,12 +4,14 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,8 +24,10 @@ import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
-import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel // Ensure correct import
+import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
+import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInventoryBinding
+import kotlinx.coroutines.launch
 
 class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListener,
     JewelleryAdapter.OnItemClickListener {
@@ -324,7 +328,24 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     private fun addItemButton() {
-        showBottomSheetDialog() // Reusing the function
+        // Check inventory count before allowing new item creation
+        lifecycleScope.launch {
+            try {
+                // Get total inventory item count from repository
+                val inventoryCount = inventoryViewModel.getTotalInventoryCount()
+                
+                // Check if inventory limit is reached based on subscription
+                context?.let { ctx ->
+                    FeatureChecker.checkInventoryLimit(ctx, inventoryCount) {
+                        // If within limits, show the item creation bottom sheet
+                        showBottomSheetDialog()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("InventoryFragment", "Error checking inventory limits: ${e.message}", e)
+                Toast.makeText(context, "Error checking inventory limits: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun navigateToItemDetail(item: JewelleryItem) {

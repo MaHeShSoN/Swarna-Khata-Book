@@ -21,217 +21,325 @@
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="20dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- Status Section -->
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
+            android:orientation="vertical"
+            android:padding="20dp">
 
-            <LinearLayout
+            <!-- Status Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="Current Status"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="18sp" />
-
-                <TextView
-                    android:id="@+id/statusPremium"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="Premium: false"
-                    android:textColor="@color/my_light_on_background"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/statusFirstUse"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="First Use: Not set"
-                    android:textColor="@color/my_light_on_background"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/statusDaysRemaining"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="Days Remaining: 10/10"
-                    android:textColor="@color/my_light_on_background"
-                    android:textSize="16sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Set Premium Status -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="Subscription Status Actions"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="18sp" />
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSetPremium"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/my_light_primary"
-                        android:text="Set Premium"
-                        android:textColor="@color/white" />
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Current Status"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSetFree"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:id="@+id/statusCurrentPlan"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/status_unpaid"
-                        android:text="Set Free"
-                        android:textColor="@color/white" />
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Current Plan: NONE"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusTrialActive"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Trial Active: false"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusTrialExpired"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Trial Expired: false"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusDaysRemaining"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Days Remaining: 0/15"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusFirstUseDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="First Use Date: Not set"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/statusMonthlyInvoices"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="Monthly Invoices: 0"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="16sp" />
                 </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.card.MaterialCardView>
 
-        <!-- Trial Period Actions -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
+            <!-- Trial Management Section -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="Trial Period Actions"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="18sp" />
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnResetTrial"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/my_light_primary"
-                        android:text="Reset Trial"
-                        android:textColor="@color/white" />
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Trial Management"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnExpireSoon"
-                        style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:backgroundTint="@color/status_unpaid"
-                        android:text="Set 1 Day Left"
-                        android:textColor="@color/white" />
-                </LinearLayout>
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:hint="Trial Days"
-                        app:boxBackgroundColor="@color/white">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/trialLengthInput"
-                            android:layout_width="match_parent"
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnResetTrial"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:text="10" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/my_light_primary"
+                            android:text="Reset Trial"
+                            android:textColor="@color/white" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnEndTrial"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:backgroundTint="@color/status_unpaid"
+                            android:text="End Trial"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:hint="Trial Days"
+                            app:boxBackgroundColor="@color/white">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/editTrialDays"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number"
+                                android:text="15" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetTrialDays"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:backgroundTint="@color/my_light_primary"
+                            android:text="Set Days"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Subscription Plan Management -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Subscription Plan Management"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="16dp">
+                        
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetBasic"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:backgroundTint="@color/my_light_primary"
+                            android:text="BASIC"
+                            android:textSize="12sp"
+                            android:textColor="@color/white" />
+                            
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetStandard"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginHorizontal="4dp"
+                            android:backgroundTint="@color/my_light_primary"
+                            android:text="STANDARD"
+                            android:textSize="12sp"
+                            android:textColor="@color/white" />
+                            
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetPremium"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:backgroundTint="@color/my_light_primary"
+                            android:text="PREMIUM"
+                            android:textSize="12sp"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+                    
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center">
+                        
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetNone"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/status_unpaid"
+                            android:text="Set NONE (No Subscription)" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Invoice Counter -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Monthly Invoice Counter"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="For Basic plan quota testing (100/month)"
+                        android:textColor="@color/my_light_on_background"
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnUpdateTrialLength"
+                        android:id="@+id/btnIncrementInvoices"
                         style="@style/Widget.Material3.Button"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:backgroundTint="@color/my_light_primary"
-                        android:text="Update"
+                        android:text="Increment Invoice Count (+1)"
                         android:textColor="@color/white" />
                 </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:fontFamily="@font/montserratregular"
-            android:gravity="center"
-            android:text="This debug screen is for testing only and should be disabled in production."
-            android:textColor="@color/status_unpaid"
-            android:textSize="14sp" />
-    </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:fontFamily="@font/montserratregular"
+                android:gravity="center"
+                android:text="This debug screen is for testing only and will be disabled in production builds."
+                android:textColor="@color/status_unpaid"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

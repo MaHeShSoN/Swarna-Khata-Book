@@ -68,7 +68,8 @@ class SettingsAdapter(
             "reports" to ContextCompat.getColorStateList(context, R.color.my_background_light_yellow_color),
             "recycling_bin" to ContextCompat.getColorStateList(context, R.color.my_background_light_red_color),
             "account_settings" to ContextCompat.getColorStateList(context, R.color.my_background_light_orange_color),
-            "app_updates" to ContextCompat.getColorStateList(context, R.color.my_background_light_teal_color)
+            "app_updates" to ContextCompat.getColorStateList(context, R.color.my_background_light_teal_color),
+            "about_language" to ContextCompat.getColorStateList(context, R.color.my_background_light_pink_color)
         )
         // --- End Color Caching ---
 
@@ -84,7 +85,7 @@ class SettingsAdapter(
                 badgeView.visibility = View.VISIBLE
                 badgeView.text = item.badgeText
                 val (badgeBackground, badgeTextColor) = when (item.badgeText) {
-                    "PREMIUM" -> premiumBadgeBackground to blackTextColor
+                    itemView.context.getString(R.string.premium) -> premiumBadgeBackground to whiteTextColor
                     "NEW" -> newBadgeBackground to whiteTextColor
                     "DAYS LEFT", "EXPIRED" -> daysLeftBadgeBackground to whiteTextColor
                     else -> defaultBadgeBackground to whiteTextColor // Default case

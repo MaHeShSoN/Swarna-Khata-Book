@@ -4,8 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
     android:background="@color/cream_background"
+    android:fillViewport="true"
     tools:context=".AccountSettingsFragment">
 
     <LinearLayout
@@ -26,18 +26,6 @@
                 app:title="Account Settings"
                 app:titleTextAppearance="@style/ToolbarTitle"
                 app:titleTextColor="@color/white" />
-
-            <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/progressBar"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:indeterminate="true"
-                android:paddingStart="2dp"
-                android:paddingTop="0dp"
-                android:paddingEnd="2dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/appBarLayout" />
 
         </com.google.android.material.appbar.AppBarLayout>
 
@@ -156,7 +144,7 @@
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:layout_marginEnd="12dp"
-                            android:src="@drawable/hugeicons__taxes"
+                            android:src="@drawable/fluent__tag_percent_24_regular"
                             app:tint="@color/my_light_primary" />
 
                         <TextView
@@ -206,6 +194,7 @@
                 app:cardElevation="3dp"
                 app:strokeColor="@color/my_light_outline"
                 app:strokeWidth="1dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

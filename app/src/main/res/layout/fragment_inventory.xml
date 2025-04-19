@@ -50,7 +50,7 @@
             android:layout_height="wrap_content"
             android:background="@color/my_light_primary"
             app:menu="@menu/inventory_menu"
-            app:title="Stock's"
+            app:title="@string/inventory"
             app:titleTextAppearance="@style/ToolbarTitle" />
 
     </com.google.android.material.appbar.AppBarLayout>

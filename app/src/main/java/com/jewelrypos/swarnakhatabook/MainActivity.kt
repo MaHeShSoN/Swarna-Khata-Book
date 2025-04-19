@@ -204,20 +204,21 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
-            // Check if the user is premium
-            val isPremium = subscriptionManager.isPremiumUser()
+            // Check if the user has an active subscription
+            val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
+            val isTrialActive = subscriptionManager.isTrialActive()
 
-            if (!isPremium) {
-                // Check if trial has expired
+            // If no active subscription and trial has expired, show alert
+            if (currentPlan == com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan.NONE && !isTrialActive) {
+                // No active subscription and trial expired - show alert
                 if (subscriptionManager.hasTrialExpired()) {
-                    // Trial expired - show alert and log out
                     showTrialExpiredDialog()
-                } else {
-                    // Trial still active - show remaining days if less than 3
-                    val daysRemaining = subscriptionManager.getDaysRemaining()
-                    if (daysRemaining <= 3) {
-                        showTrialReminderDialog(daysRemaining)
-                    }
+                }
+            } else if (isTrialActive) {
+                // Trial still active - show remaining days if less than 3
+                val daysRemaining = subscriptionManager.getDaysRemaining()
+                if (daysRemaining <= 3) {
+                    showTrialReminderDialog(daysRemaining)
                 }
             }
         }
@@ -240,9 +241,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showTrialReminderDialog(daysRemaining: Int) {
+        val pluralSuffix = if (daysRemaining > 1) "s" else ""
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.trial_ending_soon_title))
-            .setMessage(getString(R.string.trial_ending_soon_message, daysRemaining, if (daysRemaining > 1) "s" else ""))
+            .setMessage(getString(R.string.trial_ending_soon_message, daysRemaining, pluralSuffix))
             .setPositiveButton(getString(R.string.upgrade)) { _, _ ->
                 // Navigate to upgrade screen
                 navigateToUpgradeScreen()
@@ -254,16 +256,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun navigateToUpgradeScreen() {
-        // In a real app, this would navigate to your subscription/payment screen
-        Toast.makeText(this, getString(R.string.navigate_to_upgrade), Toast.LENGTH_SHORT).show()
-
-        // For testing purposes only - this would be replaced with actual purchase flow
-        lifecycleScope.launch {
-            val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
-            if (success) {
-                Toast.makeText(this@MainActivity, getString(R.string.upgraded_to_premium), Toast.LENGTH_SHORT).show()
-            }
-        }
+        val intent = Intent(this, UpgradeActivity::class.java)
+        startActivity(intent)
     }
 
     private fun logoutUser() {

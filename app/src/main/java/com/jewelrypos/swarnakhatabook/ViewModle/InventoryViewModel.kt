@@ -274,6 +274,58 @@ class InventoryViewModel(
         return liveData
     }
 
+    fun deleteJewelleryItem(itemId: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.deleteJewelleryItem(itemId).fold(
+                onSuccess = {
+                    refreshData() // Reload data after deletion
+                },
+                onFailure = { error ->
+                    _errorMessage.value = "Failed to delete item: ${error.message}"
+                    _isLoading.value = false
+                }
+            )
+        }
+    }
+
+    /**
+     * Moves a jewelry item to the recycle bin instead of permanent deletion
+     */
+    fun moveJewelleryItemToRecycleBin(item: JewelleryItem): LiveData<Result<Unit>> {
+        val resultLiveData = MutableLiveData<Result<Unit>>()
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.moveItemToRecycleBin(item).fold(
+                onSuccess = {
+                    resultLiveData.value = Result.success(Unit)
+                    refreshData() // Reload data after moving to recycle bin
+                },
+                onFailure = { error ->
+                    resultLiveData.value = Result.failure(error)
+                    _errorMessage.value = "Failed to move item to recycle bin: ${error.message}"
+                    _isLoading.value = false
+                }
+            )
+        }
+        return resultLiveData
+    }
+
+    /**
+     * Get the total count of inventory items
+     */
+    suspend fun getTotalInventoryCount(): Int {
+        return repository.getTotalInventoryCount().fold(
+            onSuccess = { count ->
+                count
+            },
+            onFailure = { error ->
+                _errorMessage.value = "Error getting inventory count: ${error.message}"
+                0 // Return 0 on error
+            }
+        )
+    }
+
     // --- Helper Functions ---
 
     private fun isOnline(): Boolean {

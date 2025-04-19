@@ -74,7 +74,7 @@
                     style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Item Name"
+                    android:hint="@string/item_name"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -94,8 +94,8 @@
                     android:id="@+id/progressBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:indeterminate="true"
                     android:layout_marginTop="2dp"
+                    android:indeterminate="true"
                     android:paddingStart="2dp"
                     android:paddingTop="0dp"
                     android:paddingEnd="2dp"
@@ -139,7 +139,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Gross Weight"
+                    android:hint="@string/gross_weight"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -163,7 +163,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Net Weight"
+                    android:hint="@string/net_weight"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -187,13 +187,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Purity (e.g. 91.66)"
+                    android:hint="@string/purity_e_g_91_66"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
                     app:endIconMode="clear_text"
                     app:hintTextColor="@color/my_light_secondary"
-                    app:suffixText="%">
+                    app:suffixText="g">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/purityEditText"
@@ -204,29 +204,63 @@
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Wastage -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/wastageInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Wastage"
-                    app:boxBackgroundColor="@color/my_light_surface"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:boxStrokeWidth="1dp"
-                    app:endIconMode="clear_text"
-                    app:hintTextColor="@color/my_light_secondary"
-                    app:suffixText="%">
+                    android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/wastageEditText"
-                        android:layout_width="match_parent"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/wastageInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:inputType="numberDecimal"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="@string/wastage"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconMode="clear_text"
+                        app:hintTextColor="@color/my_light_secondary"
+                        >
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/wastageEditText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/wastageTypeInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:hint="@string/type"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconMode="dropdown_menu"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/wastageTypeDropdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textAutoComplete|textCapWords"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </LinearLayout>
+
+                <!-- Wastage -->
 
 
             </LinearLayout>
@@ -273,7 +307,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
-                        android:hint="Diamond Price"
+                        android:hint="@string/diamond_price"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
@@ -327,7 +361,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Rate Based On ?"
+                    android:hint="@string/rate_based_on"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -349,7 +383,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Metal Rate (1 Gram)"
+                    android:hint="@string/metal_rate_1_gram"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -381,7 +415,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
-                        android:hint="Making Charges"
+                        android:hint="@string/making_charges"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
@@ -405,7 +439,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:hint="Type"
+                        android:hint="@string/type"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
@@ -427,7 +461,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Total Making Charges (Auto Calculated)"
+                    android:hint="@string/total_making_charges_auto_calculated"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -452,7 +486,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Total Gold Charges (Wt*Gold Rate)"
+                    android:hint="@string/total_gold_charges_wt_gold_rate"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -477,7 +511,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Total Charges"
+                    android:hint="@string/total_charges"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -572,7 +606,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Total Extra Charges"
+                    android:hint="@string/total_extra_charges"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -641,7 +675,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Tax Rate"
+                    android:hint="@string/tax_rate"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -665,7 +699,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Tax Amount (Auto Calculated)"
+                    android:hint="@string/tax_amount_auto_calculated"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"

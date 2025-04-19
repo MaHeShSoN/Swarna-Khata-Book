@@ -13,6 +13,8 @@ import com.google.android.material.datepicker.MaterialDatePicker
 import com.jewelrypos.swarnakhatabook.Adapters.ReportTypeAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.ReportType
 import com.jewelrypos.swarnakhatabook.Factorys.ReportViewModelFactory
+import com.jewelrypos.swarnakhatabook.Utilitys.PremiumFeatureHelper
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.ReportViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentReportsBinding
 
@@ -20,6 +22,12 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.widget.TextView
 
 class ReportsFragment : Fragment() {
 
@@ -28,7 +36,7 @@ class ReportsFragment : Fragment() {
 
     private lateinit var viewModel: ReportViewModel
     private lateinit var reportAdapter: ReportTypeAdapter
-
+    
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -43,6 +51,23 @@ class ReportsFragment : Fragment() {
         setupViewModel()
         setupUI()
         setupObservers()
+        
+        // Check premium status and show info message
+        PremiumFeatureHelper.isPremiumUser(this) { isPremium ->
+            if (!isPremium) {
+                // Show a non-blocking message that report generation requires premium
+                Toast.makeText(
+                    requireContext(),
+                    "Premium subscription required to generate reports",
+                    Toast.LENGTH_LONG
+                ).show()
+                
+                // Show premium banner if it exists
+                binding.premiumBanner?.visibility = View.VISIBLE
+            } else {
+                binding.premiumBanner?.visibility = View.GONE
+            }
+        }
     }
 
     private fun setupViewModel() {
@@ -181,13 +206,23 @@ class ReportsFragment : Fragment() {
     }
 
     private fun navigateToReportDetail(reportType: ReportType) {
-        when (reportType.id) {
-            "sales_report" -> navigateToSalesReport()
-            "inventory_valuation" -> navigateToInventoryReport()
-            "customer_statement" -> navigateToCustomerStatementReport()
-            "gst_report" -> navigateToGstReport()
-            "low_stock" -> navigateToLowStockReport()
+        val reportAction = {
+            when (reportType.id) {
+                "sales_report" -> navigateToSalesReport()
+                "inventory_valuation" -> navigateToInventoryReport()
+                "customer_statement" -> navigateToCustomerStatementReport()
+                "gst_report" -> navigateToGstReport()
+                "low_stock" -> navigateToLowStockReport()
+            }
         }
+        
+        // Use the helper to check premium status
+        PremiumFeatureHelper.checkPremiumAccess(
+            fragment = this,
+            featureName = "Business Reports",
+            premiumAction = reportAction
+            // Default non-premium action will show the upgrade dialog
+        )
     }
 
     private fun navigateToSalesReport() {

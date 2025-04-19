@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.databinding.ActivitySubscriptionDebugBinding
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -17,11 +19,15 @@ import java.util.Locale
 class SubscriptionDebugActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySubscriptionDebugBinding
+    private lateinit var subscriptionManager: UserSubscriptionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySubscriptionDebugBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Get subscription manager once
+        subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
@@ -37,95 +43,97 @@ class SubscriptionDebugActivity : AppCompatActivity() {
 
     private fun refreshStatus() {
         lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
-
             // Get current status
-            val isPremium = subscriptionManager.isPremiumUser()
-            val firstUseDate = subscriptionManager.getFirstUseDate()
+            val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
+            val isTrialActive = subscriptionManager.isTrialActive()
+            val trialExpired = subscriptionManager.hasTrialExpired()
             val daysRemaining = subscriptionManager.getDaysRemaining()
             val trialPeriod = subscriptionManager.getTrialPeriod()
+            val monthlyInvoiceCount = subscriptionManager.getMonthlyInvoiceCount()
 
-            // Update UI
-            binding.statusPremium.text = "Premium: $isPremium"
-            binding.statusDaysRemaining.text = "Days Remaining: $daysRemaining / $trialPeriod"
-
-            if (firstUseDate != null) {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                binding.statusFirstUse.text = "First Use: ${dateFormat.format(Date(firstUseDate))}"
+            // Format first use date
+            val firstUseDate = subscriptionManager.getFirstUseDate()
+            val formattedDate = if (firstUseDate != null) {
+                SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(firstUseDate))
             } else {
-                binding.statusFirstUse.text = "First Use: Not set"
+                "Not set"
             }
 
-            // Update trial length field
-            binding.trialLengthInput.setText(trialPeriod.toString())
+            // Update UI
+            runOnUiThread {
+                binding.statusCurrentPlan.text = "Current Plan: ${currentPlan.name}"
+                binding.statusTrialActive.text = "Trial Active: $isTrialActive"
+                binding.statusTrialExpired.text = "Trial Expired: $trialExpired" 
+                binding.statusDaysRemaining.text = "Days Remaining: $daysRemaining / $trialPeriod"
+                binding.statusFirstUseDate.text = "First Use Date: $formattedDate"
+                binding.statusMonthlyInvoices.text = "Monthly Invoices: $monthlyInvoiceCount"
+            }
         }
     }
 
     private fun setupButtons() {
-        // Set Premium Status
+        // Trial management buttons
+        binding.btnResetTrial.setOnClickListener {
+            lifecycleScope.launch {
+                subscriptionManager.resetTrial()
+                refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Trial reset", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnEndTrial.setOnClickListener {
+            lifecycleScope.launch {
+                subscriptionManager.endTrial()
+                refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Trial ended", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnSetTrialDays.setOnClickListener {
+            val days = binding.editTrialDays.text.toString().toIntOrNull() ?: 15
+            subscriptionManager.setTrialPeriod(days)
+            refreshStatus()
+            Toast.makeText(this@SubscriptionDebugActivity, "Trial period set to $days days", Toast.LENGTH_SHORT).show()
+        }
+
+        // Plan management buttons
+        binding.btnSetBasic.setOnClickListener {
+            lifecycleScope.launch {
+                subscriptionManager.updateSubscriptionPlan(SubscriptionPlan.BASIC)
+                refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Set to BASIC plan", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.btnSetStandard.setOnClickListener {
+            lifecycleScope.launch {
+                subscriptionManager.updateSubscriptionPlan(SubscriptionPlan.STANDARD)
+                refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Set to STANDARD plan", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.btnSetPremium.setOnClickListener {
             lifecycleScope.launch {
-                val success = SwarnaKhataBook.getUserSubscriptionManager()
-                    .updatePremiumStatus(true)
-
-                if (success) {
-                    Toast.makeText(this@SubscriptionDebugActivity,
-                        "Premium status set to TRUE", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@SubscriptionDebugActivity,
-                        "Failed to update premium status", Toast.LENGTH_SHORT).show()
-                }
-
+                subscriptionManager.updateSubscriptionPlan(SubscriptionPlan.PREMIUM)
                 refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Set to PREMIUM plan", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Set Free Status
-        binding.btnSetFree.setOnClickListener {
+        binding.btnSetNone.setOnClickListener {
             lifecycleScope.launch {
-                val success = SwarnaKhataBook.getUserSubscriptionManager()
-                    .updatePremiumStatus(false)
-
-                if (success) {
-                    Toast.makeText(this@SubscriptionDebugActivity,
-                        "Premium status set to FALSE", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@SubscriptionDebugActivity,
-                        "Failed to update premium status", Toast.LENGTH_SHORT).show()
-                }
-
+                subscriptionManager.updateSubscriptionPlan(SubscriptionPlan.NONE)
                 refreshStatus()
+                Toast.makeText(this@SubscriptionDebugActivity, "Set to NO plan", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Reset Trial
-        binding.btnResetTrial.setOnClickListener {
-            SwarnaKhataBook.getUserSubscriptionManager().resetTrial()
-            Toast.makeText(this@SubscriptionDebugActivity,
-                "Trial period reset", Toast.LENGTH_SHORT).show()
+        // Monthly invoice counter
+        binding.btnIncrementInvoices.setOnClickListener {
+            subscriptionManager.incrementMonthlyInvoiceCount()
             refreshStatus()
-        }
-
-        // Set Trial to 1 Day
-        binding.btnExpireSoon.setOnClickListener {
-            SwarnaKhataBook.getUserSubscriptionManager().setTrialPeriod(1)
-            Toast.makeText(this@SubscriptionDebugActivity,
-                "Trial period set to 1 day", Toast.LENGTH_SHORT).show()
-            refreshStatus()
-        }
-
-        // Update Trial Length
-        binding.btnUpdateTrialLength.setOnClickListener {
-            val trialLength = binding.trialLengthInput.text.toString().toIntOrNull()
-            if (trialLength != null && trialLength > 0) {
-                SwarnaKhataBook.getUserSubscriptionManager().setTrialPeriod(trialLength)
-                Toast.makeText(this@SubscriptionDebugActivity,
-                    "Trial period set to $trialLength days", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@SubscriptionDebugActivity,
-                    "Please enter a valid number of days", Toast.LENGTH_SHORT).show()
-            }
-            refreshStatus()
+            Toast.makeText(this@SubscriptionDebugActivity, "Incremented invoice count", Toast.LENGTH_SHORT).show()
         }
     }
 }

@@ -12,6 +12,7 @@ import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -25,9 +26,11 @@ import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
+import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerBinding
+import kotlinx.coroutines.launch
 
 class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperationListener,
     CustomerAdapter.OnCustomerClickListener {
@@ -264,7 +267,24 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     private fun addCustomerButton() {
-        showCustomerBottomSheet()
+        // Check customer count before allowing new customer creation
+        lifecycleScope.launch {
+            try {
+                // Get total customer count from repository
+                val customerCount = customerViewModel.getTotalCustomerCount()
+                
+                // Check if customer limit is reached based on subscription
+                context?.let { ctx ->
+                    FeatureChecker.checkCustomerLimit(ctx, customerCount) {
+                        // If within limits, show the customer creation bottom sheet
+                        showCustomerBottomSheet()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("CustomerFragment", "Error checking customer limits: ${e.message}", e)
+                Toast.makeText(context, "Error checking customer limits: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showCustomerBottomSheet(customer: Customer? = null) {

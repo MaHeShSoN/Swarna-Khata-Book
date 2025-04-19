@@ -333,4 +333,32 @@ class CustomerViewModel(
         // Remove observers to prevent memory leaks
         _activeCustomerType.removeObserver { }
     }
+
+    /**
+     * Gets the total count of customers for the current user/shop
+     * Used for subscription limit checks
+     */
+    suspend fun getTotalCustomerCount(): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                // First try to use the local list if it's loaded
+                if (_allCustomers.isNotEmpty()) {
+                    return@withContext _allCustomers.size
+                }
+                
+                // Otherwise, fetch the count from repository
+                val countResult = repository.getCustomerCount()
+                
+                if (countResult.isSuccess) {
+                    return@withContext countResult.getOrDefault(0)
+                } else {
+                    Log.e("CustomerViewModel", "Error getting customer count: ${countResult.exceptionOrNull()?.message}")
+                    throw countResult.exceptionOrNull() ?: Exception("Unknown error getting customer count")
+                }
+            } catch (e: Exception) {
+                Log.e("CustomerViewModel", "Error in getTotalCustomerCount: ${e.message}")
+                throw e
+            }
+        }
+    }
 }

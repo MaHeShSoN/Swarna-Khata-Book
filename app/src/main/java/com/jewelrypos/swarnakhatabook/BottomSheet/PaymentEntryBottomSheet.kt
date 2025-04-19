@@ -137,8 +137,8 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         val methods =
             listOf(
                 "Cash",
-                "Card",
                 "UPI",
+                "Card",
                 "Bank Transfer",
                 "Gold Exchange",
                 "Silver Exchange",

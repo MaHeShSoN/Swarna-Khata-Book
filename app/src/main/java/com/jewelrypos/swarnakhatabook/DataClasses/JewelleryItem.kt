@@ -10,6 +10,7 @@ data class JewelleryItem(
     val grossWeight: Double = 0.0,
     val netWeight: Double = 0.0,
     val wastage: Double = 0.0,
+    val wastageType: String = "",
     val purity: String = "",
     val makingCharges: Double = 0.0,
     val makingChargesType: String = "",

@@ -45,6 +45,7 @@ import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
+import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
@@ -275,9 +276,15 @@ class InvoiceCreationFragment : Fragment() {
         }
 
         binding.saveButton.setOnClickListener {
-            binding.saveButton.text = getString(R.string.saving)
-            binding.saveButton.isEnabled = false
-            saveInvoice()
+            if (validateInvoice()) {
+                // Check monthly invoice limit before saving
+                context?.let { ctx ->
+                    FeatureChecker.checkMonthlyInvoiceLimit(ctx) {
+                        // If within limits, proceed with saving the invoice
+                        saveInvoice()
+                    }
+                }
+            }
         }
 
         binding.cancelButton.setOnClickListener {
@@ -527,6 +534,9 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     private fun selectItems() {
+
+
+
         val itemSelectionSheet = ItemSelectionBottomSheet.newInstance()
         itemSelectionSheet.setOnItemSelectedListener(object :
             ItemSelectionBottomSheet.OnItemSelectedListener {
@@ -682,15 +692,6 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     private fun saveInvoice() {
-        // Validate
-        if (!validateInvoice()) {
-            return
-        }
-
-        proceedWithSavingInvoice()
-    }
-
-    private fun proceedWithSavingInvoice() {
         try {
             // Create invoice object
             val invoiceNumber = generateInvoiceNumber()
@@ -766,6 +767,9 @@ class InvoiceCreationFragment : Fragment() {
                     binding.progressOverlay.visibility = View.GONE
 
                     if (success) {
+                        // Increment the monthly invoice count
+                        SwarnaKhataBook.getUserSubscriptionManager().incrementMonthlyInvoiceCount()
+                        
                         context?.let { ctx ->
                             Toast.makeText(ctx, getString(R.string.invoice_saved_successfully), Toast.LENGTH_SHORT)
                                 .show()
