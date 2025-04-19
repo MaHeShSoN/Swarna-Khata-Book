@@ -77,11 +77,17 @@ class RecyclingBinFragment : Fragment() {
             isPremiumUser = premium
             // Show a non-blocking message that restore feature requires premium
             if (!isPremiumUser) {
+                // Show toast message
                 Toast.makeText(
                     requireContext(),
                     "Upgrade to Premium to restore items from the Recycling Bin",
                     Toast.LENGTH_LONG
                 ).show()
+                
+                // Show premium banner
+                binding.premiumBanner.visibility = View.VISIBLE
+            } else {
+                binding.premiumBanner.visibility = View.GONE
             }
         }
 

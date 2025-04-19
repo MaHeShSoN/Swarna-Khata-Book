@@ -22,6 +22,7 @@ data class AppNotification(
     val relatedInvoiceId: String? = null,
     val stockLevel: Double? = null,
     val shopId: String? = null,  // Added shopId field for multi-user support
+    val actionUrl: String? = null, // URL for app updates or external actions
     @ServerTimestamp val createdAt: Date? = null,
     val readAt: Date? = null,
     val actionTaken: Boolean = false

@@ -6,6 +6,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
@@ -30,6 +32,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.NotificationPermissionHelper
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentNotificationBinding
+import com.jewelrypos.swarnakhatabook.Utilitys.FCMHelper
 
 class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActionListener {
 
@@ -48,7 +51,9 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         // Ensure context is available during ViewModel creation
         val safeContext = requireContext().applicationContext // Use application context if possible
         val repository = NotificationRepository(
-            FirebaseFirestore.getInstance(), FirebaseAuth.getInstance()
+            FirebaseFirestore.getInstance(), 
+            FirebaseAuth.getInstance(),
+            safeContext // Pass the context here
         )
         val connectivityManager =
             safeContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -93,7 +98,7 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         setupSwipeRefresh()
         setupEmptyState()
         
-        // Set the current shop ID for filtering notifications
+        // Set the current shop ID for filtering
         setupShopFiltering()
 
         // Apply entrance animation
@@ -147,9 +152,25 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                     navigateToNotificationSettings()
                     true
                 }
+                
+                R.id.action_debug -> {
+                    debugFirestorePermissions()
+                    true
+                }
 
                 else -> false
             }
+        }
+        
+        // Add a debug option to the menu during development
+        // You should remove this in production
+        try {
+            val menu = binding.topAppBar.menu
+            menu.add(Menu.NONE, R.id.action_debug, Menu.NONE, "Debug")
+                .setIcon(android.R.drawable.ic_menu_info_details)
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding debug menu item", e)
         }
     }
 
@@ -273,7 +294,23 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
             // Check if errorMessage is not null or empty before showing toast
             if (!errorMessage.isNullOrEmpty()) {
                 // Use context safely
-                context?.let { Toast.makeText(it, errorMessage, Toast.LENGTH_SHORT).show() }
+                context?.let { safeContext ->
+                    // Show error with Material design alerts for better visibility for critical errors
+                    if (errorMessage.contains("delete") || errorMessage.contains("dismiss") || 
+                        errorMessage.contains("permission") || errorMessage.contains("failed")) {
+                        
+                        com.google.android.material.snackbar.Snackbar.make(
+                            binding.root,
+                            errorMessage,
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).setAction("Refresh") {
+                            viewModel.loadNotifications()
+                        }.show()
+                    } else {
+                        // Regular toast for less critical messages
+                        Toast.makeText(safeContext, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                }
                 binding.swipeRefreshLayout.isRefreshing = false // Stop refresh on error
             }
         }
@@ -307,13 +344,21 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     override fun onDismissButtonClick(notification: AppNotification) {
         // Use context safely for Dialog
         context?.let { safeContext ->
-            MaterialAlertDialogBuilder(safeContext).setTitle("Delete Notification")
+            MaterialAlertDialogBuilder(safeContext)
+                .setTitle("Delete Notification")
                 .setMessage("Do you want to delete this notification?")
                 .setPositiveButton("Yes") { _, _ ->
+                    // Show a temporary "Deleting..." toast for better UX
+                    Toast.makeText(safeContext, "Deleting notification...", Toast.LENGTH_SHORT).show()
                     viewModel.handleNotificationDismiss(notification.id)
-                }.setNegativeButton("No", null).show()
+                }
+                .setNegativeButton("No", null)
+                .show()
+        } ?: run {
+            // If context is null, show a debug log and try the operation anyway
+            Log.w(TAG, "Context was null when trying to show delete confirmation dialog")
+            viewModel.handleNotificationDismiss(notification.id) // Delete even if dialog can't be shown
         }
-            ?: viewModel.handleNotificationDismiss(notification.id) // Delete even if dialog can't be shown
     }
     // --- Navigation Logic ---
 
@@ -368,7 +413,6 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
 
                 NotificationType.GENERAL -> {
                     if (notification.relatedItemId != null) {
-//                        navigateToItemDetail(notification.relatedItemId)
                         val parentNavController =
                             requireActivity().findNavController(R.id.nav_host_fragment)
                         val action =
@@ -378,7 +422,22 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                         parentNavController.navigate(action)
                     }
                     // No specific navigation for other general types needed here
-                    // The safeNavigateToMainScreen might still be called if needed by specific logic
+                }
+
+                NotificationType.APP_UPDATE -> {
+                    // For app updates, we can handle external links or specific actions
+                    notification.actionUrl?.let { url ->
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                            intent.data = android.net.Uri.parse(url)
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error opening URL: ${e.message}")
+                            context?.let { ctx ->
+                                Toast.makeText(ctx, "Could not open link: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
                 }
 
                 NotificationType.BIRTHDAY, NotificationType.ANNIVERSARY -> {
@@ -499,6 +558,34 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         }
     }
 
+    /**
+     * Debug method to check Firestore permissions
+     * This is for development only
+     */
+    private fun debugFirestorePermissions() {
+        try {
+            // Get the current shop ID from shared preferences or another source
+            val sharedPreferences = requireContext().getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            val currentShopId = sharedPreferences.getString("active_shop_id", null)
+            
+            if (currentShopId.isNullOrEmpty()) {
+                Toast.makeText(requireContext(), "No active shop ID found", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            // Call the ViewModel's method to check Firestore rules
+            viewModel.checkFirestoreRules(currentShopId)
+            
+            // Print FCM token to logcat
+            FCMHelper.printTokenToLogcat()
+            Toast.makeText(requireContext(), "FCM Token printed to logcat", Toast.LENGTH_SHORT).show()
+            
+            Toast.makeText(requireContext(), "Checking Firestore permissions...", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during Firestore permission check", e)
+            Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -507,5 +594,6 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         navigationRunnable = null
         _binding = null // Crucial: Clear the binding reference
         Log.d(TAG, "onDestroyView called, binding and handler callbacks cleared.")
+        // Don't call debugFirestorePermissions here as it tries to use context after the view is destroyed
     }
 }

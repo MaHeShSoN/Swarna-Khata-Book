@@ -8,6 +8,7 @@ data class NotificationPreferences(
     val businessInsights: Boolean = true,
     val customerBirthday: Boolean = true,
     val customerAnniversary: Boolean = true,
+    val appUpdates: Boolean = true,
     val paymentDueReminderDays: Int = 3,
     val paymentOverdueAlertDays: Int = 1
 )

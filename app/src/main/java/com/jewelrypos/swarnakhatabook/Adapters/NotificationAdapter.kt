@@ -81,6 +81,7 @@ class NotificationAdapter(
 
         // Set notification icon based on type
         val iconResource = when (notification.type) {
+            NotificationType.APP_UPDATE -> R.drawable.mingcute__notification_fill
             NotificationType.CREDIT_LIMIT -> R.drawable.material_symbols_warning_rounded
             NotificationType.PAYMENT_DUE -> R.drawable.mdi__currency_inr
             NotificationType.PAYMENT_OVERDUE -> R.drawable.mdi__currency_inr
@@ -122,6 +123,7 @@ class NotificationAdapter(
 
         // Configure action button based on notification type
         val actionText = when (notification.type) {
+            NotificationType.APP_UPDATE -> "Update"
             NotificationType.CREDIT_LIMIT -> "View Customer"
             NotificationType.PAYMENT_DUE, NotificationType.PAYMENT_OVERDUE -> "Add Payment"
             NotificationType.BIRTHDAY, NotificationType.ANNIVERSARY -> "Send Wishes"

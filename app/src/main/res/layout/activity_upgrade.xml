@@ -42,446 +42,801 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Header section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:fontFamily="@font/librebaskervilleregular"
-                android:text="Choose your plan"
-                android:textColor="@color/my_light_on_surface"
-                android:textSize="24sp" />
-
             <!-- Trial info banner (only visible when in trial) -->
             <LinearLayout
                 android:id="@+id/trialBanner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/box"
-                android:backgroundTint="@color/my_light_secondary_container"
-                android:orientation="vertical"
-                android:padding="16dp"
                 android:layout_marginBottom="16dp"
+                android:background="@drawable/rounded_metric_background"
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical"
                 android:visibility="gone"
                 tools:visibility="visible">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="You're in Trial Mode"
-                    android:textColor="@color/my_light_secondary_container"
-                    android:textSize="16sp" />
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="12dp"
+                    android:src="@drawable/material_symbols__timer_outline"
+                    app:tint="@color/my_light_primary" />
 
-                <TextView
-                    android:id="@+id/trialDaysRemaining"
-                    android:layout_width="match_parent"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="7 days remaining"
-                    android:textColor="@color/my_light_secondary_container"
-                    android:textSize="14sp" />
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="You're in Trial Mode"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/trialDaysRemaining"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="7 days remaining"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="14sp" />
+                </LinearLayout>
             </LinearLayout>
 
+            <!-- Period Toggle Container -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="Billing Period"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="12dp"/>
+
+                <!-- Period Toggle -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/monthlyToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:background="@color/my_light_primary"
+                            android:fontFamily="@font/montserratmedium"
+                            android:gravity="center"
+                            android:paddingHorizontal="24dp"
+                            android:text="Monthly"
+                            android:textColor="@color/white"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/yearlyToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/montserratmedium"
+                            android:gravity="center"
+                            android:paddingHorizontal="24dp"
+                            android:text="Yearly"
+                            android:textColor="@color/my_light_secondary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Plans section -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp">
+
+                <!-- Basic Plan -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/basicMonthlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/standardMonthlyCard"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Basic"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹99"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Standard Plan -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/standardMonthlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="3dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/basicMonthlyCard"
+                    app:layout_constraintEnd_toStartOf="@id/premiumMonthlyCard"
+                    app:strokeColor="@color/my_light_primary"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Standard"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹199"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Premium Plan -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/premiumMonthlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/standardMonthlyCard"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Premium"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹299"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Yearly Plan Cards (initially hidden) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/basicYearlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/standardYearlyCard"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Basic"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹999"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/standardYearlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="3dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/basicYearlyCard"
+                    app:layout_constraintEnd_toStartOf="@id/premiumYearlyCard"
+                    app:strokeColor="@color/my_light_primary"
+                    app:strokeWidth="2dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Standard"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹1,999"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="4dp"
+                            android:background="@drawable/rounded_badge_background"
+                            android:fontFamily="@font/montserratmedium"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:text="POPULAR"
+                            android:textColor="@color/white"
+                            android:textSize="8sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/premiumYearlyCard"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/my_light_surface"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="1dp"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/standardYearlyCard"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:strokeColor="@color/my_light_outline"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:text="Premium"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:fontFamily="@font/montserratbold"
+                            android:text="₹2,999"
+                            android:textAlignment="center"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="20sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Plan Details Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/selectedPlanTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="Standard Plan"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="16dp"
+                        android:background="@color/my_light_outline"
+                        android:alpha="0.5" />
+
+                    <!-- Standard Plan Features -->
+                    <LinearLayout
+                        android:id="@+id/standardPlanFeatures"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Unlimited customers"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Unlimited invoices"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Advanced reporting"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Email invoices"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Customer portal"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Basic Plan Features (Initially Hidden) -->
+                    <LinearLayout
+                        android:id="@+id/basicPlanFeatures"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Up to 100 customers"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Up to 500 invoices"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Basic reporting"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Premium Plan Features (Initially Hidden) -->
+                    <LinearLayout
+                        android:id="@+id/premiumPlanFeatures"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Everything in Standard"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Multi-user access"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="API access"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Premium support"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_marginEnd="12dp"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/my_light_primary" />
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/montserratregular"
+                                android:text="Custom branding"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Subscribe Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/purchaseButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:backgroundTint="@color/my_light_primary"
+                android:fontFamily="@font/montserratbold"
+                android:text="Subscribe Now"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                app:cornerRadius="8dp" />
+
+            <!-- Terms Text -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="24dp"
                 android:fontFamily="@font/montserratregular"
-                android:text="Select the plan that best fits your business needs"
-                android:textColor="@color/my_light_on_background"
-                android:textSize="16sp" />
-
-            <!-- Monthly Plans Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:fontFamily="@font/montserratsemibold"
-                android:text="Monthly Plans"
-                android:textColor="@color/my_light_on_surface"
-                android:textSize="18sp" />
-
-            <!-- Basic Monthly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/basicMonthlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Basic"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹99/month"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Up to 100 customers\n• Up to 500 invoices\n• Basic reporting"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Standard Monthly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/standardMonthlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_primary"
-                app:strokeWidth="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Standard"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹199/month"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Unlimited customers\n• Unlimited invoices\n• Advanced reporting\n• Email invoices\n• Customer portal"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Premium Monthly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/premiumMonthlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Premium"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹299/month"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Everything in Standard\n• Multi-user access\n• API access\n• Premium support\n• Custom branding"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Yearly Plans Section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:fontFamily="@font/montserratsemibold"
-                android:text="Yearly Plans (Save 20%)"
-                android:textColor="@color/my_light_on_surface"
-                android:textSize="18sp" />
-
-            <!-- Basic Yearly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/basicYearlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Basic Yearly"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹999/year"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="(₹83/month)"
-                        android:textColor="@color/status_partial"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Up to 100 customers\n• Up to 500 invoices\n• Basic reporting"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Standard Yearly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/standardYearlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Standard Yearly"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹1,999/year"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="(₹167/month)"
-                        android:textColor="@color/status_partial"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Unlimited customers\n• Unlimited invoices\n• Advanced reporting\n• Email invoices\n• Customer portal"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Premium Yearly Plan -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/premiumYearlyCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:clickable="true"
-                android:focusable="true"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:text="Premium Yearly"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratbold"
-                        android:text="₹2,999/year"
-                        android:textColor="@color/my_light_primary"
-                        android:textSize="22sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="(₹250/month)"
-                        android:textColor="@color/status_partial"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:text="• Everything in Standard\n• Multi-user access\n• API access\n• Premium support\n• Custom branding"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Terms and Notes -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:fontFamily="@font/montserratregular"
-                android:text="By purchasing a subscription, you agree to our terms of service. Subscriptions will automatically renew unless cancelled at least 24 hours before the end of the current period."
+                android:text="By purchasing a subscription, you agree to our terms of service. Subscriptions will automatically renew unless cancelled before the end of the current period."
+                android:textAlignment="center"
                 android:textColor="@color/my_light_on_background"
                 android:textSize="12sp" />
 
-            <!-- Current Plan Indicators -->
-            <!-- These views are used for highlighting current plan -->
+            <!-- Hidden Current Plan Indicators -->
             <TextView
                 android:id="@+id/basicMonthlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/standardMonthlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/premiumMonthlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/basicYearlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/standardYearlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <TextView
                 android:id="@+id/premiumYearlyCurrentPlan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Current Plan"
-                android:textColor="@color/green"
-                android:textStyle="bold"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:visibility="gone" />
 
             <!-- Debug Section (Hidden in Release) -->
@@ -489,41 +844,40 @@
                 android:id="@+id/debugContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/box"
                 android:backgroundTint="#F0F0F0"
+                android:orientation="vertical"
+                android:padding="16dp"
                 android:visibility="gone"
                 tools:visibility="visible">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
                     android:text="DEBUG: Google Play Products"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
                     android:textColor="#E91E63"
-                    android:layout_marginBottom="8dp" />
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
                 <Button
                     android:id="@+id/verifyButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Verify Product Details"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_marginBottom="8dp"
+                    android:text="Verify Product Details" />
 
                 <TextView
                     android:id="@+id/debugText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:fontFamily="monospace"
-                    android:textColor="#000000"
                     android:background="#FFFFFF"
-                    android:padding="8dp" />
+                    android:fontFamily="monospace"
+                    android:padding="8dp"
+                    android:textColor="#000000"
+                    android:textSize="12sp" />
             </LinearLayout>
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

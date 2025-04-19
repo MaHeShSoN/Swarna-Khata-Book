@@ -65,6 +65,7 @@ class NotificationSettingsViewModel(
         val currentPrefs = _preferences.value ?: NotificationPreferences()
 
         val updatedPrefs = when (type) {
+            NotificationType.APP_UPDATE -> currentPrefs.copy(appUpdates = enabled)
             NotificationType.PAYMENT_DUE -> currentPrefs.copy(paymentDue = enabled)
             NotificationType.PAYMENT_OVERDUE -> currentPrefs.copy(paymentOverdue = enabled)
             NotificationType.CREDIT_LIMIT -> currentPrefs.copy(creditLimit = enabled)

@@ -23,6 +23,8 @@ import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.InvoicePdfGenerator
+import com.jewelrypos.swarnakhatabook.Utilitys.PremiumFeatureHelper
+import android.content.Intent
 
 import com.jewelrypos.swarnakhatabook.databinding.FragmentTempleteSelectionBinding
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +56,8 @@ class TemplateSelectionFragment : Fragment() {
         R.color.gold
     )
 
+    // Track premium status
+    private var isPremiumUser = false
     private var selectedColorIndex = 0
 
     override fun onCreateView(
@@ -81,6 +85,9 @@ class TemplateSelectionFragment : Fragment() {
         // Initialize template buttons map
         initializeTemplateButtons()
 
+        // Check premium status
+        checkPremiumStatus()
+
         // Load settings
         loadSettings()
 
@@ -106,9 +113,6 @@ class TemplateSelectionFragment : Fragment() {
             viewLifecycleOwner,
             backPressedCallback
         )
-
-
-       
     }
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -138,7 +142,6 @@ class TemplateSelectionFragment : Fragment() {
             }
             .show()
     }
-
 
     private fun setupToolbar() {
         val toolbar: Toolbar = binding.topAppBar
@@ -174,6 +177,41 @@ class TemplateSelectionFragment : Fragment() {
         }
     }
 
+    private fun checkPremiumStatus() {
+        // Use PremiumFeatureHelper to check premium status
+        PremiumFeatureHelper.isPremiumUser(this) { premium ->
+            isPremiumUser = premium
+            
+            // We're hiding the premiumBanner as requested, showing badges instead
+            binding.premiumBanner?.visibility = View.GONE
+            
+            // Update UI with premium badges
+            updatePremiumTemplateAccess()
+        }
+    }
+    
+    private fun updatePremiumTemplateAccess() {
+        // Add premium badges to premium template options but don't block selection
+        for ((type, _) in templateButtons) {
+            val template = PdfSettings.getAvailableTemplates().find { it.templateType == type }
+            
+            if (template != null && template.isPremium) {
+                val label = templateLabels[type]
+                // Only add premium badge if not already present
+                if (label != null && !label.text.toString().contains("👑")) {
+                    label.text = "${label.text} 👑"
+                }
+            }
+        }
+    }
+    
+    private fun showPremiumTemplateDialog() {
+        PremiumFeatureHelper.showPremiumFeatureDialog(
+            requireContext(),
+            "Advanced invoice templates & color themes"
+        )
+    }
+
     private fun loadSettings() {
         lifecycleScope.launch {
             // Show loading
@@ -205,16 +243,9 @@ class TemplateSelectionFragment : Fragment() {
             // Load all available templates
             val templates = PdfSettings.getAvailableTemplates()
 
-            // Mark premium templates
-            for (template in templates) {
-                if (template.isPremium) {
-                    val templateType = template.templateType
-                    templateLabels[templateType]?.let { label ->
-                        label.text = "${label.text} 👑"
-                    }
-                }
-            }
-
+            // Mark premium templates - this is now handled in updatePremiumTemplateAccess()
+            // We're keeping this comment for clarity
+            
             // Load PDF preview
             updatePreview()
 
@@ -227,6 +258,9 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     private fun selectTemplate(templateType: TemplateType, updatePreview: Boolean = true) {
+        // Allow selecting any template, including premium ones
+        // Premium check will happen at save time
+        
         // Reset all template buttons
         for (button in templateButtons.values) {
             button.setBackgroundResource(R.drawable.template_button_unselected)
@@ -364,6 +398,17 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     private fun saveSettings() {
+        // Check if user is premium before allowing saving premium templates
+        val currentTemplate = pdfSettings?.templateType
+        val template = currentTemplate?.let { 
+            PdfSettings.getAvailableTemplates().find { it.templateType == currentTemplate } 
+        }
+        
+        if (template != null && template.isPremium && !isPremiumUser) {
+            showPremiumTemplateDialog()
+            return
+        }
+        
         // Save current settings
         pdfSettings?.let { settings ->
             lifecycleScope.launch(Dispatchers.IO) {

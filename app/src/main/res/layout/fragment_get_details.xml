@@ -84,7 +84,7 @@
                 app:prefixText="+91"
                 app:counterEnabled="true"
                 app:counterMaxLength="10"
-                app:startIconDrawable="@drawable/ic_phone_custom"
+                app:startIconDrawable="@drawable/ic__outline_phone"
                 app:startIconTint="@color/my_light_primary">
 
                 <com.google.android.material.textfield.TextInputEditText

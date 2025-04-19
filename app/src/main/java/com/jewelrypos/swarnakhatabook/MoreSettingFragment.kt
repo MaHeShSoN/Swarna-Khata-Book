@@ -188,11 +188,7 @@ class MoreSettingFragment : Fragment() {
             "invoice_template" -> {
                 // Still check premium status for template customization
                 // but don't block navigation
-                if (isPremium) {
-                    mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
-                } else {
-                    showPremiumFeatureDialog("Advanced invoice templates & colors")
-                }
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_templateSelectionFragment)
             }
 
             "account_settings" -> {

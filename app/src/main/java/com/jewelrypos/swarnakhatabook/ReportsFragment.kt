@@ -63,9 +63,9 @@ class ReportsFragment : Fragment() {
                 ).show()
                 
                 // Show premium banner if it exists
-                binding.premiumBanner?.visibility = View.VISIBLE
+                binding.premiumBanner.visibility = View.VISIBLE
             } else {
-                binding.premiumBanner?.visibility = View.GONE
+                binding.premiumBanner.visibility = View.GONE
             }
         }
     }

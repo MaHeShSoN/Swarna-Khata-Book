@@ -6,5 +6,6 @@ enum class NotificationType {
     PAYMENT_OVERDUE,      // Payment is overdue
     BIRTHDAY,             // Customer birthday
     ANNIVERSARY,          // Customer anniversary
-    GENERAL               // General notification
+    GENERAL,              // General notification
+    APP_UPDATE            // App updates and customer notifications
 }

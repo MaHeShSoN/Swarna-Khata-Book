@@ -15,12 +15,16 @@ import com.jewelrypos.swarnakhatabook.Repository.NotificationRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.Event
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.Date
 
 class NotificationViewModel(
     private val repository: NotificationRepository,
     private val connectivityManager: ConnectivityManager
 ) : ViewModel() {
+
+    // Reference to Firestore for debugging
+    private val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 
     // --- LiveData ---
 
@@ -198,10 +202,11 @@ class NotificationViewModel(
 
         loadUnreadCountJob = viewModelScope.launch {
             try {
+                Log.d(TAG, "Refreshing unread notification count for shop: ${_currentShopId.value}")
+                
                 // If a shop ID is set, get unread count for that shop
                 val shopId = _currentShopId.value
                 val result = if (shopId != null) {
-                    Log.d(TAG, "Getting unread count for shop: $shopId")
                     repository.getUnreadNotificationCountForShop(shopId)
                 } else {
                     repository.getUnreadNotificationCount()
@@ -209,14 +214,28 @@ class NotificationViewModel(
 
                 result.fold(
                     onSuccess = { count ->
+                        Log.d(TAG, "New unread count: $count for shop: ${_currentShopId.value}")
                         _unreadCount.value = count
                     },
                     onFailure = { exception ->
-                        Log.e(TAG, "Error getting unread count", exception)
+                        Log.e(TAG, "Error getting unread count: ${exception.message}", exception)
+                        
+                        // Try a fallback method if available
+                        try {
+                            val fallbackCount = repository.getUnreadNotificationCountSafe()
+                            if (fallbackCount >= 0) { // -1 indicates error in the safe method
+                                Log.d(TAG, "Using fallback unread count: $fallbackCount")
+                                _unreadCount.value = fallbackCount
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Fallback count also failed: ${e.message}", e)
+                        }
                     }
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "Exception getting unread count", e)
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e(TAG, "Exception getting unread count: ${e.message}", e)
+                }
             }
         }
     }
@@ -246,79 +265,153 @@ class NotificationViewModel(
 
         notificationActionJob = viewModelScope.launch {
             try {
+                // Get notification status before marking as read to avoid unnecessary count refresh
+                val currentList = _notifications.value ?: emptyList()
+                val notification = currentList.find { it.id == notificationId }
+                val wasUnread = notification?.status == NotificationStatus.UNREAD
+
                 repository.markAsRead(notificationId).fold(
                     onSuccess = {
                         // Update the notification in the local list optimistically
-                        val currentList = _notifications.value?.toMutableList() ?: mutableListOf()
-                        val index = currentList.indexOfFirst { it.id == notificationId }
+                        val updatedList = currentList.toMutableList()
+                        val index = updatedList.indexOfFirst { it.id == notificationId }
 
-                        if (index != -1 && currentList[index].status != NotificationStatus.READ) { // Only update if not already read
-                            val updatedNotification = currentList[index].copy(
+                        if (index != -1 && updatedList[index].status != NotificationStatus.READ) { // Only update if not already read
+                            val updatedNotification = updatedList[index].copy(
                                 status = NotificationStatus.READ,
                                 readAt = java.util.Date() // Set read timestamp
                             )
 
-                            currentList[index] = updatedNotification
+                            updatedList[index] = updatedNotification
+                            _notifications.value = updatedList // Update LiveData
 
-                            _notifications.value = currentList // Update LiveData
-
-                            refreshUnreadCount() // Refresh count after successful update
+                            // Only refresh count if notification was actually unread before
+                            if (wasUnread) {
+                                // Update locally first for immediate UI response
+                                val currentCount = _unreadCount.value ?: 0
+                                if (currentCount > 0) {
+                                    _unreadCount.value = currentCount - 1
+                                }
+                                
+                                // Then refresh from server to ensure accuracy
+                                refreshUnreadCount()
+                            }
                         }
                     },
                     onFailure = { exception ->
                         _errorMessage.value = exception.message ?: "Failed to mark as read"
-                        Log.e(
-                            "NotificationViewModel", "Error marking notification as read", exception
-                        )
+                        Log.e(TAG, "Error marking notification as read", exception)
                     }
                 )
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to mark notification as read: ${e.message}"
-                Log.e("NotificationViewModel", "Exception marking notification as read", e)
+                Log.e(TAG, "Exception marking notification as read", e)
             }
         }
     }
 
-    // Add this to NotificationViewModel.kt
     /**
-     * Handle notification dismiss/delete with error handling
+     * Handle notification dismiss/delete with improved error handling
      */
     fun handleNotificationDismiss(notificationId: String) {
         notificationActionJob?.cancel()
 
-        notificationActionJob = viewModelScope.launch {
-            try {
-                // Update local list immediately for better UX
-                updateLocalListAfterDismiss(notificationId)
+        // Get notification details first for tracking
+        val notification = _notifications.value?.find { it.id == notificationId }
+        if (notification == null) {
+            _errorMessage.value = "Cannot find notification to delete."
+            return
+        }
 
-                // Delete from server
-                repository.deleteNotification(notificationId)
-            } catch (e: Exception) {
-                if (e !is kotlinx.coroutines.CancellationException) {
-                    _errorMessage.value = "Error deleting notification: ${e.message}"
-                    Log.e("NotificationViewModel", "Error deleting notification", e)
-                }
+        // Get current shop ID directly from the ViewModel
+        val shopId = _currentShopId.value
+        if (shopId.isNullOrEmpty()) {
+            _errorMessage.value = "No active shop selected. Please refresh and try again."
+            return
+        }
+
+        // Log what we're trying to delete
+        Log.d(TAG, "Starting deletion of notification: $notificationId, type: ${notification.type}, shop: $shopId")
+
+        // Optimistically remove from UI first (better UX)
+        val originalList = _notifications.value?.toMutableList() ?: mutableListOf()
+        val updatedList = originalList.filter { it.id != notificationId }
+        _notifications.value = updatedList
+        
+        // Track if we need to refresh unread count
+        val wasUnread = notification.status == NotificationStatus.UNREAD
+        
+        // Update local unread count immediately if needed
+        if (wasUnread) {
+            val currentCount = _unreadCount.value ?: 0
+            if (currentCount > 0) {
+                _unreadCount.value = currentCount - 1
             }
         }
-    }
 
-    private fun updateLocalListAfterDismiss(notificationId: String) {
-        val currentList = _notifications.value?.toMutableList() ?: return
-        val index = currentList.indexOfFirst { it.id == notificationId }
-
-        if (index != -1) {
-            val notification = currentList[index]
-            // If the notification was unread, update the count
-            if (notification.status == NotificationStatus.UNREAD) {
-                val currentCount = _unreadCount.value ?: 0
-                if (currentCount > 0) {
-                    _unreadCount.value = currentCount - 1
+        notificationActionJob = viewModelScope.launch {
+            try {
+                // Try to delete on the server, pass shop ID explicitly
+                val result = repository.deleteNotification(notificationId, shopId)
+                
+                if (result.isFailure) {
+                    // Get details from the error
+                    val exception = result.exceptionOrNull()
+                    Log.e(TAG, "Failed to delete notification: ${exception?.message}")
+                    
+                    // Create an appropriate error message
+                    val errorMessage = when {
+                        exception?.message?.contains("permission") == true || 
+                        exception?.message?.contains("PERMISSION_DENIED") == true ->
+                            "You don't have permission to delete this notification."
+                            
+                        exception?.message?.contains("network") == true || 
+                        exception?.message?.contains("UNAVAILABLE") == true ->
+                            "Network error. Please check your connection and try again."
+                            
+                        exception?.message?.contains("NOT_FOUND") == true ->
+                            "Notification has already been deleted."
+                            
+                        exception?.message?.contains("UNAUTHENTICATED") == true ||
+                        exception?.message?.contains("authentication") == true ->
+                            "Authentication error. Please log in again."
+                            
+                        else -> "Failed to delete notification. Please try again later."
+                    }
+                    
+                    // Restore the item in the list
+                    _notifications.value = originalList
+                    
+                    // Restore unread count if needed
+                    if (wasUnread) {
+                        refreshUnreadCount()
+                    }
+                    
+                    _errorMessage.value = errorMessage
+                } else {
+                    // Delete was successful, refresh unread count to be sure
+                    if (wasUnread) {
+                        refreshUnreadCount()
+                    }
+                    
+                    Log.d(TAG, "Successfully deleted notification: $notificationId")
+                }
+            } catch (e: Exception) {
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e(TAG, "Exception deleting notification: ${e.javaClass.name}", e)
+                    
+                    // Restore the item in the list
+                    _notifications.value = originalList
+                    
+                    // Restore unread count if needed
+                    if (wasUnread) {
+                        refreshUnreadCount()
+                    }
+                    
+                    // Set a user-friendly error message
+                    _errorMessage.value = "Could not delete notification due to a system error. Please try again later."
                 }
             }
-
-            // Remove from list
-            currentList.removeAt(index)
-            _notifications.value = currentList
         }
     }
 
@@ -481,6 +574,109 @@ class NotificationViewModel(
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to create notification: ${e.message}"
                 Log.e("NotificationViewModel", "Exception creating notification", e)
+            }
+        }
+    }
+
+    /**
+     * Helper method to check Firestore security rules and permissions
+     * This is for development/debugging only
+     */
+    fun checkFirestoreRules(shopId: String?) {
+        if (shopId.isNullOrEmpty()) {
+            _errorMessage.value = "No shop ID available for rule checking"
+            return
+        }
+        
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                
+                // 1. Try to read a notification
+                val readResult = try {
+                    val query = firestore.collection("shopData")
+                        .document(shopId)
+                        .collection("notifications")
+                        .limit(1)
+                        
+                    val snapshot = query.get().await()
+                    if (snapshot.isEmpty) "Read success (no notifications found)" else "Read success (found ${snapshot.size()} notifications)"
+                } catch (e: Exception) {
+                    "Read failed: ${e.message}"
+                }
+                
+                // 2. Try to create a test notification
+                val testId = "test_${System.currentTimeMillis()}"
+                val writeResult = try {
+                    val testDoc = firestore.collection("shopData")
+                        .document(shopId)
+                        .collection("notifications")
+                        .document(testId)
+                        
+                    val testData = hashMapOf(
+                        "title" to "Test Notification",
+                        "message" to "This is a test notification for debugging",
+                        "type" to "GENERAL",
+                        "status" to "UNREAD",
+                        "shopId" to shopId,
+                        "createdAt" to com.google.firebase.Timestamp.now()
+                    )
+                    
+                    testDoc.set(testData).await()
+                    "Write success"
+                } catch (e: Exception) {
+                    "Write failed: ${e.message}"
+                }
+                
+                // 3. Try to delete a notification (either the test one or any other)
+                val deleteResult = try {
+                    // First try to delete the test notification if we created it
+                    if (writeResult == "Write success") {
+                        firestore.collection("shopData")
+                            .document(shopId)
+                            .collection("notifications")
+                            .document(testId)
+                            .delete()
+                            .await()
+                        "Delete success (test notification)"
+                    } else {
+                        // Otherwise try to find any notification to delete
+                        val query = firestore.collection("shopData")
+                            .document(shopId)
+                            .collection("notifications")
+                            .limit(1)
+                            
+                        val snapshot = query.get().await()
+                        if (!snapshot.isEmpty) {
+                            val doc = snapshot.documents.first()
+                            doc.reference.delete().await()
+                            "Delete success (found notification)"
+                        } else {
+                            "No notifications to delete"
+                        }
+                    }
+                } catch (e: Exception) {
+                    "Delete failed: ${e.message}"
+                }
+                
+                // Compile results
+                val resultMessage = """
+                    Firestore Rules Check Results:
+                    - Read: $readResult
+                    - Write: $writeResult
+                    - Delete: $deleteResult
+                    
+                    If 'Delete failed', your Firestore rules likely need updating.
+                """.trimIndent()
+                
+                Log.d(TAG, resultMessage)
+                _errorMessage.value = resultMessage
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking Firestore rules", e)
+                _errorMessage.value = "Error during rule check: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }

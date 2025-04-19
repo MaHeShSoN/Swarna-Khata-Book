@@ -117,7 +117,7 @@
                         android:hint="Shop Address"
                         app:endIconMode="clear_text"
                         app:startIconContentDescription="Address Icon"
-                        app:startIconDrawable="@drawable/system_uicons__location"
+                        app:startIconDrawable="@drawable/akar_icons__location"
                         app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -139,7 +139,7 @@
                         android:hint="Phone Number (Read-only)"
                         app:endIconMode="clear_text"
                         app:startIconContentDescription="Phone Icon"
-                        app:startIconDrawable="@drawable/ic_phone_custom"
+                        app:startIconDrawable="@drawable/ic__outline_phone"
                         app:startIconTint="@color/my_light_primary">
 
                         <com.google.android.material.textfield.TextInputEditText

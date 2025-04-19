@@ -230,26 +230,80 @@ class NotificationRepository(
     }
 
     /**
-     * Deletes a notification
+     * Deletes a notification - simplified direct approach with better error logging
      */
     suspend fun deleteNotification(notificationId: String, shopId: String? = null): Result<Unit> {
         return try {
+            // First use the explicitly passed shopId if available
             val targetShopId = shopId ?: getActiveShopId()
+            
             if (targetShopId.isNullOrEmpty()) {
-                Log.w(TAG, "No shop ID available")
+                Log.w(TAG, "No shop ID available when trying to delete notification $notificationId")
                 return Result.failure(Exception("No shop ID available"))
             }
 
-            firestore.collection("shopData")
+            // Log the delete operation with details
+            Log.d(TAG, "Attempting to delete notification $notificationId from shop $targetShopId")
+            Log.d(TAG, "Current user UID: ${auth.currentUser?.uid}")
+            
+            // Create the document reference
+            val notificationRef = firestore.collection("shopData")
                 .document(targetShopId)
                 .collection("notifications")
                 .document(notificationId)
-                .delete()
-                .await()
 
-            Result.success(Unit)
+            // Check if document exists first
+            val documentSnapshot = try {
+                notificationRef.get().await()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking if notification exists: ${e.message}")
+                // Continue with deletion anyway, in case the read permission is not available
+                // but write permission might be
+                null
+            }
+            
+            if (documentSnapshot != null && !documentSnapshot.exists()) {
+                Log.d(TAG, "Notification $notificationId already deleted or doesn't exist")
+                return Result.success(Unit) 
+            }
+            
+            // Log the data about to be deleted for debugging
+            if (documentSnapshot != null) {
+                Log.d(TAG, "Found notification data: ${documentSnapshot.data}")
+            }
+            
+            // Simple direct deletion with try/catch for specific error logging
+            try {
+                // Use a direct delete instead of transaction for simplicity
+                notificationRef.delete().await()
+                Log.d(TAG, "Successfully deleted notification $notificationId")
+                Result.success(Unit)
+            } catch (e: Exception) {
+                // Log the specific Firestore error details
+                Log.e(TAG, "Firestore error deleting notification: ${e.javaClass.simpleName}: ${e.message}")
+                // Try to print any nested exceptions
+                e.cause?.let { cause ->
+                    Log.e(TAG, "Caused by: ${cause.javaClass.simpleName}: ${cause.message}")
+                }
+                
+                // Try as one last attempt to update the status to "DELETED" 
+                try {
+                    Log.d(TAG, "Trying alternative approach - marking as DELETED")
+                    notificationRef.update(
+                        mapOf(
+                            "status" to "DELETED",
+                            "deletedAt" to com.google.firebase.Timestamp.now()
+                        )
+                    ).await()
+                    Log.d(TAG, "Successfully marked notification as DELETED")
+                    Result.success(Unit)
+                } catch (innerE: Exception) {
+                    Log.e(TAG, "Both deletion approaches failed: ${innerE.message}")
+                    throw e  // Throw the original exception
+                }
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting notification", e)
+            Log.e(TAG, "Error deleting notification $notificationId: ${e.javaClass.simpleName}: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -317,6 +371,8 @@ class NotificationRepository(
 
             // Add more specific filters based on notification type
             when (notification.type) {
+
+
                 NotificationType.PAYMENT_DUE, NotificationType.PAYMENT_OVERDUE -> {
                     // For payment notifications, check specific invoice
                     if (notification.relatedInvoiceId != null) {
@@ -338,7 +394,7 @@ class NotificationRepository(
                         query = query.whereEqualTo("customerId", notification.customerId)
                     }
                 }
-                NotificationType.GENERAL -> {
+                NotificationType.GENERAL, NotificationType.APP_UPDATE -> {
                     // For general notifications, check by relatedItemId if it exists
                     if (notification.relatedItemId != null) {
                         query = query.whereEqualTo("relatedItemId", notification.relatedItemId)
@@ -428,6 +484,7 @@ class NotificationRepository(
                 NotificationType.CREDIT_LIMIT -> prefs.creditLimit
                 NotificationType.BIRTHDAY -> prefs.customerBirthday
                 NotificationType.ANNIVERSARY -> prefs.customerAnniversary
+                NotificationType.APP_UPDATE -> prefs.appUpdates
                 NotificationType.GENERAL -> {
                     // For GENERAL type, we need to check the context
                     // Default to business insights preference
@@ -605,10 +662,29 @@ class NotificationRepository(
     /**
      * Helper to get the active shop ID
      */
-    private fun getActiveShopId(): String? {
+    private suspend fun getActiveShopId(): String? {
         if (context == null) {
             Log.w(TAG, "Context is null, cannot get active shop ID")
-            return null
+            
+            // Try to get the shopId from cached notifications if available
+            val shopIdFromCache = try {
+                val snapshot = firestore.collection("shopData")
+                    .limit(1)
+                    .get(com.google.firebase.firestore.Source.CACHE)
+                    .await()
+                
+                if (!snapshot.isEmpty) {
+                    val shopId = snapshot.documents.first().id
+                    Log.d(TAG, "Found shop ID from cache: $shopId")
+                    return shopId
+                }
+                null
+            } catch (e: Exception) {
+                Log.e(TAG, "Error trying to get shopId from cache", e)
+                null
+            }
+            
+            return shopIdFromCache
         }
         
         return SessionManager.getActiveShopId(context)

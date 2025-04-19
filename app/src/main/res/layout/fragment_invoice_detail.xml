@@ -182,7 +182,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:contentDescription="Call customer"
-                        app:icon="@drawable/baseline_phone_24"
+                        app:icon="@drawable/ic__outline_phone"
                         app:iconTint="@color/my_light_primary"
                         app:layout_constraintEnd_toStartOf="@id/infoButton"
                         app:layout_constraintTop_toTopOf="parent" />
@@ -194,7 +194,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:contentDescription="Customer Info"
-                        app:icon="@drawable/material_symbols_warning_rounded"
+                        app:icon="@drawable/fluent__error_circle_12_regular"
                         app:iconTint="@color/my_light_primary"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />

@@ -7,6 +7,11 @@
         android:icon="@drawable/material_symbols__refresh_rounded"
         android:title="@string/menu_refresh"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_debug"
+        android:icon="@drawable/tabler__restore"
+        android:title="@string/menu_refresh"
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_settings"

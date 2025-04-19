@@ -169,8 +169,12 @@ class DashBoardFragment : Fragment(),
             navigateToNotifications()
         }
 
+        // Debug: Log the current shop ID
+        Log.d("DashBoardFragment", "Setting up notification badge, active shop: ${SessionManager.getActiveShopId(requireContext())}")
+
         // Observe unread notification count from view model
         notificationViewModel.unreadCount.observe(viewLifecycleOwner) { count ->
+            Log.d("DashBoardFragment", "Unread notification count updated: $count")
             if (count > 0) {
                 // Show badge with count
                 badgeCountView.visibility = View.VISIBLE
@@ -181,7 +185,14 @@ class DashBoardFragment : Fragment(),
             }
         }
 
-        // Refresh the unread count
+        // Listen for shop changes to refresh notifications
+        SessionManager.activeShopIdLiveData.observe(viewLifecycleOwner) { shopId ->
+            Log.d("DashBoardFragment", "Active shop changed, refreshing notification count: $shopId")
+            notificationViewModel.setCurrentShop(shopId)
+            notificationViewModel.refreshUnreadCount()
+        }
+
+        // Ensure we refresh the count now
         notificationViewModel.refreshUnreadCount()
     }
 
@@ -795,6 +806,7 @@ class DashBoardFragment : Fragment(),
     override fun onResume() {
         super.onResume()
         // Refresh notification count when returning to this fragment
+        Log.d("DashBoardFragment", "onResume, refreshing notification count")
         notificationViewModel.refreshUnreadCount()
         
         // Check managed shops when returning to this fragment
