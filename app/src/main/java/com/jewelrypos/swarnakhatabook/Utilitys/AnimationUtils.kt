@@ -14,7 +14,9 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.FragmentNavigator
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.jewelrypos.swarnakhatabook.R
+import androidx.navigation.navOptions
 
 /**
  * Utility class for animations throughout the app
@@ -33,7 +35,8 @@ object AnimationUtils {
         view.animate()
             .alpha(1f)
             .setDuration(duration)
-            .setListener(null)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .start()
     }
 
     /**
@@ -43,11 +46,13 @@ object AnimationUtils {
         view.animate()
             .alpha(0f)
             .setDuration(duration)
+            .setInterpolator(AccelerateDecelerateInterpolator())
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     view.visibility = View.GONE
                 }
             })
+            .start()
     }
 
     /**
@@ -100,47 +105,51 @@ object AnimationUtils {
     /**
      * Apply pulse animation to a view (useful for buttons)
      */
-    fun pulse(view: View) {
-        scaleView(view, 1f, 0.9f, 100)
-        view.postDelayed({
-            scaleView(view, 0.9f, 1f, 100)
-        }, 100)
+    fun pulse(view: View, duration: Long = 150) {
+        val scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.95f, 1f)
+        val scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 0.95f, 1f)
+        
+        scaleX.duration = duration
+        scaleY.duration = duration
+        
+        scaleX.interpolator = AccelerateDecelerateInterpolator()
+        scaleY.interpolator = AccelerateDecelerateInterpolator()
+        
+        scaleX.start()
+        scaleY.start()
     }
 
     /**
      * Apply shake animation to a view (useful for error feedback)
      */
-    fun shake(view: View) {
-        val animation = android.view.animation.AnimationUtils.loadAnimation(
-            view.context,
-            R.anim.shake_animation
-        )
-        view.startAnimation(animation)
+    fun shake(view: View, duration: Long = 500) {
+        val animator = ObjectAnimator.ofFloat(view, "translationX", 0f, 25f, -25f, 25f, -25f, 15f, -15f, 6f, -6f, 0f)
+        animator.duration = duration
+        animator.interpolator = AccelerateDecelerateInterpolator()
+        animator.start()
     }
 
     /**
      * Apply animation to RecyclerView items
      */
     fun animateRecyclerView(recyclerView: RecyclerView) {
-        val context = recyclerView.context
-        val controller = androidx.recyclerview.widget.DefaultItemAnimator()
-        controller.addDuration = DEFAULT_DURATION
-        controller.removeDuration = DEFAULT_DURATION
-        controller.moveDuration = DEFAULT_DURATION
-        controller.changeDuration = DEFAULT_DURATION
-        recyclerView.itemAnimator = controller
+        // Disable default animations for smoother performance
+        val animator = recyclerView.itemAnimator as SimpleItemAnimator?
+        animator?.supportsChangeAnimations = false
     }
 
     /**
      * Get NavOptions for forward navigation with slide animations
      */
     fun getSlideNavOptions(): NavOptions {
-        return NavOptions.Builder()
-            .setEnterAnim(R.anim.slide_in_right)
-            .setExitAnim(R.anim.slide_out_left)
-            .setPopEnterAnim(R.anim.slide_in_left)
-            .setPopExitAnim(R.anim.slide_out_right)
-            .build()
+        return navOptions {
+            anim {
+                enter = R.anim.slide_in_right
+                exit = R.anim.slide_out_left
+                popEnter = R.anim.slide_in_left
+                popExit = R.anim.slide_out_right
+            }
+        }
     }
 
     /**

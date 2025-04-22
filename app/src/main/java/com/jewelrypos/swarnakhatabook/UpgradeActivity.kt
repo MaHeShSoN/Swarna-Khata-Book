@@ -23,8 +23,9 @@ class UpgradeActivity : AppCompatActivity() {
     private var isMonthlySelected = true
     private var selectedPlanType = "STANDARD" // Default selection
 
-    private val SELECTED_CARD_TRANSLATION_Y = -15f // Move up by 15dp
-    private val UNSELECTED_CARD_TRANSLATION_Y = 5f // Move down by 5dp
+    private val SELECTED_CARD_TRANSLATION_Y = -8f // A smaller upward movement to prevent overlap
+    private val UNSELECTED_CARD_TRANSLATION_Y = 0f // Keep cards at their natural position when unselected
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -275,12 +276,7 @@ class UpgradeActivity : AppCompatActivity() {
      */
     private fun highlightCard(card: MaterialCardView) {
         // Reset all cards first
-        resetCardHighlighting(binding.basicMonthlyCard)
-        resetCardHighlighting(binding.standardMonthlyCard)
-        resetCardHighlighting(binding.premiumMonthlyCard)
-        resetCardHighlighting(binding.basicYearlyCard)
-        resetCardHighlighting(binding.standardYearlyCard)
-        resetCardHighlighting(binding.premiumYearlyCard)
+        resetAllCards()
 
         // Now highlight the selected card
         card.strokeColor = ContextCompat.getColor(this, R.color.my_light_primary)
@@ -295,11 +291,15 @@ class UpgradeActivity : AppCompatActivity() {
 
         card.tag = "selected"
     }
-
     /**
      * Reset card highlighting to default state
      */
     private fun resetCardHighlighting(card: MaterialCardView) {
+        // Reset stroke color and width to default
+        card.strokeColor = ContextCompat.getColor(this, R.color.my_light_outline)
+        card.strokeWidth = resources.getDimensionPixelSize(R.dimen.card_default_stroke_width)
+        card.elevation = resources.getDimension(R.dimen.card_default_elevation)
+
         // Animate the card moving down
         card.animate()
             .translationY(UNSELECTED_CARD_TRANSLATION_Y)
@@ -308,6 +308,20 @@ class UpgradeActivity : AppCompatActivity() {
 
         // Clear the "selected" tag
         card.tag = null
+    }
+    private fun resetAllCards() {
+        val allCards = listOf(
+            binding.basicMonthlyCard,
+            binding.standardMonthlyCard,
+            binding.premiumMonthlyCard,
+            binding.basicYearlyCard,
+            binding.standardYearlyCard,
+            binding.premiumYearlyCard
+        )
+
+        for (card in allCards) {
+            resetCardHighlighting(card)
+        }
     }
 
     private fun setupSubscriptionButtons() {

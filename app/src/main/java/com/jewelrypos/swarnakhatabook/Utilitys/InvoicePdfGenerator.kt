@@ -113,15 +113,15 @@ class InvoicePdfGenerator(private val context: Context) {
                         contentStream, document, page, invoice, shop, pageWidth, pageHeight
                     )
 
-                    TemplateType.ADVANCE_GST -> generateAdvanceGstTemplate(
+                    TemplateType.GST_TALLY -> generateGstTallyTemplate(
                         contentStream, document, page, invoice, shop, pageWidth, pageHeight
                     )
 
-                    TemplateType.ADVANCE_GST_TALLY -> generateAdvanceGstTallyTemplate(
+                    TemplateType.MODERN_MINIMAL -> generateMordenMinimalTemplate(
                         contentStream, document, page, invoice, shop, pageWidth, pageHeight
                     )
 
-                    TemplateType.BILLBOOK -> generateBillbookTemplate(
+                    TemplateType.LUXURY_BOUTIQUE -> generateLuxuryBoutiqueTemplate(
                         contentStream, document, page, invoice, shop, pageWidth, pageHeight
                     )
                 }
@@ -138,454 +138,1248 @@ class InvoicePdfGenerator(private val context: Context) {
         }
     }
 
-    // Advanced GST template optimized for jewelry business
-    private fun generateAdvanceGstTemplate(
-        contentStream: PDPageContentStream,
+
+    private fun generateMordenMinimalTemplate(
+        stream: PDPageContentStream,
         document: PDDocument,
         page: PDPage,
         invoice: Invoice,
-        shop: ShopInvoiceDetails,
-        pageWidth: Float,
-        pageHeight: Float
+        details: ShopInvoiceDetails,
+        w: Float,
+        h: Float
     ) {
-        // Clean design with structured table layout for jewelry items
+        // ---------- HEADER SECTION ----------
+        // Draw shop logo if available (left side)
 
-        // Draw header with tax invoice and original label
-        contentStream.setFont(boldFont, 12f)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(25f, pageHeight - 40f)
-        contentStream.showText("TAX INVOICE")
-        contentStream.endText()
+        stream.setNonStrokingColor(AWTColor(255, 254, 250)) // FFFEFA color (very light off-white)
+        stream.addRect(0f, 0f, w, h)
+        stream.fill()
 
-        // Add "ORIGINAL FOR RECIPIENT" tag
-        contentStream.setFont(regularFont, 8f)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(pageWidth - 150f, pageHeight - 40f)
-        contentStream.showText("ORIGINAL FOR RECIPIENT")
-        contentStream.endText()
 
-        // Draw shop logo if enabled (in top right)
+        var shopDetailsStartX = 25f
+
         if (settings.showLogo && settings.logoUri != null) {
             try {
-                drawShopLogo(
-                    document, pageWidth - 50f, pageHeight - 40f, settings.logoUri!!, contentStream
-                )
+                drawShopLogo(document, 60f, h - 60f, settings.logoUri!!, stream)
+                // If logo is available, move shop details to the right of logo
+                shopDetailsStartX = 113f
             } catch (e: Exception) {
                 Log.e("InvoicePdfGenerator", "Error drawing logo: ${e.message}")
             }
         }
 
-        // Draw business information
-        drawText(contentStream, shop.shopName, 25f, pageHeight - 70f, 14f, true)
-        contentStream.setNonStrokingColor(secondaryColor)
-        drawText(contentStream, shop.address, 25f, pageHeight - 85f, 9f, false)
-        drawText(contentStream, "Mobile: ${shop.phoneNumber}", 25f, pageHeight - 100f, 9f, false)
-        drawText(contentStream, "GSTIN: ${shop.gstNumber}", 25f, pageHeight - 115f, 9f, false)
+        // Shop details (left side)
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, details.shopName, shopDetailsStartX, h - 47f, 10f, true)
+        drawText(stream, details.address, shopDetailsStartX, h - 60f, 9f, false)
+        drawText(stream, details.phoneNumber, shopDetailsStartX, h - 73f, 9f, false)
+        drawText(stream, "GST: ${details.gstNumber}", shopDetailsStartX, h - 86f, 9f, false)
 
-        // Draw horizontal line
-        drawLine(
-            contentStream,
-            20f,
-            pageHeight - 125f,
-            pageWidth - 20f,
-            pageHeight - 125f,
-            0.5f,
-            secondaryColor
-        )
+        // TAX INVOICE title (right side) - adjusted to match image
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, "TAX INVOICE", w - 220f, h - 47f, 14f, true)
 
-        // Invoice details in a line
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "Invoice No.:", 25f, pageHeight - 145f, 9f, true)
+        // ---------- CUSTOMER AND INVOICE DETAILS SECTION ----------
+        // "BILL TO" section
+        val billToBoxY = h - 120f
+        stream.setNonStrokingColor(primaryColor) // Light green
+        stream.addRect(20f, billToBoxY, 100f, 18f)
+        stream.fill()
+
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        drawText(stream, "BILL TO", 27f, billToBoxY + 6f, 10f, true)
+
+        // Customer details
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, invoice.customerName, 25f, billToBoxY - 15f, 10f, true)
+        drawText(stream, invoice.customerAddress, 25f, billToBoxY - 30f, 9f, false)
+        drawText(stream, invoice.customerPhone, 25f, billToBoxY - 45f, 9f, false)
+
+        // "INVOICE DETAILS" section - adjusted position to match image
+        stream.setNonStrokingColor(primaryColor) // Light green
+        stream.addRect(w - 220f, billToBoxY, 100f, 18f)
+        stream.fill()
+
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        drawText(stream, "INVOICE DETAILS", w - 210f, billToBoxY + 6f, 10f, true)
+
+        // Invoice details - adjusted to match image
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, "Invoice No", w - 220f, billToBoxY - 15f, 10f, false)
+        val invoiceDisplayNumber = if (invoice.invoiceNumber.startsWith(settings.invoicePrefix)) {
+            invoice.invoiceNumber
+        } else {
+            "${settings.invoicePrefix}${invoice.invoiceNumber}"
+        }
         drawText(
-            contentStream,
-            "${settings.invoicePrefix}${invoice.invoiceNumber}",
-            95f,
-            pageHeight - 145f,
-            9f,
+            stream,
+            "        :         $invoiceDisplayNumber",
+            w - 160f,
+            billToBoxY - 15f,
+            10f,
             false
         )
 
-        drawText(contentStream, "Invoice Date:", pageWidth - 150f, pageHeight - 145f, 9f, true)
+        drawText(stream, "Invoice Date", w - 220f, billToBoxY - 30f, 10f, false)
         drawText(
-            contentStream,
-            dateFormatter.format(Date(invoice.invoiceDate)),
-            pageWidth - 70f,
-            pageHeight - 145f,
-            9f,
+            stream,
+            "        :         ${dateFormatter.format(Date(invoice.invoiceDate))}",
+            w - 160f,
+            billToBoxY - 30f,
+            10f,
             false
         )
 
-        // Customer details in two columns
-        drawRectangle(contentStream, 25f, pageHeight - 195f, pageWidth - 50f, 50f, secondaryColor)
+        // ---------- ITEMS TABLE SECTION ----------
+        // Fix #1: Reduce the gap between heading and items
+        var currentY = billToBoxY - 75f  // Adjusted to reduce the gap
 
-        contentStream.setNonStrokingColor(secondaryColor)
-        drawText(contentStream, "BILL TO", 35f, pageHeight - 160f, 9f, true)
-        drawText(contentStream, "SHIP TO", pageWidth / 2 + 35f, pageHeight - 160f, 9f, true)
+        // Table header row
+        stream.setNonStrokingColor(primaryColor) // Light green
+        stream.addRect(20f, currentY, w - 40f, 18f)
+        stream.fill()
 
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, invoice.customerName, 35f, pageHeight - 173f, 9f, true)
-        drawText(
-            contentStream, "Address: ${invoice.customerAddress}", 35f, pageHeight - 185f, 8f, false
+        // Define table columns
+        val columns = listOf(
+            "Product Name",
+            "QTY",
+            "Gr.WT",
+            "Stone Wt",
+            "Net.Wt",
+            "Stone Value",
+            "Gold Value",
+            "Labour",
+            "Total Value"
         )
-        drawText(
-            contentStream, "Phone: ${invoice.customerPhone}", 35f, pageHeight - 195f, 8f, false
-        )
-        drawText(
-            contentStream,
-            "Address: ${invoice.customerAddress}",
-            pageWidth / 2 + 35f,
-            pageHeight - 173f,
-            8f,
-            false
-        )
+        val columnWidths =
+            floatArrayOf(0.22f, 0.06f, 0.08f, 0.08f, 0.08f, 0.12f, 0.12f, 0.09f, 0.15f)
+        var columnX = 25f
 
-        // Draw items table with jewelry-specific columns
-        var currentY = pageHeight - 195f
+        // Draw table headers
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        for (i in columns.indices) {
+            drawText(stream, columns[i], columnX, currentY + 6f, 9f, true)
+            columnX += columnWidths[i] * (w - 40f)
+        }
 
-        // Draw jewelry-focused table with GST details
-        currentY = drawJewelryGstItemsTable(contentStream, invoice.items, 25f, currentY, pageWidth - 50f)
+        // Draw item rows - Fix #1: Reduce space between header and first item
+        currentY -= 5f
+        val rowHeight = 25f
 
-        // Calculate tax values
-        val totalTaxableAmount = invoice.items.sumOf { item -> item.price * item.quantity }
-        val totalGstRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 0.0
-        val cgstRate = totalGstRate / 2.0
-        val sgstRate = totalGstRate / 2.0
-        val cgstAmount = totalTaxableAmount * (cgstRate / 100.0)
-        val sgstAmount = totalTaxableAmount * (sgstRate / 100.0)
-        val totalTaxAmount = cgstAmount + sgstAmount
+        // Track totals
+        var totalQuantity = 0
+        var totalNetWeight = 0.0
+        var totalStoneValue = 0.0
+        var totalGoldValue = 0.0
+        var totalLabour = 0.0
+        var totalValue = 0.0
 
-        // Tax summary table
-        currentY -= 10f
+        // Draw each item row
+        for (i in invoice.items.indices) {
+            val item = invoice.items[i]
 
-        // Tax summary title
-        drawText(contentStream, "TAX SUMMARY", 25f, currentY - 10f, 10f, true)
-        currentY -= 15f
+            // Alternating row background
+            if (i % 2 == 1) {
+                // Light gray for alternating rows
+                stream.setNonStrokingColor(AWTColor(240, 240, 240))
+                stream.addRect(20f, currentY - rowHeight, w - 40f, rowHeight)
+                stream.fill()
+            }
 
-        drawText(contentStream, "Description", 35f, currentY - 15f, 9f, true)
-        drawText(contentStream, "Taxable Value", 200f, currentY - 15f, 9f, true)
-        drawText(contentStream, "CGST", 300f, currentY - 15f, 9f, true)
-        drawText(contentStream, "SGST", 400f, currentY - 15f, 9f, true)
-        drawText(contentStream, "Total Tax", pageWidth - 80f, currentY - 15f, 9f, true)
+            // Draw item data
+            stream.setNonStrokingColor(AWTColor(0, 0, 0))
+            columnX = 25f
 
-        // Draw horizontal line
-        drawLine(
-            contentStream,
-            25f,
-            currentY - 20f,
-            pageWidth - 25f,
-            currentY - 20f,
-            0.5f,
-            secondaryColor
-        )
-
-        // Tax data row
-        drawText(contentStream, "Jewelry Items", 35f, currentY - 35f, 9f, false)
-        drawText(
-            contentStream,
-            formatter.format(totalTaxableAmount),
-            200f,
-            currentY - 35f,
-            9f,
-            false
-        )
-
-        // CGST columns
-        drawText(contentStream, "${cgstRate}%", 300f, currentY - 25f, 8f, false)
-        drawText(
-            contentStream,
-            formatter.format(cgstAmount),
-            300f,
-            currentY - 35f,
-            8f,
-            false
-        )
-
-        // SGST columns
-        drawText(contentStream, "${sgstRate}%", 400f, currentY - 25f, 8f, false)
-        drawText(
-            contentStream,
-            formatter.format(sgstAmount),
-            400f,
-            currentY - 35f,
-            8f,
-            false
-        )
-
-        drawText(
-            contentStream,
-            "₹ " + formatter.format(totalTaxAmount),
-            pageWidth - 80f,
-            currentY - 35f,
-            9f,
-            true
-        )
-
-        // Draw horizontal line
-        drawLine(
-            contentStream,
-            25f,
-            currentY - 45f,
-            pageWidth - 25f,
-            currentY - 45f,
-            0.5f,
-            secondaryColor
-        )
-
-        // Total row
-        drawText(contentStream, "Total", 35f, currentY - 60f, 9f, true)
-        drawText(
-            contentStream,
-            formatter.format(totalTaxableAmount),
-            200f,
-            currentY - 60f,
-            9f,
-            true
-        )
-        drawText(
-            contentStream,
-            formatter.format(cgstAmount),
-            300f,
-            currentY - 60f,
-            9f,
-            true
-        )
-        drawText(
-            contentStream,
-            formatter.format(sgstAmount),
-            400f,
-            currentY - 60f,
-            9f,
-            true
-        )
-        drawText(
-            contentStream,
-            "₹ " + formatter.format(totalTaxAmount),
-            pageWidth - 80f,
-            currentY - 60f,
-            9f,
-            true
-        )
-
-        // Draw payment section
-        currentY -= 70f
-        drawText(contentStream, "PAYMENT DETAILS:", 35f, currentY - 10f, 9f, true)
-        currentY -= 15f
-
-        // Payment methods
-        var paymentY = currentY
-        for (payment in invoice.payments) {
-            drawText(contentStream, payment.method, 35f, paymentY - 15f, 9f, false)
             drawText(
-                contentStream,
-                "₹ " + formatter.format(payment.amount),
-                200f,
-                paymentY - 15f,
+                stream,
+                item.itemDetails.displayName,
+                columnX,
+                currentY - rowHeight / 4,
                 9f,
                 false
             )
-            paymentY -= 15f
+            val purityRateText =
+                "${item.itemDetails.purity} @ ${formatter.format(item.itemDetails.metalRate)}"
+            drawText(stream, purityRateText, columnX, currentY - rowHeight * 3 / 4, 9f, false)
+
+            columnX += columnWidths[0] * (w - 40f)
+
+            // Quantity
+            drawText(stream, "${item.quantity}", columnX, currentY - rowHeight / 2, 9f, false)
+            columnX += columnWidths[1] * (w - 40f)
+            totalQuantity += item.quantity
+
+            // Gross Weight
+            drawText(
+                stream,
+                formatter.format(item.itemDetails.grossWeight),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            columnX += columnWidths[2] * (w - 40f)
+
+            // Stone Weight (calculated as Gross Weight - Net Weight)
+            val stoneWeight = item.itemDetails.grossWeight - item.itemDetails.netWeight
+            drawText(
+                stream,
+                formatter.format(stoneWeight),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            columnX += columnWidths[3] * (w - 40f)
+
+            // Net Weight
+            drawText(
+                stream,
+                formatter.format(item.itemDetails.netWeight),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            columnX += columnWidths[4] * (w - 40f)
+            totalNetWeight += item.itemDetails.netWeight * item.quantity
+
+            // Stone Value (use diamondPrice if available, otherwise calculate)
+            val stoneValue = if (item.itemDetails.diamondPrice > 0) {
+                item.itemDetails.diamondPrice * item.quantity
+            } else {
+                // If no diamondPrice is set, calculate based on stone weight
+                val stoneRate = 1000.0 // default rate per gram if not specified
+                stoneWeight * stoneRate * item.quantity
+            }
+            drawText(
+                stream,
+                formatter.format(stoneValue),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            columnX += columnWidths[5] * (w - 40f)
+            totalStoneValue += stoneValue
+
+            // Gold Value - calculate based on metal rate and weight
+            val goldValue = when (item.itemDetails.metalRateOn.uppercase()) {
+                "NET WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.netWeight * item.quantity
+                "GROSS WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.grossWeight * item.quantity
+                else -> item.itemDetails.metalRate * item.itemDetails.netWeight * item.quantity
+            }
+            drawText(
+                stream,
+                formatter.format(goldValue),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            columnX += columnWidths[6] * (w - 40f)
+            totalGoldValue += goldValue
+
+            // Labour
+            val labour = when (item.itemDetails.makingChargesType.uppercase()) {
+                "PER GRAM" -> item.itemDetails.makingCharges * item.itemDetails.netWeight * item.quantity
+                "FIX" -> item.itemDetails.makingCharges * item.quantity
+                "PERCENTAGE" -> {
+                    val metalValue = when (item.itemDetails.metalRateOn.uppercase()) {
+                        "NET WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.netWeight
+                        "GROSS WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.grossWeight
+                        else -> item.itemDetails.metalRate * item.itemDetails.netWeight
+                    }
+                    (metalValue * item.itemDetails.makingCharges / 100.0) * item.quantity
+                }
+
+                else -> 0.0
+            }
+            drawText(stream, formatter.format(labour), columnX, currentY - rowHeight / 2, 9f, false)
+            columnX += columnWidths[7] * (w - 40f)
+            totalLabour += labour
+
+            // Total Value
+            val itemTotal = item.price * item.quantity
+            drawText(
+                stream,
+                formatter.format(itemTotal),
+                columnX,
+                currentY - rowHeight / 2,
+                9f,
+                false
+            )
+            totalValue += itemTotal
+
+            currentY -= rowHeight
         }
 
-        // Horizontal line after payments
-        drawLine(
-            contentStream,
-            25f,
-            paymentY - 5f,
-            pageWidth / 2 - 25f,
-            paymentY - 5f,
-            0.5f,
-            secondaryColor
-        )
+        // Subtotal row (light green background)
+        stream.setNonStrokingColor(primaryColor) // Light green
+        stream.addRect(20f, currentY - rowHeight + 9f, w - 40f, 18f)
+        stream.fill()
 
-        // Total payment and balance
-        paymentY -= 10f
-        drawText(contentStream, "Amount Paid", 35f, paymentY - 15f, 9f, true)
+        // Draw subtotal data - fixed to center text properly
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        columnX = 25f
+
+        // First column - SUBTOTAL
+        drawText(stream, "SUBTOTAL", columnX, currentY - rowHeight / 2 + 2.5f, 9f, true)
+        columnX += columnWidths[0] * (w - 40f)
+
+        // Quantity
+        drawText(stream, "$totalQuantity", columnX, currentY - rowHeight / 2 + 2.5f, 9f, true)
+        columnX += columnWidths[1] * (w - 40f)
+
+        // Skip some columns - jump to net weight
+        columnX += (columnWidths[2] + columnWidths[3]) * (w - 40f)
+
+        // Net Weight
         drawText(
-            contentStream,
-            "₹ " + formatter.format(invoice.paidAmount),
-            200f,
-            paymentY - 15f,
+            stream,
+            formatter.format(totalNetWeight),
+            columnX,
+            currentY - rowHeight / 2 + 2.5f,
+            9f,
+            true
+        )
+        columnX += columnWidths[4] * (w - 40f)
+
+        // Stone Value
+        drawText(
+            stream,
+            formatter.format(totalStoneValue),
+            columnX,
+            currentY - rowHeight / 2 + 2.5f,
+            9f,
+            true
+        )
+        columnX += columnWidths[5] * (w - 40f)
+
+        // Gold Value
+        drawText(
+            stream,
+            formatter.format(totalGoldValue),
+            columnX,
+            currentY - rowHeight / 2 + 2.5f,
+            9f,
+            true
+        )
+        columnX += columnWidths[6] * (w - 40f)
+
+        // Labour
+        drawText(
+            stream,
+            formatter.format(totalLabour),
+            columnX,
+            currentY - rowHeight / 2 + 2.5f,
+            9f,
+            true
+        )
+        columnX += columnWidths[7] * (w - 40f)
+
+        // Total Value
+        drawText(
+            stream,
+            formatter.format(totalValue),
+            columnX,
+            currentY - rowHeight / 2 + 2.5f,
             9f,
             true
         )
 
-        paymentY -= 15f
-        drawText(contentStream, "Balance Due", 35f, paymentY - 15f, 9f, true)
+        currentY -= rowHeight
 
-        // Set balance due color based on amount
+        // ---------- CALCULATION SECTION ----------
+        // Tax and charges on the right side
+        val taxInfoX = w - 200f
+        var taxInfoY = currentY - 20f
+
+        // Calculate tax amounts
+        val taxRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 0.0
+        val halfTaxRate = taxRate / 2.0
+        val totalTax = invoice.items.sumOf { item ->
+            val itemTotal = item.price * item.quantity
+            val extraChargesTotal =
+                item.itemDetails.listOfExtraCharges.sumOf { it.amount * item.quantity }
+            val taxableAmount = itemTotal + extraChargesTotal
+            taxableAmount * (item.itemDetails.taxRate / 100.0)
+        }
+        val halfTax = totalTax / 2.0
+
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        // CGST
+        drawText(stream, "CGST(${halfTaxRate.toDouble()}%)", taxInfoX, taxInfoY, 9f, false)
+        drawText(stream, formatter.format(halfTax), w - 80f, taxInfoY, 9f, false)
+        taxInfoY -= 15f
+
+        // SGST
+        drawText(stream, "SGST(${halfTaxRate.toDouble()}%)", taxInfoX, taxInfoY, 9f, false)
+        drawText(stream, formatter.format(halfTax), w - 80f, taxInfoY, 9f, false)
+        taxInfoY -= 15f
+
+        // Extra charges
+        val extraChargeMap = mutableMapOf<String, Double>()
+        invoice.items.forEach { item ->
+            item.itemDetails.listOfExtraCharges.forEach { charge ->
+                val amount = charge.amount * item.quantity
+                extraChargeMap[charge.name] = extraChargeMap.getOrDefault(charge.name, 0.0) + amount
+            }
+        }
+
+        // Draw each extra charge
+        extraChargeMap.forEach { (name, amount) ->
+            drawText(stream, name.uppercase(), taxInfoX, taxInfoY, 9f, false)
+            drawText(stream, formatter.format(amount), w - 80f, taxInfoY, 9f, false)
+            taxInfoY -= 15f
+        }
+
+        // Fix #2: Fix the spacing around the TOTAL AMOUNT
+        taxInfoY -= 5f // Add some space before total
+
+        // Draw line before total - fixed position
+        drawLine(stream, taxInfoX, taxInfoY + 15f, w - 30f, taxInfoY + 15f, 0.5f, AWTColor(0, 0, 0))
+
+        // TOTAL AMOUNT
+        drawText(stream, "TOTAL AMOUNT", taxInfoX, taxInfoY + 2f, 10f, true)
+        drawText(stream, formatter.format(invoice.totalAmount), w - 80f, taxInfoY + 2f, 10f, true)
+
+        // Fix #2: Fix the spacing below TOTAL AMOUNT
+        taxInfoY -= 5f
+
+        // Draw line after total with fixed position
+        drawLine(stream, taxInfoX, taxInfoY, w - 30f, taxInfoY, 0.5f, AWTColor(0, 0, 0))
+        taxInfoY -= 10f
+
+        // Payment details
+        if (invoice.payments.isNotEmpty()) {
+            for (payment in invoice.payments) {
+                drawText(stream, payment.method, taxInfoX, taxInfoY, 9f, false)
+                drawText(stream, formatter.format(payment.amount), w - 80f, taxInfoY, 9f, false)
+                taxInfoY -= 15f
+            }
+        }
+
+        // Received Amount
+        drawText(stream, "Received Amount", taxInfoX, taxInfoY, 9f, true)
+        drawText(stream, formatter.format(invoice.paidAmount), w - 80f, taxInfoY, 9f, true)
+        taxInfoY -= 15f
+
+        // Balance
         val balanceDue = invoice.totalAmount - invoice.paidAmount
-        contentStream.setNonStrokingColor(
-            if (balanceDue <= 0) AWTColor(0, 128, 0) else AWTColor(192, 0, 0)
+        drawText(stream, "Balance", taxInfoX, taxInfoY, 9f, true)
+        stream.setNonStrokingColor(
+            if (balanceDue <= 0) AWTColor(0, 128, 0) else AWTColor(
+                192,
+                0,
+                0
+            )
         )
+        drawText(stream, formatter.format(balanceDue), w - 80f, taxInfoY, 9f, true)
 
+        // Amount in words (Requested feature #2)
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, "Amount in words : ", 25f, taxInfoY, 9f, true)
         drawText(
-            contentStream,
-            "₹ " + formatter.format(balanceDue),
-            200f,
-            paymentY - 15f,
-            9f,
-            true
-        )
-
-        // Reset text color
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-
-        // Amount in words
-        drawText(contentStream, "Total Amount (in words)", 35f, currentY - 80f, 9f, true)
-        drawText(
-            contentStream,
-            numberToWords(invoice.totalAmount.toInt()) + " Rupees Only",
-            35f,
-            currentY - 95f,
+            stream,
+            numberToWords(balanceDue.toInt()) + " Rupees Only",
+            25f,
+            taxInfoY - 15f,
             9f,
             false
         )
+        taxInfoY -= 30f
 
-        // Notes and terms in columns
-        drawText(contentStream, "Notes", 35f, currentY - 120f, 9f, true)
-        drawText(
-            contentStream, "Terms and Conditions", pageWidth / 2 + 35f, currentY - 120f, 9f, true
-        )
-
-        // Add custom notes or default
-        val notesText = invoice.notes.takeIf { it.isNotEmpty() } ?: "Thank you for your business."
-        drawText(contentStream, notesText, 35f, currentY - 135f, 8f, false)
-
-        // Terms and conditions from settings
-        val terms = settings.termsAndConditions.split("\n")
-        var termsY = currentY - 135f
-
-        for (term in terms) {
-            drawText(contentStream, term, pageWidth / 2 + 35f, termsY, 8f, false)
-            termsY -= 12f
+        // Notes section (Requested feature #1)
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, "Term & Conditions : ", 25f, taxInfoY, 9f, true)
+        // If there are specific notes in the invoice object, you would use those here
+        // For now, adding a placeholder for notes
+        val notes = settings.termsAndConditions.split("\n").take(2).joinToString("\n")
+        val noteLines = notes.split("\n")
+        for (i in noteLines.indices) {
+            drawText(stream, noteLines[i], 25f, taxInfoY - 15f - (i * 15f), 9f, false)
         }
 
-        // Draw signature if enabled
+        // ---------- FOOTER SECTION ----------
+        // Fix #4: Position QR code more to the left
+        if (settings.showQrCode && settings.upiId.isNotEmpty()) {
+            drawUpiQrCode(
+                document,
+                page,
+                settings.upiId,
+                25f,
+                80f
+            ) // Moved more to the left (was 60f)
+        }
+
+        // Fix #3: Add signature implementation
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
-                drawSignatureImage(
-                    document,
-                    pageWidth - 100f,
-                    currentY - 150f,
-                    settings.signatureUri!!,
-                    contentStream
-                )
+                // Draw uploaded signature image
+                try {
+                    drawSignatureImage(document, w - 80f, 100f, settings.signatureUri!!, stream)
+                    stream.setNonStrokingColor(AWTColor(0, 0, 0))
+                    drawText(stream, "Authorized Signature", w - 120f, 80f, 9f, true)
+                    drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
+                } catch (e: Exception) {
+                    Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
+                    // Fall back to text-only signature line
+                    stream.setNonStrokingColor(AWTColor(0, 0, 0))
+                    drawText(stream, "Authorized Signature", w - 120f, 80f, 10f, true)
+                    drawText(stream, details.shopName, w - 120f, 65f, 9f, false)
+                }
+            } else {
+                // Draw signature line
+                stream.setNonStrokingColor(AWTColor(0, 0, 0))
+                drawLine(stream, w - 180f, 90f, w - 60f, 90f, 0.5f, AWTColor(0, 0, 0))
+                drawText(stream, "Authorized Signature", w - 120f, 80f, 9f, true)
+                drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
             }
-            drawText(
-                contentStream,
-                "Authorised Signatory For",
-                pageWidth - 140f,
-                currentY - 190f,
-                8f,
+        } else {
+            // Shop name at the bottom right even if signature is not shown
+            stream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(stream, details.shopName, w - 120f, 65f, 10f, true)
+        }
+
+        // Add bottom text (Requested feature #4)
+        stream.setNonStrokingColor(AWTColor(100, 100, 100)) // Gray color
+        drawCenteredText(stream, "Invoice Made By Swarna Khata Book", w / 2, 30f, 8f, false)
+    }
+
+    private fun generateLuxuryBoutiqueTemplate(
+        stream: PDPageContentStream,
+        document: PDDocument,
+        page: PDPage,
+        invoice: Invoice,
+        details: ShopInvoiceDetails,
+        w: Float,
+        h: Float
+    ) {
+        // Set luxury gold accent color
+        val luxuryGold = AWTColor(212, 175, 55)
+        val luxuryDarkGold = AWTColor(165, 124, 0)
+        val luxuryBackgroundColor = AWTColor(250, 250, 250)
+
+        // Background
+        stream.setNonStrokingColor(luxuryBackgroundColor)
+        stream.addRect(0f, 0f, w, h)
+        stream.fill()
+
+        // Draw elegant border with gold accent
+        stream.setStrokingColor(luxuryGold)
+        stream.setLineWidth(2.0f)
+        stream.addRect(20f, 20f, w - 40f, h - 40f)
+        stream.stroke()
+
+        // Add decorative corner elements
+        drawDecorativeCorner(stream, 20f, h - 20f, 15f, 15f, luxuryGold) // Top-left
+        drawDecorativeCorner(stream, w - 20f, h - 20f, -15f, 15f, luxuryGold) // Top-right
+        drawDecorativeCorner(stream, 20f, 20f, 15f, -15f, luxuryGold) // Bottom-left
+        drawDecorativeCorner(stream, w - 20f, 20f, -15f, -15f, luxuryGold) // Bottom-right
+
+        // Header section with gold accent bar
+        stream.setNonStrokingColor(luxuryGold)
+        stream.addRect(20f, h - 130f, w - 40f, 3f)
+        stream.fill()
+
+        // Draw elegant "TAX INVOICE" title
+        stream.setNonStrokingColor(luxuryDarkGold)
+        drawCenteredText(stream, "TAX INVOICE", w / 2, h - 50f, 18f, true)
+
+        // Add shop logo if available
+        var shopDetailsStartX = 40f
+        if (settings.showLogo && settings.logoUri != null) {
+            try {
+                drawShopLogo(document, 80f, h - 70f, settings.logoUri!!, stream)
+                // If logo is available, move shop details to the right
+                shopDetailsStartX = 130f
+            } catch (e: Exception) {
+                Log.e("InvoicePdfGenerator", "Error drawing logo: ${e.message}")
+            }
+        }
+
+        // Shop details with elegant styling
+        stream.setNonStrokingColor(luxuryDarkGold)
+        drawText(stream, details.shopName, shopDetailsStartX, h - 80f, 14f, true)
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+        drawText(stream, details.address, shopDetailsStartX, h - 95f, 10f, false)
+        drawText(stream, "Tel: ${details.phoneNumber}", shopDetailsStartX, h - 110f, 10f, false)
+        drawText(stream, "GSTIN: ${details.gstNumber}", shopDetailsStartX, h - 125f, 10f, false)
+
+        // Customer and Invoice details section
+        stream.setNonStrokingColor(luxuryGold)
+        stream.addRect(40f, h - 155f, w / 2 - 60f, 25f)
+        stream.fill()
+        stream.addRect(w / 2 + 20f, h - 155f, w / 2 - 60f, 25f)
+        stream.fill()
+
+        // Customer details heading
+        stream.setNonStrokingColor(AWTColor(40, 40, 40))
+        drawCenteredText(stream, "CLIENT DETAILS", 40f + (w / 2 - 60f) / 2, h - 140f, 12f, true)
+
+        // Invoice details heading
+        drawCenteredText(
+            stream,
+            "INVOICE DETAILS",
+            w / 2 + 20f + (w / 2 - 60f) / 2,
+            h - 140f,
+            12f,
+            true
+        )
+
+        // Customer details content
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+        drawText(stream, invoice.customerName, 50f, h - 175f, 12f, true)
+        drawText(stream, invoice.customerAddress, 50f, h - 190f, 10f, false)
+        drawText(stream, "Tel: ${invoice.customerPhone}", 50f, h - 205f, 10f, false)
+
+        // Invoice details content
+        val invoiceDisplayNumber = if (invoice.invoiceNumber.startsWith(settings.invoicePrefix)) {
+            invoice.invoiceNumber
+        } else {
+            "${settings.invoicePrefix}${invoice.invoiceNumber}"
+        }
+
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+        drawText(stream, "Invoice No:", w / 2 + 30f, h - 175f, 10f, true)
+        drawText(stream, invoiceDisplayNumber, w / 2 + 120f, h - 175f, 10f, false)
+
+        drawText(stream, "Date:", w / 2 + 30f, h - 190f, 10f, true)
+        drawText(
+            stream,
+            dateFormatter.format(Date(invoice.invoiceDate)),
+            w / 2 + 120f,
+            h - 190f,
+            10f,
+            false
+        )
+
+        // Items Table Header with gold background
+        val tableY = h - 230f
+        stream.setNonStrokingColor(luxuryGold)
+        stream.addRect(40f, tableY, w - 80f, 25f)
+        stream.fill()
+
+        // Define table columns
+        val columns = listOf(
+            "Description",
+            "Qty",
+            "Weight",
+            "Stone Value",
+            "Labor",
+            "Gold Value",
+            "Amount"
+        )
+        val columnWidths = floatArrayOf(0.30f, 0.08f, 0.12f, 0.12f, 0.12f, 0.12f, 0.14f)
+        var columnX = 45f
+
+        // Draw column headers
+        stream.setNonStrokingColor(AWTColor(40, 40, 40))
+        for (i in columns.indices) {
+            val width = columnWidths[i] * (w - 80f)
+            drawCenteredText(stream, columns[i], columnX + width / 2, tableY + 10f, 10f, true)
+            columnX += width
+        }
+
+        // Draw Items
+        var currentY = tableY - 5f
+        val rowHeight = 30f
+
+        // Track totals
+        var totalQuantity = 0
+        var totalWeight = 0.0
+        var totalStoneValue = 0.0
+        var totalLabour = 0.0
+        var totalGoldValue = 0.0
+        var totalAmount = 0.0
+
+        // Draw alternating rows for items
+        for (i in invoice.items.indices) {
+            val item = invoice.items[i]
+
+            // Alternating row background
+            if (i % 2 == 1) {
+                stream.setNonStrokingColor(AWTColor(245, 245, 245))
+                stream.addRect(40f, currentY - rowHeight, w - 80f, rowHeight)
+                stream.fill()
+            }
+
+            columnX = 45f
+            stream.setNonStrokingColor(AWTColor(60, 60, 60))
+
+            // Description (2 lines)
+            val itemName = item.itemDetails.displayName
+            drawText(stream, itemName, columnX + 5f, currentY - rowHeight / 3, 10f, true)
+
+            // Add purity info on second line
+            val purityText =
+                "${item.itemDetails.purity} @ ${formatter.format(item.itemDetails.metalRate)}"
+            drawText(stream, purityText, columnX + 5f, currentY - rowHeight * 2 / 3, 9f, false)
+            columnX += columnWidths[0] * (w - 80f)
+
+            // Quantity
+            drawCenteredText(
+                stream,
+                "${item.quantity}",
+                columnX + (columnWidths[1] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
+                false
+            )
+            columnX += columnWidths[1] * (w - 80f)
+            totalQuantity += item.quantity
+
+            // Weight (Net Weight)
+            val netWeight = item.itemDetails.netWeight * item.quantity
+            drawCenteredText(
+                stream,
+                formatter.format(netWeight),
+                columnX + (columnWidths[2] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
+                false
+            )
+            columnX += columnWidths[2] * (w - 80f)
+            totalWeight += netWeight
+
+            // Stone Value
+            val stoneValue = item.itemDetails.diamondPrice * item.quantity
+            drawCenteredText(
+                stream,
+                formatter.format(stoneValue),
+                columnX + (columnWidths[3] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
+                false
+            )
+            columnX += columnWidths[3] * (w - 80f)
+            totalStoneValue += stoneValue
+
+            // Labor Value
+            val labour = when (item.itemDetails.makingChargesType.uppercase()) {
+                "PER GRAM" -> item.itemDetails.makingCharges * item.itemDetails.netWeight * item.quantity
+                "FIX" -> item.itemDetails.makingCharges * item.quantity
+                "PERCENTAGE" -> {
+                    val metalValue = when (item.itemDetails.metalRateOn.uppercase()) {
+                        "NET WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.netWeight
+                        "GROSS WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.grossWeight
+                        else -> item.itemDetails.metalRate * item.itemDetails.netWeight
+                    }
+                    (metalValue * item.itemDetails.makingCharges / 100.0) * item.quantity
+                }
+
+                else -> 0.0
+            }
+            drawCenteredText(
+                stream,
+                formatter.format(labour),
+                columnX + (columnWidths[4] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
+                false
+            )
+            columnX += columnWidths[4] * (w - 80f)
+            totalLabour += labour
+
+            // Gold Value
+            val goldValue = when (item.itemDetails.metalRateOn.uppercase()) {
+                "NET WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.netWeight * item.quantity
+                "GROSS WEIGHT" -> item.itemDetails.metalRate * item.itemDetails.grossWeight * item.quantity
+                else -> item.itemDetails.metalRate * item.itemDetails.netWeight * item.quantity
+            }
+            drawCenteredText(
+                stream,
+                formatter.format(goldValue),
+                columnX + (columnWidths[5] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
+                false
+            )
+            columnX += columnWidths[5] * (w - 80f)
+            totalGoldValue += goldValue
+
+            // Total Amount
+            val itemTotal = item.price * item.quantity
+            drawCenteredText(
+                stream,
+                formatter.format(itemTotal),
+                columnX + (columnWidths[6] * (w - 80f)) / 2,
+                currentY - rowHeight / 2,
+                10f,
                 true
             )
-            drawText(contentStream, shop.shopName, pageWidth - 140f, currentY - 200f, 8f, false)
+            totalAmount += itemTotal
+
+            currentY -= rowHeight
+        }
+
+        // Subtotal row with gold background
+        stream.setNonStrokingColor(luxuryGold)
+        stream.addRect(40f, currentY - rowHeight, w - 80f, rowHeight)
+        stream.fill()
+
+        // Draw subtotal labels and values
+        stream.setNonStrokingColor(AWTColor(40, 40, 40))
+        columnX = 45f
+
+        // Subtotal label
+        drawText(stream, "SUBTOTAL", columnX + 5f, currentY - rowHeight / 2, 10f, true)
+        columnX += columnWidths[0] * (w - 80f)
+
+        // Quantity total
+        drawCenteredText(
+            stream,
+            "$totalQuantity",
+            columnX + (columnWidths[1] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+        columnX += columnWidths[1] * (w - 80f)
+
+        // Weight total
+        drawCenteredText(
+            stream,
+            formatter.format(totalWeight),
+            columnX + (columnWidths[2] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+        columnX += columnWidths[2] * (w - 80f)
+
+        // Stone Value total
+        drawCenteredText(
+            stream,
+            formatter.format(totalStoneValue),
+            columnX + (columnWidths[3] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+        columnX += columnWidths[3] * (w - 80f)
+
+        // Labor total
+        drawCenteredText(
+            stream,
+            formatter.format(totalLabour),
+            columnX + (columnWidths[4] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+        columnX += columnWidths[4] * (w - 80f)
+
+        // Gold Value total
+        drawCenteredText(
+            stream,
+            formatter.format(totalGoldValue),
+            columnX + (columnWidths[5] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+        columnX += columnWidths[5] * (w - 80f)
+
+        // Amount total
+        drawCenteredText(
+            stream,
+            formatter.format(totalAmount),
+            columnX + (columnWidths[6] * (w - 80f)) / 2,
+            currentY - rowHeight / 2,
+            10f,
+            true
+        )
+
+        // Payment section on right side
+        val summaryX = w - 250f
+        var summaryY = currentY - rowHeight - 30f
+
+        // Calculate tax amounts
+        val taxRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 0.0
+        val halfTaxRate = taxRate / 2.0
+        val totalTax = invoice.items.sumOf { item ->
+            val itemTotal = item.price * item.quantity
+            val extraChargesTotal =
+                item.itemDetails.listOfExtraCharges.sumOf { it.amount * item.quantity }
+            val taxableAmount = itemTotal + extraChargesTotal
+            taxableAmount * (item.itemDetails.taxRate / 100.0)
+        }
+        val halfTax = totalTax / 2.0
+
+        // Extra charges
+        val extraChargesTotal = invoice.items.sumOf { item ->
+            item.itemDetails.listOfExtraCharges.sumOf { it.amount * item.quantity }
+        }
+
+        // Draw payment summary with elegant layout
+        drawPaymentSummary(
+            stream,
+            luxuryGold,
+            summaryX,
+            summaryY,
+            w - summaryX - 40f,
+            invoice,
+            halfTaxRate,
+            halfTax,
+            extraChargesTotal
+        )
+
+        // Amount in words section
+        stream.setNonStrokingColor(luxuryDarkGold)
+        drawText(stream, "Amount in Words:", 45f, 150f, 10f, true)
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+        drawText(
+            stream,
+            numberToWords(invoice.totalAmount.toInt()) + " Rupees Only",
+            45f,
+            135f,
+            10f,
+            false
+        )
+
+        // Terms and conditions
+        stream.setNonStrokingColor(luxuryDarkGold)
+        drawText(stream, "Terms & Conditions:", 45f, 115f, 10f, true)
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+
+        // Split terms into lines
+        val terms = settings.termsAndConditions.split("\n")
+        var yPos = 100f
+        for (term in terms) {
+            drawText(stream, term, 45f, yPos, 9f, false)
+            yPos -= 15f
+        }
+
+        // Draw signature section
+        if (settings.showSignature) {
+            if (settings.signatureUri != null) {
+                try {
+                    drawSignatureImage(document, w - 100f, 100f, settings.signatureUri!!, stream)
+                    stream.setNonStrokingColor(luxuryDarkGold)
+                    drawText(stream, "Authorized Signatory", w - 140f, 70f, 10f, true)
+                    stream.setNonStrokingColor(AWTColor(60, 60, 60))
+                    drawText(stream, details.shopName, w - 140f, 55f, 9f, false)
+                } catch (e: Exception) {
+                    Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
+                    // Fallback to signature line
+                    stream.setNonStrokingColor(luxuryDarkGold)
+                    drawLine(stream, w - 180f, 80f, w - 60f, 80f, 0.5f, luxuryDarkGold)
+                    drawText(stream, "Authorized Signatory", w - 140f, 70f, 10f, true)
+                    stream.setNonStrokingColor(AWTColor(60, 60, 60))
+                    drawText(stream, details.shopName, w - 140f, 55f, 9f, false)
+                }
+            } else {
+                // Draw signature line
+                stream.setNonStrokingColor(luxuryDarkGold)
+                drawLine(stream, w - 180f, 80f, w - 60f, 80f, 0.5f, luxuryDarkGold)
+                drawText(stream, "Authorized Signatory", w - 140f, 70f, 10f, true)
+                stream.setNonStrokingColor(AWTColor(60, 60, 60))
+                drawText(stream, details.shopName, w - 140f, 55f, 9f, false)
+            }
         }
 
         // Draw QR code if enabled
         if (settings.showQrCode && settings.upiId.isNotEmpty()) {
-            drawUpiQrCode(document, page, settings.upiId, 70f, currentY - 170f)
-            drawText(contentStream, "Scan to Pay", 70f, currentY - 190f, 8f, true)
+            drawUpiQrCode(document, page, settings.upiId, 45f, 80f)
+            stream.setNonStrokingColor(luxuryDarkGold)
+            drawText(stream, "Scan to Pay", 65f, 35f, 10f, true)
         }
 
-        // Draw footer at bottom
-        contentStream.setFont(regularFont, 7f)
-        contentStream.setNonStrokingColor(secondaryColor)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(pageWidth / 2 - 50f, 30f)
-        contentStream.showText("Invoice created using SwarnaKhataBook")
-        contentStream.endText()
+        // Footer
+        stream.setNonStrokingColor(AWTColor(120, 120, 120))
+        drawCenteredText(stream, "Invoice generated using Swarna Khata Book", w / 2, 25f, 8f, false)
+
+
     }
 
-    // Method to draw jewelry-focused GST items table
-    private fun drawJewelryGstItemsTable(
-        contentStream: PDPageContentStream,
-        items: List<InvoiceItem>,
+
+    private fun drawDecorativeCorner(
+        stream: PDPageContentStream,
         x: Float,
         y: Float,
-        width: Float
-    ): Float {
-        // Define headers for jewelry items with GST focus
-        val headers = listOf(
-            "ITEM", "PURITY", "GR.WT", "NET.WT", "QTY", "MAKING", "RATE", "CGST", "SGST", "AMOUNT"
+        offsetX: Float,
+        offsetY: Float,
+        color: AWTColor
+    ) {
+        stream.setStrokingColor(color)
+        stream.setLineWidth(1.5f)
+
+        // First line
+        stream.moveTo(x, y)
+        stream.lineTo(x + offsetX, y)
+        stream.stroke()
+
+        // Second line
+        stream.moveTo(x, y)
+        stream.lineTo(x, y + offsetY)
+        stream.stroke()
+    }
+
+    // Helper method to draw payment summary for luxury template
+    private fun drawPaymentSummary(
+        stream: PDPageContentStream,
+        luxuryGold: AWTColor,
+        x: Float,
+        y: Float,
+        width: Float,
+        invoice: Invoice,
+        halfTaxRate: Double,
+        halfTax: Double,
+        extraChargesTotal: Double
+    ) {
+        // Draw elegant payment summary box with gold border
+        stream.setStrokingColor(luxuryGold)
+        stream.setLineWidth(1.0f)
+        stream.addRect(x, y - 150f, width, 150f)
+        stream.stroke()
+
+        // Gold accent bar at top
+        stream.setNonStrokingColor(luxuryGold)
+        stream.addRect(x, y, width, 25f)
+        stream.fill()
+
+        // Payment summary heading
+        stream.setNonStrokingColor(AWTColor(40, 40, 40))
+        drawCenteredText(stream, "PAYMENT SUMMARY", x + width / 2, y + 10f, 10f, true)
+
+        var currentY = y - 20f
+        val labelX = x + 10f
+        val valueX = x + width - 10f
+
+        // Draw each payment detail item
+        stream.setNonStrokingColor(AWTColor(60, 60, 60))
+
+        // CGST
+        drawText(stream, "CGST (${halfTaxRate.toInt()}%)", labelX, currentY, 9f, false)
+        drawRightAlignedText(stream, formatter.format(halfTax), valueX, currentY, 9f, false)
+        currentY -= 15f
+
+        // SGST
+        drawText(stream, "SGST (${halfTaxRate.toInt()}%)", labelX, currentY, 9f, false)
+        drawRightAlignedText(stream, formatter.format(halfTax), valueX, currentY, 9f, false)
+        currentY -= 15f
+
+        // Extra charges if any
+        if (extraChargesTotal > 0) {
+            drawText(stream, "Extra Charges", labelX, currentY, 9f, false)
+            drawRightAlignedText(
+                stream,
+                formatter.format(extraChargesTotal),
+                valueX,
+                currentY,
+                9f,
+                false
+            )
+            currentY -= 15f
+        }
+
+        // Separator line before total
+        drawLine(stream, labelX, currentY + 5f, x + width - 10f, currentY + 5f, 0.5f, luxuryGold)
+        currentY -= 15f
+
+        // Total Amount
+        drawText(stream, "Total Amount", labelX, currentY, 10f, true)
+        drawRightAlignedText(
+            stream,
+            formatter.format(invoice.totalAmount),
+            valueX,
+            currentY,
+            10f,
+            true
+        )
+        currentY -= 20f
+
+        // Payment method(s)
+        if (invoice.payments.isNotEmpty()) {
+            for (payment in invoice.payments) {
+                drawText(stream, payment.method, labelX, currentY, 9f, false)
+                drawRightAlignedText(
+                    stream,
+                    formatter.format(payment.amount),
+                    valueX,
+                    currentY,
+                    9f,
+                    false
+                )
+                currentY -= 15f
+            }
+        }
+
+        // Separator line before balance
+        drawLine(stream, labelX, currentY + 5f, x + width - 10f, currentY + 5f, 0.5f, luxuryGold)
+        currentY -= 15f
+
+        // Balance
+        val balanceDue = invoice.totalAmount - invoice.paidAmount
+        drawText(stream, "Balance", labelX, currentY, 10f, true)
+        stream.setNonStrokingColor(
+            if (balanceDue <= 0) AWTColor(0, 128, 0) else AWTColor(
+                192,
+                0,
+                0
+            )
+        )
+        drawRightAlignedText(stream, formatter.format(balanceDue), valueX, currentY, 10f, true)
+    }
+
+    // Helper method for right-aligned text
+    private fun drawRightAlignedText(
+        contentStream: PDPageContentStream,
+        text: String,
+        x: Float,
+        y: Float,
+        fontSize: Float,
+        isBold: Boolean
+    ) {
+        val font = if (isBold) boldFont else regularFont
+        val textWidth = font.getStringWidth(text) / 1000 * fontSize
+        drawText(contentStream, text, x - textWidth, y, fontSize, isBold)
+    }
+
+    private fun generateGstTallyTemplate(
+        stream: PDPageContentStream,
+        document: PDDocument,
+        page: PDPage,
+        invoice: Invoice,
+        details: ShopInvoiceDetails,
+        w: Float,
+        h: Float
+    ) {
+        // Draw the full page border
+        drawRectangle(stream, 20f, 20f, w - 40f, h - 40f, AWTColor(0, 0, 0))
+
+        // ---------- HEADER SECTION ----------
+
+        // Draw horizontal line to separate header from content
+        drawLine(stream, 20f, h - 120f, w - 20f, h - 120f, 0.5f, AWTColor(0, 0, 0))
+
+        // Draw vertical line to divide header into two sections
+        drawLine(stream, w / 2, h - 20f, w / 2, h - 120f, 0.5f, AWTColor(0, 0, 0))
+
+        // Shop details on the right side of the header
+        stream.setNonStrokingColor(primaryColor) // Light pink color for shop name
+        drawText(stream, details.shopName, 30f, h - 60f, 12f, true)
+
+        stream.setNonStrokingColor(AWTColor(0, 0, 0)) // Black for the rest
+        drawText(stream, details.address, 30f, h - 75f, 10f, false)
+        drawText(stream, "Mobile No: ${details.phoneNumber}", 30f, h - 90f, 10f, false)
+        drawText(stream, "GST number: ${details.gstNumber}", 30f, h - 105f, 10f, false)
+
+        // ---------- CUSTOMER AND INVOICE DETAILS SECTION ----------
+
+        // Draw line to separate customer section from item table
+        drawLine(stream, 20f, h - 200f, w - 20f, h - 200f, 0.5f, AWTColor(0, 0, 0))
+
+        // Draw vertical line to divide customer and invoice details
+        drawLine(stream, w / 2, h - 120f, w / 2, h - 200f, 0.5f, AWTColor(0, 0, 0))
+
+        // Customer details (left side)
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(stream, "BILL TO", 30f, h - 140f, 11f, true)
+        drawText(stream, invoice.customerName, 30f, h - 155f, 11f, true)
+        drawText(stream, invoice.customerAddress, 30f, h - 170f, 10f, false)
+        drawText(stream, "MOBILE NUMBER: ${invoice.customerPhone}", 30f, h - 185f, 10f, false)
+
+        // Invoice details (right side)
+        drawText(stream, "Invoice Number", w / 2 + 20f, h - 155f, 11f, false)
+        drawText(stream, ":", w / 2 + 120f, h - 155f, 11f, false)
+
+        val invoiceDisplayNumber = if (invoice.invoiceNumber.startsWith(settings.invoicePrefix)) {
+            invoice.invoiceNumber
+        } else {
+            "${settings.invoicePrefix}${invoice.invoiceNumber}"
+        }
+        drawText(stream, invoiceDisplayNumber, w / 2 + 140f, h - 155f, 11f, false)
+
+        drawText(stream, "Invoice Date", w / 2 + 20f, h - 170f, 11f, false)
+        drawText(stream, ":", w / 2 + 120f, h - 170f, 11f, false)
+        drawText(
+            stream,
+            dateFormatter.format(Date(invoice.invoiceDate)),
+            w / 2 + 140f,
+            h - 170f,
+            11f,
+            false
         )
 
-        // Define column widths proportions
-        val columnWidths = floatArrayOf(0.20f, 0.08f, 0.08f, 0.08f, 0.06f, 0.10f, 0.10f, 0.08f, 0.08f, 0.14f)
+        // ---------- ITEMS TABLE SECTION ----------
+        var currentY = h - 200f
 
-        // Calculate actual widths
-        val actualWidths = columnWidths.map { it * width }.toFloatArray()
+        // Define table columns for the main items table
+        val columns = listOf(
+            "Description",
+            "QTY",
+            "Gr.WT",
+            "Stone WT",
+            "Net Wt",
+            "Stone Value",
+            "Labour",
+            "Gold Value",
+            "Total Value"
+        )
+        val columnWidths =
+            floatArrayOf(0.20f, 0.08f, 0.08f, 0.08f, 0.08f, 0.12f, 0.12f, 0.12f, 0.12f)
+        var columnX = 25f
 
-        // Draw table headers with colored background
-        val headerBgColor = AWTColor(245, 245, 220) // light yellow
+        // Draw table header background
+        stream.setNonStrokingColor(primaryColor) // Light pink background for header
+        stream.addRect(20f, currentY - 10f, w - 40f, 18f)
+        stream.fill()
 
-        // Fill background rectangle for header
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, y - 15f, width, 15f)
-        contentStream.fill()
+        // Draw table header text
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        for (i in columns.indices) {
+            val textWidth = boldFont.getStringWidth(columns[i]) / 1000 * 10f
+            val columnWidth = columnWidths[i] * (w - 40f)
+            val textX = columnX + (columnWidth - textWidth) / 2 // Center text in column
 
-        // Draw borders
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, y - 15f, width, 15f)
-        contentStream.stroke()
+            stream.setNonStrokingColor(AWTColor.WHITE)
+            drawText(stream, columns[i], textX, currentY - 5f, 10f, true)
 
-        // Draw header text
-        var xPos = x
-        for (i in headers.indices) {
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, headers[i], xPos + 5f, y - 10f, 8f, true)
-
-            // Draw vertical lines
-            if (i < headers.size - 1) {
+            // Draw vertical line for column
+            if (i < columns.size - 1) {
+                val lineX = columnX + columnWidth
                 drawLine(
-                    contentStream,
-                    xPos + actualWidths[i],
-                    y,
-                    xPos + actualWidths[i],
-                    y - 15f,
-                    0.2f,
-                    secondaryColor
+                    stream,
+                    lineX,
+                    currentY + 8f,
+                    lineX,
+                    currentY - 450f,
+                    0.5f,
+                    AWTColor(0, 0, 0)
                 )
             }
 
-            xPos += actualWidths[i]
+            columnX += columnWidth
         }
 
-        // Reset for data rows
-        var currentY = y - 15f
+        currentY -= 20f // Move to first data row
 
         // Track totals
-        var totalGrossWeight = 0.0
-        var totalNetWeight = 0.0
         var totalQuantity = 0
-        var totalMaking = 0.0
-        var totalAmount = 0.0
-        var totalCGST = 0.0
-        var totalSGST = 0.0
+        var totalGrossWeight = 0.0
+        var totalStoneWeight = 0.0
+        var totalNetWeight = 0.0
+        var totalStoneValue = 0.0
+        var totalLabour = 0.0
+        var totalGoldValue = 0.0
+        var totalValue = 0.0
 
-        // Draw rows
-        for ((index, item) in items.withIndex()) {
-            // Alternate row background colors
-            if (index % 2 == 0) {
-                contentStream.setNonStrokingColor(AWTColor(250, 250, 250)) // very light gray
-                contentStream.addRect(x, currentY - 15f, width, 15f)
-                contentStream.fill()
-            }
-
-            // Draw border
-            contentStream.setStrokingColor(secondaryColor)
-            contentStream.addRect(x, currentY - 15f, width, 15f)
-            contentStream.stroke()
+        // Draw each item row
+        for (item in invoice.items) {
+            columnX = 25f
 
             // Calculate values
-            val grossWeight = item.itemDetails.grossWeight
-            val netWeight = item.itemDetails.netWeight
             val quantity = item.quantity
+            val grossWeight = item.itemDetails.grossWeight * quantity
+            val netWeight = item.itemDetails.netWeight * quantity
+            val stoneWeight = (item.itemDetails.grossWeight - item.itemDetails.netWeight) * quantity
 
-            // Calculate making charges
-            val makingCharge = when (item.itemDetails.makingChargesType.uppercase()) {
-                "PER GRAM" -> item.itemDetails.makingCharges * netWeight * quantity
+            // Calculate labor
+            val labour = when (item.itemDetails.makingChargesType.uppercase()) {
+                "PER GRAM" -> item.itemDetails.makingCharges * netWeight
                 "FIX" -> item.itemDetails.makingCharges * quantity
                 "PERCENTAGE" -> {
                     val metalValue = when (item.itemDetails.metalRateOn.uppercase()) {
@@ -593,145 +1387,306 @@ class InvoicePdfGenerator(private val context: Context) {
                         "GROSS WEIGHT" -> item.itemDetails.metalRate * grossWeight
                         else -> item.itemDetails.metalRate * netWeight
                     }
-                    (metalValue * item.itemDetails.makingCharges / 100.0) * quantity
+                    (metalValue * item.itemDetails.makingCharges / 100.0)
                 }
+
                 else -> 0.0
             }
 
+            // Calculate stone value
+            val stoneValue = item.itemDetails.diamondPrice * quantity
+
+            // Calculate gold value
+            val goldValue = when (item.itemDetails.metalRateOn.uppercase()) {
+                "NET WEIGHT" -> item.itemDetails.metalRate * netWeight
+                "GROSS WEIGHT" -> item.itemDetails.metalRate * grossWeight
+                else -> item.itemDetails.metalRate * netWeight
+            }
+
             val itemTotal = item.price * quantity
-            val taxRate = item.itemDetails.taxRate
-            val cgstRate = taxRate / 2.0
-            val sgstRate = taxRate / 2.0
-            val cgstAmount = itemTotal * (cgstRate / 100.0)
-            val sgstAmount = itemTotal * (sgstRate / 100.0)
 
             // Update totals
-            totalGrossWeight += grossWeight * quantity
-            totalNetWeight += netWeight * quantity
             totalQuantity += quantity
-            totalMaking += makingCharge
-            totalAmount += itemTotal
-            totalCGST += cgstAmount
-            totalSGST += sgstAmount
+            totalGrossWeight += grossWeight
+            totalStoneWeight += stoneWeight
+            totalNetWeight += netWeight
+            totalStoneValue += stoneValue
+            totalLabour += labour
+            totalGoldValue += goldValue
+            totalValue += itemTotal
 
-            // Draw row data
-            xPos = x
-            for (i in headers.indices) {
-                val value = when (i) {
-                    0 -> item.itemDetails.displayName
-                    1 -> item.itemDetails.purity
-                    2 -> formatter.format(grossWeight)
-                    3 -> formatter.format(netWeight)
-                    4 -> quantity.toString()
-                    5 -> formatter.format(makingCharge)
-                    6 -> formatter.format(item.itemDetails.metalRate)
-                    7 -> formatter.format(cgstAmount) + "\n(${cgstRate.toInt()}%)"
-                    8 -> formatter.format(sgstAmount) + "\n(${sgstRate.toInt()}%)"
-                    9 -> "₹${formatter.format(itemTotal)}"
-                    else -> ""
-                }
+            stream.setNonStrokingColor(AWTColor(0, 0, 0))
 
-                contentStream.setNonStrokingColor(AWTColor.BLACK)
-                drawText(contentStream, value, xPos + 5f, currentY - 10f, 8f, false)
+            // Description
+            drawText(stream, item.itemDetails.displayName, columnX + 2f, currentY, 9f, false)
+            // Second line - purity and rate
+            val purityRateText =
+                "${item.itemDetails.purity} @ ${formatter.format(item.itemDetails.metalRate)}"
+            drawText(stream, purityRateText, columnX + 2f, currentY - 12f, 8f, false)
+            columnX += columnWidths[0] * (w - 40f)
 
-                // Draw vertical lines
-                if (i < headers.size - 1) {
-                    drawLine(
-                        contentStream,
-                        xPos + actualWidths[i],
-                        currentY,
-                        xPos + actualWidths[i],
-                        currentY - 15f,
-                        0.2f,
-                        secondaryColor
-                    )
-                }
+            // Quantity
+            val qtyX = columnX + (columnWidths[1] * (w - 40f)) / 2 - 5f
+            drawText(stream, "$quantity", qtyX, currentY, 9f, false)
+            columnX += columnWidths[1] * (w - 40f)
 
-                xPos += actualWidths[i]
-            }
+            // Gross Weight
+            val gwX = columnX + (columnWidths[2] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(grossWeight), gwX, currentY, 9f, false)
+            columnX += columnWidths[2] * (w - 40f)
 
-            currentY -= 15f
+            // Stone Weight
+            val swX = columnX + (columnWidths[3] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(stoneWeight), swX, currentY, 9f, false)
+            columnX += columnWidths[3] * (w - 40f)
+
+            // Net Weight
+            val nwX = columnX + (columnWidths[4] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(netWeight), nwX, currentY, 9f, false)
+            columnX += columnWidths[4] * (w - 40f)
+
+            // Stone Value
+            val svX = columnX + (columnWidths[5] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(stoneValue), svX, currentY, 9f, false)
+            columnX += columnWidths[5] * (w - 40f)
+
+            // Labour
+            val lbX = columnX + (columnWidths[6] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(labour), lbX, currentY, 9f, false)
+            columnX += columnWidths[6] * (w - 40f)
+
+            // Gold Value
+            val gvX = columnX + (columnWidths[7] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(goldValue), gvX, currentY, 9f, false)
+            columnX += columnWidths[7] * (w - 40f)
+
+            // Total Value
+            val tvX = columnX + (columnWidths[8] * (w - 40f)) / 2 - 10f
+            drawText(stream, formatter.format(itemTotal), tvX, currentY, 9f, false)
+
+            currentY -= 25f
         }
 
-        // Draw total row with colored background
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, currentY - 15f, width, 15f)
-        contentStream.fill()
+        // Calculate a reasonable Y position for subtotal that will always be visible
+        // This makes sure the subtotal row shows regardless of number of items
+        var subtotalY = 187f
 
-        // Draw border
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, currentY - 15f, width, 15f)
-        contentStream.stroke()
+        // Draw horizontal line before subtotal
+        drawLine(stream, 20f, subtotalY + 10f, w - 20f, subtotalY + 10f, 0.5f, AWTColor(0, 0, 0))
 
-        // Draw totals
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        xPos = x
-        for (i in headers.indices) {
-            val value = when (i) {
-                0 -> "TOTAL"
-                1 -> ""
-                2 -> formatter.format(totalGrossWeight)
-                3 -> formatter.format(totalNetWeight)
-                4 -> totalQuantity.toString()
-                5 -> formatter.format(totalMaking)
-                6 -> ""
-                7 -> formatter.format(totalCGST)
-                8 -> formatter.format(totalSGST)
-                9 -> "₹${formatter.format(totalAmount)}"
-                else -> ""
-            }
+        // Draw subtotal row with pink background
+        stream.setNonStrokingColor(primaryColor)
+        stream.addRect(20f, subtotalY, w - 40f, 18f)
+        stream.fill()
 
-            contentStream.setFont(boldFont, 8f)
-            drawText(contentStream, value, xPos + 5f, currentY - 10f, 8f, true)
+        // Draw subtotal text
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        columnX = 25f
 
-            // Draw vertical lines for total row
-            if (i < headers.size - 1) {
+        // Sub Total text
+        drawText(stream, "Sub Total", columnX + 2f, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[0] * (w - 40f)
+
+        // Quantity
+        val qtyX = columnX + (columnWidths[1] * (w - 40f)) / 2 - 5f
+        drawText(stream, "$totalQuantity", qtyX, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[1] * (w - 40f)
+
+        // Skip gross weight in subtotal
+        columnX += columnWidths[2] * (w - 40f)
+
+        // Skip stone weight in subtotal
+        columnX += columnWidths[3] * (w - 40f)
+
+        // Net Weight
+        val nwX = columnX + (columnWidths[4] * (w - 40f)) / 2 - 10f
+        drawText(stream, formatter.format(totalNetWeight), nwX, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[4] * (w - 40f)
+
+        // Stone Value
+        val svX = columnX + (columnWidths[5] * (w - 40f)) / 2 - 10f
+        drawText(stream, formatter.format(totalStoneValue), svX, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[5] * (w - 40f)
+
+        // Labour
+        val lbX = columnX + (columnWidths[6] * (w - 40f)) / 2 - 10f
+        drawText(stream, formatter.format(totalLabour), lbX, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[6] * (w - 40f)
+
+        // Gold Value
+        val gvX = columnX + (columnWidths[7] * (w - 40f)) / 2 - 10f
+        drawText(stream, formatter.format(totalGoldValue), gvX, subtotalY + 5f, 10f, true)
+        columnX += columnWidths[7] * (w - 40f)
+
+        // Total Value
+        val tvX = columnX + (columnWidths[8] * (w - 40f)) / 2 - 10f
+        drawText(stream, formatter.format(totalValue), tvX, subtotalY + 5f, 10f, true)
+
+        // Move to the tax and charges section
+        subtotalY -= 30f
+
+        // ---------- TAX AND PAYMENT SECTION ----------
+
+        // Define tax section columns
+        val taxColumns =
+            listOf("CGST", "SGST", "Total Extra Charges", "Total Received Amount", "Total Amount")
+        val taxColumnWidths = floatArrayOf(0.15f, 0.15f, 0.3f, 0.2f, 0.2f)
+
+        // Draw tax section headers with pink background
+        stream.setNonStrokingColor(primaryColor)
+        stream.addRect(20f, subtotalY, w - 40f, 18f)
+        stream.fill()
+
+        // Draw tax header text
+        stream.setNonStrokingColor(AWTColor.WHITE)
+        columnX = 25f
+        for (i in taxColumns.indices) {
+            val taxColumnWidth = taxColumnWidths[i] * (w - 40f)
+            val textWidth = boldFont.getStringWidth(taxColumns[i]) / 1000 * 10f
+            val textX = columnX + (taxColumnWidth - textWidth) / 2 // Center text
+
+            drawText(stream, taxColumns[i], textX, subtotalY + 5f, 10f, true)
+
+            // Draw vertical lines between tax columns
+            if (i < taxColumns.size - 1) {
+                val lineX = columnX + taxColumnWidth
                 drawLine(
-                    contentStream,
-                    xPos + actualWidths[i],
-                    currentY,
-                    xPos + actualWidths[i],
-                    currentY - 15f,
-                    0.2f,
-                    secondaryColor
+                    stream,
+                    lineX,
+                    subtotalY + 18f,
+                    lineX,
+                    subtotalY - 35f,
+                    0.5f,
+                    AWTColor(0, 0, 0)
                 )
             }
 
-            xPos += actualWidths[i]
+            columnX += taxColumnWidth
         }
 
-        return currentY - 20f
+        // Draw horizontal line below tax headers
+        drawLine(stream, 20f, subtotalY, w - 20f, subtotalY, 0.5f, AWTColor(0, 0, 0))
+
+        subtotalY -= 20f
+
+        // Calculate tax amounts
+        val taxRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 0.0
+        val halfTaxRate = taxRate / 2.0
+        val totalTax = invoice.items.sumOf { item ->
+            val itemTotal = item.price * item.quantity
+            val extraChargesTotal =
+                item.itemDetails.listOfExtraCharges.sumOf { it.amount * item.quantity }
+            val taxableAmount = itemTotal + extraChargesTotal
+            taxableAmount * (item.itemDetails.taxRate / 100.0)
+        }
+        val halfTax = totalTax / 2.0
+
+        // Calculate extra charges
+        val extraChargesTotal = invoice.items.sumOf { item ->
+            item.itemDetails.listOfExtraCharges.sumOf { it.amount * item.quantity }
+        }
+
+        // Draw tax values
+        columnX = 25f
+
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+
+        // CGST
+        val cgstX = columnX + (taxColumnWidths[0] * (w - 40f)) / 2 - 5f
+        drawText(stream, formatter.format(halfTax), cgstX, subtotalY + 5f, 10f, false)
+        columnX += taxColumnWidths[0] * (w - 40f)
+
+        // SGST
+        val sgstX = columnX + (taxColumnWidths[1] * (w - 40f)) / 2 - 5f
+        drawText(stream, formatter.format(halfTax), sgstX, subtotalY + 5f, 10f, false)
+        columnX += taxColumnWidths[1] * (w - 40f)
+
+        // Total Extra Charges
+        val ecX = columnX + (taxColumnWidths[2] * (w - 40f)) / 2 - 5f
+        drawText(stream, formatter.format(extraChargesTotal), ecX, subtotalY + 5f, 10f, false)
+        columnX += taxColumnWidths[2] * (w - 40f)
+
+        // Total Received Amount
+        val raX = columnX + (taxColumnWidths[3] * (w - 40f)) / 2 - 5f
+        drawText(stream, formatter.format(invoice.paidAmount), raX, subtotalY + 5f, 10f, false)
+        columnX += taxColumnWidths[3] * (w - 40f)
+
+        // Total Amount
+        val taX = columnX + (taxColumnWidths[4] * (w - 40f)) / 2 - 5f
+        drawText(stream, formatter.format(invoice.totalAmount), taX, subtotalY + 5f, 10f, true)
+
+        // Draw horizontal line after tax values
+        drawLine(stream, 20f, subtotalY - 15f, w - 20f, subtotalY - 15f, 0.5f, AWTColor(0, 0, 0))
+
+        // ---------- AMOUNT IN WORDS SECTION ----------
+        // Move Amount in Words section above QR code section
+
+
+//        numberToWords(invoice.totalAmount.toInt()) + " Rupees Only"
+        // Draw "Amount in Words" label and value
+        stream.setNonStrokingColor(AWTColor(0, 0, 0))
+        drawText(
+            stream,
+            "AMOUNT IN WORDS       :        ${numberToWords(invoice.totalAmount.toInt())}" + " Rupees Only",
+            25.5f,
+            110f,
+            10f,
+            true
+        )
+
+
+        // ---------- FOOTER SECTION ----------
+        // Keep your existing footer implementation as is
+        val footerHeight = 85f
+        drawRectangle(stream, 20f, 20f, (w - 40f), footerHeight, AWTColor(0, 0, 0))
+
+        // Draw QR code if enabled
+        if (settings.showQrCode && settings.upiId.isNotEmpty()) {
+            drawUpiQrCode2(document, page, settings.upiId, 20.5f, 20.5f)
+        }
+
+        drawLine(stream, 105f, 20f, 105f, 105f, 0.5f, AWTColor(0, 0, 0))
+
+        // Draw Terms and Conditions
+        drawText(stream, "Term And Condition", 125f, 90f, 10f, true)
+
+        // Split terms into lines and draw each line
+        val terms = settings.termsAndConditions.split("\n")
+        for (i in terms.indices) {
+            drawText(stream, terms[i], 125f, 70f - (i * 15f), 9f, false)
+        }
+
+        drawLine(
+            stream,
+            160f + (w - 40f) / 2,
+            20f,
+            160f + (w - 40f) / 2,
+            105f,
+            0.5f,
+            AWTColor(0, 0, 0)
+        )
+
+        // Draw signature line
+        if (settings.showSignature) {
+            if (settings.signatureUri != null) {
+                // Draw uploaded signature image
+                try {
+                    drawSignatureImage2(document, w - 90f, 55f, settings.signatureUri!!, stream)
+                    drawText(stream, "AUTHORISED SIGNATURE ", w - 140, 30f, 10f, true)
+                } catch (e: Exception) {
+                    Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
+                    // Fall back to text-only signature line
+                    drawText(stream, "AUTHORISED SIGNATURE ", w - 140, 30f, 10f, true)
+                }
+            } else {
+                // Draw signature line
+                drawText(stream, "AUTHORISED SIGNATURE ", w - 140, 30f, 10f, true)
+            }
+        } else {
+            // Draw signature text only
+            drawText(stream, "AUTHORISED SIGNATURE ", w - 140, 30f, 10f, true)
+        }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     // Original template (now called Simple template)
     private fun generateSimpleTemplate(
@@ -787,7 +1742,7 @@ class InvoicePdfGenerator(private val context: Context) {
         )
 
         // Customer section title and details
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(contentStream, "Customer:", 25f, pageHeight - 120f, 12f, true)
         drawText(contentStream, invoice.customerName, 25f, pageHeight - 135f, 10f, false)
         drawText(
@@ -956,7 +1911,6 @@ class InvoicePdfGenerator(private val context: Context) {
     }
 
 
-
     private fun generateStylishTemplate(
         contentStream: PDPageContentStream,
         document: PDDocument,
@@ -974,7 +1928,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
         // TAX INVOICE title at the top left
         contentStream.setFont(boldFont, 10f)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         contentStream.beginText()
         contentStream.newLineAtOffset(25f, pageHeight - 40f)
         contentStream.showText("TAX INVOICE")
@@ -992,7 +1946,14 @@ class InvoicePdfGenerator(private val context: Context) {
         drawText(contentStream, shop.shopName, 25f, pageHeight - 70f, 14f, true)
         contentStream.setNonStrokingColor(secondaryColor)
         drawText(contentStream, shop.address, 25f, pageHeight - 85f, 9f, false)
-        drawText(contentStream, "Mobile: ${shop.phoneNumber}," + " " + "GSTIN: ${shop.gstNumber}", 25f, pageHeight - 100f, 9f, false)
+        drawText(
+            contentStream,
+            "Mobile: ${shop.phoneNumber}," + " " + "GSTIN: ${shop.gstNumber}",
+            25f,
+            pageHeight - 100f,
+            9f,
+            false
+        )
 
         // Draw shop logo if enabled (top right, aligned with shop name)
         if (settings.showLogo && settings.logoUri != null) {
@@ -1006,14 +1967,28 @@ class InvoicePdfGenerator(private val context: Context) {
         }
 
         // Customer details section
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(contentStream, "BILL TO", 25f, pageHeight - 135f, 10f, true)
-        drawText(contentStream, "INVOICE DETAILS", pageWidth / 2 + 10f, pageHeight - 135f, 10f, true)
+        drawText(
+            contentStream,
+            "INVOICE DETAILS",
+            pageWidth / 2 + 10f,
+            pageHeight - 135f,
+            10f,
+            true
+        )
 
         // Customer details
         drawText(contentStream, invoice.customerName, 25f, pageHeight - 150f, 10f, true)
         drawText(contentStream, invoice.customerAddress, 25f, pageHeight - 165f, 9f, false)
-        drawText(contentStream, "Mobile: ${invoice.customerPhone}", 25f, pageHeight - 180f, 9f, false)
+        drawText(
+            contentStream,
+            "Mobile: ${invoice.customerPhone}",
+            25f,
+            pageHeight - 180f,
+            9f,
+            false
+        )
 
         // Invoice details on right
         drawText(contentStream, "Invoice No.:", pageWidth / 2 + 10f, pageHeight - 150f, 9f, true)
@@ -1041,12 +2016,18 @@ class InvoicePdfGenerator(private val context: Context) {
         var currentY = pageHeight - 210f
 
         // Draw items with stylish headers - modified for better formatting
-        currentY = drawImprovedStylishItemsTable(contentStream, invoice.items, 25f, currentY, pageWidth - 50f)
+        currentY = drawImprovedStylishItemsTable(
+            contentStream,
+            invoice.items,
+            25f,
+            currentY,
+            pageWidth - 50f
+        )
 
         // Draw terms and conditions heading
         drawText(contentStream, "TERMS AND CONDITIONS", 25f, currentY - 40f, 10f, true)
         // Set color to black explicitly for terms and conditions
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         val terms = settings.termsAndConditions.split("\n")
         var yPos = currentY - 55f
         for (term in terms) {
@@ -1054,10 +2035,10 @@ class InvoicePdfGenerator(private val context: Context) {
             yPos -= 15f
         }
 
-        drawText(contentStream, "Amount in words:", 25f, yPos - 15f, 9f, true)
+        drawText(contentStream, "Amount in words    :", 25f, yPos - 15f, 9f, true)
         drawText(
             contentStream,
-            numberToWords(invoice.totalAmount.toInt()-invoice.paidAmount.toInt()) + " Rupees Only",
+            numberToWords(invoice.totalAmount.toInt() - invoice.paidAmount.toInt()) + " Rupees Only",
             25f,
             yPos - 30f,
             9f,
@@ -1065,17 +2046,23 @@ class InvoicePdfGenerator(private val context: Context) {
         )
 
         // Right side financial summary section
-        currentY = drawCompactFinancialSummary(contentStream, invoice, pageWidth / 2 + 100f, currentY, (pageWidth / 2) - 125f)
+        currentY = drawCompactFinancialSummary(
+            contentStream,
+            invoice,
+            pageWidth / 2 + 100f,
+            currentY,
+            (pageWidth / 2) - 125f
+        )
 
         // Define signature and QR code Y position (aligned with each other)
         val signatureY = 120f
 
         // Draw QR code on the left side (if enabled)
         if (settings.showQrCode && settings.upiId.isNotEmpty()) {
-            drawUpiQrCode(document, page, settings.upiId, 25f, signatureY-50f)
+            drawUpiQrCode(document, page, settings.upiId, 25f, signatureY - 50f)
         }
 
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
         // Draw signature at right bottom
         if (settings.showSignature) {
@@ -1083,12 +2070,12 @@ class InvoicePdfGenerator(private val context: Context) {
                 drawSignatureImage(
                     document,
                     pageWidth - 90f,
-                    signatureY-25f,
+                    signatureY - 25f,
                     settings.signatureUri!!,
                     contentStream
                 )
             }
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
             drawText(
                 contentStream,
@@ -1150,7 +2137,7 @@ class InvoicePdfGenerator(private val context: Context) {
                 else xPos + 5f
 
             // Draw header text
-            contentStream.setNonStrokingColor(AWTColor.black)
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
             drawText(contentStream, headers[i], textX, y, 10f, true)
 
             // Move to next column position
@@ -1168,7 +2155,7 @@ class InvoicePdfGenerator(private val context: Context) {
         contentStream.fill()
 
         // Reset text color
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
         // Prepare data rows
         val rowHeight = 15f
@@ -1199,6 +2186,7 @@ class InvoicePdfGenerator(private val context: Context) {
                     }
                     (metalValue * item.itemDetails.makingCharges / 100.0) * pieces
                 }
+
                 else -> 0.0
             }
 
@@ -1218,7 +2206,8 @@ class InvoicePdfGenerator(private val context: Context) {
             // Item description in 2 lines
             // Line 1: ItemName ItemCode
             val itemNameText = item.itemDetails.displayName
-            val itemCodeText = if (item.itemDetails.jewelryCode.isNotEmpty()) " ${item.itemDetails.jewelryCode}" else ""
+            val itemCodeText =
+                if (item.itemDetails.jewelryCode.isNotEmpty()) " ${item.itemDetails.jewelryCode}" else ""
             val line1Text = itemNameText + itemCodeText
             drawText(contentStream, line1Text, xPos + 5f, currentY, 10f, false)
 
@@ -1236,7 +2225,14 @@ class InvoicePdfGenerator(private val context: Context) {
 
             // Draw rate in bold (we would make it italic if we could)
             val atSymbolWidth = regularFont.getStringWidth(" @ ") / 1000 * 10f
-            drawText(contentStream, rateText, xPos + 5f + purityWidth + atSymbolWidth, currentY - 12f, 10f, true)
+            drawText(
+                contentStream,
+                rateText,
+                xPos + 5f + purityWidth + atSymbolWidth,
+                currentY - 12f,
+                10f,
+                true
+            )
 
             // Move to the next columns
             xPos += actualWidths[0]
@@ -1245,7 +2241,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 2: Gross Weight
             val grossWeightText = formatter.format(grossWeight)
             val grossWeightX =
-                if (isRightAligned[1]) xPos + actualWidths[1] - 5f - (regularFont.getStringWidth(grossWeightText) / 1000 * 10f)
+                if (isRightAligned[1]) xPos + actualWidths[1] - 5f - (regularFont.getStringWidth(
+                    grossWeightText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, grossWeightText, grossWeightX, currentY, 10f, false)
             xPos += actualWidths[1]
@@ -1253,7 +2251,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 3: Net Weight
             val netWeightText = formatter.format(netWeight)
             val netWeightX =
-                if (isRightAligned[2]) xPos + actualWidths[2] - 5f - (regularFont.getStringWidth(netWeightText) / 1000 * 10f)
+                if (isRightAligned[2]) xPos + actualWidths[2] - 5f - (regularFont.getStringWidth(
+                    netWeightText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, netWeightText, netWeightX, currentY, 10f, false)
             xPos += actualWidths[2]
@@ -1261,7 +2261,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 4: Pieces
             val piecesText = pieces.toString()
             val piecesX =
-                if (isRightAligned[3]) xPos + actualWidths[3] - 5f - (regularFont.getStringWidth(piecesText) / 1000 * 10f)
+                if (isRightAligned[3]) xPos + actualWidths[3] - 5f - (regularFont.getStringWidth(
+                    piecesText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, piecesText, piecesX, currentY, 10f, false)
             xPos += actualWidths[3]
@@ -1269,7 +2271,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 5: Labour
             val labourText = formatter.format(labour)
             val labourX =
-                if (isRightAligned[4]) xPos + actualWidths[4] - 5f - (regularFont.getStringWidth(labourText) / 1000 * 10f)
+                if (isRightAligned[4]) xPos + actualWidths[4] - 5f - (regularFont.getStringWidth(
+                    labourText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, labourText, labourX, currentY, 10f, false)
             xPos += actualWidths[4]
@@ -1277,7 +2281,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 6: Stone Value
             val stoneText = formatter.format(stoneValue)
             val stoneX =
-                if (isRightAligned[5]) xPos + actualWidths[5] - 5f - (regularFont.getStringWidth(stoneText) / 1000 * 10f)
+                if (isRightAligned[5]) xPos + actualWidths[5] - 5f - (regularFont.getStringWidth(
+                    stoneText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, stoneText, stoneX, currentY, 10f, false)
             xPos += actualWidths[5]
@@ -1285,7 +2291,9 @@ class InvoicePdfGenerator(private val context: Context) {
             // Column 7: Total
             val totalText = "₹${formatter.format(itemTotal)}"
             val totalX =
-                if (isRightAligned[6]) xPos + actualWidths[6] - 5f - (regularFont.getStringWidth(totalText) / 1000 * 10f)
+                if (isRightAligned[6]) xPos + actualWidths[6] - 5f - (regularFont.getStringWidth(
+                    totalText
+                ) / 1000 * 10f)
                 else xPos + 5f
             drawText(contentStream, totalText, totalX, currentY, 10f, false)
 
@@ -1296,7 +2304,6 @@ class InvoicePdfGenerator(private val context: Context) {
         }
 
 
-
         // Draw totals line with more spacing to prevent overlapping
         contentStream.setNonStrokingColor(primaryColor)
         contentStream.addRect(x, currentY - 10f, width, 1.5f)
@@ -1304,9 +2311,8 @@ class InvoicePdfGenerator(private val context: Context) {
         currentY -= 25f  // More space after line
 
         // Subtotal label
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(contentStream, "TOTALS", x + 5f, currentY, 10f, true)
-
 
 
         // Draw totals for each column (skipping description column)
@@ -1360,10 +2366,8 @@ class InvoicePdfGenerator(private val context: Context) {
     }
 
 
-
-
     // New method for the compact right-side financial summary
-// New method for the compact right-side financial summary with horizontal line below total
+    // New method for the compact right-side financial summary with horizontal line below total
     private fun drawCompactFinancialSummary(
         contentStream: PDPageContentStream,
         invoice: Invoice,
@@ -1394,7 +2398,7 @@ class InvoicePdfGenerator(private val context: Context) {
         }
 
         // Draw each tax and extra charge item
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         contentStream.setFont(regularFont, 10f)
 
         // Tax entry with rate
@@ -1433,10 +2437,10 @@ class InvoicePdfGenerator(private val context: Context) {
         currentY -= 15f
 
         // Draw payment details in compact form
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         if (invoice.payments.isNotEmpty()) {
             for (payment in invoice.payments) {
-                contentStream.setNonStrokingColor(AWTColor.BLACK)
+                contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
                 val paymentAmount = "₹${formatter.format(payment.amount)}"
                 drawText(contentStream, payment.method, labelX, currentY, 10f, false)
                 val paymentAmountWidth = regularFont.getStringWidth(paymentAmount) / 1000 * 10f
@@ -1453,7 +2457,7 @@ class InvoicePdfGenerator(private val context: Context) {
         }
 
         // Draw received amount (sum of all payments)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         val paidAmount = invoice.paidAmount
         val paidAmountText = "Received Amount"
         val paidAmountValue = "₹${formatter.format(paidAmount)}"
@@ -1481,785 +2485,7 @@ class InvoicePdfGenerator(private val context: Context) {
     }
 
 
-
-
-    private fun generateAdvanceGstTallyTemplate(
-        contentStream: PDPageContentStream,
-        document: PDDocument,
-        page: PDPage,
-        invoice: Invoice,
-        shop: ShopInvoiceDetails,
-        pageWidth: Float,
-        pageHeight: Float
-    ) {
-        // Draw outer border
-        drawRectangle(contentStream, 20f, 20f, pageWidth - 40f, pageHeight - 40f, secondaryColor)
-
-        // Top section with headers
-        // Tax invoice title at the top left
-        contentStream.setFont(boldFont, 12f)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(30f, pageHeight - 40f)
-        contentStream.showText("TAX INVOICE")
-        contentStream.endText()
-
-        // Original for recipient tag
-        contentStream.setFont(regularFont, 8f)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(150f, pageHeight - 40f)
-        contentStream.showText("ORIGINAL FOR RECIPIENT")
-        contentStream.endText()
-
-        // Draw shop logo if enabled (in top right)
-        if (settings.showLogo && settings.logoUri != null) {
-            try {
-                drawShopLogo(
-                    document, pageWidth - 80f, pageHeight - 60f, settings.logoUri!!, contentStream
-                )
-            } catch (e: Exception) {
-                Log.e("InvoicePdfGenerator", "Error drawing logo: ${e.message}")
-            }
-        }
-
-        // Dividing line between top header and company info
-        drawLine(
-            contentStream,
-            20f,
-            pageHeight - 50f,
-            pageWidth - 20f,
-            pageHeight - 50f,
-            0.5f,
-            secondaryColor
-        )
-
-        // Company details on left
-        drawText(contentStream, shop.shopName, 30f, pageHeight - 70f, 14f, true)
-        contentStream.setNonStrokingColor(secondaryColor)
-        drawText(contentStream, shop.address, 30f, pageHeight - 85f, 9f, false)
-        drawText(contentStream, "Mobile: ${shop.phoneNumber}", 30f, pageHeight - 100f, 9f, false)
-
-        // Second section divider
-        drawLine(
-            contentStream,
-            20f,
-            pageHeight - 115f,
-            pageWidth - 20f,
-            pageHeight - 115f,
-            0.5f,
-            secondaryColor
-        )
-
-        // Invoice details in top right
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "Invoice No.", pageWidth / 2 + 50f, pageHeight - 70f, 9f, true)
-        drawText(contentStream, "Invoice Date", pageWidth / 2 + 50f, pageHeight - 90f, 9f, true)
-
-        drawText(
-            contentStream,
-            "${settings.invoicePrefix}${invoice.invoiceNumber}",
-            pageWidth - 80f,
-            pageHeight - 70f,
-            9f,
-            false
-        )
-        drawText(
-            contentStream,
-            dateFormatter.format(Date(invoice.invoiceDate)),
-            pageWidth - 80f,
-            pageHeight - 90f,
-            9f,
-            false
-        )
-
-        // Bill To section with background color
-        val billSectionColor = AWTColor(245, 245, 240) // Light cream color
-        contentStream.setNonStrokingColor(billSectionColor)
-        contentStream.addRect(20f, pageHeight - 175f, pageWidth - 40f, 60f)
-        contentStream.fill()
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "BILL TO", 30f, pageHeight - 130f, 10f, true)
-        drawText(contentStream, invoice.customerName, 30f, pageHeight - 145f, 10f, true)
-        drawText(contentStream, "Address: ${invoice.customerAddress}", 30f, pageHeight - 160f, 9f, false)
-        drawText(contentStream, "Mobile: ${invoice.customerPhone}", 240f, pageHeight - 160f, 9f, false)
-
-        // Table header with light background
-        val tableY = pageHeight - 175f
-        val headerColor = AWTColor(235, 245, 220) // Light green
-        contentStream.setNonStrokingColor(headerColor)
-        contentStream.addRect(20f, tableY - 25f, pageWidth - 40f, 25f)
-        contentStream.fill()
-
-        // Table headers for jewelry items
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "S.NO.", 30f, tableY - 15f, 9f, true)
-        drawText(contentStream, "ITEMS", 70f, tableY - 15f, 9f, true)
-        drawText(contentStream, "QTY.", 185f, tableY - 15f, 9f, true)
-        drawText(contentStream, "RATE", 230f, tableY - 15f, 9f, true)
-        drawText(contentStream, "GR.WT", 285f, tableY - 15f, 9f, true)
-        drawText(contentStream, "NET.WT", 340f, tableY - 15f, 9f, true)
-        drawText(contentStream, "LABOUR", 395f, tableY - 15f, 9f, true)
-        drawText(contentStream, "STONE VAL", 450f, tableY - 15f, 9f, true)
-        drawText(contentStream, "PURITY", 505f, tableY - 15f, 9f, true)
-        drawText(contentStream, "AMOUNT", 550f, tableY - 15f, 9f, true)
-
-        // Draw table grid lines
-        drawLine(contentStream, 65f, tableY, 65f, tableY - 330f, 0.2f, secondaryColor) // After S.No
-        drawLine(contentStream, 180f, tableY, 180f, tableY - 330f, 0.2f, secondaryColor) // After Items
-        drawLine(contentStream, 225f, tableY, 225f, tableY - 330f, 0.2f, secondaryColor) // After Qty
-        drawLine(contentStream, 280f, tableY, 280f, tableY - 330f, 0.2f, secondaryColor) // After Rate
-        drawLine(contentStream, 335f, tableY, 335f, tableY - 330f, 0.2f, secondaryColor) // After Gr.Wt
-        drawLine(contentStream, 390f, tableY, 390f, tableY - 330f, 0.2f, secondaryColor) // After Net.Wt
-        drawLine(contentStream, 445f, tableY, 445f, tableY - 330f, 0.2f, secondaryColor) // After Labour
-        drawLine(contentStream, 500f, tableY, 500f, tableY - 330f, 0.2f, secondaryColor) // After Stone Val
-        drawLine(contentStream, 545f, tableY, 545f, tableY - 330f, 0.2f, secondaryColor) // After Purity
-
-        // Horizontal line after header
-        drawLine(contentStream, 20f, tableY - 25f, pageWidth - 20f, tableY - 25f, 0.5f, secondaryColor)
-
-        // Item rows
-        var currentY = tableY - 25f
-        var totalQuantity = 0
-        var totalAmount = 0.0
-        var totalGrossWeight = 0.0
-        var totalNetWeight = 0.0
-        var totalLabour = 0.0
-        var totalStoneValue = 0.0
-
-        for ((index, item) in invoice.items.withIndex()) {
-            // Calculate row values
-            val itemTotal = item.price * item.quantity
-            val grossWeight = item.itemDetails.grossWeight
-            val netWeight = item.itemDetails.netWeight
-            val quantity = item.quantity
-
-            // Calculate making charges
-            val labour = when (item.itemDetails.makingChargesType.uppercase()) {
-                "PER GRAM" -> item.itemDetails.makingCharges * netWeight * quantity
-                "FIX" -> item.itemDetails.makingCharges * quantity
-                "PERCENTAGE" -> {
-                    val metalValue = when (item.itemDetails.metalRateOn.uppercase()) {
-                        "NET WEIGHT" -> item.itemDetails.metalRate * netWeight
-                        "GROSS WEIGHT" -> item.itemDetails.metalRate * grossWeight
-                        else -> item.itemDetails.metalRate * netWeight
-                    }
-                    (metalValue * item.itemDetails.makingCharges / 100.0) * quantity
-                }
-                else -> 0.0
-            }
-
-            // Stone value (example fixed value - can be modified based on your needs)
-            val stoneValue = item.itemDetails.diamondPrice * item.quantity
-
-            // Update totals
-            totalQuantity += quantity
-            totalGrossWeight += grossWeight * quantity
-            totalNetWeight += netWeight * quantity
-            totalLabour += labour
-            totalStoneValue += stoneValue
-            totalAmount += itemTotal
-
-            drawText(contentStream, (index + 1).toString(), 30f, currentY - 15f, 9f, false)
-            drawText(contentStream, item.itemDetails.displayName, 70f, currentY - 15f, 9f, false)
-
-            // Add code/IMEI if available
-            if (item.itemDetails.jewelryCode.isNotEmpty()) {
-                drawText(contentStream, item.itemDetails.jewelryCode, 70f, currentY - 30f, 8f, false)
-            }
-
-            drawText(contentStream, quantity.toString(), 185f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(item.price), 230f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(grossWeight), 285f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(netWeight), 340f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(labour), 395f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(stoneValue), 450f, currentY - 15f, 9f, false)
-            drawText(contentStream, item.itemDetails.purity, 505f, currentY - 15f, 9f, false)
-            drawText(contentStream, formatter.format(itemTotal), 550f, currentY - 15f, 9f, false)
-
-            currentY -= 40f
-
-            // Draw horizontal line after each item
-            drawLine(contentStream, 20f, currentY, pageWidth - 20f, currentY, 0.2f, secondaryColor)
-        }
-
-        // Total row with colored background
-        contentStream.setNonStrokingColor(headerColor)
-        contentStream.addRect(20f, currentY - 25f, pageWidth - 40f, 25f)
-        contentStream.fill()
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "TOTAL", 30f, currentY - 15f, 10f, true)
-        drawText(contentStream, totalQuantity.toString(), 185f, currentY - 15f, 10f, true)
-        drawText(contentStream, "", 230f, currentY - 15f, 10f, true) // Skip RATE total
-        drawText(contentStream, formatter.format(totalGrossWeight), 285f, currentY - 15f, 10f, true)
-        drawText(contentStream, formatter.format(totalNetWeight), 340f, currentY - 15f, 10f, true)
-        drawText(contentStream, formatter.format(totalLabour), 395f, currentY - 15f, 10f, true)
-        drawText(contentStream, formatter.format(totalStoneValue), 450f, currentY - 15f, 10f, true)
-        drawText(contentStream, "", 505f, currentY - 15f, 10f, true) // Skip PURITY total
-        drawText(contentStream, "₹ " + formatter.format(totalAmount), 550f, currentY - 15f, 10f, true)
-
-        currentY -= 25f
-
-        // Received amount
-        drawLine(contentStream, 20f, currentY, pageWidth - 20f, currentY, 0.5f, secondaryColor)
-
-        drawText(contentStream, "RECEIVED AMOUNT", 30f, currentY - 15f, 9f, true)
-        drawText(contentStream, "₹ " + formatter.format(invoice.paidAmount), 550f, currentY - 15f, 9f, false)
-
-        currentY -= 25f
-        drawLine(contentStream, 20f, currentY, pageWidth - 20f, currentY, 0.5f, secondaryColor)
-
-        // Balance
-        drawText(contentStream, "BALANCE AMOUNT", 30f, currentY - 15f, 9f, true)
-        val balance = totalAmount - invoice.paidAmount
-        contentStream.setNonStrokingColor(if (balance > 0) AWTColor(192, 0, 0) else AWTColor(0, 128, 0))
-        drawText(contentStream, "₹ " + formatter.format(balance), 550f, currentY - 15f, 9f, true)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-
-        // Simple tax summary table (without HSN/SAC and cess)
-        currentY -= 50f
-
-        // Tax summary header
-        contentStream.setNonStrokingColor(headerColor)
-        contentStream.addRect(20f, currentY, pageWidth - 40f, 20f)
-        contentStream.fill()
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "Taxable Value", 130f, currentY - 12f, 9f, true)
-
-        // CGST & SGST columns with subheader
-        drawText(contentStream, "CGST", 300f, currentY - 12f, 9f, true)
-        drawText(contentStream, "SGST", 400f, currentY - 12f, 9f, true)
-
-        // Total tax amount
-        drawText(contentStream, "Total Tax Amount", 510f, currentY - 12f, 9f, true)
-
-        // Tax data
-        currentY -= 20f
-        drawLine(contentStream, 20f, currentY, pageWidth - 20f, currentY, 0.2f, secondaryColor)
-
-        // Draw vertical separators
-        drawLine(contentStream, 230f, currentY + 20f, 230f, currentY - 40f, 0.2f, secondaryColor)
-        drawLine(contentStream, 370f, currentY + 20f, 370f, currentY - 40f, 0.2f, secondaryColor)
-        drawLine(contentStream, 470f, currentY + 20f, 470f, currentY - 40f, 0.2f, secondaryColor)
-
-        // Tax Rate and Amount headers
-        drawText(contentStream, "Rate", 250f, currentY - 10f, 8f, false)
-        drawText(contentStream, "Amount", 310f, currentY - 10f, 8f, false)
-        drawText(contentStream, "Rate", 380f, currentY - 10f, 8f, false)
-        drawText(contentStream, "Amount", 420f, currentY - 10f, 8f, false)
-
-        // Calculate tax values
-        val taxRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 0.0
-        val cgstRate = taxRate / 2.0
-        val sgstRate = taxRate / 2.0
-        val cgstAmount = totalAmount * (cgstRate / 100.0)
-        val sgstAmount = totalAmount * (sgstRate / 100.0)
-
-        // Tax data row
-        currentY -= 20f
-        drawText(contentStream, formatter.format(totalAmount), 130f, currentY - 10f, 9f, false)
-        drawText(contentStream, "${cgstRate}%", 250f, currentY - 10f, 8f, false)
-        drawText(contentStream, formatter.format(cgstAmount), 310f, currentY - 10f, 9f, false)
-        drawText(contentStream, "${sgstRate}%", 380f, currentY - 10f, 8f, false)
-        drawText(contentStream, formatter.format(sgstAmount), 420f, currentY - 10f, 9f, false)
-        drawText(contentStream, "₹ " + formatter.format(cgstAmount + sgstAmount), 510f, currentY - 10f, 9f, true)
-
-        currentY -= 20f
-        drawLine(contentStream, 20f, currentY, pageWidth - 20f, currentY, 0.5f, secondaryColor)
-
-        // Tax summary total
-        drawText(contentStream, "Total", 30f, currentY - 15f, 9f, true)
-        drawText(contentStream, formatter.format(totalAmount), 130f, currentY - 15f, 9f, true)
-        drawText(contentStream, formatter.format(cgstAmount), 310f, currentY - 15f, 9f, true)
-        drawText(contentStream, formatter.format(sgstAmount), 420f, currentY - 15f, 9f, true)
-        drawText(contentStream, "₹ " + formatter.format(cgstAmount + sgstAmount), 510f, currentY - 15f, 9f, true)
-
-        // Amount in words
-        currentY -= 40f
-        drawText(contentStream, "Total Amount (in words)", 30f, currentY, 9f, true)
-        drawText(
-            contentStream,
-            numberToWords(totalAmount.toInt()) + " Rupees",
-            30f,
-            currentY - 15f,
-            9f,
-            false
-        )
-
-        // Terms and conditions
-        drawText(contentStream, "Terms and Conditions", 30f, currentY - 40f, 9f, true)
-
-        val terms = settings.termsAndConditions.split("\n")
-        var termsY = currentY - 55f
-
-        for ((i, term) in terms.withIndex()) {
-            if (i < 2) { // Limit to first two terms to save space
-                drawText(
-                    contentStream,
-                    "${i+1}. $term",
-                    30f,
-                    termsY,
-                    8f,
-                    false
-                )
-                termsY -= 15f
-            }
-        }
-
-        // Draw signature if enabled
-        if (settings.showSignature) {
-            if (settings.signatureUri != null) {
-                drawSignatureImage(
-                    document,
-                    pageWidth - 100f,
-                    currentY - 60f,
-                    settings.signatureUri!!,
-                    contentStream
-                )
-            }
-            drawText(
-                contentStream,
-                "Authorised Signatory For",
-                pageWidth - 150f,
-                currentY - 90f,
-                8f,
-                true
-            )
-            drawText(contentStream, shop.shopName, pageWidth - 150f, currentY - 100f, 8f, false)
-        }
-
-        // Draw footer
-        contentStream.setFont(regularFont, 7f)
-        contentStream.setNonStrokingColor(secondaryColor)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(pageWidth / 2 - 80f, 30f)
-        contentStream.showText("Invoice created using SwarnaKhataBook")
-        contentStream.endText()
-    }
-
-
-
-    // Advanced GST (Tally) template with tally-like formatting
-    // Helper method to draw advanced GST items table
-
-    // Helper method to draw tally-style items table
-    private fun drawTallyStyleItemsTable(
-        contentStream: PDPageContentStream,
-        items: List<InvoiceItem>,
-        x: Float,
-        y: Float,
-        width: Float
-    ): Float {
-        // Define headers
-        val headers = listOf(
-            "S.NO.", "ITEMS", "HSN", "QTY.", "RATE", "DISC.", "TAX", "CESS", "AMOUNT"
-        )
-
-        // Define column widths proportions
-        val columnWidths =
-            floatArrayOf(0.05f, 0.25f, 0.10f, 0.07f, 0.10f, 0.10f, 0.10f, 0.10f, 0.13f)
-
-        // Calculate actual widths
-        val actualWidths = columnWidths.map { it * width }.toFloatArray()
-
-        // Draw table headers with colored background
-        val headerBgColor = AWTColor(245, 230, 190) // beige
-
-        // Fill background rectangle for header
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, y - 15f, width, 15f)
-        contentStream.fill()
-
-        // Draw borders
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, y - 15f, width, 15f)
-        contentStream.stroke()
-
-        // Draw header text
-        var xPos = x
-        for (i in headers.indices) {
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, headers[i], xPos + 5f, y - 10f, 8f, true)
-
-            // Draw vertical lines
-            if (i < headers.size - 1) {
-                drawLine(
-                    contentStream,
-                    xPos + actualWidths[i],
-                    y,
-                    xPos + actualWidths[i],
-                    y - 15f,
-                    0.2f,
-                    secondaryColor
-                )
-            }
-
-            xPos += actualWidths[i]
-        }
-
-        // Reset for data rows
-        var currentY = y - 15f
-
-        // Draw rows
-        for ((index, item) in items.withIndex()) {
-            // Draw border
-            contentStream.setStrokingColor(secondaryColor)
-            contentStream.addRect(x, currentY - 15f, width, 15f)
-            contentStream.stroke()
-
-            // Draw row data
-            xPos = x
-            for (i in headers.indices) {
-                val value = when (i) {
-                    0 -> (index + 1).toString()
-                    1 -> item.itemDetails.displayName
-                    2 -> "1001" // Sample HSN code
-                    3 -> "${item.quantity} PCS"
-                    4 -> formatter.format(item.price)
-                    5 -> formatter.format(item.price * 0.10) + "\n(10%)"
-                    6 -> formatter.format(item.price * 0.14) + "\n(14%)"
-                    7 -> formatter.format(item.price * 0.12) + "\n(12%)"
-                    8 -> "₹${formatter.format(item.price * item.quantity)}"
-                    else -> ""
-                }
-
-                contentStream.setNonStrokingColor(AWTColor.BLACK)
-                drawText(contentStream, value, xPos + 5f, currentY - 10f, 8f, false)
-
-                // Draw vertical lines
-                if (i < headers.size - 1) {
-                    drawLine(
-                        contentStream,
-                        xPos + actualWidths[i],
-                        currentY,
-                        xPos + actualWidths[i],
-                        currentY - 15f,
-                        0.2f,
-                        secondaryColor
-                    )
-                }
-
-                xPos += actualWidths[i]
-            }
-
-            currentY -= 15f
-        }
-
-        // Draw extras like delivery charges
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, currentY - 15f, width, 15f)
-        contentStream.stroke()
-
-        drawText(
-            contentStream, "Delivery Charges", x + actualWidths[0] + 5f, currentY - 10f, 8f, false
-        )
-        drawText(
-            contentStream,
-            "-",
-            x + actualWidths[0] + actualWidths[1] + 5f,
-            currentY - 10f,
-            8f,
-            false
-        )
-        drawText(
-            contentStream,
-            "-",
-            x + actualWidths[0] + actualWidths[1] + actualWidths[2] + 5f,
-            currentY - 10f,
-            8f,
-            false
-        )
-        drawText(contentStream, "100", x + width - 30f, currentY - 10f, 8f, false)
-
-        currentY -= 15f
-
-        // Draw total row
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, currentY - 15f, width, 15f)
-        contentStream.fill()
-
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, currentY - 15f, width, 15f)
-        contentStream.fill()
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "TOTAL", x + 5f, currentY - 10f, 9f, true)
-
-        // Calculate and display totals
-        val totalQuantity = items.sumOf { it.quantity }
-        drawText(
-            contentStream,
-            totalQuantity.toString(),
-            x + actualWidths[0] + actualWidths[1] + actualWidths[2] + 5f,
-            currentY - 10f,
-            9f,
-            true
-        )
-
-        val totalRate = items.sumOf { it.price }
-        drawText(
-            contentStream,
-            formatter.format(totalRate),
-            x + actualWidths[0] + actualWidths[1] + actualWidths[2] + actualWidths[3] + 5f,
-            currentY - 10f,
-            9f,
-            true
-        )
-
-        val totalAmount = items.sumOf { it.price * it.quantity } + 100 // Adding delivery charges
-        drawText(
-            contentStream,
-            "₹${formatter.format(totalAmount)}",
-            x + width - 30f,
-            currentY - 10f,
-            9f,
-            true
-        )
-
-        return currentY - 30f
-    }
-
-    // Helper method to draw billbook style items table
-    private fun drawBillbookItemsTable(
-        contentStream: PDPageContentStream,
-        items: List<InvoiceItem>,
-        x: Float,
-        y: Float,
-        width: Float
-    ): Float {
-        // Define headers
-        val headers = listOf(
-            "S.NO.", "ITEMS", "HSN", "QTY.", "RATE", "DISC.", "AMOUNT"
-        )
-
-        // Define column widths proportions
-        val columnWidths = floatArrayOf(0.05f, 0.35f, 0.10f, 0.10f, 0.15f, 0.10f, 0.15f)
-
-        // Calculate actual widths
-        val actualWidths = columnWidths.map { it * width }.toFloatArray()
-
-        // Draw table border
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, y - 300f, width, 300f) // Fixed height table
-        contentStream.stroke()
-
-        // Draw table headers with colored background
-        val headerBgColor = AWTColor(245, 245, 220) // light yellow
-
-        // Fill background rectangle for header
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, y, width, -20f)
-        contentStream.fill()
-
-        // Draw header text
-        var xPos = x
-        for (i in headers.indices) {
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, headers[i], xPos + 5f, y - 15f, 9f, true)
-
-            // Draw vertical lines through entire table
-            if (i < headers.size - 1) {
-                drawLine(
-                    contentStream,
-                    xPos + actualWidths[i],
-                    y,
-                    xPos + actualWidths[i],
-                    y - 300f,
-                    0.2f,
-                    secondaryColor
-                )
-            }
-
-            xPos += actualWidths[i]
-        }
-
-        // Draw horizontal line after header
-        drawLine(
-            contentStream, x, y - 20f, x + width, y - 20f, 0.5f, secondaryColor
-        )
-
-        // Reset for data rows
-        var currentY = y - 20f
-
-        // Draw rows
-        for ((index, item) in items.withIndex()) {
-            // Draw row data
-            xPos = x
-            for (i in headers.indices) {
-                val value = when (i) {
-                    0 -> (index + 1).toString()
-                    1 -> item.itemDetails.displayName + "\nIMEI: ${item.itemDetails.jewelryCode}"
-                    2 -> "1001" // Sample HSN code
-                    3 -> "${item.quantity} PCS"
-                    4 -> formatter.format(item.price)
-                    5 -> formatter.format(item.price * 0.10) + "\n(10%)"
-                    6 -> formatter.format(item.price * item.quantity)
-                    else -> ""
-                }
-
-                contentStream.setNonStrokingColor(AWTColor.BLACK)
-                drawText(contentStream, value, xPos + 5f, currentY - 15f, 9f, false)
-
-                xPos += actualWidths[i]
-            }
-
-            currentY -= 40f
-
-            // Draw horizontal line after each row
-            drawLine(
-                contentStream, x, currentY, x + width, currentY, 0.2f, secondaryColor
-            )
-        }
-
-        // Draw extras like delivery charges
-        xPos = x
-        for (i in headers.indices) {
-            val value = when (i) {
-                0 -> ""
-                1 -> "Delivery Charges"
-                2 -> "-"
-                3 -> "-"
-                4 -> "-"
-                5 -> "-"
-                6 -> "₹ 100"
-                else -> ""
-            }
-
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, value, xPos + 5f, currentY - 15f, 9f, false)
-
-            xPos += actualWidths[i]
-        }
-
-        currentY -= 30f
-
-        // Draw IGST charges
-        xPos = x
-        for (i in headers.indices) {
-            val value = when (i) {
-                0 -> ""
-                1 -> "IGST @14%"
-                2 -> "-"
-                3 -> "-"
-                4 -> "-"
-                5 -> "-"
-                6 -> "₹ " + formatter.format(items.sumOf { it.price * it.quantity } * 0.14)
-                else -> ""
-            }
-
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, value, xPos + 5f, currentY - 15f, 9f, false)
-
-            xPos += actualWidths[i]
-        }
-
-        currentY -= 30f
-
-        // Draw Cess charges
-        xPos = x
-        for (i in headers.indices) {
-            val value = when (i) {
-                0 -> ""
-                1 -> "Cess @12%"
-                2 -> "-"
-                3 -> "-"
-                4 -> "-"
-                5 -> "-"
-                6 -> "₹ " + formatter.format(items.sumOf { it.price * it.quantity } * 0.12)
-                else -> ""
-            }
-
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, value, xPos + 5f, currentY - 15f, 9f, false)
-
-            xPos += actualWidths[i]
-        }
-
-        currentY -= 30f
-
-        // Draw Round off
-        xPos = x
-        for (i in headers.indices) {
-            val value = when (i) {
-                0 -> ""
-                1 -> "Round Off"
-                2 -> "-"
-                3 -> "-"
-                4 -> "-"
-                5 -> "-"
-                6 -> "₹ -" + formatter.format(getTotalRoundOff(items))
-                else -> ""
-            }
-
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
-            drawText(contentStream, value, xPos + 5f, currentY - 15f, 9f, false)
-
-            xPos += actualWidths[i]
-        }
-
-        currentY -= 30f
-
-        // Draw total row with colored background
-        contentStream.setNonStrokingColor(headerBgColor)
-        contentStream.addRect(x, currentY, width, -20f)
-        contentStream.fill()
-
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.addRect(x, currentY, width, -20f)
-        contentStream.stroke()
-
-        // Draw TOTAL text
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "TOTAL", x + 5f, currentY - 15f, 10f, true)
-
-        // Calculate and display final total
-        val totalAmount =
-            items.sumOf { it.price * it.quantity } * 1.26 + 100 // Adding GST, Cess and delivery
-        drawText(
-            contentStream,
-            "₹ " + formatter.format(totalAmount),
-            x + width - 50f,
-            currentY - 15f,
-            10f,
-            true
-        )
-
-        // Draw received amount
-        currentY -= 25f
-        drawLine(
-            contentStream, x, currentY, x + width, currentY, 0.2f, secondaryColor
-        )
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "RECEIVED AMOUNT", x + 5f, currentY - 15f, 9f, true)
-        drawText(
-            contentStream,
-            "₹ " + formatter.format(totalAmount),
-            x + width - 50f,
-            currentY - 15f,
-            9f,
-            false
-        )
-
-        // Draw balance amount
-        currentY -= 25f
-        drawLine(
-            contentStream, x, currentY, x + width, currentY, 0.2f, secondaryColor
-        )
-
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, "BALANCE AMOUNT", x + 5f, currentY - 15f, 9f, true)
-        drawText(contentStream, "₹ 0", x + width - 50f, currentY - 15f, 9f, false)
-
-        return y - 320f // Return position after table
-    }
-
     // Helpers for tax and total calculations
-    private fun getTaxableAmount(invoice: Invoice): Double {
-        return invoice.items.sumOf { it.price * it.quantity }
-    }
 
     private fun getTotalRoundOff(items: List<InvoiceItem>): Double {
         val totalBeforeRounding = items.sumOf { it.price * it.quantity } * 1.26 + 100
@@ -2267,9 +2493,6 @@ class InvoicePdfGenerator(private val context: Context) {
         return Math.abs(roundedTotal - totalBeforeRounding)
     }
 
-    private fun getTotalRoundOff(invoice: Invoice): Double {
-        return getTotalRoundOff(invoice.items)
-    }
 
     private fun loadFonts(document: PDDocument) {
         try {
@@ -2300,7 +2523,7 @@ class InvoicePdfGenerator(private val context: Context) {
         contentStream.endText()
 
         // Reset text color
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
         // Create headers
         val headers = listOf("Description", "Amount")
@@ -2387,7 +2610,7 @@ class InvoicePdfGenerator(private val context: Context) {
         contentStream.endText()
 
         // Reset text color
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
         currentY -= 20f
 
@@ -2462,7 +2685,7 @@ class InvoicePdfGenerator(private val context: Context) {
         currentY -= 25f
 
         // Draw paid amount
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(contentStream, "Amount Paid:", x + 5f, currentY, 12f, true)
         drawText(
             contentStream,
@@ -2492,7 +2715,7 @@ class InvoicePdfGenerator(private val context: Context) {
         currentY -= 25f
 
         // Draw amount in words
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
+        contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(
             contentStream,
             "Amount in words: " + numberToWords(balanceDue.toInt()),
@@ -2525,10 +2748,31 @@ class InvoicePdfGenerator(private val context: Context) {
                 // Draw label
                 contentStream.beginText()
                 contentStream.setFont(boldFont, 10f)
-                contentStream.setNonStrokingColor(AWTColor.BLACK)
+                contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
                 contentStream.newLineAtOffset(x + 15f, y - 15f)
                 contentStream.showText("Scan to Pay")
                 contentStream.endText()
+            }
+        } catch (e: Exception) {
+            Log.e("InvoicePdfGenerator", "Error generating QR code", e)
+        }
+    }
+
+    private fun drawUpiQrCode2(
+        document: PDDocument, page: PDPage, upiId: String, x: Float, y: Float
+    ) {
+        try {
+            // Generate QR code
+            val qrCodeBitmap = generateUpiQrCode(upiId)
+
+            // Convert bitmap to PDImageXObject
+            val qrCodeImage = LosslessFactory.createFromImage(document, qrCodeBitmap)
+
+            // Draw on page
+            PDPageContentStream(
+                document, page, PDPageContentStream.AppendMode.APPEND, true, true
+            ).use { contentStream ->
+                contentStream.drawImage(qrCodeImage, x, y, 80f, 80f)
             }
         } catch (e: Exception) {
             Log.e("InvoicePdfGenerator", "Error generating QR code", e)
@@ -2571,7 +2815,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
         // Draw terms and conditions
         if (settings.termsAndConditions.isNotEmpty()) {
-            contentStream.setNonStrokingColor(AWTColor.BLACK)
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
             drawText(contentStream, "Terms & Conditions:", 40f, 100f, 10f, true)
 
             // Split terms into lines and draw each line
@@ -2766,7 +3010,7 @@ class InvoicePdfGenerator(private val context: Context) {
         val totalHeight = rowHeight * (data.size + 1) // +1 for header row
 
         // Draw outer border - only once to prevent overlapping
-        drawRectangle(contentStream, x, y - totalHeight, width, totalHeight, AWTColor.BLACK)
+        drawRectangle(contentStream, x, y - totalHeight, width, totalHeight, AWTColor(0, 0, 0))
 
         // Draw header row content
         var xPos = x
@@ -2789,12 +3033,12 @@ class InvoicePdfGenerator(private val context: Context) {
         for (i in 0 until headers.size) {
             xPos += columnWidths[i]
             if (i < headers.size - 1) {
-                drawLine(contentStream, xPos, y, xPos, y - totalHeight, 0.5f, AWTColor.BLACK)
+                drawLine(contentStream, xPos, y, xPos, y - totalHeight, 0.5f, AWTColor(0, 0, 0))
             }
         }
 
         // Draw horizontal line after header
-        drawLine(contentStream, x, y - rowHeight, x + width, y - rowHeight, 0.5f, AWTColor.BLACK)
+        drawLine(contentStream, x, y - rowHeight, x + width, y - rowHeight, 0.5f, AWTColor(0, 0, 0))
 
         // Draw data rows
         var yPos = y - rowHeight
@@ -2824,279 +3068,13 @@ class InvoicePdfGenerator(private val context: Context) {
 
             // Draw horizontal line after each row (except last)
             if (rowIndex < data.size - 1) {
-                drawLine(contentStream, x, yPos, x + width, yPos, 0.5f, AWTColor.BLACK)
+                drawLine(contentStream, x, yPos, x + width, yPos, 0.5f, AWTColor(0, 0, 0))
             }
         }
 
         return y - totalHeight - 10f // Return the Y position after drawing the table plus some spacing
     }
 
-    // 1. Generate Billbook Template
-    private fun generateBillbookTemplate(
-        contentStream: PDPageContentStream,
-        document: PDDocument,
-        page: PDPage,
-        invoice: Invoice,
-        shop: ShopInvoiceDetails,
-        pageWidth: Float,
-        pageHeight: Float
-    ) {
-        // Draw clean, modern billbook style with signature box
-
-        // Draw outer border
-        drawRectangle(contentStream, 20f, 20f, pageWidth - 40f, pageHeight - 40f, secondaryColor)
-
-        // Draw header divider
-        drawLine(
-            contentStream,
-            20f,
-            pageHeight - 120f,
-            pageWidth - 20f,
-            pageHeight - 120f,
-            0.5f,
-            secondaryColor
-        )
-
-        // Header with logo
-        contentStream.setFont(boldFont, 22f)
-        contentStream.setNonStrokingColor(primaryColor)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(40f, pageHeight - 40f)
-        contentStream.showText("BILL / INVOICE")
-        contentStream.endText()
-
-        // Draw shop logo if enabled
-        if (settings.showLogo && settings.logoUri != null) {
-            try {
-                drawShopLogo(
-                    document, pageWidth - 80f, pageHeight - 70f, settings.logoUri!!, contentStream
-                )
-            } catch (e: Exception) {
-                Log.e("InvoicePdfGenerator", "Error drawing logo: ${e.message}")
-            }
-        }
-
-        // Shop details
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, shop.shopName, 40f, pageHeight - 70f, 14f, true)
-        drawText(contentStream, shop.address, 40f, pageHeight - 90f, 9f, false)
-        drawText(contentStream, "Phone: ${shop.phoneNumber}", 40f, pageHeight - 105f, 9f, false)
-
-        // Invoice details section
-        drawText(
-            contentStream,
-            "Bill No: ${settings.invoicePrefix}${invoice.invoiceNumber}",
-            pageWidth - 200f,
-            pageHeight - 70f,
-            10f,
-            true
-        )
-        drawText(
-            contentStream,
-            "Date: ${dateFormatter.format(Date(invoice.invoiceDate))}",
-            pageWidth - 200f,
-            pageHeight - 90f,
-            10f,
-            false
-        )
-
-        // Customer details section
-        drawLine(
-            contentStream,
-            20f,
-            pageHeight - 150f,
-            pageWidth - 20f,
-            pageHeight - 150f,
-            0.2f,
-            secondaryColor
-        )
-
-        // Customer title
-        contentStream.setFont(boldFont, 10f)
-        contentStream.setNonStrokingColor(primaryColor)
-        contentStream.beginText()
-        contentStream.newLineAtOffset(40f, pageHeight - 140f)
-        contentStream.showText("BILLED TO:")
-        contentStream.endText()
-
-        // Customer info
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-        drawText(contentStream, invoice.customerName, 40f, pageHeight - 160f, 12f, true)
-        drawText(contentStream, invoice.customerAddress, 40f, pageHeight - 175f, 9f, false)
-        drawText(
-            contentStream,
-            "Phone: ${invoice.customerPhone}",
-            40f,
-            pageHeight - 190f,
-            9f,
-            false
-        )
-
-        // Start Y position for items table
-        var currentY = pageHeight - 210f
-
-        // Draw items table in billbook style
-        currentY =
-            drawBillbookItemsTable(contentStream, invoice.items, 30f, currentY, pageWidth - 60f)
-
-        // Draw Tax summary
-        contentStream.setNonStrokingColor(primaryColor)
-        drawText(contentStream, "TAX SUMMARY:", 30f, currentY - 20f, 12f, true)
-        contentStream.setNonStrokingColor(AWTColor.BLACK)
-
-        // Draw tax details table
-        val taxHeaders = listOf("HSN/SAC", "TAXABLE AMT", "RATE", "IGST", "CGST", "SGST")
-        val taxWidths = floatArrayOf(0.15f, 0.25f, 0.15f, 0.15f, 0.15f, 0.15f)
-        val actualTaxWidths = taxWidths.map { it * (pageWidth - 60f) }.toFloatArray()
-
-        // Draw tax header
-        var xPos = 30f
-        for (i in taxHeaders.indices) {
-            drawText(contentStream, taxHeaders[i], xPos + 5f, currentY - 40f, 9f, true)
-            xPos += actualTaxWidths[i]
-        }
-
-        drawLine(
-            contentStream,
-            30f,
-            currentY - 45f,
-            pageWidth - 30f,
-            currentY - 45f,
-            0.2f,
-            secondaryColor
-        )
-
-        // Sample tax data
-        val taxRate = invoice.items.firstOrNull()?.itemDetails?.taxRate ?: 5.0
-        val taxableAmount = getTaxableAmount(invoice)
-        val igstAmount = taxableAmount * (taxRate / 100.0)
-
-        xPos = 30f
-        drawText(contentStream, "998391", xPos + 5f, currentY - 60f, 9f, false)
-        xPos += actualTaxWidths[0]
-
-        drawText(
-            contentStream,
-            "₹${formatter.format(taxableAmount)}",
-            xPos + 5f,
-            currentY - 60f,
-            9f,
-            false
-        )
-        xPos += actualTaxWidths[1]
-
-        drawText(contentStream, "${taxRate.toInt()}%", xPos + 5f, currentY - 60f, 9f, false)
-        xPos += actualTaxWidths[2]
-
-        drawText(
-            contentStream,
-            "₹${formatter.format(igstAmount)}",
-            xPos + 5f,
-            currentY - 60f,
-            9f,
-            false
-        )
-        xPos += actualTaxWidths[3]
-
-        drawText(contentStream, "-", xPos + 5f, currentY - 60f, 9f, false)
-        xPos += actualTaxWidths[4]
-
-        drawText(contentStream, "-", xPos + 5f, currentY - 60f, 9f, false)
-
-        // Draw terms and bank details in two columns
-        drawText(contentStream, "TERMS & CONDITIONS:", 30f, currentY - 100f, 10f, true)
-
-        val terms = settings.termsAndConditions.split("\n")
-        var yPos = currentY - 115f
-
-        for (term in terms) {
-            drawText(contentStream, "• $term", 30f, yPos, 8f, false)
-            yPos -= 12f
-        }
-
-        // Draw bank details
-        drawText(contentStream, "BANK DETAILS:", pageWidth / 2 + 20f, currentY - 100f, 10f, true)
-        drawText(
-            contentStream,
-            "Bank Name: [YOUR BANK]",
-            pageWidth / 2 + 20f,
-            currentY - 115f,
-            8f,
-            false
-        )
-        drawText(
-            contentStream,
-            "A/C No: XXXXXXXXXXXX",
-            pageWidth / 2 + 20f,
-            currentY - 127f,
-            8f,
-            false
-        )
-        drawText(contentStream, "IFSC: XXXXXXXXX", pageWidth / 2 + 20f, currentY - 139f, 8f, false)
-
-        // Draw totals section
-        drawRectangle(contentStream, pageWidth - 200f, 120f, 170f, 100f, secondaryColor)
-
-        drawText(contentStream, "SUBTOTAL:", pageWidth - 190f, 200f, 10f, true)
-        drawText(
-            contentStream,
-            "₹${formatter.format(taxableAmount)}",
-            pageWidth - 40f,
-            200f,
-            10f,
-            false
-        )
-
-        drawText(contentStream, "DISCOUNT:", pageWidth - 190f, 180f, 10f, true)
-        drawText(contentStream, "₹0.00", pageWidth - 40f, 180f, 10f, false)
-
-        drawText(contentStream, "TAX:", pageWidth - 190f, 160f, 10f, true)
-        drawText(
-            contentStream,
-            "₹${formatter.format(igstAmount)}",
-            pageWidth - 40f,
-            160f,
-            10f,
-            false
-        )
-
-        drawLine(
-            contentStream,
-            pageWidth - 190f,
-            150f,
-            pageWidth - 30f,
-            150f,
-            0.5f,
-            secondaryColor
-        )
-
-        drawText(contentStream, "GRAND TOTAL:", pageWidth - 190f, 130f, 12f, true)
-        drawText(
-            contentStream,
-            "₹${formatter.format(invoice.totalAmount)}",
-            pageWidth - 40f,
-            130f,
-            12f,
-            true
-        )
-
-        // Draw bottom section with signature
-        if (settings.showSignature) {
-            if (settings.signatureUri != null) {
-                drawSignatureImage(
-                    document, pageWidth - 100f, 80f, settings.signatureUri!!, contentStream
-                )
-            }
-            drawText(contentStream, "For " + shop.shopName, pageWidth - 100f, 50f, 9f, true)
-            drawText(contentStream, "Authorized Signatory", pageWidth - 100f, 35f, 8f, false)
-        }
-
-        // Draw QR code if enabled
-        if (settings.showQrCode && settings.upiId.isNotEmpty()) {
-            drawUpiQrCode(document, page, settings.upiId, 100f, 80f)
-            drawText(contentStream, "Scan to Pay UPI", 80f, 50f, 9f, true)
-        }
-    }
 
     // 2. Draw Shop Logo
     private fun drawShopLogo(
@@ -3162,6 +3140,47 @@ class InvoicePdfGenerator(private val context: Context) {
             // Calculate dimensions (max 100x50)
             val maxWidth = 100f
             val maxHeight = 50f
+            val ratio = signatureImage.width.toFloat() / signatureImage.height.toFloat()
+
+            val width: Float
+            val height: Float
+
+            if (ratio > 1) { // Wider than tall
+                width = maxWidth
+                height = width / ratio
+            } else { // Taller than wide
+                height = maxHeight
+                width = height * ratio
+            }
+
+            // Draw signature
+            contentStream.drawImage(signatureImage, x - width / 2, y, width, height)
+        } catch (e: Exception) {
+            Log.e("InvoicePdfGenerator", "Error loading signature: ${e.message}")
+        }
+    }
+
+    private fun drawSignatureImage2(
+        document: PDDocument,
+        x: Float,
+        y: Float,
+        signatureUri: String,
+        contentStream: PDPageContentStream
+    ) {
+        try {
+            val uri = Uri.parse(signatureUri)
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return
+
+            // Load signature
+            val signatureBitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+
+            // Create PDImageXObject from bitmap
+            val signatureImage = LosslessFactory.createFromImage(document, signatureBitmap)
+
+            // Calculate dimensions (max 100x50)
+            val maxWidth = 50f
+            val maxHeight = 25f
             val ratio = signatureImage.width.toFloat() / signatureImage.height.toFloat()
 
             val width: Float

@@ -13,10 +13,16 @@ import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
 
 class SwarnaKhataBook : Application() {
 
-    // Avoid using static fields that reference context
-    private lateinit var _userSubscriptionManager: UserSubscriptionManager
-    private lateinit var _appUpdateManager: AppUpdateManager
-    private lateinit var _billingManager: BillingManager
+    // Use lazy initialization to defer creation until first use
+    private val _userSubscriptionManager by lazy { 
+        UserSubscriptionManager(applicationContext).also {
+            // Record first use if needed (moved inside lazy init)
+            it.recordFirstUseIfNeeded()
+        }
+    }
+    
+    private val _appUpdateManager by lazy { AppUpdateManager(applicationContext) }
+    private val _billingManager by lazy { BillingManager(applicationContext) }
 
     companion object {
         // Use weak reference to application context or provide access via function
@@ -35,26 +41,29 @@ class SwarnaKhataBook : Application() {
         // Store instance of application
         instance = this
 
-        // Configure Firestore only once at app startup
+        // Configure Firestore only once at app startup - this is still needed early
+        // but we'll optimize the settings
+        configureCacheSettings()
+
+        // Create notification channels on app startup
+        // This is important for Android 8.0+ and should be done at startup
+        NotificationChannelManager.createNotificationChannels(applicationContext)
+        
+        // Note: No longer initializing managers here - they will be initialized on demand
+    }
+    
+    private fun configureCacheSettings() {
+        // Configure Firestore settings to prioritize cached content and offline support
         val cacheSettings = PersistentCacheSettings.newBuilder()
             .setSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
             .build()
 
         val settings = FirebaseFirestoreSettings.Builder()
             .setLocalCacheSettings(cacheSettings)
+            // Note: When using setLocalCacheSettings(), neither setCacheSizeBytes() 
+            // nor setPersistenceEnabled() should be used as they're mutually exclusive
             .build()
 
         FirebaseFirestore.getInstance().firestoreSettings = settings
-
-        // Initialize managers (not as static fields)
-        _userSubscriptionManager = UserSubscriptionManager(applicationContext)
-        _appUpdateManager = AppUpdateManager(applicationContext)
-        _billingManager = BillingManager(applicationContext)
-
-        // Record first use if needed
-        _userSubscriptionManager.recordFirstUseIfNeeded()
-
-        // Create notification channels on app startup
-        NotificationChannelManager.createNotificationChannels(applicationContext)
     }
 }

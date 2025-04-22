@@ -49,7 +49,6 @@ class RecycledItemsAdapter(
         private val deleteButton: MaterialButton = itemView.findViewById(R.id.deleteButton)
         private val itemTypeIcon: ImageView = itemView.findViewById(R.id.itemTypeIcon)
 
-
         fun bind(item: RecycledItem) {
             itemNameTextView.text = item.itemName
 
@@ -58,15 +57,15 @@ class RecycledItemsAdapter(
             val typeText = when (item.itemType.uppercase()) {
                 "INVOICE" -> {
                     iconResId = R.drawable.tabler__file_invoice // Use your invoice icon
-                    "Invoice"
+                    itemView.context.getString(R.string.item_type_invoice)
                 }
                 "CUSTOMER" -> {
                     iconResId = R.drawable.line_md__person_twotone // Use your customer icon
-                    "Customer"
+                    itemView.context.getString(R.string.item_type_customer)
                 }
                 "JEWELLERYITEM" -> { // *** ADD THIS CASE ***
                     iconResId = R.drawable.uil__gold // Use your inventory/jewelry icon
-                    "Inventory Item"
+                    itemView.context.getString(R.string.item_type_inventory)
                 }
                 else -> {
                     iconResId = R.drawable.mingcute__question_line // Default icon
@@ -76,9 +75,16 @@ class RecycledItemsAdapter(
             itemTypeTextView.text = typeText
             itemTypeIcon.setImageResource(iconResId) // Set the icon
 
-            // Format and display dates
-            deletedDateTextView.text = "Deleted: ${viewModel.formatDeletedDate(item.deletedAt)}"
-            expiryTextView.text = "Expires: ${viewModel.calculateExpiryTimeRemaining(item.expiresAt)}"
+            // Format and display dates with localized prefixes
+            deletedDateTextView.text = itemView.context.getString(
+                R.string.deleted_prefix,
+                viewModel.formatDeletedDate(item.deletedAt)
+            )
+            
+            expiryTextView.text = itemView.context.getString(
+                R.string.expires_prefix,
+                viewModel.calculateExpiryTimeRemaining(item.expiresAt)
+            )
 
             // Set click listeners
             restoreButton.setOnClickListener {

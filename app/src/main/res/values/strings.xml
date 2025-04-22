@@ -252,7 +252,7 @@
     <string name="date_label">Date: </string>
     <string name="total_label">Total: </string>
     <string name="balance_label">Balance: </string>
-    <string name="add_item">+ Add Item</string>
+    <string name="add_item">Add Item</string>
     <string name="pricing_information">Pricing Information</string>
     <string name="total_collected">Total Collected</string>
     <string name="payment_breakdown">Payment Breakdown</string>
@@ -486,4 +486,45 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_save_invoice">Save Invoice</string>
     <string name="default_notification_channel_id">default_channel</string>
+    <string name="add_customer">Add Customer</string>
+    <!-- RecyclingBin Strings -->
+    <string name="no_items_in_recycling_bin">No items in recycling bin</string>
+    <string name="error_loading_recycled_items">Error loading recycled items: %1$s</string>
+    <string name="unexpected_error">Unexpected error: %1$s</string>
+    <string name="customer_restored_successfully">Customer %1$s restored successfully</string>
+    <string name="failed_to_restore_customer">Failed to restore customer: %1$s</string>
+    <string name="unexpected_error_restoring_customer">Unexpected error restoring customer: %1$s</string>
+    <string name="item_restored_successfully">Item \'%1$s\' restored successfully</string>
+    <string name="failed_to_restore_item">Failed to restore item: %1$s</string>
+    <string name="unexpected_error_restoring_item">Unexpected error restoring item: %1$s</string>
+    <string name="invoice_restored_successfully">Invoice %1$s restored successfully</string>
+    <string name="failed_to_restore_invoice">Failed to restore invoice: %1$s</string>
+    <string name="item_permanently_deleted">Item permanently deleted</string>
+    <string name="failed_to_delete_item_permanently">Failed to delete item permanently: %1$s</string>
+    <string name="unexpected_error_deleting_item">Unexpected error deleting item permanently: %1$s</string>
+    <string name="unknown">Unknown</string>
+    <string name="today_at_time">Today at %1$s</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="in_x_days">In %1$d days</string>
+    <string name="item_type_invoice">Invoice</string>
+    <string name="item_type_customer">Customer</string>
+    <string name="item_type_inventory">Inventory Item</string>
+    <string name="item_type_generic">Item</string>
+    <string name="deleted_prefix">Deleted: %1$s</string>
+    <string name="expires_prefix">Expires: %1$s</string>
+    <string name="restore_not_supported">Restore not supported for this item type</string>
+    <string name="premium_required_restore_message">Upgrade to Premium to restore items from the Recycling Bin</string>
+    <string name="restoring_items_from_bin">Restoring items from Recycling Bin</string>
+    <!-- Additional subscription badge related strings for SettingsViewModel -->
+    <string name="days_left">DAYS LEFT</string>
+    <string name="trial_ends_in_days">Trial ends in %1$d days</string>
+    <string name="days_left_format">%1$d DAYS LEFT</string>
+    <string name="debug_subscription">Debug Subscription</string>
+    <string name="developer_tools_for_testing">Developer tools for testing subscription features</string>
+    <string name="create_new_shop">Create New Shop</string>
+    <string name="loading_shop">Loading Shop…</string>
+    <string name="select_shop">Select Shop</string>
+    <string name="shop_switch_failed">Failed to switch shop</string>
+    <string name="shop_load_failed">Failed to load shops</string>
+    <string name="no_shops_available">No shops available</string>
 </resources>

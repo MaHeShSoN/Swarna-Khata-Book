@@ -49,51 +49,48 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
     private fun checkUserShops(userId: String) {
         viewModelScope.launch {
             try {
-                // --- PROPOSED CHANGE START ---
-                // Check if there is a previously saved active shop ID from the last session
+                // First check if there is a previously saved active shop ID from the last session
                 val activeShopId = SessionManager.getActiveShopId(getApplication())
+                
                 if (activeShopId != null) {
                     // If an active shop ID exists from the previous session,
-                    // optimistically navigate to the dashboard.
-                    // The dashboard screen can handle verifying this ID and loading shop data.
+                    // immediately navigate to the dashboard to improve startup performance
                     Log.d("SplashViewModel", "Found activeShopId in SessionManager: $activeShopId, navigating to Dashboard.")
                     _navigationEvent.value = NavigationEvent.NavigateToDashboard
-                    return@launch // Stop further checks in this coroutine
+                    
+                    // Optionally verify shop access in the background for future sessions
+                    // but don't wait for the result to speed up the startup
+                    verifyShopAccessInBackground(userId, activeShopId)
+                    return@launch
                 }
-                // --- PROPOSED CHANGE END ---
 
-
-                // Proceed only if no active shop ID was found in the session
-                Log.d("SplashViewModel", "No activeShopId in SessionManager, fetching managed shops from Firestore.")
-                val managedShopsResult = ShopManager.getManagedShops(userId)
+                // No active shop in session, need to fetch from network
+                val managedShopsResult = ShopManager.getManagedShops(userId, preferCache = true)
 
                 if (managedShopsResult.isSuccess) {
                     val managedShops = managedShopsResult.getOrNull() ?: emptyMap()
                     Log.d("SplashViewModel", "Fetched managed shops successfully. Count: ${managedShops.size}")
 
                     when {
-                        // Only navigate to CreateShop if BOTH session is empty AND fetch returns no shops.
                         managedShops.isEmpty() -> {
-                            Log.d("SplashViewModel", "No shops found after fetch, navigating to CreateShop.")
+                            Log.d("SplashViewModel", "No shops found, navigating to CreateShop.")
                             _navigationEvent.value = NavigationEvent.NavigateToCreateShop
                         }
                         managedShops.size == 1 -> {
                             val shopId = managedShops.keys.first()
                             Log.d("SplashViewModel", "Found single shop: $shopId. Setting active and navigating to Dashboard.")
-                            SessionManager.setActiveShopId(getApplication(), shopId) // Set session for next time
+                            SessionManager.setActiveShopId(getApplication(), shopId)
                             _navigationEvent.value = NavigationEvent.NavigateToDashboard
                         }
-                        else -> { // Multiple shops
+                        else -> {
                             Log.d("SplashViewModel", "Found multiple shops. Navigating to ShopSelection.")
-                            // Note: The activeShopId check here is less critical now,
-                            // as the initial check handles the main dashboard case.
-                            // But keeping it doesn't hurt.
+                            // Even with multiple shops, check if one is already active
                             val currentActiveShopId = SessionManager.getActiveShopId(getApplication())
                             if (currentActiveShopId != null && managedShops.containsKey(currentActiveShopId)) {
-                                Log.d("SplashViewModel", "Multiple shops found, but active ID ($currentActiveShopId) is valid. Navigating to Dashboard.")
+                                Log.d("SplashViewModel", "Multiple shops, but active ID ($currentActiveShopId) is valid. Navigating to Dashboard.")
                                 _navigationEvent.value = NavigationEvent.NavigateToDashboard
                             } else {
-                                Log.d("SplashViewModel", "Multiple shops found, no valid active ID. Navigating to ShopSelection.")
+                                Log.d("SplashViewModel", "Multiple shops, no valid active ID. Navigating to ShopSelection.")
                                 _navigationEvent.value = NavigationEvent.NavigateToShopSelection
                             }
                         }
@@ -106,6 +103,28 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: Exception) {
                 Log.e("SplashViewModel", "Error checking user shops: ${e.message}", e)
                 _navigationEvent.value = NavigationEvent.NavigateToRegistration
+            }
+        }
+    }
+    
+    // Verify shop access in background without blocking UI
+    private fun verifyShopAccessInBackground(userId: String, shopId: String) {
+        viewModelScope.launch {
+            try {
+                // Check if the user still has access to this shop, but don't wait for the result
+                val managedShopsResult = ShopManager.getManagedShops(userId, preferCache = false)
+                if (managedShopsResult.isSuccess) {
+                    val managedShops = managedShopsResult.getOrNull() ?: emptyMap()
+                    if (!managedShops.containsKey(shopId)) {
+                        // User no longer has access to this shop, but we won't interrupt the current flow
+                        // This will be handled on the next app start
+                        Log.w("SplashViewModel", "Background check: User no longer has access to shop: $shopId")
+                        // Optionally clear the active shop ID
+                        // SessionManager.clearActiveShopId(getApplication())
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SplashViewModel", "Error in background shop verification: ${e.message}", e)
             }
         }
     }

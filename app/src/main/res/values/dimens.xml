@@ -3,6 +3,6 @@
     <dimen name="badge_text_size">10sp</dimen>
     <dimen name="card_selected_stroke_width">2dp</dimen>
     <dimen name="card_default_stroke_width">1dp</dimen>
-    <dimen name="card_selected_elevation">6dp</dimen>
+    <dimen name="card_selected_elevation">4dp</dimen>
     <dimen name="card_default_elevation">1dp</dimen>
 </resources>

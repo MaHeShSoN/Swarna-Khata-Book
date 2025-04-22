@@ -4,7 +4,7 @@ package com.jewelrypos.swarnakhatabook.Enums
 enum class TemplateType {
     SIMPLE,
     STYLISH,
-    ADVANCE_GST,
-    ADVANCE_GST_TALLY,
-    BILLBOOK
+    GST_TALLY,
+    LUXURY_BOUTIQUE,
+    MODERN_MINIMAL
 }

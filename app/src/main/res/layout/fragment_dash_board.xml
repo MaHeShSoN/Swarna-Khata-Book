@@ -129,7 +129,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="@string/add_client"
+                                android:text="@string/add_customer"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />

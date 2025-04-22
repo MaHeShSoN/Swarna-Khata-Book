@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook.Factorys
 
+import android.app.Application
 import android.net.ConnectivityManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -10,6 +11,7 @@ import com.jewelrypos.swarnakhatabook.Repository.RecycledItemsRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.RecyclingBinViewModel
 
 class RecyclingBinViewModelFactory(
+    private val application: Application,
     private val recycledItemsRepository: RecycledItemsRepository,
     private val invoiceRepository: InvoiceRepository,
     private val connectivityManager: ConnectivityManager
@@ -19,6 +21,7 @@ class RecyclingBinViewModelFactory(
         if (modelClass.isAssignableFrom(RecyclingBinViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return RecyclingBinViewModel(
+                application,
                 recycledItemsRepository,
                 invoiceRepository,
                 connectivityManager

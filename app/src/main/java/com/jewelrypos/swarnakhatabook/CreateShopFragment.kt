@@ -9,8 +9,10 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.Repository.ShopManager
+import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCreateShopBinding
@@ -38,6 +40,11 @@ class CreateShopFragment : Fragment() {
             SessionManager.initialize(it)
         }
         
+        // Apply entrance animations
+        AnimationUtils.fadeIn(binding.shopName)
+        AnimationUtils.fadeIn(binding.shopAddress, 200)
+        AnimationUtils.fadeIn(binding.hasGstCheckBox, 300)
+        
         setupListeners()
     }
     
@@ -49,16 +56,25 @@ class CreateShopFragment : Fragment() {
             // Clear GST field when hiding it
             if (!isChecked) {
                 binding.editTextGstNumber.text?.clear()
+            } else {
+                // Add animation when showing GST field
+                AnimationUtils.fadeIn(binding.gstNumber)
             }
         }
         
         binding.buttonCreate.setOnClickListener {
+            // Apply button animation
+            AnimationUtils.pulse(it)
+            
             if (validateInputs()) {
                 checkShopLimit()
             }
         }
         
         binding.buttonCancel.setOnClickListener {
+            // Apply button animation
+            AnimationUtils.pulse(it)
+            
             findNavController().navigateUp()
         }
     }
@@ -142,7 +158,8 @@ class CreateShopFragment : Fragment() {
     }
     
     private fun createShop() {
-        val userId = SessionManager.getCurrentUserId()
+        // Get current user ID from Firebase Auth
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
             Toast.makeText(requireContext(), "User not logged in", Toast.LENGTH_SHORT).show()
             return
@@ -214,6 +231,9 @@ class CreateShopFragment : Fragment() {
         binding.editTextAddress.isEnabled = !isLoading
         binding.editTextGstNumber.isEnabled = !isLoading
         binding.hasGstCheckBox.isEnabled = !isLoading
+        
+        // Update button text during loading
+        binding.buttonCreate.text = if (isLoading) "Creating..." else "Create"
     }
 
     override fun onDestroyView() {

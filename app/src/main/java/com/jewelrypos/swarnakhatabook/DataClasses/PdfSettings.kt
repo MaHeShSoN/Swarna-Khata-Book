@@ -38,29 +38,6 @@ class PdfSettings(
                     previewResId = R.drawable.template_preview_stylish,
                     description = "Modern design with elegant layout",
                     templateType = TemplateType.STYLISH
-                ),
-                InvoiceTemplate(
-                    id = "advance_gst",
-                    name = "Advance GST",
-                    previewResId = R.drawable.template_preview_advance_gst,
-                    description = "Design optimized for GST details",
-                    templateType = TemplateType.ADVANCE_GST
-                ),
-                InvoiceTemplate(
-                    id = "advance_gst_tally",
-                    name = "Advance GST (Tally)",
-                    previewResId = R.drawable.template_preview_advance_gst_tally,
-                    description = "Similar to Tally software format",
-                    templateType = TemplateType.ADVANCE_GST_TALLY,
-                    isPremium = true
-                ),
-                InvoiceTemplate(
-                    id = "billbook",
-                    name = "Billbook",
-                    previewResId = R.drawable.template_preview_billbook,
-                    description = "Traditional billbook style layout",
-                    templateType = TemplateType.BILLBOOK,
-                    isPremium = true
                 )
             )
         }

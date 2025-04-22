@@ -50,7 +50,12 @@ class RecyclingBinFragment : Fragment() {
         val invoiceRepository = InvoiceRepository(firestore, auth, requireContext())
         val connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         
-        RecyclingBinViewModelFactory(recycledItemsRepository, invoiceRepository, connectivityManager)
+        RecyclingBinViewModelFactory(
+            requireActivity().application,
+            recycledItemsRepository, 
+            invoiceRepository, 
+            connectivityManager
+        )
     }
 
     private lateinit var adapter: RecycledItemsAdapter
@@ -80,7 +85,7 @@ class RecyclingBinFragment : Fragment() {
                 // Show toast message
                 Toast.makeText(
                     requireContext(),
-                    "Upgrade to Premium to restore items from the Recycling Bin",
+                    getString(R.string.premium_required_restore_message),
                     Toast.LENGTH_LONG
                 ).show()
                 
@@ -124,16 +129,16 @@ class RecyclingBinFragment : Fragment() {
         adapter.setOnItemActionListener(object : RecycledItemsAdapter.OnItemActionListener {
             override fun onRestoreItem(item: RecycledItem) {
                 val itemTypeName = when (item.itemType.uppercase()) {
-                    "INVOICE" -> "Invoice"
-                    "CUSTOMER" -> "Customer"
-                    "JEWELLERYITEM" -> "Inventory Item"
-                    else -> "Item"
+                    "INVOICE" -> getString(R.string.item_type_invoice)
+                    "CUSTOMER" -> getString(R.string.item_type_customer)
+                    "JEWELLERYITEM" -> getString(R.string.item_type_inventory)
+                    else -> getString(R.string.item_type_generic)
                 }
                 
                 // Use the helper to handle premium access for restore operation
                 PremiumFeatureHelper.checkPremiumAccess(
                     fragment = this@RecyclingBinFragment,
-                    featureName = "Restoring items from Recycling Bin",
+                    featureName = getString(R.string.restoring_items_from_bin),
                     premiumAction = {
                         // This block executes only for premium users
                         showRestoreConfirmation(item, itemTypeName) {
@@ -144,7 +149,7 @@ class RecyclingBinFragment : Fragment() {
                                 else -> {
                                     Toast.makeText(
                                         requireContext(),
-                                        "Restore not supported for this item type",
+                                        getString(R.string.restore_not_supported),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }

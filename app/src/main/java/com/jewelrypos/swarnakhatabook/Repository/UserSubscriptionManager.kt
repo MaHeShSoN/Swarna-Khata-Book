@@ -127,11 +127,12 @@ class UserSubscriptionManager(private val context: Context) {
         return try {
             firestore.collection("users")
                 .document(userId)
-                .update(
+                .set(
                     mapOf(
                         "subscriptionPlan" to plan.name,
                         "subscriptionUpdatedAt" to com.google.firebase.Timestamp.now()
-                    )
+                    ),
+                    com.google.firebase.firestore.SetOptions.merge()
                 )
                 .await()
 

@@ -43,22 +43,11 @@ class MainScreenFragment : Fragment() {
         AnimationUtils.fadeIn(binding.innerNavHostFragment)
         
         setupUI()
-        loadActiveShopDetails()
-        setupObservers()
     }
 
     private fun setupUI() {
-        // Setup toolbar
-        setupToolbar()
-        
         // Setup bottom navigation
         setupBottomNavigation()
-    }
-
-
-
-    private fun setupToolbar() {
-        // Setup toolbar
     }
 
     private fun setupBottomNavigation() {
@@ -90,35 +79,6 @@ class MainScreenFragment : Fragment() {
                     R.id.inventoryFragment -> binding.bottomNavigation.selectTabAt(2)
                     R.id.customerFragment -> binding.bottomNavigation.selectTabAt(3)
                     R.id.moreSettingFragment -> binding.bottomNavigation.selectTabAt(4)
-                }
-            }
-        }
-    }
-
-    private fun setupObservers() {
-        // Observe changes to active shop
-        SessionManager.activeShopIdLiveData.observe(viewLifecycleOwner) { shopId ->
-            if (shopId != null) {
-                loadActiveShopDetails()
-            }
-        }
-    }
-
-    private fun loadActiveShopDetails() {
-        context?.let { ctx ->
-            val activeShopId = SessionManager.getActiveShopId(ctx)
-            
-            if (activeShopId != null) {
-                lifecycleScope.launch {
-                    val shopDetailsResult = ShopManager.getShopDetails(activeShopId)
-                    
-                    if (shopDetailsResult.isSuccess) {
-                        val shopDetails = shopDetailsResult.getOrNull()
-                        if (shopDetails != null) {
-                            // Set the shop name in the activity title
-                            (requireActivity() as AppCompatActivity).supportActionBar?.title = shopDetails.shopName
-                        }
-                    }
                 }
             }
         }

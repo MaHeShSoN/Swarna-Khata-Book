@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.jewelrypos.swarnakhatabook.DataClasses.BadgeType
 import com.jewelrypos.swarnakhatabook.DataClasses.SettingsItem
 import com.jewelrypos.swarnakhatabook.R
 
@@ -38,7 +39,7 @@ class SettingsAdapter(
     override fun getItemCount(): Int = items.size
 
     // --- Optimized ViewHolder ---
-    inner class SettingsViewHolder(itemView: View, context: Context) : RecyclerView.ViewHolder(itemView) {
+    inner class SettingsViewHolder(itemView: View, private val context: Context) : RecyclerView.ViewHolder(itemView) {
         private val iconView: ImageView = itemView.findViewById(R.id.settingIconView)
         private val titleView: TextView = itemView.findViewById(R.id.settingTitle)
         private val subtitleView: TextView = itemView.findViewById(R.id.settingSubtitle)
@@ -77,19 +78,37 @@ class SettingsAdapter(
         // Bind method now only takes the item
         fun bind(item: SettingsItem) {
             iconView.setImageResource(item.iconResId)
-            titleView.text = item.title
-            subtitleView.text = item.subtitle
+            
+            // Resolve string resources for title and subtitle
+            titleView.text = context.getString(item.titleResId)
+            
+            // Handle subtitle with potential format args
+            subtitleView.text = if (item.subtitleResIdArgs != null) {
+                context.getString(item.subtitleResId, *item.subtitleResIdArgs.toTypedArray())
+            } else {
+                context.getString(item.subtitleResId)
+            }
 
-            // Badge logic using cached colors
-            if (item.badgeText != null) {
+            // Badge logic using BadgeType for more consistent styling
+            if (item.badgeTextResId != null) {
                 badgeView.visibility = View.VISIBLE
-                badgeView.text = item.badgeText
-                val (badgeBackground, badgeTextColor) = when (item.badgeText) {
-                    itemView.context.getString(R.string.premium) -> premiumBadgeBackground to whiteTextColor
-                    "NEW" -> newBadgeBackground to whiteTextColor
-                    "DAYS LEFT", "EXPIRED" -> daysLeftBadgeBackground to whiteTextColor
-                    else -> defaultBadgeBackground to whiteTextColor // Default case
+                
+                // Resolve badge text with potential format args
+                badgeView.text = if (item.badgeTextResIdArgs != null) {
+                    context.getString(item.badgeTextResId, *item.badgeTextResIdArgs.toTypedArray())
+                } else {
+                    context.getString(item.badgeTextResId)
                 }
+                
+                // Determine badge styling based on badge type rather than text
+                val (badgeBackground, badgeTextColor) = when (item.badgeType) {
+                    BadgeType.PREMIUM -> premiumBadgeBackground to whiteTextColor
+                    BadgeType.NEW -> newBadgeBackground to whiteTextColor
+                    BadgeType.DAYS_LEFT, BadgeType.EXPIRED -> daysLeftBadgeBackground to whiteTextColor
+                    BadgeType.TRIAL -> defaultBadgeBackground to whiteTextColor
+                    BadgeType.NONE -> defaultBadgeBackground to whiteTextColor
+                }
+                
                 badgeView.backgroundTintList = badgeBackground
                 badgeView.setTextColor(badgeTextColor)
             } else {

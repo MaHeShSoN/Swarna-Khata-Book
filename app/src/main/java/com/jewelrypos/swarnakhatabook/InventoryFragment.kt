@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
@@ -26,6 +27,7 @@ import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
+import com.jewelrypos.swarnakhatabook.ViewModle.ShopSwitcherViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInventoryBinding
 import kotlinx.coroutines.launch
 
@@ -34,6 +36,9 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
     private var _binding: FragmentInventoryBinding? = null
     private val binding get() = _binding!!
+    
+    // Get the shared shop switcher view model
+    private val shopSwitcherViewModel: ShopSwitcherViewModel by activityViewModels()
 
     private val inventoryViewModel: InventoryViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
@@ -72,12 +77,23 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setupEventBusObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
-
-
+        
+        // Observe shop changes
+        observeShopChanges()
 
         return binding.root
     }
-
+    
+    private fun observeShopChanges() {
+        // Observe shop changes from the shop switcher view model
+        shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
+            shop?.let {
+                Log.d("InventoryFragment", "Shop changed to: ${shop.shopName}")
+                // Refresh data when shop changes
+                inventoryViewModel.refreshDataAndClearFilters()
+            }
+        }
+    }
 
     private fun setupEventBusObservers() {
         // Observe inventory update events

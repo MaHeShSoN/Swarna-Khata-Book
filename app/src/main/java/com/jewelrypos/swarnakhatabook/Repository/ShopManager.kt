@@ -7,6 +7,8 @@ import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -15,6 +17,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import com.google.gson.reflect.TypeToken
 import com.jewelrypos.swarnakhatabook.DataClasses.Shop
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
 import com.jewelrypos.swarnakhatabook.DataClasses.ShopInvoiceDetails
@@ -46,25 +49,82 @@ object ShopManager {
     // ======== NEW MULTI-SHOP METHODS ========
 
     // Get user profile by userId
-    suspend fun getUserProfile(userId: String): Result<UserProfile?> {
+    suspend fun getUserProfile(userId: String, preferCache: Boolean = false): Result<UserProfile?> {
         return try {
-            val document = FirebaseFirestore.getInstance()
-                .collection("users")
-                .document(userId)
-                .get()
-                .await()
-
-            if (document.exists()) {
-                val userProfile = UserProfile(
-                    userId = userId,
-                    name = document.getString("name") ?: "",
-                    phoneNumber = document.getString("phoneNumber") ?: "",
-                    managedShops = document.get("managedShops") as? Map<String, Boolean> ?: emptyMap(),
-                    createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
-                )
-                Result.success(userProfile)
+            // Determine which source to use
+            val source = if (preferCache) {
+                Source.CACHE
             } else {
+                Source.DEFAULT
+            }
+            
+            try {
+                // First try with the specified source
+                val document = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(userId)
+                    .get(source)
+                    .await()
+                
+                if (document.exists()) {
+                    val userProfile = UserProfile(
+                        userId = userId,
+                        name = document.getString("name") ?: "",
+                        phoneNumber = document.getString("phoneNumber") ?: "",
+                        managedShops = document.get("managedShops") as? Map<String, Boolean> ?: emptyMap(),
+                        createdAt = document.getTimestamp("createdAt") ?: Timestamp.now()
+                    )
+                    return Result.success(userProfile)
+                } else if (preferCache) {
+                    // If we preferred cache but got no results, try SERVER as fallback
+                    Log.d(TAG, "No cache data for user profile, trying server")
+                    val serverDocument = FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(userId)
+                        .get(Source.SERVER)
+                        .await()
+                    
+                    if (serverDocument.exists()) {
+                        val userProfile = UserProfile(
+                            userId = userId,
+                            name = serverDocument.getString("name") ?: "",
+                            phoneNumber = serverDocument.getString("phoneNumber") ?: "",
+                            managedShops = serverDocument.get("managedShops") as? Map<String, Boolean> ?: emptyMap(),
+                            createdAt = serverDocument.getTimestamp("createdAt") ?: Timestamp.now()
+                        )
+                        return Result.success(userProfile)
+                    }
+                }
+                
+                // If we got here, the document doesn't exist in the requested source
                 Result.success(null)
+            } catch (e: Exception) {
+                if (e is FirebaseFirestoreException && 
+                    e.code == FirebaseFirestoreException.Code.UNAVAILABLE && 
+                    preferCache) {
+                    // If cache was unavailable and we preferred cache, try server
+                    Log.w(TAG, "Cache unavailable, falling back to server", e)
+                    val serverDocument = FirebaseFirestore.getInstance()
+                        .collection("users")
+                        .document(userId)
+                        .get(Source.SERVER)
+                        .await()
+                    
+                    if (serverDocument.exists()) {
+                        val userProfile = UserProfile(
+                            userId = userId,
+                            name = serverDocument.getString("name") ?: "",
+                            phoneNumber = serverDocument.getString("phoneNumber") ?: "",
+                            managedShops = serverDocument.get("managedShops") as? Map<String, Boolean> ?: emptyMap(),
+                            createdAt = serverDocument.getTimestamp("createdAt") ?: Timestamp.now()
+                        )
+                        return Result.success(userProfile)
+                    }
+                    return Result.success(null)
+                } else {
+                    // Re-throw other exceptions
+                    throw e
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error getting user profile", e)
@@ -323,13 +383,33 @@ object ShopManager {
     }
 
     // Get all shops managed by a user
-    suspend fun getManagedShops(userId: String): Result<Map<String, Boolean>> {
+    suspend fun getManagedShops(userId: String, preferCache: Boolean = false): Result<Map<String, Boolean>> {
         return try {
-            val userProfileResult = getUserProfile(userId)
+            // Check for cached shop data first if preferCache is true
+            if (preferCache) {
+                // Try to get from SharedPreferences first for faster startup
+                try {
+                    val cachedShops = getCachedManagedShops(userId)
+                    if (cachedShops.isNotEmpty()) {
+                        Log.d(TAG, "Using cached managed shops data for quick startup")
+                        return Result.success(cachedShops)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error reading cached managed shops, falling back to network", e)
+                    // Continue with network request below
+                }
+            }
+            
+            // If preferCache is false or no cache data available, fetch from network
+            val userProfileResult = getUserProfile(userId, preferCache)
             
             if (userProfileResult.isSuccess) {
                 val userProfile = userProfileResult.getOrNull()
                 if (userProfile != null) {
+                    // Cache the result for next time
+                    if (userProfile.managedShops.isNotEmpty()) {
+                        cacheManagedShops(userId, userProfile.managedShops)
+                    }
                     Result.success(userProfile.managedShops)
                 } else {
                     Result.success(emptyMap())
@@ -340,6 +420,40 @@ object ShopManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error getting managed shops", e)
             Result.failure(e)
+        }
+    }
+    
+    // Cache managed shops data for faster startup
+    private fun cacheManagedShops(userId: String, managedShops: Map<String, Boolean>) {
+        try {
+            val shopsJson = gson.toJson(managedShops)
+            sharedPreferences.edit()
+                .putString("cached_managed_shops_$userId", shopsJson)
+                .putLong("cached_managed_shops_timestamp_$userId", System.currentTimeMillis())
+                .apply()
+            Log.d(TAG, "Cached managed shops data for userId: $userId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error caching managed shops", e)
+        }
+    }
+    
+    // Get cached managed shops data
+    private fun getCachedManagedShops(userId: String): Map<String, Boolean> {
+        try {
+            val shopsJson = sharedPreferences.getString("cached_managed_shops_$userId", null) ?: return emptyMap()
+            val timestamp = sharedPreferences.getLong("cached_managed_shops_timestamp_$userId", 0)
+            
+            // Only use cache if it's less than 24 hours old
+            if (System.currentTimeMillis() - timestamp > 24 * 60 * 60 * 1000) {
+                Log.d(TAG, "Cached managed shops data is too old, ignoring cache")
+                return emptyMap()
+            }
+            
+            val type = object : TypeToken<Map<String, Boolean>>() {}.type
+            return gson.fromJson(shopsJson, type) ?: emptyMap()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading cached managed shops", e)
+            return emptyMap()
         }
     }
 

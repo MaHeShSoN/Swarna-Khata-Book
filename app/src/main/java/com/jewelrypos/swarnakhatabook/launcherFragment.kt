@@ -49,6 +49,9 @@ class launcherFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Show loading indicator immediately
+        binding.loadingIndicator.visibility = View.VISIBLE
+
         // Initialize ViewModel using ViewModelProvider.Factory for AndroidViewModel
         val factory =
             ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)
@@ -76,6 +79,8 @@ class launcherFragment : Fragment() {
 
             // Check if trial has expired for non-premium users
             if (!subscriptionManager.isPremiumUser() && subscriptionManager.hasTrialExpired()) {
+                // Hide loading indicator before showing dialog
+                binding.loadingIndicator.visibility = View.GONE
                 showTrialExpiredDialog()
             } else {
                 // Trial still valid or user is premium
@@ -105,6 +110,9 @@ class launcherFragment : Fragment() {
     }
 
     private fun upgradeToPremium() {
+        // Show loading indicator while upgrading
+        binding.loadingIndicator.visibility = View.VISIBLE
+        
         lifecycleScope.launch {
             val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
             if (success) {
@@ -112,6 +120,8 @@ class launcherFragment : Fragment() {
                 // Continue with normal app flow
                 checkPinAndProceed()
             } else {
+                // Hide loading indicator on failure
+                binding.loadingIndicator.visibility = View.GONE
                 Toast.makeText(requireContext(), "Upgrade failed. Please try again.", Toast.LENGTH_SHORT).show()
                 logoutUser()
             }
@@ -134,6 +144,8 @@ class launcherFragment : Fragment() {
 
         // *** FIX: Check BOTH if a PIN exists AND if the lock is ENABLED ***
         if (PinSecurityManager.hasPinBeenSetUp(context) && PinSecurityManager.isPinLockEnabled(context)) {
+            // Hide loading indicator before showing PIN dialog
+            binding.loadingIndicator.visibility = View.GONE
             // PIN is set AND the lock is enabled, show verification dialog
             showPinVerificationDialog()
         } else {
@@ -143,27 +155,32 @@ class launcherFragment : Fragment() {
     }
     
     private fun startNormalFlow() {
+        // Keep loading indicator visible while waiting for navigation events
+        binding.loadingIndicator.visibility = View.VISIBLE
+        
         // Observe navigation events
         viewModel.navigationEvent.observe(viewLifecycleOwner) { event ->
-            Handler(Looper.getMainLooper()).postDelayed({
-                when (event) {
-                    is SplashViewModel.NavigationEvent.NavigateToDashboard -> {
-                        findNavController().navigate(R.id.action_launcherFragment_to_mainScreenFragment)
-                    }
-                    is SplashViewModel.NavigationEvent.NavigateToRegistration -> {
-                        findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
-                    }
-                    is SplashViewModel.NavigationEvent.NavigateToCreateShop -> {
-                        findNavController().navigate(R.id.action_launcherFragment_to_createShopFragment)
-                    }
-                    is SplashViewModel.NavigationEvent.NavigateToShopSelection -> {
-                        findNavController().navigate(R.id.action_launcherFragment_to_shopSelectionFragment)
-                    }
-                    is SplashViewModel.NavigationEvent.NoInternet -> {
-                        showNoInternetDialog()
-                    }
+            // Hide loading indicator before navigation
+            binding.loadingIndicator.visibility = View.GONE
+            
+            // Navigate immediately without delay
+            when (event) {
+                is SplashViewModel.NavigationEvent.NavigateToDashboard -> {
+                    findNavController().navigate(R.id.action_launcherFragment_to_mainScreenFragment)
                 }
-            }, 3000) // 3 second delay
+                is SplashViewModel.NavigationEvent.NavigateToRegistration -> {
+                    findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
+                }
+                is SplashViewModel.NavigationEvent.NavigateToCreateShop -> {
+                    findNavController().navigate(R.id.action_launcherFragment_to_createShopFragment)
+                }
+                is SplashViewModel.NavigationEvent.NavigateToShopSelection -> {
+                    findNavController().navigate(R.id.action_launcherFragment_to_shopSelectionFragment)
+                }
+                is SplashViewModel.NavigationEvent.NoInternet -> {
+                    showNoInternetDialog()
+                }
+            }
         }
 
         // Trigger connectivity and auth check
@@ -175,6 +192,8 @@ class launcherFragment : Fragment() {
             .setTitle("No Internet Connection")
             .setMessage("Please check your internet connection and try again.")
             .setPositiveButton("Retry") { _, _ ->
+                // Show loading indicator when retrying
+                binding.loadingIndicator.visibility = View.VISIBLE
                 // Retry connectivity and auth check
                 viewModel.checkInternetAndAuth()
             }
@@ -212,6 +231,8 @@ class launcherFragment : Fragment() {
             reason = "Please enter your PIN to unlock the app",
             onPinCorrect = {
                 // PIN correct, continue app
+                // Show loading indicator before proceeding
+                binding.loadingIndicator.visibility = View.VISIBLE
                 startNormalFlow()
             },
             onPinIncorrect = { status ->

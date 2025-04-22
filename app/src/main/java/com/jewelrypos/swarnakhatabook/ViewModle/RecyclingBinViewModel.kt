@@ -1,15 +1,17 @@
 package com.jewelrypos.swarnakhatabook.ViewModle
 
+import android.app.Application
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
 import com.jewelrypos.swarnakhatabook.Events.EventBus
+import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.RecycledItemsRepository
 import kotlinx.coroutines.Dispatchers
@@ -19,10 +21,11 @@ import java.util.Date
 import java.util.Locale
 
 class RecyclingBinViewModel(
+    application: Application,
     private val recycledItemsRepository: RecycledItemsRepository,
     private val invoiceRepository: InvoiceRepository,
     private val connectivityManager: ConnectivityManager
-) : ViewModel() {
+) : AndroidViewModel(application) {
 
     private val _recycledItems = MutableLiveData<List<RecycledItem>>()
     val recycledItems: LiveData<List<RecycledItem>> = _recycledItems
@@ -54,16 +57,16 @@ class RecyclingBinViewModel(
                     onSuccess = { items ->
                         _recycledItems.value = items
                         if (items.isEmpty()) {
-                            _errorMessage.value = "No items in recycling bin"
+                            _errorMessage.value = getApplication<Application>().getString(R.string.no_items_in_recycling_bin)
                         }
                     },
                     onFailure = { error ->
-                        _errorMessage.value = "Error loading recycled items: ${error.message}"
+                        _errorMessage.value = getApplication<Application>().getString(R.string.error_loading_recycled_items, error.message)
                         _recycledItems.value = emptyList()
                     }
                 )
             } catch (e: Exception) {
-                _errorMessage.value = "Unexpected error: ${e.message}"
+                _errorMessage.value = getApplication<Application>().getString(R.string.unexpected_error, e.message)
                 _recycledItems.value = emptyList()
             } finally {
                 _isLoading.value = false
@@ -81,20 +84,20 @@ class RecyclingBinViewModel(
             try {
                 recycledItemsRepository.restoreCustomer(recycledItemId).fold(
                     onSuccess = { customer ->
-                        _restoreSuccess.value = Pair(true, "Customer ${customer.firstName} ${customer.lastName} restored successfully")
+                        _restoreSuccess.value = Pair(true, getApplication<Application>().getString(R.string.customer_restored_successfully, "${customer.firstName} ${customer.lastName}"))
                         loadRecycledItems() // Refresh the list (or filter by type if needed)
                         EventBus.postCustomerUpdated() // Notify other parts of the app
                     },
                     onFailure = { error ->
                         Log.e("RecyclingBinVM", "Error restoring customer: ${error.message}", error) // Add logging
-                        _restoreSuccess.value = Pair(false, "Failed to restore customer: ${error.message}")
-                        _errorMessage.value = "Failed to restore customer: ${error.message}" // Also set error message
+                        _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.failed_to_restore_customer, error.message))
+                        _errorMessage.value = getApplication<Application>().getString(R.string.failed_to_restore_customer, error.message) // Also set error message
                     }
                 )
             } catch (e: Exception) {
                 Log.e("RecyclingBinVM", "Exception during customer restore: ${e.message}", e) // Add logging
-                _restoreSuccess.value = Pair(false, "Unexpected error restoring customer: ${e.message}")
-                _errorMessage.value = "Unexpected error: ${e.message}" // Also set error message
+                _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.unexpected_error_restoring_customer, e.message))
+                _errorMessage.value = getApplication<Application>().getString(R.string.unexpected_error, e.message) // Also set error message
             } finally {
                 _isLoading.value = false
             }
@@ -109,22 +112,22 @@ class RecyclingBinViewModel(
                 recycledItemsRepository.restoreJewelleryItem(recycledItemId).fold(
                     onSuccess = { jewelleryItem ->
                         // On success, update LiveData to notify UI
-                        _restoreSuccess.value = Pair(true, "Item '${jewelleryItem.displayName}' restored successfully")
+                        _restoreSuccess.value = Pair(true, getApplication<Application>().getString(R.string.item_restored_successfully, jewelleryItem.displayName))
                         loadRecycledItems() // Refresh the list of recycled items
                         EventBus.postInventoryUpdated() // Notify other parts of the app about inventory change
                     },
                     onFailure = { error ->
                         // On failure, log the error and update LiveData
                         Log.e("RecyclingBinVM", "Error restoring jewellery item: ${error.message}", error)
-                        _restoreSuccess.value = Pair(false, "Failed to restore item: ${error.message}")
-                        _errorMessage.value = "Failed to restore item: ${error.message}" // Set error message for UI
+                        _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.failed_to_restore_item, error.message))
+                        _errorMessage.value = getApplication<Application>().getString(R.string.failed_to_restore_item, error.message) // Set error message for UI
                     }
                 )
             } catch (e: Exception) {
                 // Catch any unexpected exceptions during the process
                 Log.e("RecyclingBinVM", "Exception during jewellery item restore: ${e.message}", e)
-                _restoreSuccess.value = Pair(false, "Unexpected error restoring item: ${e.message}")
-                _errorMessage.value = "Unexpected error: ${e.message}" // Set error message for UI
+                _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.unexpected_error_restoring_item, e.message))
+                _errorMessage.value = getApplication<Application>().getString(R.string.unexpected_error, e.message) // Set error message for UI
             } finally {
                 _isLoading.value = false // End loading state regardless of outcome
             }
@@ -137,16 +140,16 @@ class RecyclingBinViewModel(
             try {
                 recycledItemsRepository.restoreInvoice(recycledItemId).fold(
                     onSuccess = { invoice ->
-                        _restoreSuccess.value = Pair(true, "Invoice ${invoice.invoiceNumber} restored successfully")
+                        _restoreSuccess.value = Pair(true, getApplication<Application>().getString(R.string.invoice_restored_successfully, invoice.invoiceNumber))
                         loadRecycledInvoices() // Refresh the list
                         EventBus.postInvoiceUpdated() // Notify the app that invoices have changed
                     },
                     onFailure = { error ->
-                        _restoreSuccess.value = Pair(false, "Failed to restore invoice: ${error.message}")
+                        _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.failed_to_restore_invoice, error.message))
                     }
                 )
             } catch (e: Exception) {
-                _restoreSuccess.value = Pair(false, "Unexpected error: ${e.message}")
+                _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.unexpected_error, e.message))
             } finally {
                 _isLoading.value = false
             }
@@ -161,15 +164,15 @@ class RecyclingBinViewModel(
             try {
                 recycledItemsRepository.permanentlyDeleteItem(recycledItemId).fold(
                     onSuccess = {
-                        _restoreSuccess.value = Pair(true, "Item permanently deleted")
+                        _restoreSuccess.value = Pair(true, getApplication<Application>().getString(R.string.item_permanently_deleted))
                         loadRecycledItems() // Refresh the list after permanent deletion
                     },
                     onFailure = { error ->
-                        _restoreSuccess.value = Pair(false, "Failed to delete item permanently: ${error.message}")
+                        _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.failed_to_delete_item_permanently, error.message))
                     }
                 )
             } catch (e: Exception) {
-                _restoreSuccess.value = Pair(false, "Unexpected error deleting item permanently: ${e.message}")
+                _restoreSuccess.value = Pair(false, getApplication<Application>().getString(R.string.unexpected_error_deleting_item, e.message))
             } finally {
                 _isLoading.value = false
             }
@@ -177,7 +180,7 @@ class RecyclingBinViewModel(
     }
 
     fun formatDeletedDate(timestamp: com.google.firebase.Timestamp?): String {
-        if (timestamp == null) return "Unknown"
+        if (timestamp == null) return getApplication<Application>().getString(R.string.unknown)
 
         val date = timestamp.toDate()
         val now = Date()
@@ -187,10 +190,11 @@ class RecyclingBinViewModel(
         return when {
             diffInDays < 1 -> {
                 // Format as time if less than a day
-                SimpleDateFormat("'Today at' h:mm a", Locale.getDefault()).format(date)
+                val formattedTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(date)
+                getApplication<Application>().getString(R.string.today_at_time, formattedTime)
             }
             diffInDays < 2 -> {
-                "Yesterday"
+                getApplication<Application>().getString(R.string.yesterday)
             }
             diffInDays < 7 -> {
                 SimpleDateFormat("EEEE", Locale.getDefault()).format(date) // Day name
@@ -206,15 +210,15 @@ class RecyclingBinViewModel(
         val diffInMillis = expiresAt - now
 
         if (diffInMillis <= 0) {
-            return "Expired"
+            return getApplication<Application>().getString(R.string.expired)
         }
 
         val diffInDays = diffInMillis / (1000 * 60 * 60 * 24)
 
         return when {
-            diffInDays < 1 -> "Today"
-            diffInDays < 2 -> "Tomorrow"
-            else -> "In $diffInDays days"
+            diffInDays < 1 -> getApplication<Application>().getString(R.string.today)
+            diffInDays < 2 -> getApplication<Application>().getString(R.string.tomorrow)
+            else -> getApplication<Application>().getString(R.string.in_x_days, diffInDays)
         }
     }
 

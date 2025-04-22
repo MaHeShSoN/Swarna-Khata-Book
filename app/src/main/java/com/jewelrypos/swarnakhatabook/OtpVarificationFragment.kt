@@ -49,6 +49,9 @@ class OtpVarificationFragment : Fragment() {
     // List to store all OTP digit inputs for easier access
     private lateinit var otpDigits: List<EditText>
 
+    // Flag to prevent multiple verification attempts
+    private var isVerifying = false
+
     // SMS retriever
     private val smsVerificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -106,7 +109,9 @@ class OtpVarificationFragment : Fragment() {
         binding.btnVerify.setOnClickListener {
             // Apply button animation
             AnimationUtils.pulse(it)
-            verifyOtp()
+            if (!isVerifying) {
+                verifyOtp()
+            }
         }
 
         // Setup Resend button
@@ -169,7 +174,7 @@ class OtpVarificationFragment : Fragment() {
                     }
 
                     // Auto-verify when all digits are filled
-                    if (isOtpComplete()) {
+                    if (isOtpComplete() && !isVerifying) {
                         verifyOtp()
                     }
                 }
@@ -219,8 +224,10 @@ class OtpVarificationFragment : Fragment() {
             // Fill the OTP fields
             fillOtpFields(otp)
 
-            // Verify OTP automatically
-            verifyOtp()
+            // Verify OTP automatically if not already verifying
+            if (!isVerifying) {
+                verifyOtp()
+            }
         }
     }
 
@@ -253,6 +260,9 @@ class OtpVarificationFragment : Fragment() {
             return
         }
         
+        // Prevent multiple verification attempts
+        isVerifying = true
+        
         // Show loading state
         setLoading(true)
         
@@ -265,12 +275,14 @@ class OtpVarificationFragment : Fragment() {
         } catch (e: Exception) {
             Log.e(TAG, "Error verifying OTP", e)
             setLoading(false)
+            isVerifying = false
             Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun resendOtp() {
         Toast.makeText(requireContext(), "Resending OTP...", Toast.LENGTH_SHORT).show()
+        binding.tvResend.isEnabled = false
         
         // Get phone number from args
         val phoneNumber = args.phoneNumber
@@ -279,12 +291,16 @@ class OtpVarificationFragment : Fragment() {
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                 Log.d(TAG, "onVerificationCompleted:$credential")
-                signInWithPhoneAuthCredential(credential)
+                if (!isVerifying) {
+                    isVerifying = true
+                    signInWithPhoneAuthCredential(credential)
+                }
             }
             
             override fun onVerificationFailed(e: FirebaseException) {
                 Log.w(TAG, "onVerificationFailed", e)
                 Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                binding.tvResend.isEnabled = true
             }
             
             override fun onCodeSent(
@@ -293,6 +309,10 @@ class OtpVarificationFragment : Fragment() {
             ) {
                 Log.d(TAG, "onCodeSent:$verificationId")
                 Toast.makeText(requireContext(), "OTP resent successfully", Toast.LENGTH_SHORT).show()
+                binding.tvResend.isEnabled = true
+                
+                // Start SMS retriever to auto-fill the new OTP
+                startSmsRetriever()
             }
         }
         
@@ -310,8 +330,6 @@ class OtpVarificationFragment : Fragment() {
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(requireActivity()) { task ->
-                setLoading(false)
-
                 if (task.isSuccessful) {
                     // Sign in success
                     Log.d(TAG, "signInWithCredential:success")
@@ -323,10 +341,14 @@ class OtpVarificationFragment : Fragment() {
                         // Create a user profile in Firestore if needed
                         saveUserProfile(user.uid)
                     } else {
+                        setLoading(false)
+                        isVerifying = false
                         Toast.makeText(requireContext(), "Authentication failed", Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     // Sign in failed
+                    setLoading(false)
+                    isVerifying = false
                     Log.w(TAG, "signInWithCredential:failure", task.exception)
 
                     if (task.exception is FirebaseAuthInvalidCredentialsException) {
@@ -343,24 +365,47 @@ class OtpVarificationFragment : Fragment() {
     private fun saveUserProfile(userId: String) {
         lifecycleScope.launch {
             try {
+                // Try to get existing user profile first
+                val userProfileResult = ShopManager.getUserProfile(userId)
+                val existingProfile = userProfileResult.getOrNull()
+                
                 // Create or update UserProfile
-                val userProfile = UserProfile(
-                    userId = userId,
-                    name = args.name.takeIf { it.isNotEmpty() } ?: "User",
-                    phoneNumber = args.phoneNumber,
-                    createdAt = Timestamp.now()
-                )
+                val userProfile = if (existingProfile != null) {
+                    // Update existing profile
+                    existingProfile.copy(
+                        name = args.name.takeIf { it.isNotEmpty() } ?: existingProfile.name,
+                        phoneNumber = args.phoneNumber
+                    )
+                } else {
+                    // Create new profile
+                    UserProfile(
+                        userId = userId,
+                        name = args.name.takeIf { it.isNotEmpty() } ?: "User",
+                        phoneNumber = args.phoneNumber,
+                        createdAt = Timestamp.now()
+                    )
+                }
 
                 // Save UserProfile to Firestore
                 val result = ShopManager.saveUserProfile(userProfile)
                 
                 if (result.isSuccess) {
+                    // Create login session with phone number
+                    SessionManager.createLoginSession(requireContext(), args.phoneNumber)
+                    
+                    // Set current user ID in SessionManager (for future use)
+                    SessionManager.getCurrentUserId()
+                    
                     // Navigate to shop selection
                     navigateToShopSelection()
                 } else {
+                    setLoading(false)
+                    isVerifying = false
                     throw result.exceptionOrNull() ?: Exception("Failed to save user profile")
                 }
             } catch (e: Exception) {
+                setLoading(false)
+                isVerifying = false
                 Log.e(TAG, "Error saving user profile", e)
                 Toast.makeText(
                     requireContext(),
@@ -372,9 +417,6 @@ class OtpVarificationFragment : Fragment() {
     }
 
     private fun navigateToShopSelection() {
-        // Create login session with phone number (only once)
-        SessionManager.createLoginSession(requireContext(), args.phoneNumber)
-        
         // Navigate to shop selection with animation
         findNavController().navigate(
             R.id.action_otpVarificationFragment_to_shopSelectionFragment,
@@ -385,16 +427,11 @@ class OtpVarificationFragment : Fragment() {
 
     private fun setLoading(isLoading: Boolean) {
         binding.btnVerify.isEnabled = !isLoading
+        binding.tvResend.isEnabled = !isLoading
         binding.btnVerify.text = if (isLoading) "Verifying..." else "Verify"
-
-        // Show/hide progress indicator
-//        if (isLoading) {
-//            binding.progressBar.visibility = View.VISIBLE
-//            AnimationUtils.fadeIn(binding.progressBar)
-//        } else {
-//            AnimationUtils.fadeOut(binding.progressBar)
-//            binding.progressBar.visibility = View.GONE
-//        }
+        
+        // Disable OTP input fields during loading
+        otpDigits.forEach { it.isEnabled = !isLoading }
     }
 
     override fun onDestroyView() {

@@ -17,6 +17,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentShopSelectionBinding
 import kotlinx.coroutines.launch
 import java.lang.Exception
+import com.google.firebase.auth.FirebaseAuth
 
 class ShopSelectionFragment : Fragment() {
 
@@ -94,7 +95,12 @@ class ShopSelectionFragment : Fragment() {
     private fun checkShopLimitAndNavigate() {
         binding.progressBar.visibility = View.VISIBLE
         
-        val userId = SessionManager.getCurrentUserId() ?: return
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId == null) {
+            binding.progressBar.visibility = View.GONE
+            Toast.makeText(requireContext(), "You must be logged in to create a shop", Toast.LENGTH_SHORT).show()
+            return
+        }
         
         lifecycleScope.launch {
             try {
@@ -143,77 +149,98 @@ class ShopSelectionFragment : Fragment() {
         binding.textViewEmptyState.visibility = View.GONE
         binding.recyclerViewShops.visibility = View.GONE
         
-        // Get the phone number from SessionManager
-        val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+        // Get the user ID from FirebaseAuth
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
         
-        if (phoneNumber == null) {
-            showEmptyState("No phone number found. Please log in again.")
+        if (userId == null) {
+            // If no user ID, try to get phone number from SessionManager as fallback
+            val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+            
+            if (phoneNumber == null) {
+                showEmptyState("No user found. Please log in again.")
+                return
+            }
+            
+            // Try to load shops by phone number
+            lifecycleScope.launch {
+                loadShopsByPhoneNumber(phoneNumber)
+            }
             return
         }
         
         lifecycleScope.launch {
             try {
-                // First try to get shops by phone number
-                val shopsByPhoneResult = ShopManager.getShopsByPhoneNumber(phoneNumber)
+                // First try to get shops from user's managed shops
+                val managedShopsResult = ShopManager.getManagedShops(userId, preferCache = true)
                 
-                if (shopsByPhoneResult.isSuccess) {
-                    val shopsList = shopsByPhoneResult.getOrNull() ?: emptyList()
+                if (managedShopsResult.isSuccess) {
+                    val shopsMap = managedShopsResult.getOrNull() ?: emptyMap()
                     
-                    if (shopsList.isNotEmpty()) {
-                        adapter.submitList(shopsList)
-                        binding.progressBar.visibility = View.GONE
-                        binding.textViewEmptyState.visibility = View.GONE
-                        binding.recyclerViewShops.visibility = View.VISIBLE
-                        AnimationUtils.fadeIn(binding.recyclerViewShops)
-                        return@launch
-                    } else {
-                        android.util.Log.d("ShopSelectionFragment", "No shops found by phone number, trying by user ID")
-                    }
-                }
-                
-                // If no shops found by phone number, try by user ID
-                val userId = SessionManager.getCurrentUserId()
-                if (userId != null) {
-                    val shopsByUserIdResult = ShopManager.getManagedShops(userId)
-                    
-                    if (shopsByUserIdResult.isSuccess) {
-                        val shopsMap = shopsByUserIdResult.getOrNull() ?: emptyMap()
+                    if (shopsMap.isNotEmpty()) {
+                        // Convert map of shop IDs to list of ShopDetails
+                        val shopDetailsList = mutableListOf<ShopDetails>()
                         
-                        if (shopsMap.isNotEmpty()) {
-                            // Convert map of shop IDs to list of ShopDetails
-                            val shopDetailsList = mutableListOf<ShopDetails>()
-                            
-                            // For each shop ID in the map, get the shop details
-                            for (shopId in shopsMap.keys) {
-                                val shopDetailsResult = ShopManager.getShopDetails(shopId)
-                                if (shopDetailsResult.isSuccess) {
-                                    val shopDetails = shopDetailsResult.getOrNull()
-                                    if (shopDetails != null) {
-                                        shopDetailsList.add(shopDetails)
-                                    }
+                        // For each shop ID in the map, get the shop details
+                        for (shopId in shopsMap.keys) {
+                            val shopDetailsResult = ShopManager.getShopDetails(shopId)
+                            if (shopDetailsResult.isSuccess) {
+                                val shopDetails = shopDetailsResult.getOrNull()
+                                if (shopDetails != null) {
+                                    shopDetailsList.add(shopDetails)
                                 }
                             }
-                            
-                            if (shopDetailsList.isNotEmpty()) {
-                                adapter.submitList(shopDetailsList)
-                                binding.progressBar.visibility = View.GONE
-                                binding.textViewEmptyState.visibility = View.GONE
-                                binding.recyclerViewShops.visibility = View.VISIBLE
-                                AnimationUtils.fadeIn(binding.recyclerViewShops)
-                                return@launch
-                            }
+                        }
+                        
+                        if (shopDetailsList.isNotEmpty()) {
+                            updateShopList(shopDetailsList)
+                            return@launch
                         }
                     }
                 }
                 
-                // If we reach here, no shops were found
-                showEmptyState()
+                // If no shops found by user ID, try by phone number as a fallback
+                val phoneNumber = SessionManager.getPhoneNumber(requireContext())
+                if (phoneNumber != null) {
+                    loadShopsByPhoneNumber(phoneNumber)
+                } else {
+                    // No phone number available, show empty state
+                    showEmptyState()
+                }
                 
             } catch (e: Exception) {
                 android.util.Log.e("ShopSelectionFragment", "Error loading shops", e)
                 showEmptyState("Error loading shops: ${e.message}")
             }
         }
+    }
+    
+    private suspend fun loadShopsByPhoneNumber(phoneNumber: String) {
+        try {
+            val shopsByPhoneResult = ShopManager.getShopsByPhoneNumber(phoneNumber)
+            
+            if (shopsByPhoneResult.isSuccess) {
+                val shopsList = shopsByPhoneResult.getOrNull() ?: emptyList()
+                
+                if (shopsList.isNotEmpty()) {
+                    updateShopList(shopsList)
+                } else {
+                    showEmptyState()
+                }
+            } else {
+                showEmptyState("Error loading shops: ${shopsByPhoneResult.exceptionOrNull()?.message}")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ShopSelectionFragment", "Error loading shops by phone number", e)
+            showEmptyState("Error loading shops: ${e.message}")
+        }
+    }
+    
+    private fun updateShopList(shopsList: List<ShopDetails>) {
+        adapter.submitList(shopsList)
+        binding.progressBar.visibility = View.GONE
+        binding.textViewEmptyState.visibility = View.GONE
+        binding.recyclerViewShops.visibility = View.VISIBLE
+        AnimationUtils.fadeIn(binding.recyclerViewShops)
     }
     
     private fun showEmptyState(message: String = "No shops found. Create your first shop!") {

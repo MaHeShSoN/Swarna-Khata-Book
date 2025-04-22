@@ -51,13 +51,19 @@ import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
+import com.jewelrypos.swarnakhatabook.ViewModle.ShopSwitcherViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentDashBoardBinding
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Calendar
 import java.util.Locale
-
+import android.widget.PopupMenu
+import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
+import android.widget.ListPopupWindow // Add this import
+import android.view.Gravity // Add this import
+import android.util.DisplayMetrics // Add this import
+import com.jewelrypos.swarnakhatabook.Adapters.ShopMenuAdapter
 
 class DashBoardFragment : Fragment(),
     CustomerBottomSheetFragment.CustomerOperationListener,
@@ -66,11 +72,14 @@ class DashBoardFragment : Fragment(),
     private var _binding: FragmentDashBoardBinding? = null
     private val binding get() = _binding!!
 
+    // Get the shared shop switcher view model
+    private val shopSwitcherViewModel: ShopSwitcherViewModel by activityViewModels()
+
     private val customerViewModel: CustomerViewModel by activityViewModels {
         // Create the repository and pass it to the factory
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = CustomerRepository(firestore, auth,requireContext())
+        val repository = CustomerRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         CustomerViewModelFactory(repository, connectivityManager)
@@ -119,6 +128,9 @@ class DashBoardFragment : Fragment(),
         setupPeriodSelector()
         setupQuickActions()
 
+        // Load shop data for switching
+        loadShopData()
+
         // Load data for dashboard
         loadDashboardData()
         loadItemPerformanceData()
@@ -127,18 +139,13 @@ class DashBoardFragment : Fragment(),
     private fun setupToolbar() {
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-                R.id.action_refresh -> {
-                    loadDashboardData()
-                    true
-                }
-
                 R.id.action_notifications -> {
                     navigateToNotifications()
                     true
                 }
-                
+
                 R.id.action_switch_shop -> {
-                    navigateToShopSelection()
+                    showShopSwitcherMenu()
                     true
                 }
 
@@ -146,14 +153,9 @@ class DashBoardFragment : Fragment(),
             }
         }
         setupNotificationBadge()
-        
-        // Check if user has multiple shops and show/hide the switch shop menu item
-    }
 
-
-    private fun navigateToShopSelection() {
-        requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(R.id.action_mainScreenFragment_to_shopSelectionFragment)
+        // Update the shop name in the toolbar title
+        updateToolbarTitle()
     }
 
     private fun setupNotificationBadge() {
@@ -170,7 +172,12 @@ class DashBoardFragment : Fragment(),
         }
 
         // Debug: Log the current shop ID
-        Log.d("DashBoardFragment", "Setting up notification badge, active shop: ${SessionManager.getActiveShopId(requireContext())}")
+        Log.d(
+            "DashBoardFragment",
+            "Setting up notification badge, active shop: ${
+                SessionManager.getActiveShopId(requireContext())
+            }"
+        )
 
         // Observe unread notification count from view model
         notificationViewModel.unreadCount.observe(viewLifecycleOwner) { count ->
@@ -187,13 +194,108 @@ class DashBoardFragment : Fragment(),
 
         // Listen for shop changes to refresh notifications
         SessionManager.activeShopIdLiveData.observe(viewLifecycleOwner) { shopId ->
-            Log.d("DashBoardFragment", "Active shop changed, refreshing notification count: $shopId")
+            Log.d(
+                "DashBoardFragment",
+                "Active shop changed, refreshing notification count: $shopId"
+            )
             notificationViewModel.setCurrentShop(shopId)
             notificationViewModel.refreshUnreadCount()
         }
 
         // Ensure we refresh the count now
         notificationViewModel.refreshUnreadCount()
+    }
+
+    private fun loadShopData() {
+        val userId = SessionManager.getCurrentUserId()
+        if (userId != null) {
+            shopSwitcherViewModel.loadInitialData(userId, requireContext())
+
+            // Observe active shop changes to update the title
+            shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
+                if (shop != null) {
+                    // Update toolbar title when shop changes
+                    binding.topAppBar.title = shop.shopName
+                }
+            }
+
+            // Handle errors
+            shopSwitcherViewModel.error.observe(viewLifecycleOwner) { error ->
+                error?.let {
+                    Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
+                    shopSwitcherViewModel.clearError()
+                }
+            }
+        }
+    }
+
+    private fun updateToolbarTitle() {
+        // Observe active shop to update the toolbar title
+        shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
+            if (shop != null) {
+                binding.topAppBar.title = shop.shopName
+            } else {
+                binding.topAppBar.title = getString(R.string.menu_home)
+            }
+        }
+    }
+
+    private fun showShopSwitcherMenu() {
+        val shops = shopSwitcherViewModel.managedShops.value
+        val activeShop = shopSwitcherViewModel.activeShop.value
+
+        if (shops.isNullOrEmpty()) {
+            Toast.makeText(requireContext(), R.string.no_shops_available, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // --- Use ListPopupWindow ---
+        val listPopupWindow = ListPopupWindow(requireContext())
+        listPopupWindow.anchorView = binding.topAppBar // Anchor to the menu item or toolbar
+
+        // --- Create adapter (Use your existing ShopMenuAdapter) ---
+        // Create a list including the "Create New" option if needed, or handle it separately.
+        // For simplicity, this example only shows shops. Adjust as needed.
+        val adapter = ShopMenuAdapter(requireContext(), shops, activeShop?.shopId) //
+        listPopupWindow.setAdapter(adapter)
+
+        // --- Calculate and set width ---
+        val displayMetrics = DisplayMetrics()
+        requireActivity().windowManager.defaultDisplay.getMetrics(displayMetrics)
+        val screenWidth = displayMetrics.widthPixels
+        listPopupWindow.width = (screenWidth * 0.80).toInt() // 60% of screen width
+        // You might want to set a max width as well using:
+        // listPopupWindow.width = min((screenWidth * 0.60).toInt(), resources.getDimensionPixelSize(R.dimen.your_max_popup_width))
+        listPopupWindow.height = ListPopupWindow.WRAP_CONTENT
+
+        listPopupWindow.horizontalOffset = 0 // Optional: Adjust horizontal offset if needed
+        listPopupWindow.verticalOffset = 0 // Optional: Adjust vertical offset if needed
+        // Set the gravity. Gravity.START usually corresponds to left in LTR layouts.
+        listPopupWindow.setDropDownGravity(Gravity.START)
+
+        listPopupWindow.isModal = true // Makes it behave like a popup
+
+        // --- Handle item clicks ---
+        listPopupWindow.setOnItemClickListener { parent, view, position, id ->
+            val selectedItem = adapter.getItem(position) // Get item from adapter
+
+            if (selectedItem is ShopDetails) { // Check if it's a ShopDetails object
+                if (selectedItem.shopId != activeShop?.shopId) {
+                    shopSwitcherViewModel.switchActiveShop(selectedItem, requireContext()) //
+                }
+            } else if (selectedItem is String && selectedItem == "CREATE_NEW_SHOP") { // Handle create new option
+                navigateToCreateShop()
+            }
+            listPopupWindow.dismiss() // Close the popup
+        }
+
+        listPopupWindow.show()
+    }
+
+    private fun navigateToCreateShop() {
+        // Navigate to create shop screen
+        requireActivity().findNavController(R.id.nav_host_fragment)
+            .navigate(R.id.action_mainScreenFragment_to_createShopFragment)
     }
 
     private fun setupPeriodSelector() {
@@ -808,7 +910,7 @@ class DashBoardFragment : Fragment(),
         // Refresh notification count when returning to this fragment
         Log.d("DashBoardFragment", "onResume, refreshing notification count")
         notificationViewModel.refreshUnreadCount()
-        
+
         // Check managed shops when returning to this fragment
     }
 
@@ -840,5 +942,17 @@ class DashBoardFragment : Fragment(),
 
     override fun onItemUpdated(item: JewelleryItem) {
         TODO("Not yet implemented")
+    }
+
+    private fun observeShopChanges() {
+        // Observe shop changes from the shop switcher view model
+        shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
+            shop?.let {
+                Log.d("DashBoardFragment", "Shop changed to: ${shop.shopName}")
+                // Refresh data when shop changes
+                loadDashboardData()
+                loadItemPerformanceData()
+            }
+        }
     }
 }

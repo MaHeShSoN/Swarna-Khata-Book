@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -61,6 +62,38 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    /**
+     * Override attachBaseContext to apply the saved language preference
+     * before the activity and UI are created
+     */
+    override fun attachBaseContext(newBase: Context) {
+        // Get the saved language code
+        val preferences = SecurePreferences.getInstance(newBase)
+        val languageCode = preferences.getString("selected_language", null)
+        
+        // If a language is saved, apply it
+        val context = if (languageCode != null) {
+            setLocale(newBase, languageCode)
+        } else {
+            newBase
+        }
+        
+        super.attachBaseContext(context)
+    }
+    
+    /**
+     * Helper function to set the locale for a context
+     */
+    private fun setLocale(context: Context, languageCode: String): Context {
+        val locale = java.util.Locale(languageCode)
+        java.util.Locale.setDefault(locale)
+        
+        val config = Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        
+        return context.createConfigurationContext(config)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

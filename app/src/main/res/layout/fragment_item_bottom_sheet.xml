@@ -380,7 +380,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        app:endIconMode="clear_text"
+                        app:endIconMode="dropdown_menu"
                         android:layout_weight="1"
                         android:hint="@string/unit"
                         app:boxBackgroundColor="@color/my_light_surface"
