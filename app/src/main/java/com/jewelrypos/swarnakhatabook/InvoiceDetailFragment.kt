@@ -175,45 +175,45 @@ class InvoiceDetailFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         binding.progressBar.visibility = View.VISIBLE
-
+                        
                         // Get shop information
                         val shop = ShopManager.getShopDetails(requireContext())
-
+                        
                         if (shop == null) {
                             binding.progressBar.visibility = View.GONE
                             Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-
+                        
                         // Initialize PDFBox
                         PDFBoxResourceLoader.init(requireContext())
-
+                        
                         // Create PDF generator and apply settings
                         val pdfGenerator = InvoicePdfGenerator(requireContext())
                         val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
                         pdfGenerator.applySettings(pdfSettings)
-
+                        
                         // Generate PDF
                         val pdfFile = pdfGenerator.generateInvoicePdf(
                             invoice,
                             shop,
                             getString(R.string.preview_invoice, invoice.invoiceNumber)
                         )
-
+                        
                         // Hide progress
                         binding.progressBar.visibility = View.GONE
-
+                        
                         // Show PDF in bottom sheet
                         val pdfBottomSheet = PdfViewerBottomSheet.newInstance(
                             pdfFile.absolutePath,
                             "Invoice #${invoice.invoiceNumber}"
                         )
                         pdfBottomSheet.show(parentFragmentManager, "PdfViewerBottomSheet")
-
+                        
                     } catch (e: Exception) {
                         binding.progressBar.visibility = View.GONE
                         Log.e("InvoiceDetailFragment", "Error generating PDF preview: ${e.message}", e)
-
+                        
                         // Fallback to edit invoice screen if PDF generation fails
                         Toast.makeText(context, "Could not generate PDF preview. Opening edit screen instead.", Toast.LENGTH_SHORT).show()
                     }
@@ -467,7 +467,7 @@ class InvoiceDetailFragment : Fragment() {
                     getString(R.string.receipt, invoice.invoiceNumber)
                 )
 
-
+                
                 sharePdfFile(pdfFile)
 
             } catch (e: Exception) {
@@ -1915,8 +1915,7 @@ class InvoiceDetailFragment : Fragment() {
 //                }
 //            } catch (e: Exception) {
 //                showErrorMessage("Error sharing invoice: ${e.message}")
-//                Log.e("InvoiceDetailFragment", "Error sharing invoice", e)
-//            }
+//                Log.e("InvoiceDetailFragment", "Error sharing invoice", e)//            }
 //        }
 //    }
 

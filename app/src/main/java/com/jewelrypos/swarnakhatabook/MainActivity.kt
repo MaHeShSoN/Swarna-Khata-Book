@@ -41,6 +41,8 @@ import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 
 class MainActivity : AppCompatActivity() {
 
@@ -64,39 +66,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Override attachBaseContext to apply the saved language preference
-     * before the activity and UI are created
-     */
-    override fun attachBaseContext(newBase: Context) {
-        // Get the saved language code
-        val preferences = SecurePreferences.getInstance(newBase)
-        val languageCode = preferences.getString("selected_language", null)
-        
-        // If a language is saved, apply it
-        val context = if (languageCode != null) {
-            setLocale(newBase, languageCode)
-        } else {
-            newBase
-        }
-        
-        super.attachBaseContext(context)
-    }
-    
-    /**
-     * Helper function to set the locale for a context
-     */
-    private fun setLocale(context: Context, languageCode: String): Context {
-        val locale = java.util.Locale(languageCode)
-        java.util.Locale.setDefault(locale)
-        
-        val config = Configuration(context.resources.configuration)
-        config.setLocale(locale)
-        
-        return context.createConfigurationContext(config)
+    private fun applyAppLocale(languageCode: String) {
+        val localeList = LocaleListCompat.forLanguageTags(languageCode)
+        AppCompatDelegate.setApplicationLocales(localeList)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved locale before super.onCreate
+        val preferences = SecurePreferences.getInstance(this)
+        preferences.getString("selected_language", null)?.let { languageCode ->
+            applyAppLocale(languageCode)
+        }
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 

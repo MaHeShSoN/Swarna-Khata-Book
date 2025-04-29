@@ -645,5 +645,17 @@
     <string name="multi_user_access">मल्टी यूज़र एक्सेस</string>
     <string name="no_multi_user_access">कोई मल्टी यूज़र एक्सेस नहीं</string>
 
+
+
+    <string name="cannot_print_invoice_data_missing">Cannot print: Invoice data missing.</string>
+    <string name="pdf_generation_failed">Failed to generate PDF for printing.</string>
+    <string name="cannot_print_activity_context_lost">Cannot print: Activity context lost.</string>
+    <string name="print_source_file_unavailable">Print source file unavailable.</string>
+    <string name="print_destination_unavailable">Print destination unavailable.</string>
+    <string name="error_writing_pdf_for_print">Error writing PDF for print: %s</string>
+    <string name="print_error_context_invalid">Print Error: Invalid context. %s</string>
+    <string name="print_error_failed_to_start">Error starting print job: %s</string>
+    <string name="print_error_preparation_failed">Error preparing print data: %s</string>
+
 </resources>
 
