@@ -1611,9 +1611,12 @@ class InvoicePdfGenerator(private val context: Context) {
         drawText(stream, formatter.format(invoice.paidAmount), raX, subtotalY + 5f, 10f, false)
         columnX += taxColumnWidths[3] * (w - 40f)
 
+
+        val balanceDue = invoice.totalAmount - invoice.paidAmount
+
         // Total Amount
         val taX = columnX + (taxColumnWidths[4] * (w - 40f)) / 2 - 5f
-        drawText(stream, formatter.format(invoice.totalAmount), taX, subtotalY + 5f, 10f, true)
+        drawText(stream, formatter.format(balanceDue), taX, subtotalY + 5f, 10f, true)
 
         // Draw horizontal line after tax values
         drawLine(stream, 20f, subtotalY - 15f, w - 20f, subtotalY - 15f, 0.5f, AWTColor(0, 0, 0))
@@ -1627,7 +1630,7 @@ class InvoicePdfGenerator(private val context: Context) {
         stream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(
             stream,
-            "AMOUNT IN WORDS       :        ${numberToWords(invoice.totalAmount.toInt())}" + " Rupees Only",
+            "AMOUNT IN WORDS       :        ${numberToWords(balanceDue.toInt())}" + " Rupees Only",
             25.5f,
             110f,
             10f,

@@ -702,10 +702,10 @@
                 android:maxWidth="320dp"
                 android:padding="12dp"
                 android:text="@string/save_close"
-                android:textColor="@color/my_light_primary"
                 android:textSize="14sp"
-                app:strokeColor="@color/my_light_primary" />
-
+                app:strokeColor="@color/my_light_outline"
+                android:textColor="@color/my_light_outline"
+                 />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/saveAndAddButton"
                 android:layout_width="0dp"
@@ -717,7 +717,7 @@
                 android:maxWidth="320dp"
                 android:padding="12dp"
                 android:text="@string/save_and_add"
-                android:textColor="@color/my_light_on_primary"
+                android:textColor="@color/white"
                 android:textSize="14sp"
                 app:backgroundTint="@color/my_light_primary" />
 

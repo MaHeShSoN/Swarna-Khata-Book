@@ -258,11 +258,17 @@ class ShopSelectionFragment : Fragment() {
         
         // Set the selected shop in SessionManager
         context?.let { ctx ->
+            // Set active shop ID in SessionManager - this will trigger the LiveData
+            // to notify observers (like DashboardFragment) of the change
             SessionManager.setActiveShopId(ctx, shopId)
             
             // Update the adapter to show the active shop
             adapter.setActiveShopId(shopId)
             
+            // Log the shop switch for debugging
+            android.util.Log.d("ShopSelectionFragment", "Shop switched to: $shopId")
+            
+            // Navigate back to main screen, which will reload with the new shop
             findNavController().navigate(
                 R.id.action_shopSelectionFragment_to_mainScreenFragment,
                 null,

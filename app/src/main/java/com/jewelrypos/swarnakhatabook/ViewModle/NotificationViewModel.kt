@@ -241,16 +241,16 @@ class NotificationViewModel(
     }
 
     /**
-     * Sets the current shop ID for filtering notifications
-     * Pass null to show notifications from all shops
+     * Sets the current shop ID and reloads notifications for that shop
      */
-    fun setCurrentShop(shopId: String?) {
+    fun setCurrentShop(shopId: String) {
         if (_currentShopId.value != shopId) {
-            Log.d(TAG, "Setting current shop ID: $shopId")
+            Log.d(TAG, "Setting current shop ID to: $shopId")
             _currentShopId.value = shopId
-            // Reload notifications with the new shop filter
+            // Reset pagination state
+            repository.resetPagination()
+            // Reload notifications for the new shop
             loadNotifications()
-            refreshUnreadCount()
         }
     }
 

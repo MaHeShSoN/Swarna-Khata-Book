@@ -76,6 +76,9 @@ class CustomerAdapter(
             )
         }
 
+        // Set transition name for shared element transitions
+        holder.customerCard.transitionName = "customer_${currentCustomer.id}"
+
         holder.itemView.setOnClickListener {
             itemClickListener?.onCustomerClick(currentCustomer)
         }
@@ -126,5 +129,10 @@ class CustomerAdapter(
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
             return oldList[oldItemPosition] == newList[newItemPosition]
         }
+    }
+
+    // Helper method to get position for a specific customer by ID
+    fun getPositionForCustomer(customer: Customer): Int {
+        return customerList.indexOfFirst { it.id == customer.id }
     }
 }

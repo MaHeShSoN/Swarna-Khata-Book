@@ -203,8 +203,8 @@
                         android:layout_marginEnd="4dp"
                         android:layout_weight="1"
                         android:text="Full"
-                        android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
+                        android:textColor="@color/my_light_outline"
+                        app:strokeColor="@color/my_light_outline" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/halfAmountButton"
@@ -213,9 +213,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
                         android:layout_weight="1"
+
                         android:text="Half"
-                        android:textColor="@color/my_light_primary"
-                        app:strokeColor="@color/my_light_primary" />
+                        android:textColor="@color/my_light_outline"
+                        app:strokeColor="@color/my_light_outline" />
                 </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -319,9 +320,10 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:padding="12dp"
+                android:fontFamily="@font/montserratregular"
                 android:text="Cancel"
-                android:textColor="@color/my_light_primary"
-                app:strokeColor="@color/my_light_primary" />
+                android:textColor="@color/my_light_outline"
+                app:strokeColor="@color/my_light_outline" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/addPaymentButton"
@@ -331,8 +333,9 @@
                 android:layout_weight="1"
                 android:backgroundTint="@color/my_light_primary"
                 android:padding="12dp"
+                android:fontFamily="@font/montserratregular"
                 android:text="Add Payment"
-                android:textColor="@color/my_light_on_primary" />
+                android:textColor="@color/white" />
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

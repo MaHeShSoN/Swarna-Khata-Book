@@ -20,9 +20,8 @@ class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>,   private
         val jewelryTypeInitial: TextView = itemView.findViewById(R.id.jewelryTypeInitial)
         val jewelryTitle: TextView = itemView.findViewById(R.id.jewelryTitle)
         val jewelryCode: TextView = itemView.findViewById(R.id.jewelryCode)
-        val grossWeightValue: TextView = itemView.findViewById(R.id.grossWeightValue)
-        val locationValue: TextView = itemView.findViewById(R.id.locationValue)
         val stockValue: TextView = itemView.findViewById(R.id.stockValue)
+        val purity: TextView = itemView.findViewById(R.id.purity)
         // Add other views here
     }
 
@@ -39,11 +38,10 @@ class JewelleryAdapter(private var jewelleryList: List<JewelleryItem>,   private
 
     override fun onBindViewHolder(holder: JewelleryViewHolder, position: Int) {
         val currentItem = jewelleryList[position]
-        holder.jewelryTitle.text = "${currentItem.purity} ${currentItem.displayName}"
+        holder.jewelryTitle.text = "${currentItem.displayName}"
         holder.jewelryCode.text = "Code: ${currentItem.jewelryCode}"
-        holder.grossWeightValue.text = "${currentItem.grossWeight} g"
-        holder.locationValue.text = currentItem.location
         holder.stockValue.text = "${currentItem.stock} ${currentItem.stockUnit}"
+        holder.purity.text = "Purity: ${currentItem.purity}%"
         holder.jewelryTypeInitial.text = currentItem.itemType.firstOrNull()?.toString()?.uppercase() ?: ""
 
         //Change color based on itemType

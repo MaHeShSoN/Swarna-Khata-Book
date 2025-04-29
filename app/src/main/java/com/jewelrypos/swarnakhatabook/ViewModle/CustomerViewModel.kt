@@ -2,6 +2,7 @@ package com.jewelrypos.swarnakhatabook.ViewModle
 
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -45,14 +46,14 @@ class CustomerViewModel(
     private val _activeCustomerType = MutableLiveData<String?>()
     val activeCustomerType: LiveData<String?> = _activeCustomerType
 
-
     // Combined indicator for UI
     private val _isFilterActive = MutableLiveData<Boolean>(false)
-
 
     // Search query
     private var currentSearchQuery = ""
 
+    // --- RecyclerView state preservation ---
+    var layoutManagerState: Parcelable? = null
 
     init {
         loadFirstPage()
@@ -65,7 +66,6 @@ class CustomerViewModel(
               // Consider non-default sort as active filter
         _isFilterActive.value = isActive
     }
-
 
     /**
      * Applies a set of filters and triggers the background filtering process.
@@ -103,12 +103,12 @@ class CustomerViewModel(
         }
     }
 
-
     /**
      * Applies active filters and search query asynchronously.
      */
     private fun applyFiltersAndSearch() {
         viewModelScope.launch {
+            Log.d("CustomerViewModel", "applyFiltersAndSearch START -> Setting isLoading = true") // ADD LOG
             _isLoading.value = true
 
             val filteredList = withContext(Dispatchers.Default) {
@@ -120,7 +120,6 @@ class CustomerViewModel(
                         customer.customerType.equals(typeFilter, ignoreCase = true)
                     }
                 }
-
 
                 // 3. Apply Search Query
                 if (currentSearchQuery.isNotEmpty()) {
@@ -139,11 +138,11 @@ class CustomerViewModel(
 
             // Update LiveData on the main thread
             _customers.value = filteredList
+            Log.d("CustomerViewModel", "applyFiltersAndSearch END -> Setting isLoading = false") // ADD LOG
             _isLoading.value = false
             Log.d("CustomerViewModel", "Filtered/Sorted to ${filteredList.size} customers. Filters: Type=${_activeCustomerType.value}, Search='$currentSearchQuery'")
         }
     }
-
 
     fun searchCustomers(query: String) {
         val newQuery = query.trim().lowercase()
@@ -168,6 +167,7 @@ class CustomerViewModel(
     }
 
     private fun loadFirstPage() {
+        Log.d("CustomerViewModel", "loadFirstPage START -> Setting isLoading = true") // ADD LOG
         _isLoading.value = true
         viewModelScope.launch {
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
@@ -189,7 +189,7 @@ class CustomerViewModel(
 
     fun loadNextPage() {
         if (_isLoading.value == true) return
-
+        Log.d("CustomerViewModel", "loadNextPage START -> Setting isLoading = true") // ADD LOG
         _isLoading.value = true
         viewModelScope.launch {
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
@@ -234,6 +234,7 @@ class CustomerViewModel(
     fun addCustomer(customer: Customer): LiveData<Result<Customer>> {
         val resultLiveData = MutableLiveData<Result<Customer>>()
         viewModelScope.launch {
+            Log.d("CustomerViewModel", "addCustomer START -> Setting isLoading = true") // ADD LOG
             _isLoading.value = true
             repository.addCustomer(customer).fold(
                 onSuccess = { newCustomer ->
@@ -253,6 +254,7 @@ class CustomerViewModel(
 
     fun updateCustomer(customer: Customer) {
         viewModelScope.launch {
+            Log.d("CustomerViewModel", "updateCustomer START -> Setting isLoading = true") // ADD LOG
             _isLoading.value = true
             repository.updateCustomer(customer).fold(
                 onSuccess = {

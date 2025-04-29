@@ -113,12 +113,12 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
         val activeShopId = SessionManager.getActiveShopId(requireContext())
         
         // Set the shop ID in the ViewModel for filtering
-        viewModel.setCurrentShop(activeShopId)
+        viewModel.setCurrentShop(activeShopId!!)
         
         // Observe changes to the active shop ID
         SessionManager.activeShopIdLiveData.observe(viewLifecycleOwner) { shopId ->
             Log.d(TAG, "Active shop ID changed to: $shopId")
-            viewModel.setCurrentShop(shopId)
+            viewModel.setCurrentShop(shopId!!)
         }
     }
 

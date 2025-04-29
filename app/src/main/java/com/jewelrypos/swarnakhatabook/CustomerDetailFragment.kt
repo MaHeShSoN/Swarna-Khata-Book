@@ -46,7 +46,22 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
     }
 
     private var customer: Customer? = null
+    private var customerId: String = ""
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Setup shared element transition
+        com.jewelrypos.swarnakhatabook.Animations.SharedElementTransitionManager.setupEnterTransition(this)
+        
+        // Get customer ID from arguments
+        customerId = arguments?.getString("customerId") ?: ""
+        
+        if (customerId.isEmpty()) {
+            Toast.makeText(requireContext(), "Invalid customer ID", Toast.LENGTH_SHORT).show()
+            findNavController().navigateUp()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -58,9 +73,9 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        
         // Load customer details
-        loadCustomerDetails(args.customerId)
+        loadCustomerDetails(customerId)
 
         binding.topAppBar.overflowIcon = ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
 
@@ -81,6 +96,10 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
                 else -> false
             }
         }
+
+        // Start the postponed transition immediately
+        // The view doesn't have a dedicated info card that matches the one in the list
+        com.jewelrypos.swarnakhatabook.Animations.SharedElementTransitionManager.startPostponedTransition(this)
     }
 
     // Add to CustomerDetailFragment.kt

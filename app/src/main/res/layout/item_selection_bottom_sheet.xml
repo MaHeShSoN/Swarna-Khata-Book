@@ -41,7 +41,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="16dp"
+                >
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -53,6 +54,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/basic_information"
+                        android:fontFamily="@font/montserratbold"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                         android:textColor="@color/my_light_on_surface" />
 
@@ -63,6 +65,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center_vertical"
                         android:contentDescription="Add Item"
+                        android:fontFamily="@font/montserratmedium"
                         android:gravity="top"
                         android:text="@string/add_item"
                         android:textColor="@color/my_light_primary" />
@@ -85,6 +88,7 @@
                         android:id="@+id/itemNameDropdown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="textAutoComplete|textCapWords"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -129,6 +133,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/weight_details"
+                    android:fontFamily="@font/montserratbold"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
 
@@ -150,6 +155,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/grossWeightEditText"
                         android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
@@ -175,6 +181,7 @@
                         android:id="@+id/netWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -198,6 +205,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/purityEditText"
                         android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
@@ -223,13 +231,13 @@
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
                         app:endIconMode="clear_text"
-                        app:hintTextColor="@color/my_light_secondary"
-                        >
+                        app:hintTextColor="@color/my_light_secondary">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/wastageEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
                             android:inputType="numberDecimal"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
@@ -241,7 +249,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:layout_weight="1"
+                        android:layout_weight="1.5"
                         android:hint="@string/type"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
@@ -252,6 +260,7 @@
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/wastageTypeDropdown"
                             android:layout_width="match_parent"
+                            android:fontFamily="@font/montserratregular"
                             android:layout_height="wrap_content"
                             android:inputType="textAutoComplete|textCapWords"
                             android:textColor="@color/my_light_on_surface"
@@ -288,6 +297,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratbold"
                     android:text="@string/diamond_pricing"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
@@ -317,6 +327,7 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/diamondPrizeEditText"
                             android:layout_width="match_parent"
+                            android:fontFamily="@font/montserratregular"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
                             android:textColor="@color/my_light_on_surface"
@@ -350,6 +361,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratbold"
                     android:text="@string/pricing_information"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="@color/my_light_on_surface" />
@@ -371,6 +383,7 @@
                         android:id="@+id/goldRateOnEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:inputType="none"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -389,71 +402,66 @@
                     app:boxStrokeWidth="1dp"
                     app:endIconMode="clear_text"
                     app:hintTextColor="@color/my_light_secondary"
-                    app:prefixText="₹">
+                    app:prefixText="₹"
+                    >
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/goldRateEditText"
                         android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Making Charges Row -->
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/mackingChargesTypeInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:hint="@string/making_charges_type"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:hintTextColor="@color/my_light_secondary">
 
-                    <!-- Making Charges -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/mackingChargesInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox"
-                        android:layout_width="0dp"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/mackingChargesTypeEditText"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:layout_weight="1"
-                        android:hint="@string/making_charges"
-                        app:boxBackgroundColor="@color/my_light_surface"
-                        app:boxStrokeColor="@color/my_light_primary"
-                        app:boxStrokeWidth="1dp"
-                        app:endIconMode="clear_text"
-                        app:hintTextColor="@color/my_light_secondary">
+                        android:fontFamily="@font/montserratregular"
+                        android:inputType="none"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/mackingChargesEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/mackingChargesInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:layout_weight="1"
+                    android:hint="@string/making_charges"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:prefixText="₹"
+                    app:hintTextColor="@color/my_light_secondary">
 
-                    <!-- Making Charges Type -->
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/mackingChargesTypeInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                        android:layout_width="0dp"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/mackingChargesEditText"
+                        android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:hint="@string/type"
-                        app:boxBackgroundColor="@color/my_light_surface"
-                        app:boxStrokeColor="@color/my_light_primary"
-                        app:boxStrokeWidth="1dp"
-                        app:hintTextColor="@color/my_light_secondary">
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/mackingChargesTypeEditText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="none"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/totalMakingChargesInputLayout"
@@ -466,12 +474,13 @@
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
                     app:hintTextColor="@color/my_light_secondary"
-                    app:suffixText="g">
+                    app:prefixText="₹">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/totalMakingChargesEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:enabled="false"
                         android:focusable="false"
                         android:inputType="none"
@@ -491,7 +500,7 @@
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
                     app:hintTextColor="@color/my_light_secondary"
-                    app:suffixText="g">
+                    app:prefixText="₹">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/totalEditText"
@@ -500,6 +509,7 @@
                         android:enabled="false"
                         android:focusable="false"
                         android:inputType="none"
+                        android:fontFamily="@font/montserratregular"
                         android:textColor="@color/my_light_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -516,7 +526,7 @@
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
                     app:hintTextColor="@color/my_light_secondary"
-                    app:suffixText="g">
+                    app:prefixText="₹">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/totalChargesEditText"
@@ -525,6 +535,7 @@
                         android:enabled="false"
                         android:focusable="false"
                         android:inputType="none"
+                        android:fontFamily="@font/montserratregular"
                         android:textColor="@color/my_light_primary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -561,6 +572,7 @@
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_weight="1"
                         android:text="@string/extra_charges"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
@@ -571,6 +583,7 @@
                         style="@style/Widget.Material3.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_gravity="center_vertical"
                         android:contentDescription="Add Extra Charge"
                         android:gravity="top"
@@ -593,6 +606,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
+                    android:fontFamily="@font/montserratregular"
                     android:text="@string/no_extra_charges"
                     android:textAlignment="center"
                     android:textColor="@color/my_light_on_surface"
@@ -617,6 +631,7 @@
                         android:id="@+id/totalExtraChargesEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:enabled="false"
                         android:focusable="false"
                         android:inputType="none"
@@ -655,6 +670,7 @@
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_weight="1"
                         android:text="@string/tax_information"
                         android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
@@ -662,6 +678,7 @@
 
                     <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/taxApplicableCheckbox"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/tax_applicable"
@@ -686,6 +703,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/taxRateEditText"
                         android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
@@ -711,6 +729,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:enabled="false"
+                        android:fontFamily="@font/montserratregular"
                         android:focusable="false"
                         android:inputType="none"
                         android:textColor="@color/my_light_primary"
@@ -744,10 +763,11 @@
                 android:layout_weight="1"
                 android:letterSpacing="0.01"
                 android:paddingVertical="12dp"
+                android:fontFamily="@font/montserratregular"
                 android:text="@string/save_close"
-                android:textColor="@color/my_light_primary"
+                android:textColor="@color/my_light_outline"
                 app:rippleColor="@color/my_light_primary_container"
-                app:strokeColor="@color/my_light_primary" />
+                app:strokeColor="@color/my_light_outline" />
 
             <!-- Save and Add Button -->
             <com.google.android.material.button.MaterialButton
@@ -759,10 +779,11 @@
                 android:layout_marginTop="24dp"
                 android:layout_weight="1"
                 android:backgroundTint="@color/my_light_primary"
+                android:fontFamily="@font/montserratregular"
                 android:letterSpacing="0.01"
                 android:paddingVertical="12dp"
                 android:text="@string/save_and_add"
-                android:textColor="@color/my_light_on_primary"
+                android:textColor="@color/white"
                 app:rippleColor="@color/my_light_secondary" />
 
 

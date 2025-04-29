@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook.ViewModle
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -61,6 +62,9 @@ class SalesViewModel(
     // Optional: LiveData specifically for customer's invoices if needed separately
     private val _customerInvoices = MutableLiveData<List<Invoice>>()
     val customerInvoices: LiveData<List<Invoice>> = _customerInvoices
+
+    // RecyclerView state preservation
+    var layoutManagerState: Parcelable? = null
 
     // --- Internal State ---
     // Master list holding ALL fetched invoices (source for filtering)
@@ -134,6 +138,15 @@ class SalesViewModel(
      * NOTE: Consider using java.time API (if API level/desugaring allows) for cleaner date logic.
      */
     private fun matchesDateFilter(invoice: Invoice, filterType: DateFilterType): Boolean {
+
+        // Add a null check here!
+        if (invoice == null) {
+            // Decide how to handle a null invoice in the filter.
+            // Maybe return false, or log an error, or skip it.
+            Log.w("SalesViewModel", "Encountered a null invoice during date filtering.")
+            return false // Example: Treat null invoices as not matching
+        }
+
         val invoiceDate = invoice.invoiceDate
         val now = System.currentTimeMillis()
         val calendar = Calendar.getInstance()

@@ -3,11 +3,11 @@
     android:height="15dp"
     android:viewportWidth="15"
     android:viewportHeight="15">
-  <path
-      android:pathData="M3.5,8H3V7h0.5a0.5,0.5 0,0 1,0 1M7,10V7h0.5a0.5,0.5 0,0 1,0.5 0.5v2a0.5,0.5 0,0 1,-0.5 0.5z"
-      android:fillColor="@color/white"/>
-  <path
-      android:pathData="M1,1.5A1.5,1.5 0,0 1,2.5 0h8.207L14,3.293V13.5a1.5,1.5 0,0 1,-1.5 1.5h-10A1.5,1.5 0,0 1,1 13.5zM3.5,6H2v5h1V9h0.5a1.5,1.5 0,1 0,0 -3m4,0H6v5h1.5A1.5,1.5 0,0 0,9 9.5v-2A1.5,1.5 0,0 0,7.5 6m2.5,5V6h3v1h-2v1h1v1h-1v2z"
-      android:fillColor="@color/white"
-      android:fillType="evenOdd"/>
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M3.5,8H3V7h0.5a0.5,0.5 0,0 1,0 1M7,10V7h0.5a0.5,0.5 0,0 1,0.5 0.5v2a0.5,0.5 0,0 1,-0.5 0.5z" />
+    <path
+        android:fillColor="@color/white"
+        android:fillType="evenOdd"
+        android:pathData="M1,1.5A1.5,1.5 0,0 1,2.5 0h8.207L14,3.293V13.5a1.5,1.5 0,0 1,-1.5 1.5h-10A1.5,1.5 0,0 1,1 13.5zM3.5,6H2v5h1V9h0.5a1.5,1.5 0,1 0,0 -3m4,0H6v5h1.5A1.5,1.5 0,0 0,9 9.5v-2A1.5,1.5 0,0 0,7.5 6m2.5,5V6h3v1h-2v1h1v1h-1v2z" />
 </vector>

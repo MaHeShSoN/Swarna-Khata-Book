@@ -354,12 +354,23 @@ class OtpVarificationFragment : Fragment() {
                     if (task.exception is FirebaseAuthInvalidCredentialsException) {
                         // The verification code was invalid
                         Toast.makeText(requireContext(), "Invalid verification code", Toast.LENGTH_SHORT).show()
+                        // Clear OTP fields and apply shake animation
+                        clearOtpFields()
+                        AnimationUtils.shake(binding.layoutOtpInputs)
                     } else {
                         Toast.makeText(requireContext(), "Authentication failed: ${task.exception?.message}",
                             Toast.LENGTH_SHORT).show()
                     }
                 }
             }
+    }
+
+    private fun clearOtpFields() {
+        for (digit in otpDigits) {
+            digit.text.clear()
+        }
+        // Set focus to first digit
+        otpDigits[0].requestFocus()
     }
 
     private fun saveUserProfile(userId: String) {

@@ -30,7 +30,9 @@ import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperationListener,
     CustomerAdapter.OnCustomerClickListener {
@@ -181,6 +183,15 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
             binding.swipeRefreshLayout.isRefreshing = false
             adapter.updateList(customers)
+            
+            // Restore state after the adapter update has been processed by layout
+            binding.recyclerViewCustomers.post {
+                if (_binding != null &&customerViewModel.layoutManagerState != null && customers.isNotEmpty()) {
+                    binding.recyclerViewCustomers.layoutManager?.onRestoreInstanceState(customerViewModel.layoutManagerState)
+                    // Don't clear the state after restoration, so it can be used in onResume
+                }
+            }
+            
             updateUIState(customers.isEmpty()) // Update empty state based on filtered list
         }
 
@@ -267,23 +278,47 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     private fun addCustomerButton() {
-        // Check customer count before allowing new customer creation
-        lifecycleScope.launch {
+        // Show the customer bottom sheet immediately for responsive UI
+        showCustomerBottomSheet()
+        
+        // Check customer count in the background
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Get total customer count from repository
-                val customerCount = customerViewModel.getTotalCustomerCount()
-                
-                // Check if customer limit is reached based on subscription
-                context?.let { ctx ->
-                    FeatureChecker.checkCustomerLimit(ctx, customerCount) {
-                        // If within limits, show the customer creation bottom sheet
-                        showCustomerBottomSheet()
-                    }
-                }
+                checkCustomerLimitInBackground()
             } catch (e: Exception) {
                 Log.e("CustomerFragment", "Error checking customer limits: ${e.message}", e)
-                Toast.makeText(context, "Error checking customer limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error checking customer limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
+        }
+    }
+    
+    /**
+     * Checks customer limits in the background and dismisses the bottom sheet if the limit is reached
+     */
+    private suspend fun checkCustomerLimitInBackground() {
+        try {
+            // Get total customer count from repository
+            val customerCount = customerViewModel.getTotalCustomerCount()
+            
+            // Check if customer limit is reached
+            val (isLimitReached, maxLimit) = FeatureChecker.isCustomerLimitReached(requireContext(), customerCount)
+            
+            // If limit is reached, dismiss the bottom sheet and show upgrade dialog
+            if (isLimitReached) {
+                withContext(Dispatchers.Main) {
+                    // Find and dismiss the bottom sheet
+                    val bottomSheet = parentFragmentManager.findFragmentByTag(CustomerBottomSheetFragment.TAG) as? CustomerBottomSheetFragment
+                    bottomSheet?.dismissAllowingStateLoss()
+                    
+                    // Show upgrade dialog
+                    FeatureChecker.showUpgradeDialogForLimit(requireContext(), "customers", maxLimit)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("CustomerFragment", "Error in background customer limit check: ${e.message}", e)
+            // Don't dismiss the sheet if there's an error checking, just log it
         }
     }
 
@@ -326,7 +361,22 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
     }
 
     override fun onDestroyView() {
+        // Save the RecyclerView scroll position
+        binding.recyclerViewCustomers.layoutManager?.let { lm ->
+            customerViewModel.layoutManagerState = lm.onSaveInstanceState()
+        }
+        
         super.onDestroyView()
         _binding = null
+    }
+    
+    // Add onResume method to handle restoring state when returning to the fragment
+    override fun onResume() {
+        super.onResume()
+        
+        // Restore scroll position if we have a saved state and adapter has items
+        if (customerViewModel.layoutManagerState != null && adapter.itemCount > 0) {
+            binding.recyclerViewCustomers.layoutManager?.onRestoreInstanceState(customerViewModel.layoutManagerState)
+        }
     }
 }

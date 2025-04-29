@@ -24,10 +24,17 @@ class MoreSettingFragment : Fragment() {
 
     // Reference to ViewModel (will be initialized in onViewCreated)
     private lateinit var viewModel: SettingsViewModel
+    
+    // Cache adapter instance to avoid recreation
+    private var cachedAdapter: SettingsAdapter? = null
+    private var cachedItems: List<SettingsItem>? = null
+    private var cachedPremiumStatus: Boolean? = null
+
+    private var scrollPosition = 0
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentMoreSettingBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -37,6 +44,13 @@ class MoreSettingFragment : Fragment() {
 
         // Initialize RecyclerView with layout manager
         binding.settingsRecyclerView.layoutManager = LinearLayoutManager(context)
+        
+        // Restore cached adapter if available to avoid recreation
+        cachedAdapter?.let {
+            binding.settingsRecyclerView.adapter = it
+            binding.settingsRecyclerView.visibility = View.VISIBLE
+            return@let
+        }
         
         // Initialize ViewModel through factory
         val factory = SettingsViewModelFactory(
@@ -50,29 +64,51 @@ class MoreSettingFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        // Observer for loading state
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // Show/hide recycler view based on loading state
-            binding.settingsRecyclerView.visibility = if (isLoading) View.GONE else View.VISIBLE
-        }
-
-        // Observer for settings items list
+        // Use a more efficient combined approach with transformations if possible
+        
+        // Observer for settings items list - Combined with premium status
         viewModel.settingsItems.observe(viewLifecycleOwner) { items ->
-            // When items are available, ensure we also have premium status
-            viewModel.isPremium.value?.let { isPremium ->
+            if (items.isNotEmpty()) {
+                // Cache the items
+                cachedItems = items
+                
+                // Get premium status - if already cached, use that
+                val isPremium = cachedPremiumStatus ?: viewModel.isPremium.value ?: false
+                
+                // Cache premium status
+                cachedPremiumStatus = isPremium
+                
                 setupAdapter(items, isPremium)
+            }
+        }
+        
+        // Observe premium status changes separately only if needed
+        if (cachedPremiumStatus == null) {
+            viewModel.isPremium.observe(viewLifecycleOwner) { isPremium ->
+                cachedPremiumStatus = isPremium
+                cachedItems?.let { items ->
+                    setupAdapter(items, isPremium)
+                }
             }
         }
     }
 
     private fun setupAdapter(items: List<SettingsItem>, isPremium: Boolean) {
-        // Create adapter with items and premium status
-        val adapter = SettingsAdapter(items, isPremium) { item ->
-            handleNavigation(item, isPremium)
+        // Only create a new adapter if needed (not already cached with same data)
+        if (cachedAdapter == null || 
+            cachedItems != items || 
+            cachedPremiumStatus != isPremium) {
+            
+            // Create adapter with items and premium status
+            cachedAdapter = SettingsAdapter(items, isPremium) { item ->
+                handleNavigation(item, isPremium)
+            }
+            
+            // Set adapter to recycler view
+            binding.settingsRecyclerView.adapter = cachedAdapter
         }
         
-        // Set adapter to recycler view
-        binding.settingsRecyclerView.adapter = adapter
+        // Ensure visibility
         binding.settingsRecyclerView.visibility = View.VISIBLE
     }
 
@@ -180,6 +216,26 @@ class MoreSettingFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null // Prevent memory leaks
+        // Keep the cached adapter for faster reuse when fragment is recreated
+        // Only clear binding to prevent memory leaks
+        _binding = null
+    }
+    // Add onPause to save the scroll position
+    override fun onPause() {
+        super.onPause()
+        // Save scroll position
+        val layoutManager = binding.settingsRecyclerView.layoutManager as? LinearLayoutManager
+        scrollPosition = layoutManager?.findFirstVisibleItemPosition() ?: 0
+    }
+
+    // Add onResume to restore the scroll position
+    override fun onResume() {
+        super.onResume()
+        // Restore scroll position if we have items and adapter
+        if ((cachedAdapter?.itemCount ?: 0) > 0) {
+            binding.settingsRecyclerView.post {
+                (binding.settingsRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(scrollPosition)
+            }
+        }
     }
 }

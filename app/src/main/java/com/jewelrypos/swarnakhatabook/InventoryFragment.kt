@@ -30,13 +30,15 @@ import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.ShopSwitcherViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInventoryBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 
 class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListener,
     JewelleryAdapter.OnItemClickListener {
 
     private var _binding: FragmentInventoryBinding? = null
     private val binding get() = _binding!!
-    
+
     // Get the shared shop switcher view model
     private val shopSwitcherViewModel: ShopSwitcherViewModel by activityViewModels()
 
@@ -77,13 +79,13 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setupEventBusObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
-        
+
         // Observe shop changes
         observeShopChanges()
 
         return binding.root
     }
-    
+
     private fun observeShopChanges() {
         // Observe shop changes from the shop switcher view model
         shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
@@ -128,6 +130,15 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
             binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing UI
             adapter.updateList(items) // Update the adapter with filtered/searched list
+            
+            // Restore state after the adapter update has been processed by layout
+            binding.recyclerViewInventory.post {
+                if (_binding != null &&inventoryViewModel.layoutManagerState != null && items.isNotEmpty()) {
+                    binding.recyclerViewInventory.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
+                    // Don't clear the state after restoration, so it can be used in onResume
+                }
+            }
+            
             updateUIState(items.isEmpty()) // Update empty state based on the filtered list
         }
 
@@ -344,23 +355,47 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     private fun addItemButton() {
-        // Check inventory count before allowing new item creation
-        lifecycleScope.launch {
+        // Show the bottom sheet immediately for responsive UI
+        showBottomSheetDialog()
+        
+        // Check inventory count in the background
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Get total inventory item count from repository
-                val inventoryCount = inventoryViewModel.getTotalInventoryCount()
-                
-                // Check if inventory limit is reached based on subscription
-                context?.let { ctx ->
-                    FeatureChecker.checkInventoryLimit(ctx, inventoryCount) {
-                        // If within limits, show the item creation bottom sheet
-                        showBottomSheetDialog()
-                    }
-                }
+                checkInventoryLimitInBackground()
             } catch (e: Exception) {
                 Log.e("InventoryFragment", "Error checking inventory limits: ${e.message}", e)
-                Toast.makeText(context, "Error checking inventory limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error checking inventory limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
+        }
+    }
+    
+    /**
+     * Checks inventory limits in the background and dismisses the bottom sheet if the limit is reached
+     */
+    private suspend fun checkInventoryLimitInBackground() {
+        try {
+            // Get total inventory item count from repository
+            val inventoryCount = inventoryViewModel.getTotalInventoryCount()
+            
+            // Check if inventory limit is reached
+            val (isLimitReached, maxLimit) = FeatureChecker.isInventoryLimitReached(requireContext(), inventoryCount)
+            
+            // If limit is reached, dismiss the bottom sheet and show upgrade dialog
+            if (isLimitReached) {
+                withContext(Dispatchers.Main) {
+                    // Find and dismiss the bottom sheet
+                    val bottomSheet = childFragmentManager.findFragmentByTag("ItemBottomSheet") as? ItemBottomSheetFragment
+                    bottomSheet?.dismissAllowingStateLoss()
+                    
+                    // Show upgrade dialog
+                    FeatureChecker.showUpgradeDialogForLimit(requireContext(), "inventory items", maxLimit)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("InventoryFragment", "Error in background inventory limit check: ${e.message}", e)
+            // Don't dismiss the sheet if there's an error checking, just log it
         }
     }
 
@@ -399,10 +434,25 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
+        // Save the RecyclerView scroll position
+        binding.recyclerViewInventory.layoutManager?.let { lm ->
+            inventoryViewModel.layoutManagerState = lm.onSaveInstanceState()
+        }
+        
         // Cancel any ongoing search job to prevent leaks
         inventoryViewModel.searchItems("") // Clear search on destroy
         inventoryViewModel.searchJob?.cancel()
+        super.onDestroyView()
         _binding = null
+    }
+    
+    // Add onResume method to handle restoring state when returning to the fragment
+    override fun onResume() {
+        super.onResume()
+        
+        // Restore scroll position if we have a saved state and adapter has items
+        if (inventoryViewModel.layoutManagerState != null && adapter.itemCount > 0) {
+            binding.recyclerViewInventory.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.content.Context
 import android.net.ConnectivityManager
@@ -43,9 +44,11 @@ import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
+import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.PdfSettingsManager
 import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
+import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoiceCreationBinding
@@ -534,9 +537,78 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     private fun selectItems() {
+        // First check if there are items in the inventory
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        val inventoryRepository = InventoryRepository(firestore, auth, requireContext())
+
+        binding.progressOverlay.visibility = View.VISIBLE
+
+        // Check if there are items in inventory
+        lifecycleScope.launch {
+            try {
+                val result = inventoryRepository.getAllInventoryItems()
+                
+                // Hide progress regardless of success or failure
+                binding.progressOverlay.visibility = View.GONE
+
+                result.fold(
+                    onSuccess = { items ->
+                        if (items.isEmpty()) {
+                            // No items in inventory - show guidance dialog
+                            showNoItemsGuidance()
+                        } else {
+                            // Items exist - proceed with selection
+                            openItemSelectionSheet()
+                        }
+                    },
+                    onFailure = { exception ->
+                        // On error, show standard selection sheet (fallback behavior)
+                        Toast.makeText(
+                            context,
+                            getString(R.string.error_loading_inventory, exception.message),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        openItemSelectionSheet()
+                    }
+                )
+            } catch (e: Exception) {
+                binding.progressOverlay.visibility = View.GONE
+                // On exception, show standard selection sheet (fallback behavior)
+                Toast.makeText(context, getString(R.string.error_loading_inventory, e.message), Toast.LENGTH_SHORT).show()
+                openItemSelectionSheet()
+            }
+        }
+    }
 
 
+    private fun showNoItemsGuidance() {
+        // Create a dialog builder using AlertDialog.Builder
+        val builder = AlertDialog.Builder(requireContext())
 
+        // Configure the builder
+        builder.setTitle(R.string.no_inventory_items_title) // Set title using resource ID
+        builder.setMessage(R.string.no_inventory_items_message) // Set message using resource ID
+        builder.setPositiveButton(R.string.create_new_item) { dialogInterface, _ ->
+            // Positive button action: Navigate to Add Item screen
+            // No need to explicitly call dialogInterface.dismiss() here,
+            // AlertDialog buttons typically dismiss the dialog automatically.
+            findNavController().navigate(R.id.action_invoiceCreationFragment_to_addItemFragment)
+        }
+        builder.setNegativeButton(R.string.cancel) { dialogInterface, _ ->
+            // Negative button action: Do nothing, just dismiss
+            // Dialog dismisses automatically on click.
+            // dialogInterface.dismiss() // Not usually needed
+        }
+        // You can also make the dialog non-cancelable by tapping outside
+        // builder.setCancelable(false)
+
+        // Create and show the AlertDialog
+        val dialog: AlertDialog = builder.create()
+        dialog.show()
+    }
+
+    private fun openItemSelectionSheet() {
         val itemSelectionSheet = ItemSelectionBottomSheet.newInstance()
         itemSelectionSheet.setOnItemSelectedListener(object :
             ItemSelectionBottomSheet.OnItemSelectedListener {
@@ -693,6 +765,10 @@ class InvoiceCreationFragment : Fragment() {
 
     private fun saveInvoice() {
         try {
+            // Disable button and change text to indicate saving in progress
+            binding.saveButton.isEnabled = false
+            binding.saveButton.text = getString(R.string.saving_invoice)
+
             // Create invoice object
             val invoiceNumber = generateInvoiceNumber()
             val customer = salesViewModel.selectedCustomer.value
@@ -718,6 +794,10 @@ class InvoiceCreationFragment : Fragment() {
             // Validate that we have items
             if (invoiceItems.isEmpty()) {
                 Toast.makeText(context, getString(R.string.please_add_at_least_one_item), Toast.LENGTH_SHORT).show()
+                // Re-enable button and restore text
+                binding.saveButton.isEnabled = true
+                binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true)) 
+                    R.string.save_purchase else R.string.save_invoice)
                 return
             }
 
@@ -765,6 +845,11 @@ class InvoiceCreationFragment : Fragment() {
                     if (_binding == null) return@runOnUiThread
 
                     binding.progressOverlay.visibility = View.GONE
+                    
+                    // Re-enable button and restore text (in case of failure)
+                    binding.saveButton.isEnabled = true
+                    binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true)) 
+                        R.string.save_purchase else R.string.save_invoice)
 
                     if (success) {
                         // Increment the monthly invoice count
@@ -775,6 +860,8 @@ class InvoiceCreationFragment : Fragment() {
                                 .show()
                         }
 
+                        // Publish the event to notify other parts of the app that an invoice is added
+                        // This will trigger the SalesFragment to refresh and scroll to top
                         EventBus.postInvoiceAdded()
 
                         // Check if we came from CustomerInvoicesFragment
@@ -816,6 +903,13 @@ class InvoiceCreationFragment : Fragment() {
             // Handle any unexpected errors
             Log.e("InvoiceCreation", "Error saving invoice", e)
             binding.progressOverlay.visibility = View.GONE
+            
+            // Re-enable button and restore text
+            binding.saveButton.isEnabled = true
+            val customer = salesViewModel.selectedCustomer.value
+            binding.saveButton.text = getString(if (customer?.customerType?.equals("Wholesaler", ignoreCase = true) == true) 
+                R.string.save_purchase else R.string.save_invoice)
+                
             Toast.makeText(context, getString(R.string.error_saving_invoice, e.message), Toast.LENGTH_SHORT).show()
         }
     }
@@ -832,27 +926,6 @@ class InvoiceCreationFragment : Fragment() {
         }
 
         return true
-    }
-
-    private fun sharePdfFile(pdfFile: File) {
-        try {
-            val uri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.provider",
-                pdfFile
-            )
-
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.share_invoice_pdf)))
-        } catch (e: Exception) {
-            Log.e("PDFSharing", "Error sharing PDF", e)
-            Toast.makeText(context, getString(R.string.failed_to_share_pdf), Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun generateInvoiceNumber(): String {

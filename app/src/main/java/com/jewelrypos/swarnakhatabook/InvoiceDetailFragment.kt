@@ -72,7 +72,10 @@ import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import kotlinx.coroutines.launch
 import androidx.core.graphics.createBitmap
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.jewelrypos.swarnakhatabook.BottomSheet.PdfViewerBottomSheet
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
+import kotlin.coroutines.cancellation.CancellationException
 
 class InvoiceDetailFragment : Fragment() {
 
@@ -132,18 +135,9 @@ class InvoiceDetailFragment : Fragment() {
                     true
                 }
 
-//                R.id.action_whatsapp_customer -> {
-//                    messageCustomerOnWhatsApp()
-//                    true
-//                }
 
-//                R.id.action_send_reminder -> {
-//                    sendPaymentReminder()
-//                    true
-//                }
-
-                R.id.action_archive -> {
-                    archiveInvoice()
+                R.id.action_open_invoice -> {
+                    openInvoice()
                     true
                 }
 
@@ -172,6 +166,67 @@ class InvoiceDetailFragment : Fragment() {
         }
     }
 
+    private fun openInvoice() {
+        val invoiceId = args.invoiceId
+        if (invoiceId.isNotEmpty()) {
+            val invoice = viewModel.invoice.value
+            if (invoice != null) {
+                // Show PDF preview in bottom sheet
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        binding.progressBar.visibility = View.VISIBLE
+
+                        // Get shop information
+                        val shop = ShopManager.getShopDetails(requireContext())
+
+                        if (shop == null) {
+                            binding.progressBar.visibility = View.GONE
+                            Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
+                            return@launch
+                        }
+
+                        // Initialize PDFBox
+                        PDFBoxResourceLoader.init(requireContext())
+
+                        // Create PDF generator and apply settings
+                        val pdfGenerator = InvoicePdfGenerator(requireContext())
+                        val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
+                        pdfGenerator.applySettings(pdfSettings)
+
+                        // Generate PDF
+                        val pdfFile = pdfGenerator.generateInvoicePdf(
+                            invoice,
+                            shop,
+                            getString(R.string.preview_invoice, invoice.invoiceNumber)
+                        )
+
+                        // Hide progress
+                        binding.progressBar.visibility = View.GONE
+
+                        // Show PDF in bottom sheet
+                        val pdfBottomSheet = PdfViewerBottomSheet.newInstance(
+                            pdfFile.absolutePath,
+                            "Invoice #${invoice.invoiceNumber}"
+                        )
+                        pdfBottomSheet.show(parentFragmentManager, "PdfViewerBottomSheet")
+
+                    } catch (e: Exception) {
+                        binding.progressBar.visibility = View.GONE
+                        Log.e("InvoiceDetailFragment", "Error generating PDF preview: ${e.message}", e)
+
+                        // Fallback to edit invoice screen if PDF generation fails
+                        Toast.makeText(context, "Could not generate PDF preview. Opening edit screen instead.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                // If invoice is not loaded yet, navigate to edit screen
+            }
+        } else {
+            Toast.makeText(context, getString(R.string.invoice_id_not_available), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
     private fun markInvoiceAsPaid() {
         // Get current invoice
         val invoice = viewModel.invoice.value ?: return
@@ -179,34 +234,33 @@ class InvoiceDetailFragment : Fragment() {
         // Check if invoice is already fully paid
         val balanceDue = invoice.totalAmount - invoice.paidAmount
         if (balanceDue <= 0) {
-            Toast.makeText(context, "Invoice is already fully paid", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.invoice_already_paid), Toast.LENGTH_SHORT).show()
             return
         }
 
         // Show confirmation dialog using ThemedM3Dialog
         ThemedM3Dialog(requireContext())
-            .setTitle("Mark as Paid")
-            .setLayout(R.layout.dialog_confirmation) // You'll need to create this layout
+            .setTitle(getString(R.string.mark_as_paid))
+            .setLayout(R.layout.dialog_confirmation)
             .apply {
-                // Set the message in the dialog
                 findViewById<TextView>(R.id.confirmationMessage)?.text =
-                    "Are you sure you want to mark this invoice as fully paid?"
+                    getString(R.string.confirm_mark_paid)
             }
-            .setPositiveButton("Yes") { dialog, _ ->
+            .setPositiveButton(getString(R.string.yes)) { dialog, _ ->
                 // Add full payment for remaining balance
                 val newPayment = Payment(
                     amount = balanceDue,
                     method = "Manual Adjustment",
                     date = System.currentTimeMillis(),
-                    reference = "Marked as paid",
-                    notes = "Invoice manually marked as paid"
+                    reference = getString(R.string.marked_as_paid),
+                    notes = "Invoice Manually Marked"
                 )
 
                 viewModel.addPaymentToInvoice(newPayment)
-                Toast.makeText(context, "Invoice marked as paid", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.invoice_marked_paid), Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog ->
                 dialog.dismiss()
             }
             .show()
@@ -249,136 +303,122 @@ class InvoiceDetailFragment : Fragment() {
 //            .show()
 //    }
 
-    private fun messageCustomerWithReminder(phone: String, invoice: Invoice, balanceDue: Double) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                binding.progressBar.visibility = View.VISIBLE
+//    private fun messageCustomerWithReminder(phone: String, invoice: Invoice, balanceDue: Double) {
+//        viewLifecycleOwner.lifecycleScope.launch {
+//            try {
+//                binding.progressBar.visibility = View.VISIBLE
+//
+//                // Get shop information
+//                val shop = ShopManager.getShopDetails(requireContext())
+//
+//                if (shop == null) {
+//                    binding.progressBar.visibility = View.GONE
+//                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
+//                    return@launch
+//                }
+//
+//                // Initialize PDFBox
+//                PDFBoxResourceLoader.init(requireContext())
+//
+//                // Create PDF generator and apply settings
+//                val pdfGenerator = InvoicePdfGenerator(requireContext())
+//                val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
+//                pdfGenerator.applySettings(pdfSettings)
+//
+//                // Generate PDF
+//                val pdfFile = pdfGenerator.generateInvoicePdf(
+//                    invoice,
+//                    shop,
+//                    "Invoice_${invoice.invoiceNumber}"
+//                )
+//
+//                // Create content URI via FileProvider
+//                val uri = FileProvider.getUriForFile(
+//                    requireContext(),
+//                    "${requireContext().packageName}.provider",
+//                    pdfFile
+//                )
+//
+//                // Create reminder message
+//                val message = getString(R.string.payment_reminder, invoice.invoiceNumber, DecimalFormat("#,##,##0.00").format(balanceDue))
+//
+//                // Format phone number (remove any non-digit characters except +)
+//                val formattedPhone = phone.replace(Regex("[^\\d+]"), "")
+//
+//                try {
+//                    // Create intent for WhatsApp
+//                    val whatsappIntent = Intent(Intent.ACTION_SEND)
+//                    whatsappIntent.type = getString(R.string.application_pdf)
+//                    whatsappIntent.putExtra(Intent.EXTRA_STREAM, uri)
+//                    whatsappIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                    whatsappIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//                    whatsappIntent.setPackage(getString(R.string.whatsapp_package))
+//
+//                    // Try WhatsApp Business if needed
+//                    val whatsappBusinessIntent = Intent(Intent.ACTION_SEND)
+//                    whatsappBusinessIntent.type = getString(R.string.application_pdf)
+//                    whatsappBusinessIntent.putExtra(Intent.EXTRA_STREAM, uri)
+//                    whatsappBusinessIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                    whatsappBusinessIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//                    whatsappBusinessIntent.setPackage(getString(R.string.whatsapp_business_package))
+//
+//                    // Check which app is available
+//                    val packageManager = requireActivity().packageManager
+//                    val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
+//                    val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
+//
+//                    when {
+//                        whatsappInstalled -> {
+//                            startActivity(whatsappIntent)
+//                        }
+//                        whatsappBusinessInstalled -> {
+//                            startActivity(whatsappBusinessIntent)
+//                        }
+//                        else -> {
+//                            // Neither app is installed, show error
+//                            Toast.makeText(context, getString(R.string.whatsapp_not_installed), Toast.LENGTH_SHORT).show()
+//                        }
+//                    }
+//
+//                    // Record that a reminder was sent
+//                    viewModel.updateInvoiceNotes(
+//                        (invoice.notes + "\n\nPayment reminder sent on " +
+//                                SimpleDateFormat(getString(R.string.date_format), Locale.getDefault())
+//                                    .format(Date())).trim()
+//                    )
+//
+//                } catch (e: Exception) {
+//                    Toast.makeText(
+//                        context,
+//                        "Could not open WhatsApp: ${e.message}",
+//                        Toast.LENGTH_SHORT
+//                    ).show()
+//                    Log.e("InvoiceDetailFragment", "Error sending reminder", e)
+//                }
+//
+//                binding.progressBar.visibility = View.GONE
+//            } catch (e: Exception) {
+//                binding.progressBar.visibility = View.GONE
+//                Log.e("InvoiceDetailFragment", "Error creating PDF for reminder", e)
+//                Toast.makeText(context, "Error creating PDF: ${e.message}", Toast.LENGTH_SHORT).show()
+//            }
+//        }
+//    }
 
-                // Get shop information
-                val shop = ShopManager.getShopDetails(requireContext())
-
-                if (shop == null) {
-                    binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-
-                // Initialize PDFBox
-                PDFBoxResourceLoader.init(requireContext())
-
-                // Create PDF generator and apply settings
-                val pdfGenerator = InvoicePdfGenerator(requireContext())
-                val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
-                pdfGenerator.applySettings(pdfSettings)
-
-                // Generate PDF
-                val pdfFile = pdfGenerator.generateInvoicePdf(
-                    invoice,
-                    shop,
-                    "Invoice_${invoice.invoiceNumber}"
-                )
-
-                // Create content URI via FileProvider
-                val uri = FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.provider",
-                    pdfFile
-                )
-
-                // Create reminder message
-                val message = "Payment Reminder: Your invoice #${invoice.invoiceNumber} " +
-                        "has a balance due of ₹${DecimalFormat("#,##,##0.00").format(balanceDue)}. " +
-                        "Please make the payment at your earliest convenience."
-
-                // Format phone number (remove any non-digit characters except +)
-                val formattedPhone = phone.replace(Regex("[^\\d+]"), "")
-
-                try {
-                    // Create intent for WhatsApp
-                    val whatsappIntent = Intent(Intent.ACTION_SEND)
-                    whatsappIntent.type = "application/pdf"
-                    whatsappIntent.putExtra(Intent.EXTRA_STREAM, uri)
-                    whatsappIntent.putExtra(Intent.EXTRA_TEXT, message)
-                    whatsappIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    whatsappIntent.setPackage("com.whatsapp")
-
-                    // Try WhatsApp Business if needed
-                    val whatsappBusinessIntent = Intent(Intent.ACTION_SEND)
-                    whatsappBusinessIntent.type = "application/pdf"
-                    whatsappBusinessIntent.putExtra(Intent.EXTRA_STREAM, uri)
-                    whatsappBusinessIntent.putExtra(Intent.EXTRA_TEXT, message)
-                    whatsappBusinessIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    whatsappBusinessIntent.setPackage("com.whatsapp.w4b")
-
-                    // Check which app is available
-                    val packageManager = requireActivity().packageManager
-                    val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
-                    val whatsappBusinessInstalled = whatsappBusinessIntent.resolveActivity(packageManager) != null
-
-                    when {
-                        whatsappInstalled -> {
-                            startActivity(whatsappIntent)
-                        }
-                        whatsappBusinessInstalled -> {
-                            startActivity(whatsappBusinessIntent)
-                        }
-                        else -> {
-                            // Neither app is installed, show error
-                            Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-
-                    // Record that a reminder was sent
-                    viewModel.updateInvoiceNotes(
-                        (invoice.notes + "\n\nPayment reminder sent on " +
-                                SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                                    .format(Date())).trim()
-                    )
-
-                } catch (e: Exception) {
-                    Toast.makeText(
-                        context,
-                        "Could not open WhatsApp: ${e.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    Log.e("InvoiceDetailFragment", "Error sending reminder", e)
-                }
-
-                binding.progressBar.visibility = View.GONE
-            } catch (e: Exception) {
-                binding.progressBar.visibility = View.GONE
-                Log.e("InvoiceDetailFragment", "Error creating PDF for reminder", e)
-                Toast.makeText(context, "Error creating PDF: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun archiveInvoice() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Archive Invoice")
-            .setMessage("Do you want to archive this invoice? Archived invoices are hidden from the main list but can be accessed later.")
-            .setPositiveButton("Archive") { _, _ ->
-                // In a real implementation, you'd update the invoice status in your database
-                // For now, show a message about the future implementation
-                Toast.makeText(
-                    context,
-                    "Archive functionality will be implemented in a future update",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                // Example of how you might implement it:
-                // viewModel.updateInvoiceStatus(InvoiceStatus.ARCHIVED) { success ->
-                //     if (success) {
-                //         Toast.makeText(context, "Invoice archived", Toast.LENGTH_SHORT).show()
-                //         findNavController().navigateUp()
-                //     } else {
-                //         Toast.makeText(context, "Failed to archive invoice", Toast.LENGTH_SHORT).show()
-                //     }
-                // }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
+//    private fun archiveInvoice() {
+//        AlertDialog.Builder(requireContext())
+//            .setTitle(getString(R.string.archive_invoice))
+//            .setMessage(getString(R.string.confirm_archive))
+//            .setPositiveButton(getString(R.string.archive)) { _, _ ->
+//                Toast.makeText(
+//                    context,
+//                    getString(R.string.archive_future_update),
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//            }
+//            .setNegativeButton(getString(R.string.cancel), null)
+//            .show()
+//    }
 
     private fun generateReceipt() {
         val invoice = viewModel.invoice.value ?: return
@@ -386,13 +426,13 @@ class InvoiceDetailFragment : Fragment() {
         // Check if any payment has been made
         if (invoice.paidAmount <= 0) {
             ThemedM3Dialog(requireContext())
-                .setTitle("Cannot Generate Receipt")
+                .setTitle(getString(R.string.cannot_generate_receipt))
                 .setLayout(R.layout.dialog_error)
                 .apply {
                     findViewById<TextView>(R.id.errorMessage)?.text =
-                        "Cannot generate receipt: No payments have been made"
+                        getString(R.string.no_payments_made)
                 }
-                .setPositiveButton("OK") { dialog, _ ->
+                .setPositiveButton(getString(R.string.ok)) { dialog, _ ->
                     dialog.dismiss()
                 }
                 .show()
@@ -408,7 +448,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 if (shop == null) {
                     binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
@@ -424,10 +464,10 @@ class InvoiceDetailFragment : Fragment() {
                 val pdfFile = pdfGenerator.generateInvoicePdf(
                     invoice,
                     shop,
-                    "Receipt_${invoice.invoiceNumber}"
+                    getString(R.string.receipt, invoice.invoiceNumber)
                 )
 
-                
+
                 sharePdfFile(pdfFile)
 
             } catch (e: Exception) {
@@ -475,7 +515,7 @@ class InvoiceDetailFragment : Fragment() {
                         }
                     }
 
-                    Toast.makeText(context, "PDF saved successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.pdf_saved_success), Toast.LENGTH_SHORT).show()
 
                 } catch (e: Exception) {
                     Log.e("InvoiceDetailFragment", "Error saving PDF: ${e.message}", e)
@@ -501,7 +541,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 if (shop == null) {
                     binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
@@ -517,7 +557,7 @@ class InvoiceDetailFragment : Fragment() {
                 val tempPdfFile = pdfGenerator.generateInvoicePdf(
                     invoice,
                     shop,
-                    "Invoice_${invoice.invoiceNumber}"
+                    getString(R.string.invoice_pdf, invoice.invoiceNumber)
                 )
 
                 // Create content URI via FileProvider
@@ -571,7 +611,7 @@ class InvoiceDetailFragment : Fragment() {
             // Notify user
             Toast.makeText(
                 context,
-                "PDF saved to Downloads folder",
+                getString(R.string.pdf_saved_downloads),
                 Toast.LENGTH_LONG
             ).show()
 
@@ -636,8 +676,8 @@ class InvoiceDetailFragment : Fragment() {
 
         // Centralized error handling
         viewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            errorMessage?.let {
-                showErrorMessage(it)
+            if (!errorMessage.isNullOrEmpty()) {
+                showErrorMessage(errorMessage)
             }
         }
 
@@ -657,9 +697,13 @@ class InvoiceDetailFragment : Fragment() {
         binding.invoiceNumber.text = invoice.invoiceNumber
 
         // Format invoice date
-        val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+        val dateFormatter = SimpleDateFormat(getString(R.string.date_format), Locale.getDefault())
         binding.invoiceDate.text = dateFormatter.format(Date(invoice.invoiceDate))
 
+        // Add due date display if it exists
+        if (invoice.dueDate != null) {
+            binding.invoiceDueDate.text = dateFormatter.format(Date(invoice.dueDate!!))
+        }
 
         // Update payment status
         updatePaymentStatus(invoice)
@@ -700,14 +744,14 @@ class InvoiceDetailFragment : Fragment() {
     private fun updateUIForCustomerType(isWholesaler: Boolean) {
         if (isWholesaler) {
             // Update for wholesaler/supplier
-            binding.topAppBar.title = "Purchase Order Details"
-            binding.customerSectionTitle.text = "Supplier Details"
-            binding.addItemsButton.text = "Add Purchase"
-            binding.itemsSectionTitle.text = "Items Purchased"
-            binding.paymentsSectionTitle.text = "Payments to Supplier"
-            binding.amountPaidLabel.text = "Amount Paid to Supplier:"
-            binding.balanceDueLabel.text = "Balance to Pay:"
-            binding.addPaymentButton.text = "+ Add Payment"
+            binding.topAppBar.title = getString(R.string.purchase_order_details)
+            binding.customerSectionTitle.text = getString(R.string.supplier_details)
+            binding.addItemsButton.text = getString(R.string.add_purchase)
+            binding.itemsSectionTitle.text = getString(R.string.items_purchased)
+            binding.paymentsSectionTitle.text = getString(R.string.payments_to_supplier)
+            binding.amountPaidLabel.text = getString(R.string.amount_paid_to_supplier)
+            binding.balanceDueLabel.text = getString(R.string.balance_to_pay)
+            binding.addPaymentButton.text = getString(R.string.add_payment)
 
             // Apply wholesaler-specific colors
             binding.topAppBar.setBackgroundColor(
@@ -716,31 +760,19 @@ class InvoiceDetailFragment : Fragment() {
                     R.color.supplier_button_color
                 )
             )
-            binding.printButton.setTextColor(
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.supplier_text_color
-                )
-            )
         } else {
             // Reset to default consumer UI
-            binding.topAppBar.title = "Invoice Details"
-            binding.customerSectionTitle.text = "Customer Details"
-            binding.addItemsButton.text = "Add Item"
-            binding.itemsSectionTitle.text = "Items Sold"
-            binding.paymentsSectionTitle.text = "Payments"
-            binding.amountPaidLabel.text = "Amount Paid:"
-            binding.balanceDueLabel.text = "Balance Due:"
-            binding.addPaymentButton.text = "Add Payment"
+            binding.topAppBar.title = getString(R.string.invoice_details)
+            binding.customerSectionTitle.text = getString(R.string.customer_details)
+            binding.addItemsButton.text = getString(R.string.add_item)
+            binding.itemsSectionTitle.text = getString(R.string.items_sold)
+            binding.paymentsSectionTitle.text = getString(R.string.payments)
+            binding.amountPaidLabel.text = getString(R.string.amount_paid)
+            binding.balanceDueLabel.text = getString(R.string.balance_due)
+            binding.addPaymentButton.text = getString(R.string.add_payment)
 
             // Reset to default colors
             binding.topAppBar.setBackgroundColor(
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.my_light_primary
-                )
-            )
-            binding.printButton.setTextColor(
                 ContextCompat.getColor(
                     requireContext(),
                     R.color.my_light_primary
@@ -906,12 +938,12 @@ class InvoiceDetailFragment : Fragment() {
         val invoice = viewModel.invoice.value ?: return
 
         val dialog = ThemedM3Dialog(requireContext())
-            .setTitle("Share Invoice")
             .setLayout(R.layout.dialog_share_options)
 
         // Get references to the buttons in the custom layout
-        val shareImageBtn = dialog.findViewById<MaterialButton>(R.id.btnShareImage)
-        val sharePdfBtn = dialog.findViewById<MaterialButton>(R.id.btnSharePdf)
+        val shareImageBtn = dialog.findViewById<MaterialCardView>(R.id.imageOptionCard)
+        val sharePdfBtn = dialog.findViewById<MaterialCardView>(R.id.pdfOptionCard)
+        val btnCancelBtn = dialog.findViewById<MaterialButton>(R.id.btnCancel)
 
         // Create the dialog but don't show it yet
         val alertDialog = dialog.create()
@@ -927,6 +959,11 @@ class InvoiceDetailFragment : Fragment() {
             alertDialog.dismiss()
         }
 
+        btnCancelBtn?.setOnClickListener {
+            alertDialog.dismiss()
+        }
+
+
         // Show the dialog
         alertDialog.show()
     }
@@ -940,7 +977,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 if (shop == null) {
                     binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
@@ -1052,7 +1089,7 @@ class InvoiceDetailFragment : Fragment() {
 
                 if (shop == null) {
                     binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
 
@@ -1084,67 +1121,72 @@ class InvoiceDetailFragment : Fragment() {
         }
     }
 
-    // 6. Implement print functionality
+    // Inside printInvoice function
     private fun printInvoice() {
-        val invoice = viewModel.invoice.value ?: return
+        Log.d("PrintInvoice", "Starting print process")
+        val invoice = viewModel.invoice.value
+        if (invoice == null) {
+            Log.e("PrintInvoice", "Invoice is null, cannot proceed with printing")
+            return
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                Log.d("PrintInvoice", "Showing progress indicator")
                 binding.progressBar.visibility = View.VISIBLE
 
                 // Get shop information
+                Log.d("PrintInvoice", "Fetching shop details")
                 val shop = ShopManager.getShopDetails(requireContext())
 
                 if (shop == null) {
+                    Log.e("PrintInvoice", "Shop information not found")
                     binding.progressBar.visibility = View.GONE
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
+                Log.d("PrintInvoice", "Shop details retrieved successfully")
 
                 // Initialize PDFBox
+                Log.d("PrintInvoice", "Initializing PDFBox")
                 PDFBoxResourceLoader.init(requireContext())
+                Log.d("PrintInvoice", "PDFBox initialized successfully")
 
                 // Create PDF generator and apply settings
+                Log.d("PrintInvoice", "Creating PDF generator and applying settings")
                 val pdfGenerator = InvoicePdfGenerator(requireContext())
                 val pdfSettings = PdfSettingsManager(requireContext()).loadSettings()
                 pdfGenerator.applySettings(pdfSettings)
+                Log.d("PrintInvoice", "PDF generator configured successfully")
 
                 // Generate PDF
+                Log.d("PrintInvoice", "Starting PDF generation")
                 val pdfFile = pdfGenerator.generateInvoicePdf(
                     invoice,
                     shop,
                     "Invoice_${invoice.invoiceNumber}"
                 )
+                Log.d("PrintInvoice", "PDF generated successfully: ${pdfFile.absolutePath}")
 
-                // Create content URI via FileProvider
-                val uri = FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.provider",
-                    pdfFile
-                )
+                // Create print job name
+                val jobName = "Invoice_${invoice.invoiceNumber}"
+                Log.d("PrintInvoice", "Print job name created: $jobName")
 
-                // Create print intent
-                printPdf(uri)
+                // Get print manager using activity context
+                Log.d("PrintInvoice", "Getting print manager service")
+                val activity = requireActivity()
+                if (activity == null) {
+                    Log.e("PrintInvoice", "Activity is null, cannot proceed with printing")
+                    binding.progressBar.visibility = View.GONE
+                    return@launch
+                }
 
-            } catch (e: Exception) {
-                binding.progressBar.visibility = View.GONE
-                Log.e("InvoiceDetailFragment", "Error printing invoice: ${e.message}", e)
-                Toast.makeText(context, "Error printing invoice: ${e.message}", Toast.LENGTH_SHORT)
-                    .show()
-            }
-        }
-    }
+                val printManager = activity.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                Log.d("PrintInvoice", "Print manager obtained successfully")
 
-    // 7. Helper function for printing PDF
-    private fun printPdf(documentUri: Uri) {
-        try {
-            val printManager =
-                requireActivity().getSystemService(Context.PRINT_SERVICE) as PrintManager
-
-            val jobName = "Invoice_${viewModel.invoice.value?.invoiceNumber}"
-
-            val printAdapter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                object : PrintDocumentAdapter() {
+                // Create print adapter
+                Log.d("PrintInvoice", "Creating print adapter")
+                val printAdapter = object : PrintDocumentAdapter() {
                     override fun onLayout(
                         oldAttributes: PrintAttributes?,
                         newAttributes: PrintAttributes?,
@@ -1152,15 +1194,21 @@ class InvoiceDetailFragment : Fragment() {
                         callback: LayoutResultCallback?,
                         extras: Bundle?
                     ) {
+                        Log.d("PrintInvoice", "onLayout called")
                         if (cancellationSignal?.isCanceled == true) {
+                            Log.d("PrintInvoice", "Print job cancelled during layout")
                             callback?.onLayoutCancelled()
                             return
                         }
 
+                        // Create print document info
+                        Log.d("PrintInvoice", "Creating print document info")
                         val info = PrintDocumentInfo.Builder(jobName)
                             .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
+                            .setPageCount(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
                             .build()
 
+                        Log.d("PrintInvoice", "Layout finished successfully")
                         callback?.onLayoutFinished(info, true)
                     }
 
@@ -1170,60 +1218,59 @@ class InvoiceDetailFragment : Fragment() {
                         cancellationSignal: CancellationSignal?,
                         callback: WriteResultCallback?
                     ) {
+                        Log.d("PrintInvoice", "onWrite called")
                         try {
-                            val input =
-                                requireContext().contentResolver.openInputStream(documentUri)
-                            val output = FileOutputStream(destination?.fileDescriptor)
-
-                            val buffer = ByteArray(1024)
-                            var bytesRead: Int
-
-                            while (input?.read(buffer).also { bytesRead = it ?: -1 } != -1) {
-                                output.write(buffer, 0, bytesRead)
+                            Log.d("PrintInvoice", "Starting to write PDF to print destination")
+                            // Copy PDF file to print destination
+                            pdfFile.inputStream().use { input ->
+                                FileOutputStream(destination?.fileDescriptor).use { output ->
+                                    input.copyTo(output)
+                                }
                             }
-
+                            Log.d("PrintInvoice", "PDF written successfully")
                             callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
-
-                            input?.close()
-                            output.close()
-
                         } catch (e: Exception) {
+                            Log.e("PrintInvoice", "Error writing PDF: ${e.message}", e)
                             callback?.onWriteFailed(e.message)
-                            Log.e("InvoiceDetailFragment", "Error writing print data", e)
                         }
                     }
                 }
-            } else {
-                // For older Android versions - fallback to an external viewer
-                val intent = Intent(Intent.ACTION_VIEW)
-                intent.setDataAndType(documentUri, "application/pdf")
-                intent.flags =
-                    Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_GRANT_READ_URI_PERMISSION
 
-                if (intent.resolveActivity(requireActivity().packageManager) != null) {
-                    startActivity(intent)
-                } else {
-                    Toast.makeText(context, "No PDF viewer found", Toast.LENGTH_SHORT).show()
+                // Create print job using activity context
+                Log.d("PrintInvoice", "Creating print job")
+                activity.runOnUiThread {
+                    try {
+                        printManager.print(
+                            jobName,
+                            printAdapter,
+                            PrintAttributes.Builder().build()
+                        )
+                        Log.d("PrintInvoice", "Print job created successfully")
+                    } catch (e: Exception) {
+                        Log.e("PrintInvoice", "Error creating print job: ${e.message}", e)
+                        showErrorMessage("Error creating print job: ${e.message}")
+                    }
+                    binding.progressBar.visibility = View.GONE
                 }
 
+            } catch (e: Exception) {
+                Log.e("PrintInvoice", "Error during print process: ${e.message}", e)
                 binding.progressBar.visibility = View.GONE
-                return
+
+                ThemedM3Dialog(requireContext())
+                    .setTitle("Error")
+                    .setLayout(R.layout.dialog_error)
+                    .apply {
+                        findViewById<TextView>(R.id.errorMessage)?.text =
+                            "Error printing invoice: ${e.message}"
+                    }
+                    .setPositiveButton("OK") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .show()
             }
-
-            // Start print job
-            printManager.print(jobName, printAdapter, PrintAttributes.Builder().build())
-            Toast.makeText(context, "Preparing document for printing...", Toast.LENGTH_SHORT).show()
-
-            binding.progressBar.visibility = View.GONE
-
-        } catch (e: Exception) {
-            binding.progressBar.visibility = View.GONE
-            Log.e("InvoiceDetailFragment", "Error printing PDF", e)
-            Toast.makeText(context, "Error printing: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
-
-
     private fun navigateToCustomerDetail() {
         val customerId = viewModel.customer.value?.id
 
@@ -1503,7 +1550,9 @@ class InvoiceDetailFragment : Fragment() {
     }
     // Utility methods for error and loading handling
     private fun showErrorMessage(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        if (message.isNotEmpty()) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun updateLoadingState(isLoading: Boolean) {
@@ -1622,60 +1671,28 @@ class InvoiceDetailFragment : Fragment() {
 //                            startActivity(whatsappBusinessIntent)
 //                        }
 //                        else -> {
-//                            // Neither app is installed, show error with themed dialog
-//                            ThemedM3Dialog(requireContext())
-//                                .setTitle("WhatsApp Not Found")
-//                                .setLayout(R.layout.dialog_error)
-//                                .apply {
-//                                    findViewById<TextView>(R.id.errorMessage)?.text =
-//                                        "WhatsApp is not installed. Would you like to share the invoice using another app?"
-//                                }
-//                                .setPositiveButton("Yes") { dialog, _ ->
-//                                    // Create general sharing intent as fallback
-//                                    val shareIntent = Intent(Intent.ACTION_SEND)
-//                                    shareIntent.type = "application/pdf"
-//                                    shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
-//                                    shareIntent.putExtra(Intent.EXTRA_TEXT, message)
-//                                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-//                                    startActivity(Intent.createChooser(shareIntent, "Share Invoice PDF"))
-//                                    dialog.dismiss()
-//                                }
-//                                .setNegativeButton("No") { dialog ->
-//                                    dialog.dismiss()
-//                                }
-//                                .show()
+//                            // Neither WhatsApp nor WhatsApp Business installed, use general share
+//                            val generalIntent = Intent(Intent.ACTION_SEND)
+//                            generalIntent.type = "text/plain"
+//                            generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                            startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
 //                        }
 //                    }
 //                } catch (e: Exception) {
-//                    // Show error with themed dialog
-//                    ThemedM3Dialog(requireContext())
-//                        .setTitle("Error")
-//                        .setLayout(R.layout.dialog_error)
-//                        .apply {
-//                            findViewById<TextView>(R.id.errorMessage)?.text =
-//                                "Could not share via WhatsApp: ${e.message}"
-//                        }
-//                        .setPositiveButton("OK") { dialog, _ ->
-//                            dialog.dismiss()
-//                        }
-//                        .show()
-//
-//                    Log.e("InvoiceDetailFragment", "Error sharing to WhatsApp: ${e.message}", e)
+//                    // Fall back to general share on any error
+//                    val generalIntent = Intent(Intent.ACTION_SEND)
+//                    generalIntent.type = "text/plain"
+//                    generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                    startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
 //                }
-//
-//                binding.progressBar.visibility = View.GONE
-//
 //            } catch (e: Exception) {
-//                binding.progressBar.visibility = View.GONE
-//                Log.e("InvoiceDetailFragment", "Error creating PDF: ${e.message}", e)
-//
 //                // Show error with themed dialog
 //                ThemedM3Dialog(requireContext())
 //                    .setTitle("Error")
 //                    .setLayout(R.layout.dialog_error)
 //                    .apply {
 //                        findViewById<TextView>(R.id.errorMessage)?.text =
-//                            "Error creating PDF: ${e.message}"
+//                            "Error sharing invoice: ${e.message}"
 //                    }
 //                    .setPositiveButton("OK") { dialog, _ ->
 //                        dialog.dismiss()
@@ -1686,55 +1703,55 @@ class InvoiceDetailFragment : Fragment() {
 //    }
 
     // Add this method to InvoiceDetailFragment
-    private fun generateAndSavePdf() {
-        val invoice = viewModel.invoice.value ?: return
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                binding.progressBar.visibility = View.VISIBLE
-
-                // Get shop information
-                val shop = ShopManager.getShopDetails(requireContext())
-
-                if (shop == null) {
-                    Toast.makeText(context, "Shop information not found", Toast.LENGTH_SHORT).show()
-                    binding.progressBar.visibility = View.GONE
-                    return@launch
-                }
-
-                // Initialize PDFBox
-                PDFBoxResourceLoader.init(requireContext())
-
-                // Create the PDF generator
-                val pdfGenerator = InvoicePdfGenerator(requireContext())
-
-                // Load PDF settings and apply them - this is the key addition
-                val pdfSettingsManager = PdfSettingsManager(requireContext())
-                val pdfSettings = pdfSettingsManager.loadSettings()
-                pdfGenerator.applySettings(pdfSettings)
-
-                // Generate the PDF
-                val pdfFile = pdfGenerator.generateInvoicePdf(
-                    invoice,
-                    shop,
-                    "Invoice_${invoice.invoiceNumber}"
-                )
-
-                // Hide progress and share the PDF
-                binding.progressBar.visibility = View.GONE
-                sharePdfFile(pdfFile)
-
-            } catch (e: Exception) {
-                binding.progressBar.visibility = View.GONE
-                Log.e("InvoiceDetailsFragment", "Error generating PDF: ${e.message}", e)
-                Toast.makeText(
-                    requireContext(),
-                    "Error generating PDF: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
+//    private fun generateAndSavePdf() {
+//        val invoice = viewModel.invoice.value ?: return
+//
+//        viewLifecycleOwner.lifecycleScope.launch {
+//            try {
+//                binding.progressBar.visibility = View.VISIBLE
+//
+//                // Get shop information
+//                val shop = ShopManager.getShopDetails(requireContext())
+//
+//                if (shop == null) {
+//                    Toast.makeText(context, getString(R.string.shop_info_not_found), Toast.LENGTH_SHORT).show()
+//                    binding.progressBar.visibility = View.GONE
+//                    return@launch
+//                }
+//
+//                // Initialize PDFBox
+//                PDFBoxResourceLoader.init(requireContext())
+//
+//                // Create the PDF generator
+//                val pdfGenerator = InvoicePdfGenerator(requireContext())
+//
+//                // Load PDF settings and apply them - this is the key addition
+//                val pdfSettingsManager = PdfSettingsManager(requireContext())
+//                val pdfSettings = pdfSettingsManager.loadSettings()
+//                pdfGenerator.applySettings(pdfSettings)
+//
+//                // Generate the PDF
+//                val pdfFile = pdfGenerator.generateInvoicePdf(
+//                    invoice,
+//                    shop,
+//                    "Invoice_${invoice.invoiceNumber}"
+//                )
+//
+//                // Hide progress and share the PDF
+//                binding.progressBar.visibility = View.GONE
+//                sharePdfFile(pdfFile)
+//
+//            } catch (e: Exception) {
+//                binding.progressBar.visibility = View.GONE
+//                Log.e("InvoiceDetailsFragment", "Error generating PDF: ${e.message}", e)
+//                Toast.makeText(
+//                    requireContext(),
+//                    "Error generating PDF: ${e.message}",
+//                    Toast.LENGTH_SHORT
+//                ).show()
+//            }
+//        }
+//    }
 
 
     private fun sharePdfFile(pdfFile: File) {
@@ -1762,142 +1779,146 @@ class InvoiceDetailFragment : Fragment() {
     // Share invoice summary to WhatsApp
 // Share invoice summary to WhatsApp
 // Share invoice summary to WhatsApp
-    private fun shareInvoiceToWhatsApp() {
-        val invoice = viewModel.invoice.value ?: return
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                // First try to get shop information
-                val shop = ShopManager.getShopCoroutine(requireContext())
-
-                // Create a nicely formatted invoice summary
-                val message = buildString {
-                    // Shop information header if available
-                    if (shop != null && shop.shopName.isNotEmpty()) {
-                        append("*${shop.shopName}*\n")
-                        if (shop.address.isNotEmpty()) {
-                            append("${shop.address}\n")
-                        }
-                        if (shop.phoneNumber.isNotEmpty()) {
-                            append("Phone: ${shop.phoneNumber}\n")
-                        }
-                        if (shop.hasGst && shop.gstNumber.isNotEmpty()) {
-                            append("GST: ${shop.gstNumber}\n")
-                        }
-                        append("\n")
-                    }
-
-                    append("*INVOICE: ${invoice.invoiceNumber}*\n")
-
-                    // Invoice date
-                    val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                    append("Date: ${dateFormatter.format(Date(invoice.invoiceDate))}\n\n")
-
-                    // Customer info
-                    append("*Customer:*\n")
-                    append("${invoice.customerName}\n")
-                    if (invoice.customerPhone.isNotEmpty()) {
-                        append("Phone: ${invoice.customerPhone}\n")
-                    }
-                    if (invoice.customerAddress.isNotEmpty()) {
-                        append("Address: ${invoice.customerAddress}\n")
-                    }
-                    append("\n")
-
-                    // Items summary
-                    append("*Items:*\n")
-                    invoice.items.forEach { item ->
-                        append("• ${item.itemDetails.displayName}")
-                        if (item.itemDetails.purity.isNotEmpty()) {
-                            append(" (${item.itemDetails.purity})")
-                        }
-                        if (item.quantity > 1) {
-                            append(" x ${item.quantity}")
-                        }
-                        append(": ₹${DecimalFormat("#,##,##0.00").format(item.price * item.quantity)}\n")
-                    }
-                    append("\n")
-
-                    // Payment summary
-                    val formatter = DecimalFormat("#,##,##0.00")
-                    append("*Payment Details:*\n")
-                    append("Subtotal: ₹${formatter.format(calculateSubtotal(invoice))}\n")
-
-                    // Check if there are any extra charges to show
-                    val extraCharges = calculateExtraCharges(invoice)
-                    if (extraCharges > 0) {
-                        append("Extra Charges: ₹${formatter.format(extraCharges)}\n")
-                    }
-
-                    append("Tax: ₹${formatter.format(calculateTax(invoice))}\n")
-                    append("Total Amount: ₹${formatter.format(invoice.totalAmount)}\n")
-                    append("Amount Paid: ₹${formatter.format(invoice.paidAmount)}\n")
-
-                    val balanceDue = invoice.totalAmount - invoice.paidAmount
-                    append("Balance Due: ₹${formatter.format(balanceDue)}\n")
-
-                    // Payment status
-                    val paymentStatus = when {
-                        balanceDue <= 0 -> "PAID"
-                        invoice.paidAmount > 0 -> "PARTIAL"
-                        else -> "UNPAID"
-                    }
-                    append("Status: *$paymentStatus*\n\n")
-
-                    // Add notes if present
-                    if (invoice.notes.isNotEmpty()) {
-                        append("*Notes:*\n${invoice.notes}\n")
-                    }
-                }
-
-                // Create separate intents for WhatsApp and WhatsApp Business
-                val whatsappIntent = Intent(Intent.ACTION_SEND)
-                whatsappIntent.type = "text/plain"
-                whatsappIntent.setPackage("com.whatsapp")
-                whatsappIntent.putExtra(Intent.EXTRA_TEXT, message)
-
-                val whatsappBusinessIntent = Intent(Intent.ACTION_SEND)
-                whatsappBusinessIntent.type = "text/plain"
-                whatsappBusinessIntent.setPackage("com.whatsapp.w4b")
-                whatsappBusinessIntent.putExtra(Intent.EXTRA_TEXT, message)
-
-                // Check which app is available
-                val packageManager = requireActivity().packageManager
-                val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
-                val whatsappBusinessInstalled =
-                    whatsappBusinessIntent.resolveActivity(packageManager) != null
-
-                try {
-                    when {
-                        whatsappInstalled -> {
-                            startActivity(whatsappIntent)
-                        }
-
-                        whatsappBusinessInstalled -> {
-                            startActivity(whatsappBusinessIntent)
-                        }
-
-                        else -> {
-                            // Neither WhatsApp nor WhatsApp Business installed, use general share
-                            val generalIntent = Intent(Intent.ACTION_SEND)
-                            generalIntent.type = "text/plain"
-                            generalIntent.putExtra(Intent.EXTRA_TEXT, message)
-                            startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
-                        }
-                    }
-                } catch (e: Exception) {
-                    // Fall back to general share on any error
-                    val generalIntent = Intent(Intent.ACTION_SEND)
-                    generalIntent.type = "text/plain"
-                    generalIntent.putExtra(Intent.EXTRA_TEXT, message)
-                    startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
-                }
-            } catch (e: Exception) {
-                showErrorMessage("Error sharing invoice: ${e.message}")
-                Log.e("InvoiceDetailFragment", "Error sharing invoice", e)
-            }
-        }
-    }
+//    private fun shareInvoiceToWhatsApp() {
+//        val invoice = viewModel.invoice.value ?: return
+//
+//        viewLifecycleOwner.lifecycleScope.launch {
+//            try {
+//                // First try to get shop information
+//                val shop = ShopManager.getShopCoroutine(requireContext())
+//
+//                // Create a nicely formatted invoice summary
+//                val message = buildString {
+//                    // Shop information header if available
+//                    if (shop != null && shop.shopName.isNotEmpty()) {
+//                        append("*${shop.shopName}*\n")
+//                        if (shop.address.isNotEmpty()) {
+//                            append("${shop.address}\n")
+//                        }
+//                        if (shop.phoneNumber.isNotEmpty()) {
+//                            append("Phone: ${shop.phoneNumber}\n")
+//                        }
+//                        if (shop.hasGst && shop.gstNumber.isNotEmpty()) {
+//                            append("GST: ${shop.gstNumber}\n")
+//                        }
+//                        append("\n")
+//                    }
+//
+//                    append("*INVOICE: ${invoice.invoiceNumber}*\n")
+//
+//                    // Invoice date
+//                    val dateFormatter = SimpleDateFormat(getString(R.string.date_format), Locale.getDefault())
+//                    append("Date: ${dateFormatter.format(Date(invoice.invoiceDate))}\n\n")
+//
+//                    // Customer info
+//                    append("*Customer:*\n")
+//                    append("${invoice.customerName}\n")
+//                    if (invoice.customerPhone.isNotEmpty()) {
+//                        append("Phone: ${invoice.customerPhone}\n")
+//                    }
+//                    if (invoice.customerAddress.isNotEmpty()) {
+//                        append("Address: ${invoice.customerAddress}\n")
+//                    }
+//                    append("\n")
+//
+//                    // Items summary
+//                    append("*Items:*\n")
+//                    invoice.items.forEach { item ->
+//                        append("• ${item.itemDetails.displayName}")
+//                        if (item.itemDetails.purity.isNotEmpty()) {
+//                            append(" (${item.itemDetails.purity})")
+//                        }
+//                        if (item.quantity > 1) {
+//                            append(" x ${item.quantity}")
+//                        }
+//                        append(": ₹${DecimalFormat("#,##,##0.00").format(item.price * item.quantity)}\n")
+//                    }
+//                    append("\n")
+//
+//                    // Payment summary
+//                    val formatter = DecimalFormat("#,##,##0.00")
+//                    append("*Payment Details:*\n")
+//                    append("Subtotal: ₹${formatter.format(calculateSubtotal(invoice))}\n")
+//
+//                    // Check if there are any extra charges to show
+//                    val extraCharges = calculateExtraCharges(invoice)
+//                    if (extraCharges > 0) {
+//                        append("Extra Charges: ₹${formatter.format(extraCharges)}\n")
+//                    }
+//
+//                    append("Tax: ₹${formatter.format(calculateTax(invoice))}\n")
+//                    append("Total Amount: ₹${formatter.format(invoice.totalAmount)}\n")
+//                    append("Amount Paid: ₹${formatter.format(invoice.paidAmount)}\n")
+//
+//                    val balanceDue = invoice.totalAmount - invoice.paidAmount
+//                    append("Balance Due: ₹${formatter.format(balanceDue)}\n")
+//
+//                    // Payment status
+//                    val paymentStatus = when {
+//                        balanceDue <= 0 -> "PAID"
+//                        invoice.paidAmount > 0 -> "PARTIAL"
+//                        else -> "UNPAID"
+//                    }
+//                    append("Status: *$paymentStatus*\n\n")
+//
+//                    // Add notes if present
+//                    if (invoice.notes.isNotEmpty()) {
+//                        append("*Notes:*\n${invoice.notes}\n")
+//                    }
+//                }
+//
+//                // Create separate intents for WhatsApp and WhatsApp Business
+//                val whatsappIntent = Intent(Intent.ACTION_SEND)
+//                whatsappIntent.type = getString(R.string.application_pdf)
+//                whatsappIntent.setPackage(getString(R.string.whatsapp_package))
+//                whatsappIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                whatsappIntent.putExtra(Intent.EXTRA_STREAM, uri)
+//                whatsappIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//
+//                val whatsappBusinessIntent = Intent(Intent.ACTION_SEND)
+//                whatsappBusinessIntent.type = getString(R.string.application_pdf)
+//                whatsappBusinessIntent.setPackage(getString(R.string.whatsapp_business_package))
+//                whatsappBusinessIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                whatsappBusinessIntent.putExtra(Intent.EXTRA_STREAM, uri)
+//                whatsappBusinessIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+//
+//                // Check which app is available
+//                val packageManager = requireActivity().packageManager
+//                val whatsappInstalled = whatsappIntent.resolveActivity(packageManager) != null
+//                val whatsappBusinessInstalled =
+//                    whatsappBusinessIntent.resolveActivity(packageManager) != null
+//
+//                try {
+//                    when {
+//                        whatsappInstalled -> {
+//                            startActivity(whatsappIntent)
+//                        }
+//
+//                        whatsappBusinessInstalled -> {
+//                            startActivity(whatsappBusinessIntent)
+//                        }
+//
+//                        else -> {
+//                            // Neither WhatsApp nor WhatsApp Business installed, use general share
+//                            val generalIntent = Intent(Intent.ACTION_SEND)
+//                            generalIntent.type = "text/plain"
+//                            generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                            startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
+//                        }
+//                    }
+//                } catch (e: Exception) {
+//                    // Fall back to general share on any error
+//                    val generalIntent = Intent(Intent.ACTION_SEND)
+//                    generalIntent.type = "text/plain"
+//                    generalIntent.putExtra(Intent.EXTRA_TEXT, message)
+//                    startActivity(Intent.createChooser(generalIntent, "Share invoice via"))
+//                }
+//            } catch (e: Exception) {
+//                showErrorMessage("Error sharing invoice: ${e.message}")
+//                Log.e("InvoiceDetailFragment", "Error sharing invoice", e)
+//            }
+//        }
+//    }
 
     // Setup notes editing
     private fun setupNotesEditing() {

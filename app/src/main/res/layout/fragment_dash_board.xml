@@ -91,7 +91,7 @@
                             <ImageView
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
-                                android:src="@drawable/ic_invoice"
+                                android:src="@drawable/mdi__invoice_text_plus_outline"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
@@ -109,7 +109,7 @@
                         <LinearLayout
                             android:id="@+id/addCustomerAction"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:background="?attr/selectableItemBackground"
                             android:clickable="true"
@@ -121,7 +121,8 @@
                             <ImageView
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
-                                android:src="@drawable/line_md__person_twotone"
+                                android:layout_marginStart="4dp"
+                                android:src="@drawable/material_symbols__person_add_outline_rounded"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
@@ -139,19 +140,19 @@
                         <LinearLayout
                             android:id="@+id/addInventoryAction"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true"
-                            android:gravity="center"
+                            android:gravity="center|top"
                             android:orientation="vertical"
                             android:padding="8dp">
 
                             <ImageView
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
-                                android:src="@drawable/uil__gold"
+                                android:src="@drawable/mage__box_3d_plus"
                                 app:tint="@color/my_light_primary" />
 
                             <TextView
@@ -169,12 +170,12 @@
                         <LinearLayout
                             android:id="@+id/recordPaymentAction"
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:background="?attr/selectableItemBackground"
                             android:clickable="true"
                             android:focusable="true"
-                            android:gravity="center"
+                            android:gravity="center|top"
                             android:orientation="vertical"
                             android:padding="8dp">
 

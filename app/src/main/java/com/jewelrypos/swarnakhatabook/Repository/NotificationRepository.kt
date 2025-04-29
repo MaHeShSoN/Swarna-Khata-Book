@@ -694,4 +694,12 @@ class NotificationRepository(
     class UserNotAuthenticatedException(message: String) : Exception(message)
     class PhoneNumberInvalidException(message: String) : Exception(message)
     class ShopNotSelectedException(message: String) : Exception(message)
+
+    /**
+     * Resets the pagination state
+     */
+    fun resetPagination() {
+        lastDocumentSnapshot = null
+        isLastPage = false
+    }
 }

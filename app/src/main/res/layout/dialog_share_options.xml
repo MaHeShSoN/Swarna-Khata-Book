@@ -1,38 +1,133 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="24dp">
 
     <TextView
-        android:layout_width="match_parent"
+        android:id="@+id/dialogTitle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:text="Share Invoice"
+        android:textAppearance="@style/TextAppearance.App.H2"
+        android:textColor="@color/my_light_primary"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+        android:id="@+id/dialogSubtitle"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:text="Choose how you want to share this invoice:"
+        android:textAppearance="@style/TextAppearance.App.Body"
         android:textColor="@color/my_light_on_surface"
-        android:textSize="16sp"
-        android:layout_marginBottom="24dp"/>
+        app:layout_constraintTop_toBottomOf="@id/dialogTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/imageOptionCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginEnd="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:checkable="true"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:strokeColor="@color/my_light_outline"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/my_light_surface"
+        app:rippleColor="@color/my_light_primary_container"
+        app:layout_constraintTop_toBottomOf="@id/dialogSubtitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/pdfOptionCard">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/bi__image"
+                app:tint="@color/my_light_primary"
+                android:contentDescription="Image format" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="10sp"
+                android:text="Easy to view on mobile"
+                android:textAppearance="@style/TextAppearance.App.Caption"
+                android:textAlignment="center" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/pdfOptionCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginStart="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:checkable="true"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:strokeColor="@color/my_light_outline"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/my_light_surface"
+        app:rippleColor="@color/my_light_primary_container"
+        app:layout_constraintTop_toBottomOf="@id/dialogSubtitle"
+        app:layout_constraintStart_toEndOf="@id/imageOptionCard"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="16dp">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/teenyicons__pdf_solid"
+                app:tint="@color/my_light_primary"
+                android:contentDescription="PDF format" />
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="10sp"
+                android:text="Professional document"
+                android:textAppearance="@style/TextAppearance.App.Caption"
+                android:textAlignment="center" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnShareImage"
-        android:layout_width="match_parent"
+        android:id="@+id/btnCancel"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Share as Image"
-        android:textColor="@color/white"
-        app:icon="@drawable/material_symbols_light__image"
-        app:iconTint="@color/white"
-        android:backgroundTint="@color/my_light_primary"
-        android:layout_marginBottom="12dp"/>
+        android:layout_marginTop="24dp"
+        android:text="Cancel"
+        android:textColor="@color/my_light_secondary"
+        app:layout_constraintTop_toBottomOf="@id/imageOptionCard"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSharePdf"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Share as PDF"
-        android:textColor="@color/white"
-        app:icon="@drawable/teenyicons__pdf_solid"
-        app:iconTint="@color/white"
-        android:backgroundTint="@color/my_light_primary"/>
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

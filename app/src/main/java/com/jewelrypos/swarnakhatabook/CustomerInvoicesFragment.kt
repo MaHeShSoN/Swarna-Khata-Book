@@ -15,7 +15,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.Adapters.InvoicesAdapter
+import com.jewelrypos.swarnakhatabook.Adapters.InvoiceAdapter
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
@@ -28,7 +28,7 @@ class CustomerInvoicesFragment : Fragment() {
     private var _binding: FragmentCustomerInvoicesBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var adapter: InvoicesAdapter
+    private lateinit var adapter: InvoiceAdapter
     private lateinit var customerId: String
 
     private val salesViewModel: SalesViewModel by viewModels {
@@ -144,7 +144,7 @@ class CustomerInvoicesFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = InvoicesAdapter()
+        adapter = InvoiceAdapter()
 
         // In CustomerInvoicesFragment.kt
         adapter.onItemClickListener = { invoice ->

@@ -122,6 +122,8 @@ class ShopSettingsFragment : Fragment() {
     }
 
     private fun updateUI(shop: Shop) {
+        if (_binding == null) return // Check if binding is null before proceeding
+
         removeChangeListeners()
         // Populate fields with shop data
         binding.ownerNameEditText.setText(shop.name)
@@ -166,6 +168,8 @@ class ShopSettingsFragment : Fragment() {
 
 
     private fun setupChangeListeners() {
+        if (_binding == null) return // Check if binding is null before proceeding
+        
         binding.shopNameEditText.addTextChangedListener(textWatcher)
         binding.ownerNameEditText.addTextChangedListener(textWatcher)
         binding.addressEditText.addTextChangedListener(textWatcher)
@@ -176,6 +180,8 @@ class ShopSettingsFragment : Fragment() {
     }
 
     private fun removeChangeListeners() {
+        if (_binding == null) return // Check if binding is null before proceeding
+        
         binding.shopNameEditText.removeTextChangedListener(textWatcher)
         binding.ownerNameEditText.removeTextChangedListener(textWatcher)
         binding.addressEditText.removeTextChangedListener(textWatcher)
@@ -215,6 +221,8 @@ class ShopSettingsFragment : Fragment() {
     }
 
     private fun saveShopDetails() {
+        if (_binding == null) return // Check if binding is null before proceeding
+        
         val ownerName = binding.ownerNameEditText.text.toString().trim()
         val shopName = binding.shopNameEditText.text.toString().trim()
         val address = binding.addressEditText.text.toString().trim()
@@ -345,8 +353,14 @@ class ShopSettingsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
+        // Cancel any pending operations or callbacks
+        backPressedCallback.remove() // Remove the back press callback
+        
+        // Clean up text watchers
         removeChangeListeners()
+        
+        // The traditional _binding = null cleanup
+        super.onDestroyView()
         _binding = null
     }
 }

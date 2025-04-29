@@ -23,10 +23,26 @@ import com.jewelrypos.swarnakhatabook.SwarnaKhataBook
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import kotlin.math.pow
+
+/**
+ * Status events emitted by the BillingManager
+ */
+sealed class BillingEvent {
+    object ConnectionEstablished : BillingEvent()
+    object ConnectionFailed : BillingEvent()
+    object ProductDetailsLoaded : BillingEvent()
+    data class PurchaseSuccess(val purchase: Purchase) : BillingEvent()
+    data class PurchaseFailed(val code: Int, val message: String) : BillingEvent()
+    data class PurchaseCanceled(val message: String = "Purchase was canceled") : BillingEvent()
+    data class Error(val message: String, val code: Int = 0) : BillingEvent()
+}
 
 /**
  * Manages subscription purchases and verification using Google Play Billing Library
@@ -66,6 +82,10 @@ class BillingManager(private val context: Context) {
         SKU_PREMIUM_YEARLY to SubscriptionPlan.PREMIUM
     )
 
+    // Event flow for notifying UI components of billing events
+    private val _billingEvents = MutableSharedFlow<BillingEvent>(extraBufferCapacity = 1)
+    val billingEvents: SharedFlow<BillingEvent> = _billingEvents
+
     // Maintain a background scope for operations
     private val billingScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val firestore = FirebaseFirestore.getInstance()
@@ -86,6 +106,7 @@ class BillingManager(private val context: Context) {
                     billingScope.launch {
                         for (purchase in purchases) {
                             handlePurchase(purchase)
+                            _billingEvents.emit(BillingEvent.PurchaseSuccess(purchase))
                         }
                     }
                 } else {
@@ -94,15 +115,22 @@ class BillingManager(private val context: Context) {
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {
                 Log.i(TAG, "User canceled the purchase")
+                billingScope.launch {
+                    _billingEvents.emit(BillingEvent.PurchaseCanceled())
+                }
             }
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> {
                 Log.i(TAG, "Item already owned, refreshing purchases")
                 billingScope.launch {
                     queryPurchases()
+                    _billingEvents.emit(BillingEvent.Error("You already own this subscription"))
                 }
             }
             else -> {
                 Log.e(TAG, "Purchase failed with code: ${billingResult.responseCode}, message: ${billingResult.debugMessage}")
+                billingScope.launch {
+                    _billingEvents.emit(BillingEvent.PurchaseFailed(billingResult.responseCode, billingResult.debugMessage))
+                }
             }
         }
     }
@@ -144,6 +172,10 @@ class BillingManager(private val context: Context) {
                         isClientConnected = true
                         Log.d(TAG, "Play Billing service connection established")
                         
+                        billingScope.launch {
+                            _billingEvents.emit(BillingEvent.ConnectionEstablished)
+                        }
+                        
                         // Query product details on successful connection
                         queryProductDetails()
                         
@@ -154,22 +186,64 @@ class BillingManager(private val context: Context) {
                     } else {
                         isClientConnected = false
                         Log.e(TAG, "Failed to connect to Play Billing service: ${billingResult.responseCode}, ${billingResult.debugMessage}")
+                        
+                        billingScope.launch {
+                            _billingEvents.emit(BillingEvent.ConnectionFailed)
+                            _billingEvents.emit(BillingEvent.Error(
+                                "Failed to connect to Play Billing service: ${billingResult.debugMessage}",
+                                billingResult.responseCode
+                            ))
+                        }
                     }
                 }
 
                 override fun onBillingServiceDisconnected() {
                     isClientConnected = false
                     Log.e(TAG, "Play Billing service disconnected")
-                    // Try to reconnect with delay (simple approach)
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        connectToPlayBilling()
-                    }, 3000) // 3 second delay before reconnect attempt
+                    
+                    billingScope.launch {
+                        _billingEvents.emit(BillingEvent.ConnectionFailed)
+                    }
+                    
+                    // Try to reconnect with exponential backoff
+                    reconnectWithExponentialBackoff(1)
                 }
             })
             return true
         }
         
         return isClientConnected
+    }
+    
+    /**
+     * Reconnect to billing service with exponential backoff to prevent 
+     * excessive reconnection attempts
+     */
+    private fun reconnectWithExponentialBackoff(attempt: Int, maxAttempts: Int = 5) {
+        // Calculate delay with exponential backoff (1s, 2s, 4s, 8s, etc.)
+        val delayMillis = (1000 * 2.0.pow(attempt - 1)).toLong().coerceAtMost(30000)
+        
+        if (attempt <= maxAttempts) {
+            Log.d(TAG, "Scheduling reconnection attempt $attempt in ${delayMillis}ms")
+            
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (!isClientConnected) {
+                    Log.d(TAG, "Attempting to reconnect to billing service (attempt $attempt/$maxAttempts)")
+                    connectToPlayBilling()
+                    
+                    // Schedule next attempt if this one fails
+                    if (!isClientConnected) {
+                        reconnectWithExponentialBackoff(attempt + 1, maxAttempts)
+                    }
+                }
+            }, delayMillis)
+        } else {
+            Log.e(TAG, "Exceeded maximum reconnection attempts ($maxAttempts)")
+            
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("Failed to reconnect to Google Play billing service after multiple attempts"))
+            }
+        }
     }
     
     /**
@@ -180,6 +254,9 @@ class BillingManager(private val context: Context) {
         
         if (!isClientConnected) {
             Log.e(TAG, "Billing client not connected")
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("Billing client not connected when querying products"))
+            }
             return
         }
         
@@ -215,8 +292,19 @@ class BillingManager(private val context: Context) {
                         Log.d(TAG, "  - Offer: ${offer.basePlanId}, token: ${offer.offerToken.take(10)}...")
                     }
                 }
+                
+                billingScope.launch {
+                    _billingEvents.emit(BillingEvent.ProductDetailsLoaded)
+                }
             } else {
                 Log.e(TAG, "Failed to query product details: ${billingResult.responseCode}, ${billingResult.debugMessage}")
+                
+                billingScope.launch {
+                    _billingEvents.emit(BillingEvent.Error(
+                        "Failed to query product details: ${billingResult.debugMessage}",
+                        billingResult.responseCode
+                    ))
+                }
             }
         }
     }
@@ -359,12 +447,16 @@ class BillingManager(private val context: Context) {
     
     /**
      * Launch the purchase flow for a subscription
+     * Returns a BillingResult with the response code from launching the flow
      */
-    fun purchaseSubscription(activity: Activity, productId: String) {
+    fun purchaseSubscription(activity: Activity, productId: String): BillingResult? {
         Log.d(TAG, "Initiating purchase flow for $productId")
         
         if (!isClientConnected) {
             Log.e(TAG, "Billing client not connected, attempting to connect")
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("Billing client not connected, please try again"))
+            }
             if (connectToPlayBilling()) {
                 // If connection was initiated, retry purchase after a delay
                 Handler(Looper.getMainLooper()).postDelayed({
@@ -372,24 +464,33 @@ class BillingManager(private val context: Context) {
                         purchaseSubscription(activity, productId)
                     } else {
                         Log.e(TAG, "Failed to connect to billing service, cannot initiate purchase")
+                        billingScope.launch {
+                            _billingEvents.emit(BillingEvent.Error("Failed to connect to Google Play billing service"))
+                        }
                     }
                 }, 2000) // 2 second delay to allow connection to complete
             }
-            return
+            return null
         }
         
         val productDetails = productDetailsMap[productId]
         if (productDetails == null) {
             Log.e(TAG, "Product details not found for $productId, refreshing product details")
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("Product details not found for $productId, please try again"))
+            }
             queryProductDetails()
-            return
+            return null
         }
         
         // Get subscription offer details
         val offerDetails = productDetails.subscriptionOfferDetails
         if (offerDetails.isNullOrEmpty()) {
             Log.e(TAG, "No subscription offers found for $productId")
-            return
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("No subscription offers found for this product"))
+            }
+            return null
         }
         
         // Find the correct base plan to use
@@ -405,7 +506,10 @@ class BillingManager(private val context: Context) {
         
         if (basePlanId == null) {
             Log.e(TAG, "Unknown product ID: $productId")
-            return
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error("Unknown product ID: $productId"))
+            }
+            return null
         }
         
         // Find the offer with matching base plan ID
@@ -423,21 +527,117 @@ class BillingManager(private val context: Context) {
             val fallbackOffer = offerDetails.firstOrNull()
             if (fallbackOffer == null) {
                 Log.e(TAG, "No offers available at all, cannot proceed with purchase")
-                return
+                billingScope.launch {
+                    _billingEvents.emit(BillingEvent.Error("No subscription offers available"))
+                }
+                return null
             }
             
-            launchBillingFlow(activity, productDetails, fallbackOffer.offerToken)
-            return
+            return checkExistingSubscriptionsAndLaunch(activity, productDetails, fallbackOffer.offerToken)
         }
         
-        // Launch with the selected offer
-        launchBillingFlow(activity, productDetails, selectedOffer.offerToken)
+        // Launch with the selected offer, checking for existing subscriptions first
+        return checkExistingSubscriptionsAndLaunch(activity, productDetails, selectedOffer.offerToken)
+    }
+    
+    /**
+     * Check for existing subscriptions and launch billing flow appropriately
+     * for either a new purchase or upgrade/downgrade
+     * Returns the BillingResult from launching the flow
+     */
+    private fun checkExistingSubscriptionsAndLaunch(activity: Activity, productDetails: ProductDetails, offerToken: String): BillingResult? {
+        billingScope.launch {
+            try {
+                val params = QueryPurchasesParams.newBuilder()
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .build()
+                
+                val purchasesResult = suspendCancellableCoroutine<List<Purchase>> { continuation ->
+                    billingClient.queryPurchasesAsync(
+                        params,
+                        PurchasesResponseListener { billingResult, purchases ->
+                            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                                Log.d(TAG, "Found ${purchases.size} existing subscription purchases")
+                                continuation.resume(purchases)
+                            } else {
+                                Log.e(TAG, "Failed to query purchases: ${billingResult.responseCode}, ${billingResult.debugMessage}")
+                                continuation.resume(emptyList())
+                            }
+                        }
+                    )
+                }
+                
+                val activePurchase = purchasesResult.find { 
+                    it.purchaseState == Purchase.PurchaseState.PURCHASED && 
+                    !it.isAcknowledged.not() // Only consider acknowledged purchases
+                }
+                
+                // Launch on the main thread
+                withContext(Dispatchers.Main) {
+                    if (activePurchase != null) {
+                        Log.d(TAG, "Found active subscription, performing upgrade/downgrade")
+                        launchSubscriptionUpdateFlow(activity, productDetails, offerToken, activePurchase.purchaseToken)
+                    } else {
+                        Log.d(TAG, "No active subscription found, proceeding with new purchase")
+                        launchBillingFlow(activity, productDetails, offerToken)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking existing subscriptions", e)
+                // Fall back to regular purchase flow
+                withContext(Dispatchers.Main) {
+                    _billingEvents.emit(BillingEvent.Error("Error checking existing subscriptions: ${e.message}"))
+                    launchBillingFlow(activity, productDetails, offerToken)
+                }
+            }
+        }
+        return null // Actual result will be delivered through billingEvents flow
+    }
+    
+    /**
+     * Launch billing flow for subscription upgrade/downgrade
+     */
+    private fun launchSubscriptionUpdateFlow(activity: Activity, productDetails: ProductDetails, offerToken: String, oldPurchaseToken: String): BillingResult {
+        // Create the billing flow params for subscription upgrade/downgrade
+        val productDetailsParamsList = listOf(
+            BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(productDetails)
+                .setOfferToken(offerToken)
+                .build()
+        )
+        
+        // Use IMMEDIATE_WITH_TIME_PRORATION for automatic proration of remaining time
+        val subscriptionUpdateParams = BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+            .setOldPurchaseToken(oldPurchaseToken)
+            .setSubscriptionReplacementMode(BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.CHARGE_PRORATED_PRICE)
+            .build()
+        
+        val billingFlowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(productDetailsParamsList)
+            .setSubscriptionUpdateParams(subscriptionUpdateParams)
+            .build()
+        
+        // Launch the billing flow
+        Log.d(TAG, "Launching upgrade/downgrade billing flow for ${productDetails.productId}")
+        val billingResult = billingClient.launchBillingFlow(activity, billingFlowParams)
+        
+        if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
+            Log.e(TAG, "Failed to launch billing flow: ${billingResult.responseCode}, ${billingResult.debugMessage}")
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error(
+                    "Failed to launch billing flow: ${billingResult.debugMessage}",
+                    billingResult.responseCode
+                ))
+            }
+        }
+        
+        return billingResult
     }
     
     /**
      * Launch the billing flow with the given product details and offer token
      */
-    private fun launchBillingFlow(activity: Activity, productDetails: ProductDetails, offerToken: String) {
+    private fun launchBillingFlow(activity: Activity, productDetails: ProductDetails, offerToken: String): BillingResult {
         // Create the billing flow params
         val productDetailsParamsList = listOf(
             BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -456,7 +656,15 @@ class BillingManager(private val context: Context) {
         
         if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
             Log.e(TAG, "Failed to launch billing flow: ${billingResult.responseCode}, ${billingResult.debugMessage}")
+            billingScope.launch {
+                _billingEvents.emit(BillingEvent.Error(
+                    "Failed to launch billing flow: ${billingResult.debugMessage}",
+                    billingResult.responseCode
+                ))
+            }
         }
+        
+        return billingResult
     }
     
     /**
@@ -502,5 +710,31 @@ class BillingManager(private val context: Context) {
         return productDetails.subscriptionOfferDetails?.map { 
             "${it.basePlanId} (${it.pricingPhases.pricingPhaseList.firstOrNull()?.formattedPrice ?: "unknown price"})"
         } ?: emptyList()
+    }
+    
+    /**
+     * Get formatted price for a subscription product
+     */
+    fun getFormattedPrice(productId: String): String? {
+        val productDetails = productDetailsMap[productId] ?: return null
+        
+        // Find the base plan ID associated with the product ID
+        val basePlanId = when (productId) {
+            SKU_BASIC_MONTHLY -> BASE_PLAN_BASIC_MONTHLY
+            SKU_STANDARD_MONTHLY -> BASE_PLAN_STANDARD_MONTHLY
+            SKU_PREMIUM_MONTHLY -> BASE_PLAN_PREMIUM_MONTHLY
+            SKU_BASIC_YEARLY -> BASE_PLAN_BASIC_YEARLY
+            SKU_STANDARD_YEARLY -> BASE_PLAN_STANDARD_YEARLY
+            SKU_PREMIUM_YEARLY -> BASE_PLAN_PREMIUM_YEARLY
+            else -> return null
+        }
+        
+        // Find the offer with matching base plan ID
+        val selectedOffer = productDetails.subscriptionOfferDetails?.find { it.basePlanId == basePlanId }
+            ?: productDetails.subscriptionOfferDetails?.firstOrNull()
+            ?: return null
+        
+        // Get the first pricing phase (typically the recurring phase)
+        return selectedOffer.pricingPhases.pricingPhaseList.firstOrNull()?.formattedPrice
     }
 }

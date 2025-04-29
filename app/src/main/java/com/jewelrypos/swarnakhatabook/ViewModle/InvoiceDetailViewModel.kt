@@ -33,8 +33,8 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     private val _customer = MutableLiveData<Customer?>()
     val customer: LiveData<Customer?> = _customer
 
-    private val _errorMessage = MutableLiveData("")
-    val errorMessage: LiveData<String> = _errorMessage
+    private val _errorMessage = MutableLiveData<String?>(null)
+    val errorMessage: LiveData<String?> = _errorMessage
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -52,7 +52,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
     fun loadInvoice(invoiceId: String) {
         _isLoading.value = true
-        _errorMessage.value = ""
+        _errorMessage.value = null
 
         viewModelScope.launch {
             try {
@@ -111,7 +111,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         val currentInvoice = _invoice.value ?: return
 
         _isLoading.value = true
-        _errorMessage.value = ""
+        _errorMessage.value = null
 
         viewModelScope.launch {
             try {
@@ -447,7 +447,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     fun duplicateInvoice() {
         val currentInvoice = _invoice.value ?: return
         _isLoading.value = true
-        _errorMessage.value = ""
+        _errorMessage.value = null
 
         viewModelScope.launch {
             try {
@@ -490,7 +490,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
         val currentInvoice = _invoice.value ?: return
         _isLoading.value = true
-        _errorMessage.value = ""
+        _errorMessage.value = null
 
         viewModelScope.launch {
             try {
@@ -535,7 +535,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 //    fun deleteInvoice(onComplete: (Boolean) -> Unit = {}) {
 //        val currentInvoice = _invoice.value ?: return
 //        _isLoading.value = true
-//        _errorMessage.value = ""
+//        _errorMessage.value = null
 //
 //        viewModelScope.launch {
 //            try {
@@ -676,6 +676,16 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 //
 //        return subtotal + taxAmount + extraChargesTotal
 //    }
+
+    // Method to get due date from the invoice
+    fun getDueDate(): Long? {
+        return invoice.value?.dueDate
+    }
+    
+    // Method to check if due date exists
+    fun hasDueDate(): Boolean {
+        return invoice.value?.dueDate != null
+    }
 
     // Getter methods with null checks
     fun getCustomerPhone(): String = _customer.value?.phoneNumber ?: ""

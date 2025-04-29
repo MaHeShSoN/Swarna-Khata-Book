@@ -75,15 +75,11 @@ class GetDetailsFragment : Fragment() {
         return when {
             number.isEmpty() -> {
                 binding.phoneNumberLayout.error = "Phone number is required"
-                // Apply shake animation to indicate error
-                AnimationUtils.shake(binding.phoneNumberLayout)
                 false
             }
 
             !number.matches(Regex("^[0-9]{10}$")) -> {
                 binding.phoneNumberLayout.error = "Please enter a valid 10-digit number"
-                // Apply shake animation to indicate error
-                AnimationUtils.shake(binding.phoneNumberLayout)
                 false
             }
 
@@ -98,8 +94,9 @@ class GetDetailsFragment : Fragment() {
     // Send OTP to user's phone number
     private fun sendOTP() {
         // Show loading animation
-        binding.continueButton.isEnabled = false
         binding.continueButton.text = "Sending OTP..."
+        binding.continueButton.isEnabled = false
+        binding.continueButton.setTextColor(resources.getColor(android.R.color.white))
 
         // Get phone number with country code (assuming India +91)
         val phoneNumber = "+91" + binding.phoneNumberText.text.toString()

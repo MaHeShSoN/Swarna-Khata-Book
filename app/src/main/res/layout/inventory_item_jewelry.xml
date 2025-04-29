@@ -51,10 +51,23 @@
             android:maxLines="1"
             android:textColor="@color/my_light_on_surface"
             android:textSize="18sp"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/stockValue"
             app:layout_constraintStart_toEndOf="@id/jewelryTypeIndicator"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="22K Gold Bangle" />
+            tools:text="Gold Bangle" />
+
+        <!-- Stock Value (Relocated) -->
+        <TextView
+            android:id="@+id/stockValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserratsemibold"
+            android:textColor="@color/my_light_tertiary"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/jewelryTitle"
+            app:layout_constraintBottom_toBottomOf="@id/jewelryTitle"
+            tools:text="x 5 PIECE" />
 
         <!-- Jewelry Code -->
         <TextView
@@ -73,154 +86,27 @@
         <!-- Divider -->
         <View
             android:id="@+id/divider"
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_marginTop="12dp"
+            android:layout_width="1dp"
+            android:layout_height="18dp"
+            android:layout_marginStart="16dp"
             android:alpha="0.5"
+            android:layout_marginTop="4dp"
             android:background="@color/my_light_outline"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/jewelryCode" />
+            app:layout_constraintStart_toEndOf="@+id/jewelryCode"
+            app:layout_constraintTop_toBottomOf="@+id/jewelryTitle" />
 
-        <!-- Metrics Container with smaller CardViews -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/metricsContainer"
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/purity"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/divider">
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/grossWeightCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                app:cardBackgroundColor="@color/my_light_primary_container"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="2dp"
-                app:cardUseCompatPadding="true"
-                app:strokeColor="@color/my_light_primary"
-                app:strokeWidth="1dp"
-                app:layout_constraintEnd_toStartOf="@id/locationCard"
-                app:layout_constraintHorizontal_weight="1"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-
-                    <TextView
-                        android:id="@+id/grossWeightLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="GROSS WT"
-                        android:textColor="@color/my_light_secondary"
-                        android:textSize="10sp" />
-
-                    <TextView
-                        android:id="@+id/grossWeightValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp"
-                        tools:text="25.75 g" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/locationCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="4dp"
-                app:cardBackgroundColor="@color/my_light_secondary_container"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="1.5dp"
-                app:cardUseCompatPadding="true"
-                app:strokeColor="@color/my_light_secondary"
-                app:strokeWidth="1dp"
-                app:layout_constraintEnd_toStartOf="@id/stockCard"
-                app:layout_constraintHorizontal_weight="1"
-                app:layout_constraintStart_toEndOf="@id/grossWeightCard"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-
-                    <TextView
-                        android:id="@+id/locationLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="LOCATION"
-                        android:textColor="@color/my_light_secondary"
-                        android:textSize="10sp" />
-
-                    <TextView
-                        android:id="@+id/locationValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp"
-                        tools:text="Main Store" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/stockCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                app:cardBackgroundColor="@color/my_light_tertiary_container"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="1.5dp"
-                app:cardUseCompatPadding="true"
-                app:strokeColor="@color/my_light_tertiary"
-                app:strokeWidth="1dp"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintHorizontal_weight="1"
-                app:layout_constraintStart_toEndOf="@id/locationCard"
-                app:layout_constraintTop_toTopOf="parent">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="8dp">
-
-                    <TextView
-                        android:id="@+id/stockLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="STOCK"
-                        android:textColor="@color/my_light_tertiary"
-                        android:textSize="10sp" />
-
-                    <TextView
-                        android:id="@+id/stockValue"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:fontFamily="@font/montserratsemibold"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp"
-                        tools:text="5 pcs" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </androidx.constraintlayout.widget.ConstraintLayout>
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            android:fontFamily="@font/montserratlight"
+            android:textColor="@color/my_light_secondary"
+            android:textSize="12sp"
+            app:layout_constraintStart_toEndOf="@id/divider"
+            app:layout_constraintTop_toBottomOf="@id/jewelryTitle"
+            tools:text="Purity: 91.67%" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

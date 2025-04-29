@@ -119,28 +119,60 @@
             app:destination="@id/invoiceCreationFragment" />
         <action
             android:id="@+id/action_mainScreenFragment_to_invoiceDetailFragment"
-            app:destination="@id/invoiceDetailFragment" />
+            app:destination="@id/invoiceDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_customerDetailFragment"
-            app:destination="@id/customerDetailFragment" />
+            app:destination="@id/customerDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_notificationFragment"
-            app:destination="@id/notificationFragment" />
+            app:destination="@id/notificationFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
         <action
             android:id="@+id/action_mainScreenFragment_to_itemDetailFragment"
-            app:destination="@id/itemDetailFragment" />
+            app:destination="@id/itemDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left" 
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_invoicePdfSettingsFragment"
-            app:destination="@id/invoicePdfSettingsFragment" />
+            app:destination="@id/invoicePdfSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_shopSettingsFragment"
-            app:destination="@id/shopSettingsFragment" />
+            app:destination="@id/shopSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_templateSelectionFragment"
-            app:destination="@id/templateSelectionFragment" />
+            app:destination="@id/templateSelectionFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_accountSettingsFragment"
-            app:destination="@id/accountSettingsFragment" />
+            app:destination="@id/accountSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_paymentsFragment"
             app:destination="@id/paymentsFragment" />
@@ -158,13 +190,25 @@
             app:destination="@id/notificationSettingsFragment" />
         <action
             android:id="@+id/action_mainScreenFragment_to_updateSettingsFragment"
-            app:destination="@id/updateSettingsFragment" />
+            app:destination="@id/updateSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_reportsFragment"
-            app:destination="@id/reportsFragment" />
+            app:destination="@id/reportsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_recyclingBinFragment"
-            app:destination="@id/recyclingBinFragment" />
+            app:destination="@id/recyclingBinFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_shopSelectionFragment"
             app:destination="@id/shopSelectionFragment" />
@@ -182,6 +226,16 @@
         <action
             android:id="@+id/action_invoiceCreationFragment_to_customerDetailFragment"
             app:destination="@id/customerDetailFragment" />
+        <action
+            android:id="@+id/action_invoiceCreationFragment_to_addItemFragment"
+            app:destination="@id/mainScreenFragment">
+            <argument
+                android:name="openInventory"
+                android:defaultValue="true" />
+            <argument
+                android:name="openAddItemDialog"
+                android:defaultValue="true" />
+        </action>
     </fragment>
     <fragment
         android:id="@+id/invoiceDetailFragment"
@@ -195,7 +249,11 @@
             app:destination="@id/invoiceCreationFragment" />
         <action
             android:id="@+id/action_invoiceDetailFragment_to_customerDetailFragment"
-            app:destination="@id/customerDetailFragment" />
+            app:destination="@id/customerDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment

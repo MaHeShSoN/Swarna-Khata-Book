@@ -75,6 +75,21 @@ object FeatureChecker {
     }
     
     /**
+     * Show a dialog prompting the user to upgrade due to reaching a specific feature limit
+     */
+    fun showUpgradeDialogForLimit(context: Context, featureType: String, limit: Int) {
+        AlertDialog.Builder(context)
+            .setTitle("$featureType Limit Reached")
+            .setMessage("You've reached the maximum number of $featureType ($limit) allowed for your current plan. Upgrade for unlimited $featureType.")
+            .setPositiveButton("Upgrade") { _, _ ->
+                val intent = Intent(context, UpgradeActivity::class.java)
+                context.startActivity(intent)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    /**
      * Check if user has reached shop count limit
      */
     fun checkShopCountLimit(context: Context, currentCount: Int, onAvailable: () -> Unit) {
@@ -175,5 +190,29 @@ object FeatureChecker {
                     .show()
             }
         }
+    }
+    
+    /**
+     * Suspend function to check if inventory limit is reached without showing dialog
+     * Returns pair of (isLimitReached, maxLimit)
+     */
+    suspend fun isInventoryLimitReached(context: Context, currentCount: Int): Pair<Boolean, Int> {
+        val features = withContext(Dispatchers.IO) {
+            SwarnaKhataBook.getUserSubscriptionManager().getActiveSubscriptionFeatures()
+        }
+        val maxLimit = features.maxInventoryItems
+        return Pair(currentCount >= maxLimit, maxLimit)
+    }
+    
+    /**
+     * Suspend function to check if customer limit is reached without showing dialog
+     * Returns pair of (isLimitReached, maxLimit)
+     */
+    suspend fun isCustomerLimitReached(context: Context, currentCount: Int): Pair<Boolean, Int> {
+        val features = withContext(Dispatchers.IO) {
+            SwarnaKhataBook.getUserSubscriptionManager().getActiveSubscriptionFeatures()
+        }
+        val maxLimit = features.maxCustomerEntries
+        return Pair(currentCount >= maxLimit, maxLimit)
     }
 }

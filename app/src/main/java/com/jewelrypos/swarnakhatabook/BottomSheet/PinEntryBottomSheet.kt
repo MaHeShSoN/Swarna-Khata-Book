@@ -64,6 +64,9 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         // Set up button click listeners using binding
         setupButtonListeners()
         setupPinInputListener() // Setup TextWatcher
+        
+        // Add entrance animations
+        animateEntrance()
 
         // Apply stored arguments and initial state
         applyArguments()
@@ -88,7 +91,7 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-    // Refactored setupButtonListeners using ViewBinding
+    // Refactored setupButtonListeners using ViewBinding with animation feedback
     private fun setupButtonListeners() {
         val numberButtons = listOf(
             binding.btn0, binding.btn1, binding.btn2, binding.btn3, binding.btn4,
@@ -97,6 +100,9 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
 
         numberButtons.forEachIndexed { index, button ->
             button.setOnClickListener {
+                // Add animation feedback
+                com.jewelrypos.swarnakhatabook.Animations.EnhancedAnimations.animateButtonClick(button)
+                
                 if (binding.pinEditText.text?.length ?: 0 < 4) {
                     binding.pinEditText.append(index.toString())
                     // TextWatcher will handle the rest
@@ -105,6 +111,9 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnDelete.setOnClickListener {
+            // Add animation feedback
+            com.jewelrypos.swarnakhatabook.Animations.EnhancedAnimations.animateButtonClick(binding.btnDelete)
+            
             val text = binding.pinEditText.text.toString()
             if (text.isNotEmpty()) {
                 binding.pinEditText.setText(text.substring(0, text.length - 1))
@@ -114,6 +123,9 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         }
 
         binding.btnClear.setOnClickListener {
+            // Add animation feedback
+            com.jewelrypos.swarnakhatabook.Animations.EnhancedAnimations.animateButtonClick(binding.btnClear)
+            
             binding.pinEditText.setText("")
             // TextWatcher will update dots
         }
@@ -138,15 +150,36 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         })
     }
 
-    // Refactored updatePinDots using ViewBinding
+    // Enhanced updatePinDots with animation
     private fun updatePinDots() {
         val pinLength = binding.pinEditText.text?.length ?: 0
 
         for (i in pinDots.indices) {
-            pinDots[i]?.background = ContextCompat.getDrawable(
-                requireContext(),
-                if (i < pinLength) R.drawable.pin_dot_filled else R.drawable.pin_dot_empty
-            )
+            val shouldBeFilled = i < pinLength
+            val currentDrawable = pinDots[i]?.background
+            val newDrawableResId = if (shouldBeFilled) R.drawable.pin_dot_filled else R.drawable.pin_dot_empty
+            
+            // Only animate if the state is changing
+            if ((shouldBeFilled && currentDrawable != ContextCompat.getDrawable(requireContext(), R.drawable.pin_dot_filled)) || 
+                (!shouldBeFilled && currentDrawable != ContextCompat.getDrawable(requireContext(), R.drawable.pin_dot_empty))) {
+                
+                // Set the new background immediately
+                pinDots[i]?.background = ContextCompat.getDrawable(requireContext(), newDrawableResId)
+                
+                // Add a small scale animation for feedback
+                pinDots[i]?.animate()
+                    ?.scaleX(0.85f)
+                    ?.scaleY(0.85f)
+                    ?.setDuration(100)
+                    ?.withEndAction {
+                        pinDots[i]?.animate()
+                            ?.scaleX(1f)
+                            ?.scaleY(1f)
+                            ?.setDuration(100)
+                            ?.start()
+                    }
+                    ?.start()
+            }
         }
 
         // Clear any error when user starts typing again
@@ -179,21 +212,44 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         return this
     }
 
-    // Refactored setError with animation and ViewBinding
+    // Refactored setError with enhanced animation and ViewBinding
     fun setError(error: String?, isVisible: Boolean = true): PinEntryBottomSheet {
         if (_binding != null) {
             if (error != null && isVisible) {
                 binding.pinErrorText.text = error
+                binding.pinErrorText.alpha = 0f
                 binding.pinErrorText.visibility = View.VISIBLE
-                // Apply shake animation
+                binding.pinErrorText.animate()
+                    .alpha(1f)
+                    .setDuration(200)
+                    .start()
+                
+                // Apply enhanced shake animation
                 try {
+                    // First shake the container
                     val shakeAnimation = AnimationUtils.loadAnimation(requireContext(), R.anim.shake_animation)
-                    binding.pinDotsContainer.startAnimation(shakeAnimation) // Apply to dots container
+                    binding.pinDotsContainer.startAnimation(shakeAnimation)
+                    
+                    // Then highlight the error with a red flash
+                    for (dot in pinDots) {
+                        dot?.background = ContextCompat.getDrawable(requireContext(), R.drawable.pin_dot_error)
+                        
+                        // Reset to appropriate state after error indication
+                        dot?.postDelayed({
+                            updatePinDots() // Reset dots to current state
+                        }, 500)
+                    }
                 } catch (e: Exception) {
                     android.util.Log.e("PinEntryBottomSheet", "Error loading or applying animation", e)
                 }
             } else {
-                binding.pinErrorText.visibility = View.GONE
+                binding.pinErrorText.animate()
+                    .alpha(0f)
+                    .setDuration(200)
+                    .withEndAction {
+                        binding.pinErrorText.visibility = View.GONE
+                    }
+                    .start()
             }
         } else if (error != null && isVisible) {
             arguments = (arguments ?: Bundle()).apply {
@@ -226,6 +282,38 @@ class PinEntryBottomSheet : BottomSheetDialogFragment() {
         bottomSheet.layoutParams = layoutParams
     }
 
+    // Add a smooth entrance animation
+    private fun animateEntrance() {
+        // Animate title
+        binding.pinEntryTitle.alpha = 0f
+        binding.pinEntryTitle.translationY = -50f
+        binding.pinEntryTitle.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .setStartDelay(100)
+            .start()
+            
+        // Animate dots container
+        binding.pinDotsContainer.alpha = 0f
+        binding.pinDotsContainer.translationY = 50f
+        binding.pinDotsContainer.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .setStartDelay(200)
+            .start()
+            
+        // Animate keypad
+        binding.keypadContainer.alpha = 0f
+        binding.keypadContainer.translationY = 100f
+        binding.keypadContainer.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(300)
+            .setStartDelay(300)
+            .start()
+    }
 
     fun setOnPinConfirmedListener(listener: (String) -> Unit): PinEntryBottomSheet {
         onPinConfirmedListener = listener

@@ -1,30 +1,35 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.ktx.BuildConfig
 import com.jewelrypos.swarnakhatabook.Repository.BillingManager
 import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.databinding.ActivityUpgradeBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.jewelrypos.swarnakhatabook.Repository.BillingEvent
 
 class UpgradeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityUpgradeBinding
     private lateinit var billingManager: BillingManager
     private lateinit var subscriptionManager: UserSubscriptionManager
-    private var debugMode = false
     private var isMonthlySelected = true
     private var selectedPlanType = "STANDARD" // Default selection
 
     private val SELECTED_CARD_TRANSLATION_Y = -8f // A smaller upward movement to prevent overlap
-    private val UNSELECTED_CARD_TRANSLATION_Y = 0f // Keep cards at their natural position when unselected
+    private val UNSELECTED_CARD_TRANSLATION_Y =
+        0f // Keep cards at their natural position when unselected
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,11 +46,6 @@ class UpgradeActivity : AppCompatActivity() {
             finish()
         }
 
-        // Enable debug mode in debug builds
-        debugMode = BuildConfig.DEBUG
-        if (debugMode) {
-            setupDebugMode()
-        }
 
         // Setup period toggles
         setupBillingPeriodToggles()
@@ -59,13 +59,9 @@ class UpgradeActivity : AppCompatActivity() {
         // Check current subscription status
         checkSubscriptionStatus()
 
-        // Wait a moment and then verify product details are loaded
-        if (debugMode) {
-            lifecycleScope.launch {
-                delay(2000) // Wait for product details to load
-                verifyProductDetails()
-            }
-        }
+
+        // Observe billing events
+        setupBillingEventObserver()
     }
 
     /**
@@ -78,10 +74,22 @@ class UpgradeActivity : AppCompatActivity() {
                 isMonthlySelected = true
 
                 // Update toggle visuals
-                binding.monthlyToggle.setBackgroundColor(ContextCompat.getColor(this, R.color.my_light_primary))
+                binding.monthlyToggle.setBackgroundColor(
+                    ContextCompat.getColor(
+                        this, R.color.my_light_primary
+                    )
+                )
                 binding.monthlyToggle.setTextColor(ContextCompat.getColor(this, R.color.white))
-                binding.yearlyToggle.setBackgroundColor(ContextCompat.getColor(this, android.R.color.transparent))
-                binding.yearlyToggle.setTextColor(ContextCompat.getColor(this, R.color.my_light_secondary))
+                binding.yearlyToggle.setBackgroundColor(
+                    ContextCompat.getColor(
+                        this, android.R.color.transparent
+                    )
+                )
+                binding.yearlyToggle.setTextColor(
+                    ContextCompat.getColor(
+                        this, R.color.my_light_secondary
+                    )
+                )
 
                 // Show monthly cards, hide yearly cards
                 binding.basicMonthlyCard.visibility = View.VISIBLE
@@ -105,10 +113,22 @@ class UpgradeActivity : AppCompatActivity() {
                 isMonthlySelected = false
 
                 // Update toggle visuals
-                binding.yearlyToggle.setBackgroundColor(ContextCompat.getColor(this, R.color.my_light_primary))
+                binding.yearlyToggle.setBackgroundColor(
+                    ContextCompat.getColor(
+                        this, R.color.my_light_primary
+                    )
+                )
                 binding.yearlyToggle.setTextColor(ContextCompat.getColor(this, R.color.white))
-                binding.monthlyToggle.setBackgroundColor(ContextCompat.getColor(this, android.R.color.transparent))
-                binding.monthlyToggle.setTextColor(ContextCompat.getColor(this, R.color.my_light_secondary))
+                binding.monthlyToggle.setBackgroundColor(
+                    ContextCompat.getColor(
+                        this, android.R.color.transparent
+                    )
+                )
+                binding.monthlyToggle.setTextColor(
+                    ContextCompat.getColor(
+                        this, R.color.my_light_secondary
+                    )
+                )
 
                 // Show yearly cards, hide monthly cards
                 binding.basicMonthlyCard.visibility = View.GONE
@@ -134,7 +154,24 @@ class UpgradeActivity : AppCompatActivity() {
      * Update the purchase button text based on selected plan and period
      */
     private fun updatePurchaseButtonText() {
-        val price = when {
+        val sku = if (isMonthlySelected) {
+            when (selectedPlanType) {
+                "BASIC" -> BillingManager.SKU_BASIC_MONTHLY
+                "STANDARD" -> BillingManager.SKU_STANDARD_MONTHLY
+                "PREMIUM" -> BillingManager.SKU_PREMIUM_MONTHLY
+                else -> BillingManager.SKU_STANDARD_MONTHLY
+            }
+        } else {
+            when (selectedPlanType) {
+                "BASIC" -> BillingManager.SKU_BASIC_YEARLY
+                "STANDARD" -> BillingManager.SKU_STANDARD_YEARLY
+                "PREMIUM" -> BillingManager.SKU_PREMIUM_YEARLY
+                else -> BillingManager.SKU_STANDARD_YEARLY
+            }
+        }
+
+        // Get formatted price from BillingManager
+        val price = billingManager.getFormattedPrice(sku) ?: when {
             isMonthlySelected && selectedPlanType == "BASIC" -> "₹99"
             isMonthlySelected && selectedPlanType == "STANDARD" -> "₹199"
             isMonthlySelected && selectedPlanType == "PREMIUM" -> "₹299"
@@ -161,18 +198,26 @@ class UpgradeActivity : AppCompatActivity() {
                 binding.basicPlanFeatures.visibility = View.VISIBLE
                 binding.standardPlanFeatures.visibility = View.GONE
                 binding.premiumPlanFeatures.visibility = View.GONE
+
             }
+
             "STANDARD" -> {
                 binding.selectedPlanTitle.text = "Standard Plan"
                 binding.basicPlanFeatures.visibility = View.GONE
                 binding.standardPlanFeatures.visibility = View.VISIBLE
                 binding.premiumPlanFeatures.visibility = View.GONE
+
+                // Update standard plan features
+
             }
+
             "PREMIUM" -> {
                 binding.selectedPlanTitle.text = "Premium Plan"
                 binding.basicPlanFeatures.visibility = View.GONE
                 binding.standardPlanFeatures.visibility = View.GONE
                 binding.premiumPlanFeatures.visibility = View.VISIBLE
+
+                // Update premium plan features
             }
         }
 
@@ -246,6 +291,7 @@ class UpgradeActivity : AppCompatActivity() {
                     highlightCard(binding.basicYearlyCard)
                 }
             }
+
             "STANDARD" -> {
                 binding.standardMonthlyCurrentPlan.visibility = View.VISIBLE
                 binding.standardYearlyCurrentPlan.visibility = View.VISIBLE
@@ -257,6 +303,7 @@ class UpgradeActivity : AppCompatActivity() {
                     highlightCard(binding.standardYearlyCard)
                 }
             }
+
             "PREMIUM" -> {
                 binding.premiumMonthlyCurrentPlan.visibility = View.VISIBLE
                 binding.premiumYearlyCurrentPlan.visibility = View.VISIBLE
@@ -281,16 +328,17 @@ class UpgradeActivity : AppCompatActivity() {
         // Now highlight the selected card
         card.strokeColor = ContextCompat.getColor(this, R.color.my_light_primary)
         card.strokeWidth = resources.getDimensionPixelSize(R.dimen.card_selected_stroke_width)
-        card.elevation = resources.getDimension(R.dimen.card_selected_elevation)
+//        card.elevation = resources.getDimension(R.dimen.card_selected_elevation)
 
         // Animate the card moving up
-        card.animate()
-            .translationY(SELECTED_CARD_TRANSLATION_Y)
-            .setDuration(200)
-            .start()
+//        card.animate()
+//            .translationY(SELECTED_CARD_TRANSLATION_Y)
+//            .setDuration(200)
+//            .start()
 
         card.tag = "selected"
     }
+
     /**
      * Reset card highlighting to default state
      */
@@ -301,14 +349,12 @@ class UpgradeActivity : AppCompatActivity() {
         card.elevation = resources.getDimension(R.dimen.card_default_elevation)
 
         // Animate the card moving down
-        card.animate()
-            .translationY(UNSELECTED_CARD_TRANSLATION_Y)
-            .setDuration(200)
-            .start()
+        card.animate().translationY(UNSELECTED_CARD_TRANSLATION_Y).setDuration(200).start()
 
         // Clear the "selected" tag
         card.tag = null
     }
+
     private fun resetAllCards() {
         val allCards = listOf(
             binding.basicMonthlyCard,
@@ -329,33 +375,39 @@ class UpgradeActivity : AppCompatActivity() {
         binding.basicMonthlyCard.setOnClickListener {
             updateSelectedPlanDetails("BASIC")
             highlightCurrentPlan("BASIC")
+            updateCardPrices()
         }
 
         binding.basicYearlyCard.setOnClickListener {
             updateSelectedPlanDetails("BASIC")
             highlightCurrentPlan("BASIC")
+            updateCardPrices()
         }
 
         // Standard plan clicks - only select, don't purchase
         binding.standardMonthlyCard.setOnClickListener {
             updateSelectedPlanDetails("STANDARD")
             highlightCurrentPlan("STANDARD")
+            updateCardPrices()
         }
 
         binding.standardYearlyCard.setOnClickListener {
             updateSelectedPlanDetails("STANDARD")
             highlightCurrentPlan("STANDARD")
+            updateCardPrices()
         }
 
         // Premium plan clicks - only select, don't purchase
         binding.premiumMonthlyCard.setOnClickListener {
             updateSelectedPlanDetails("PREMIUM")
             highlightCurrentPlan("PREMIUM")
+            updateCardPrices()
         }
 
         binding.premiumYearlyCard.setOnClickListener {
             updateSelectedPlanDetails("PREMIUM")
             highlightCurrentPlan("PREMIUM")
+            updateCardPrices()
         }
 
         // Purchase button - only this triggers the purchase
@@ -379,98 +431,160 @@ class UpgradeActivity : AppCompatActivity() {
             processPurchase(sku)
         }
     }
+
     private fun processPurchase(sku: String) {
-        if (debugMode) {
-            // In debug mode, show details about the product
-            showProductDetails(sku)
-        } else {
-            // Launch the Google Play billing flow
+
+        // Show loading indicator
+        binding.progressBar.visibility = View.VISIBLE
+        binding.purchaseButton.isEnabled = false
+
+        // Launch the Google Play billing flow
+        try {
             billingManager.purchaseSubscription(this, sku)
+
+            // Set a timeout to hide the loading indicator if no event is received
+            Handler(Looper.getMainLooper()).postDelayed({
+                if (binding.progressBar.visibility == View.VISIBLE) {
+                    hideLoadingIndicator()
+                }
+            }, 30000) // 30 seconds timeout
+        } catch (e: Exception) {
+            // Handle unexpected errors
+            hideLoadingIndicator()
+            showMessage("Error starting purchase: ${e.message ?: "Unknown error"}")
+            Log.e("UpgradeActivity", "Error in purchase flow", e)
         }
     }
 
     /**
-     * Setup debug mode UI elements
+     * Populate subscription card prices with dynamic prices from Google Play
      */
-    private fun setupDebugMode() {
-        // Show debug info container
-        binding.debugContainer.visibility = View.VISIBLE
+    private fun updateCardPrices() {
+        // Update prices for all cards
+        try {
+            // Monthly cards
+            val basicMonthlyPrice =
+                billingManager.getFormattedPrice(BillingManager.SKU_BASIC_MONTHLY)
+            val standardMonthlyPrice =
+                billingManager.getFormattedPrice(BillingManager.SKU_STANDARD_MONTHLY)
+            val premiumMonthlyPrice =
+                billingManager.getFormattedPrice(BillingManager.SKU_PREMIUM_MONTHLY)
 
-        // Add verify button
-        binding.verifyButton.setOnClickListener {
-            verifyProductDetails()
+            // Yearly cards
+            val basicYearlyPrice = billingManager.getFormattedPrice(BillingManager.SKU_BASIC_YEARLY)
+            val standardYearlyPrice =
+                billingManager.getFormattedPrice(BillingManager.SKU_STANDARD_YEARLY)
+            val premiumYearlyPrice =
+                billingManager.getFormattedPrice(BillingManager.SKU_PREMIUM_YEARLY)
+
+            // Update card price text views if available
+            basicMonthlyPrice?.let { binding.basicMonthlyPrice.text = it }
+            standardMonthlyPrice?.let { binding.standardMonthlyPrice.text = it }
+            premiumMonthlyPrice?.let { binding.premiumMonthlyPrice.text = it }
+
+            basicYearlyPrice?.let { binding.basicYearlyPrice.text = it }
+            standardYearlyPrice?.let { binding.standardYearlyPrice.text = it }
+            premiumYearlyPrice?.let { binding.premiumYearlyPrice.text = it }
+
+            // Update purchase button text
+            updatePurchaseButtonText()
+        } catch (e: Exception) {
+            Log.e("UpgradeActivity", "Error updating card prices", e)
         }
     }
 
+
     /**
-     * Verify that product details are loaded correctly from Google Play
+     * Setup observer for billing events
      */
-    private fun verifyProductDetails() {
-        val availableProducts = billingManager.getAvailableProducts()
-        val debugText = StringBuilder()
+    private fun setupBillingEventObserver() {
+        lifecycleScope.launch {
+            billingManager.billingEvents.collect { event ->
+                when (event) {
+                    is BillingEvent.ConnectionEstablished -> {
+                        Log.d("UpgradeActivity", "Billing connection established")
+                        // Refresh product details and prices when connection is established
+                        updateCardPrices()
+                    }
 
-        debugText.append("Available Products: ${availableProducts.size}\n\n")
+                    is BillingEvent.ConnectionFailed -> {
+                        Log.e("UpgradeActivity", "Billing connection failed")
+                        showMessage("Could not connect to Google Play billing service")
+                    }
 
-        if (availableProducts.isEmpty()) {
-            debugText.append("No products loaded. Check Play Console setup.")
-        } else {
-            availableProducts.forEach { productId ->
-                debugText.append("• $productId\n")
-                val offers = billingManager.getSubscriptionOffers(productId)
-                if (offers.isEmpty()) {
-                    debugText.append("  - No offers available\n")
-                } else {
-                    offers.forEach { offer ->
-                        debugText.append("  - $offer\n")
+                    is BillingEvent.ProductDetailsLoaded -> {
+                        Log.d("UpgradeActivity", "Product details loaded")
+                        // Update UI with loaded product details
+                        updateCardPrices()
+                    }
+
+                    is BillingEvent.PurchaseSuccess -> {
+                        Log.d("UpgradeActivity", "Purchase successful")
+                        hideLoadingIndicator()
+                        showMessage("Subscription updated successfully!")
+
+                        // Refresh subscription status
+                        lifecycleScope.launch {
+                            try {
+                                subscriptionManager.refreshSubscriptionStatus()
+                                checkSubscriptionStatus()
+                            } catch (e: Exception) {
+                                Log.e("UpgradeActivity", "Error refreshing subscription status", e)
+                            }
+                        }
+                    }
+
+                    is BillingEvent.PurchaseFailed -> {
+                        Log.e(
+                            "UpgradeActivity", "Purchase failed: ${event.message} (${event.code})"
+                        )
+                        hideLoadingIndicator()
+                        showMessage("Purchase failed: ${event.message}")
+                    }
+
+                    is BillingEvent.PurchaseCanceled -> {
+                        Log.d("UpgradeActivity", "Purchase canceled")
+                        hideLoadingIndicator()
+                        showMessage("Purchase canceled")
+                    }
+
+                    is BillingEvent.Error -> {
+                        Log.e("UpgradeActivity", "Billing error: ${event.message}")
+                        hideLoadingIndicator()
+                        showMessage(event.message)
                     }
                 }
-                debugText.append("\n")
             }
         }
-
-        binding.debugText.text = debugText.toString()
     }
 
-    /**
-     * Show detailed information about a specific product
-     */
-    private fun showProductDetails(productId: String) {
-        val offers = billingManager.getSubscriptionOffers(productId)
-        val debugText = StringBuilder()
+    private fun showMessage(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+    }
 
-        debugText.append("Product: $productId\n\n")
+    private fun hideLoadingIndicator() {
+        binding.progressBar.visibility = View.GONE
+        binding.purchaseButton.isEnabled = true
+    }
 
-        if (offers.isEmpty()) {
-            debugText.append("No offers available for this product.\n")
-            debugText.append("Check that the product is properly configured in Play Console.")
+    override fun onResume() {
+        super.onResume()
+
+        // Reconnect to billing service if needed
+        if (!billingManager.connectToPlayBilling()) {
+            showMessage("Could not connect to Google Play billing service. Please try again later.")
         } else {
-            debugText.append("Available Offers:\n")
-            offers.forEach { offer ->
-                debugText.append("• $offer\n")
+            // Update card prices when activity resumes
+            lifecycleScope.launch {
+                delay(1000) // Give time for billing client to connect
+                runOnUiThread {
+                    updateCardPrices()
+                }
             }
-
-            // Show which base plan would be used
-            val basePlanId = when (productId) {
-                BillingManager.SKU_BASIC_MONTHLY -> BillingManager.BASE_PLAN_BASIC_MONTHLY
-                BillingManager.SKU_STANDARD_MONTHLY -> BillingManager.BASE_PLAN_STANDARD_MONTHLY
-                BillingManager.SKU_PREMIUM_MONTHLY -> BillingManager.BASE_PLAN_PREMIUM_MONTHLY
-                BillingManager.SKU_BASIC_YEARLY -> BillingManager.BASE_PLAN_BASIC_YEARLY
-                BillingManager.SKU_STANDARD_YEARLY -> BillingManager.BASE_PLAN_STANDARD_YEARLY
-                BillingManager.SKU_PREMIUM_YEARLY -> BillingManager.BASE_PLAN_PREMIUM_YEARLY
-                else -> null
-            }
-
-            debugText.append("\nTargeted base plan: $basePlanId\n")
         }
 
-        binding.debugText.text = debugText.toString()
-
-        // Scroll to make debug text visible
-        binding.scrollView.post {
-            binding.scrollView.smoothScrollTo(0, binding.debugContainer.top)
-        }
-
-        Toast.makeText(this, "Debug info shown below", Toast.LENGTH_SHORT).show()
+        // Reset UI elements
+        hideLoadingIndicator()
     }
 
     // Add these values to your dimens.xml file

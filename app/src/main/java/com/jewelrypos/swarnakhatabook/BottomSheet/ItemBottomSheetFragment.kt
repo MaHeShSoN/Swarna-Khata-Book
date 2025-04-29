@@ -9,6 +9,7 @@ import android.widget.ArrayAdapter
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -54,9 +55,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         // Update title if in edit mode
         if (editMode) {
-            binding.titleTextView.text = "Edit Jewellery Item"
+            binding.titleTextView.text = getString(R.string.edit_jewellery_item)
             binding.saveAddButton.visibility = View.GONE
-            binding.saveCloseButton.text = "Update"
+            binding.saveCloseButton.text = getString(R.string.update)
 
             // Optionally, adjust the layout to make the "Save and Close" button full width
             val layoutParams = binding.saveCloseButton.layoutParams as LinearLayout.LayoutParams
@@ -111,10 +112,10 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.grossWeightEditText.setText(item.grossWeight.toString())
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
+        binding.wastageTypeDropdown.setText(item.wastageType)
         binding.purityEditText.setText(item.purity)
         binding.stockEditText.setText(item.stock.toString())
         binding.stockChargesTypeEditText.setText(item.stockUnit)
-        binding.locationEditText.setText(item.location)
 
         // Disable the jewelry code field to prevent editing the document ID reference
         binding.jewelryCodeEditText.isEnabled = false
@@ -122,6 +123,18 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
 
     private fun setUpDropDownMenus() {
+        //Wastage Type
+        val listOfWastageType = listOf<String>("Percentage", "Gram")
+        val adapter0 = ArrayAdapter(
+            requireContext(),
+            R.layout.dropdown_item,
+            listOfWastageType
+        )
+        binding.wastageTypeDropdown.apply {
+            setAdapter(adapter0)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        }
 
         //Purity list
         val listOfUnits = listOf<String>("PIECE", "SET", "PAIR")
@@ -134,8 +147,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.stockChargesTypeEditText.apply {
             setAdapter(adapter3)
             setDropDownBackgroundResource(R.color.cream_background)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
         }
-
     }
 
     private fun populateDropdown(items: List<MetalItem>) {
@@ -172,6 +185,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             // If there are no items, set a hint text as helper
             if (itemNames.isEmpty()) {
                 binding.categoryInputLayout.helperText = "Use the + button to add a category"
+                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.black))
                 binding.goldImageButton1.alpha = 1.0f  // Make sure button is fully visible
                 // Optional: add a gentle pulse animation to draw attention to the button
                 binding.goldImageButton1.startAnimation(
@@ -193,6 +207,28 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 binding.categoryDropdown.setText("")  // Clear the suggestion text
             }
         }
+
+        // Set text colors for input fields
+        binding.displayNameEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.jewelryCodeEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.grossWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.netWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.wastageEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.purityEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.stockEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        binding.categoryDropdown.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+
+        // Set text colors for labels
+        binding.displayNameInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.jewelryCodeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.grossWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.netWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.wastageInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.wastageTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.purityInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.stockInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.stockTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        binding.categoryInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
     }
 
     fun showThemedDialog() {
@@ -231,14 +267,14 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        "Please fill in both fields",
+                        getString(R.string.please_fill_in_both_fields),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
 
                 dialog.dismiss()
             }
-            .setNegativeButton("Cancel") { dialog ->
+            .setNegativeButton(getString(R.string.cancel)) { dialog ->
                 dialog.dismiss()
             }
             .apply {
@@ -278,33 +314,33 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         val grossWeight = binding.grossWeightEditText.text.toString().trim()
         val netWeight = binding.netWeightEditText.text.toString().trim()
         val wastage = binding.wastageEditText.text.toString().trim()
+        val wastageType = binding.wastageTypeDropdown.text.toString().trim()
         val purity = binding.purityEditText.text.toString().trim()
         val stock = binding.stockEditText.text.toString().trim()
         val stockType = binding.stockChargesTypeEditText.text.toString().trim()
-        val location = binding.locationEditText.text.toString().trim()
         val category = binding.categoryDropdown.text.toString().trim()
 
         // Basic validation for required fields
         if (displayName.isEmpty()) {
-            binding.displayNameInputLayout.error = "Display name is required"
+            binding.displayNameInputLayout.error = getString(R.string.display_name_is_required)
             binding.displayNameEditText.requestFocus()
-            return Pair(false, "Display name is required")
+            return Pair(false, getString(R.string.display_name_is_required))
         } else {
             binding.displayNameInputLayout.error = null
         }
 
         if (jewelryCode.isEmpty()) {
-            binding.jewelryCodeInputLayout.error = "Jewelry code is required"
+            binding.jewelryCodeInputLayout.error = getString(R.string.jewelry_code_is_required)
             binding.jewelryCodeEditText.requestFocus()
-            return Pair(false, "Jewelry code is required")
+            return Pair(false, getString(R.string.jewelry_code_is_required))
         } else {
             binding.jewelryCodeInputLayout.error = null
         }
 
         if (category.isEmpty()) {
-            binding.categoryInputLayout.error = "Category is required"
+            binding.categoryInputLayout.error = getString(R.string.category_is_required)
             binding.categoryDropdown.requestFocus()
-            return Pair(false, "Category is required")
+            return Pair(false, getString(R.string.category_is_required))
         } else {
             binding.categoryInputLayout.error = null
         }
@@ -312,23 +348,24 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // Numeric field validations
         // Gross Weight - required
         if (grossWeight.isEmpty()) {
-            binding.grossWeightInputLayout.error = "Gross weight is required"
+            binding.grossWeightInputLayout.error = getString(R.string.gross_weight_is_required)
             binding.grossWeightEditText.requestFocus()
-            return Pair(false, "Gross weight is required")
+            return Pair(false, getString(R.string.gross_weight_is_required))
         } else {
             try {
                 val grossWeightValue = grossWeight.toDouble()
                 if (grossWeightValue <= 0) {
-                    binding.grossWeightInputLayout.error = "Gross weight must be greater than zero"
+                    binding.grossWeightInputLayout.error =
+                        getString(R.string.gross_weight_must_be_greater_than_zero)
                     binding.grossWeightEditText.requestFocus()
-                    return Pair(false, "Gross weight must be greater than zero")
+                    return Pair(false, getString(R.string.gross_weight_must_be_greater_than_zero))
                 } else {
                     binding.grossWeightInputLayout.error = null
                 }
             } catch (e: NumberFormatException) {
-                binding.grossWeightInputLayout.error = "Invalid gross weight"
+                binding.grossWeightInputLayout.error = getString(R.string.invalid_gross_weight)
                 binding.grossWeightEditText.requestFocus()
-                return Pair(false, "Invalid gross weight")
+                return Pair(false, getString(R.string.invalid_gross_weight))
             }
         }
 
@@ -339,27 +376,29 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 val grossWeightValue = grossWeight.toDouble()
 
                 if (netWeightValue <= 0) {
-                    binding.netWeightInputLayout.error = "Net weight must be greater than zero"
-                    return Pair(false, "Net weight must be greater than zero")
+                    binding.netWeightInputLayout.error =
+                        getString(R.string.net_weight_must_be_greater_than_zero)
+                    return Pair(false, getString(R.string.net_weight_must_be_greater_than_zero))
                 } else if (netWeightValue > grossWeightValue) {
-                    binding.netWeightInputLayout.error = "Net weight cannot exceed gross weight"
+                    binding.netWeightInputLayout.error =
+                        getString(R.string.net_weight_cannot_exceed_gross_weight)
                     binding.netWeightEditText.requestFocus()
-                    return Pair(false, "Net weight cannot exceed gross weight")
+                    return Pair(false, getString(R.string.net_weight_cannot_exceed_gross_weight))
                 } else {
                     binding.netWeightInputLayout.error = null
                 }
             } catch (e: NumberFormatException) {
-                binding.netWeightInputLayout.error = "Invalid net weight"
+                binding.netWeightInputLayout.error = getString(R.string.invalid_net_weight)
                 binding.netWeightEditText.requestFocus()
-                return Pair(false, "Invalid net weight")
+                return Pair(false, getString(R.string.invalid_net_weight))
             }
         }
 
         // Purity validation
         if (purity.isEmpty()) {
-            binding.purityInputLayout.error = "Purity is required"
+            binding.purityInputLayout.error = getString(R.string.purity_is_required)
             binding.purityEditText.requestFocus()
-            return Pair(false, "Purity is required")
+            return Pair(false, getString(R.string.purity_is_required))
         } else {
             binding.purityInputLayout.error = null
         }
@@ -369,16 +408,27 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             try {
                 val wastageValue = wastage.toDouble()
                 if (wastageValue < 0) {
-                    binding.wastageInputLayout.error = "Wastage cannot be negative"
+                    binding.wastageInputLayout.error =
+                        getString(R.string.wastage_cannot_be_negative)
                     binding.wastageEditText.requestFocus()
-                    return Pair(false, "Wastage cannot be negative")
+                    return Pair(false, getString(R.string.wastage_cannot_be_negative))
                 } else {
                     binding.wastageInputLayout.error = null
                 }
+                
+                // Validate wastage type is selected
+                if (wastageType.isEmpty()) {
+                    binding.wastageTypeInputLayout.error =
+                        getString(R.string.wastage_type_is_required)
+                    binding.wastageTypeDropdown.requestFocus()
+                    return Pair(false, getString(R.string.wastage_type_is_required))
+                } else {
+                    binding.wastageTypeInputLayout.error = null
+                }
             } catch (e: NumberFormatException) {
-                binding.wastageInputLayout.error = "Invalid wastage value"
+                binding.wastageInputLayout.error = getString(R.string.invalid_wastage_value)
                 binding.wastageEditText.requestFocus()
-                return Pair(false, "Invalid wastage value")
+                return Pair(false, getString(R.string.invalid_wastage_value))
             }
         }
 
@@ -388,25 +438,26 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             try {
                 val stockValue = stock.toDouble()
                 if (stockValue < 0) {
-                    binding.stockInputLayout.error = "Stock value cannot be negative"
+                    binding.stockInputLayout.error =
+                        getString(R.string.stock_value_cannot_be_negative)
                     binding.stockEditText.requestFocus()
-                    return Pair(false, "Stock value cannot be negative")
+                    return Pair(false, getString(R.string.stock_value_cannot_be_negative))
                 } else {
                     binding.stockInputLayout.error = null
                 }
 
                 // If stock value is provided, type must also be provided
                 if (stockType.isEmpty()) {
-                    binding.stockTypeInputLayout.error = "Stock unit is required"
+                    binding.stockTypeInputLayout.error = getString(R.string.stock_unit_is_required)
                     binding.stockChargesTypeEditText.requestFocus()
-                    return Pair(false, "Stock unit is required")
+                    return Pair(false, getString(R.string.stock_unit_is_required))
                 } else {
                     binding.stockTypeInputLayout.error = null
                 }
             } catch (e: NumberFormatException) {
-                binding.stockInputLayout.error = "Invalid stock value"
+                binding.stockInputLayout.error = getString(R.string.invalid_stock_value)
                 binding.stockEditText.requestFocus()
-                return Pair(false, "Invalid stock value")
+                return Pair(false, getString(R.string.invalid_stock_value))
             }
         }
 
@@ -425,10 +476,12 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     private fun setupInitialValues() {
         // Set default values
         binding.wastageEditText.setText("0.0")
+        binding.wastageTypeDropdown.setText(getString(R.string.percentage), false)
         binding.purityEditText.setText("0.0")
         binding.netWeightEditText.setText("0.0")
         binding.grossWeightEditText.setText("0.0")
         binding.stockEditText.setText("0.0")
+        binding.stockChargesTypeEditText.setText(getString(R.string.piece),false) // Default stock unit value
     }
 
 
@@ -464,10 +517,11 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            wastageType = binding.wastageTypeDropdown.text.toString(),
             purity = binding.purityEditText.text.toString(),
             stock = binding.stockEditText.text.toString().toDoubleOrNull() ?: 0.0,
             stockUnit = binding.stockChargesTypeEditText.text.toString(),
-            location = binding.locationEditText.text.toString(),
+            location = "", // Empty location as it's removed
         )
 
 
@@ -506,10 +560,10 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.grossWeightEditText.text?.clear()
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
+        binding.wastageTypeDropdown.setText(getString(R.string.percentage), false)
         binding.purityEditText.setText("")
         binding.stockEditText.text?.clear()
-        binding.stockChargesTypeEditText.setText("")
-        binding.locationEditText.text?.clear()
+        binding.stockChargesTypeEditText.setText(getString(R.string.piece),false) // Default value after clearing
 
         // Reset any error states
         binding.displayNameInputLayout.error = null
@@ -517,6 +571,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.grossWeightInputLayout.error = null
         binding.netWeightInputLayout.error = null
         binding.wastageInputLayout.error = null
+        binding.wastageTypeInputLayout.error = null
         binding.purityInputLayout.error = null
         binding.stockInputLayout.error = null
         binding.stockTypeInputLayout.error = null
@@ -548,6 +603,11 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 // Proceed with saving the jewelry item and close the form
                 saveJewelryItem(closeAfterSave = true)
             }
+        }
+        
+        // Handle wastage type dropdown selection
+        binding.wastageTypeDropdown.setOnItemClickListener { _, _, _, _ ->
+            // Update calculated fields or validations if needed
         }
     }
 

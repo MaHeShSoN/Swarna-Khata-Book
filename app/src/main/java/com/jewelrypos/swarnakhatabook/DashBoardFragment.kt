@@ -58,12 +58,6 @@ import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Calendar
 import java.util.Locale
-import android.widget.PopupMenu
-import com.jewelrypos.swarnakhatabook.DataClasses.ShopDetails
-import android.widget.ListPopupWindow // Add this import
-import android.view.Gravity // Add this import
-import android.util.DisplayMetrics // Add this import
-import com.jewelrypos.swarnakhatabook.Adapters.ShopMenuAdapter
 
 class DashBoardFragment : Fragment(),
     CustomerBottomSheetFragment.CustomerOperationListener,
@@ -128,8 +122,11 @@ class DashBoardFragment : Fragment(),
         setupPeriodSelector()
         setupQuickActions()
 
-        // Load shop data for switching
-        loadShopData()
+        // Load active shop info
+        loadActiveShopInfo()
+        
+        // Observe shop changes
+        observeShopChanges()
 
         // Load data for dashboard
         loadDashboardData()
@@ -143,9 +140,9 @@ class DashBoardFragment : Fragment(),
                     navigateToNotifications()
                     true
                 }
-
+                
                 R.id.action_switch_shop -> {
-                    showShopSwitcherMenu()
+                    navigateToShopSelection()
                     true
                 }
 
@@ -153,7 +150,7 @@ class DashBoardFragment : Fragment(),
             }
         }
         setupNotificationBadge()
-
+        
         // Update the shop name in the toolbar title
         updateToolbarTitle()
     }
@@ -198,7 +195,7 @@ class DashBoardFragment : Fragment(),
                 "DashBoardFragment",
                 "Active shop changed, refreshing notification count: $shopId"
             )
-            notificationViewModel.setCurrentShop(shopId)
+            notificationViewModel.setCurrentShop(shopId!!)
             notificationViewModel.refreshUnreadCount()
         }
 
@@ -206,19 +203,11 @@ class DashBoardFragment : Fragment(),
         notificationViewModel.refreshUnreadCount()
     }
 
-    private fun loadShopData() {
+    private fun loadActiveShopInfo() {
         val userId = SessionManager.getCurrentUserId()
         if (userId != null) {
             shopSwitcherViewModel.loadInitialData(userId, requireContext())
-
-            // Observe active shop changes to update the title
-            shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
-                if (shop != null) {
-                    // Update toolbar title when shop changes
-                    binding.topAppBar.title = shop.shopName
-                }
-            }
-
+            
             // Handle errors
             shopSwitcherViewModel.error.observe(viewLifecycleOwner) { error ->
                 error?.let {
@@ -240,62 +229,9 @@ class DashBoardFragment : Fragment(),
         }
     }
 
-    private fun showShopSwitcherMenu() {
-        val shops = shopSwitcherViewModel.managedShops.value
-        val activeShop = shopSwitcherViewModel.activeShop.value
-
-        if (shops.isNullOrEmpty()) {
-            Toast.makeText(requireContext(), R.string.no_shops_available, Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        // --- Use ListPopupWindow ---
-        val listPopupWindow = ListPopupWindow(requireContext())
-        listPopupWindow.anchorView = binding.topAppBar // Anchor to the menu item or toolbar
-
-        // --- Create adapter (Use your existing ShopMenuAdapter) ---
-        // Create a list including the "Create New" option if needed, or handle it separately.
-        // For simplicity, this example only shows shops. Adjust as needed.
-        val adapter = ShopMenuAdapter(requireContext(), shops, activeShop?.shopId) //
-        listPopupWindow.setAdapter(adapter)
-
-        // --- Calculate and set width ---
-        val displayMetrics = DisplayMetrics()
-        requireActivity().windowManager.defaultDisplay.getMetrics(displayMetrics)
-        val screenWidth = displayMetrics.widthPixels
-        listPopupWindow.width = (screenWidth * 0.80).toInt() // 60% of screen width
-        // You might want to set a max width as well using:
-        // listPopupWindow.width = min((screenWidth * 0.60).toInt(), resources.getDimensionPixelSize(R.dimen.your_max_popup_width))
-        listPopupWindow.height = ListPopupWindow.WRAP_CONTENT
-
-        listPopupWindow.horizontalOffset = 0 // Optional: Adjust horizontal offset if needed
-        listPopupWindow.verticalOffset = 0 // Optional: Adjust vertical offset if needed
-        // Set the gravity. Gravity.START usually corresponds to left in LTR layouts.
-        listPopupWindow.setDropDownGravity(Gravity.START)
-
-        listPopupWindow.isModal = true // Makes it behave like a popup
-
-        // --- Handle item clicks ---
-        listPopupWindow.setOnItemClickListener { parent, view, position, id ->
-            val selectedItem = adapter.getItem(position) // Get item from adapter
-
-            if (selectedItem is ShopDetails) { // Check if it's a ShopDetails object
-                if (selectedItem.shopId != activeShop?.shopId) {
-                    shopSwitcherViewModel.switchActiveShop(selectedItem, requireContext()) //
-                }
-            } else if (selectedItem is String && selectedItem == "CREATE_NEW_SHOP") { // Handle create new option
-                navigateToCreateShop()
-            }
-            listPopupWindow.dismiss() // Close the popup
-        }
-
-        listPopupWindow.show()
-    }
-
-    private fun navigateToCreateShop() {
-        // Navigate to create shop screen
+    private fun navigateToShopSelection() {
         requireActivity().findNavController(R.id.nav_host_fragment)
-            .navigate(R.id.action_mainScreenFragment_to_createShopFragment)
+            .navigate(R.id.action_mainScreenFragment_to_shopSelectionFragment)
     }
 
     private fun setupPeriodSelector() {
@@ -459,8 +395,7 @@ class DashBoardFragment : Fragment(),
                     }
                 })
 
-                // Animate and refresh
-                animateY(1500, Easing.EaseInOutQuad)
+                // Remove animation
                 invalidate()
             }
         } catch (e: Exception) {
@@ -638,7 +573,7 @@ class DashBoardFragment : Fragment(),
             description.isEnabled = false
             legend.isEnabled = false
 
-            animateY(1000)
+            // Remove animation
             invalidate()
         }
     }
@@ -949,7 +884,17 @@ class DashBoardFragment : Fragment(),
         shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
             shop?.let {
                 Log.d("DashBoardFragment", "Shop changed to: ${shop.shopName}")
-                // Refresh data when shop changes
+                
+                // First refresh notification count when shop changes
+                notificationViewModel.setCurrentShop(shop.shopId)
+                notificationViewModel.refreshUnreadCount()
+                
+                // Refresh all data sources when shop changes
+                salesViewModel.refreshInvoices()
+                customerViewModel.refreshData()
+                inventoryViewModel.refreshDataAndClearFilters()
+                
+                // Reload dashboard data
                 loadDashboardData()
                 loadItemPerformanceData()
             }

@@ -36,9 +36,8 @@
             android:id="@+id/previewCard"
             android:layout_width="match_parent"
             android:layout_height="250dp"
-            android:layout_margin="16dp"
             app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
+            app:cardCornerRadius="0dp"
             app:cardElevation="2dp"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
@@ -81,6 +80,7 @@
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
                     app:cardElevation="2dp"
+                    android:layout_marginTop="16dp"
                     app:strokeColor="@color/my_light_outline"
                     app:strokeWidth="1dp">
 
@@ -145,6 +145,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
                 <!-- Branding Settings Card -->
+                <!-- Branding Settings Card (Improved) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/brandingCard"
                     android:layout_width="match_parent"
@@ -171,186 +172,316 @@
                             android:textSize="18sp" />
 
                         <!-- Logo Section -->
-                        <LinearLayout
+                        <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:layout_marginTop="16dp">
 
-                            <TextView
-                                android:layout_width="0dp"
+                            <LinearLayout
+                                android:id="@+id/logoHeaderLayout"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/montserratmedium"
-                                android:text="@string/shop_logo"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="16sp" />
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
-                            <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/showLogoSwitch"
-                                android:layout_width="wrap_content"
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:text="@string/shop_logo"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                    android:id="@+id/showLogoSwitch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true" />
+                            </LinearLayout>
+
+                            <!-- Logo Upload State -->
+                            <LinearLayout
+                                android:id="@+id/logoUploadState"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:checked="true" />
-                        </LinearLayout>
+                                android:layout_below="@id/logoHeaderLayout"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical">
 
-                        <Button
-                            android:id="@+id/uploadLogoButton"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/upload_logo"
-                            android:textColor="@color/my_light_primary"
-                            app:strokeColor="@color/my_light_primary" />
+                                <!-- When no logo yet -->
+                                <Button
+                                    android:id="@+id/uploadLogoButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/upload_logo"
+                                    android:textColor="@color/my_light_primary"
+                                    app:icon="@drawable/si__arrow_upward_fill"
+                                    app:iconTint="@color/my_light_primary"
+                                    app:strokeColor="@color/my_light_primary" />
 
-                        <LinearLayout
-                            android:id="@+id/logoPreviewLayout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical"
-                            android:visibility="gone">
+                                <!-- When logo exists -->
+                                <RelativeLayout
+                                    android:id="@+id/logoPreviewLayout"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:visibility="gone">
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:text="Logo Preview:"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="14sp" />
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/logoPreviewCard"
+                                        android:layout_width="140dp"
+                                        android:layout_height="70dp"
+                                        app:cardCornerRadius="4dp"
+                                        app:strokeColor="@color/my_light_outline"
+                                        app:strokeWidth="1dp">
 
-                            <ImageView
-                                android:id="@+id/logoImageView"
-                                android:layout_width="120dp"
-                                android:layout_height="60dp"
-                                android:layout_marginTop="4dp"
-                                android:background="@color/my_light_primary_container"
-                                android:scaleType="fitCenter" />
-                        </LinearLayout>
+                                        <ImageView
+                                            android:id="@+id/logoImageView"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:padding="4dp"
+                                            android:scaleType="fitCenter" />
+                                    </com.google.android.material.card.MaterialCardView>
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentEnd="true"
+                                        android:layout_centerVertical="true"
+                                        android:orientation="horizontal">
+
+                                        <ImageButton
+                                            android:id="@+id/replaceLogoButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Replace Logo"
+                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            app:tint="@color/my_light_primary" />
+
+                                        <ImageButton
+                                            android:id="@+id/deleteLogoButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:layout_marginStart="8dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Delete Logo"
+                                            android:src="@drawable/material_symbols__delete"
+                                            app:tint="@color/status_unpaid" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+                            </LinearLayout>
+                        </RelativeLayout>
 
                         <!-- Watermark Section -->
-                        <LinearLayout
+                        <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:layout_marginTop="24dp">
 
-                            <TextView
-                                android:layout_width="0dp"
+                            <LinearLayout
+                                android:id="@+id/watermarkHeaderLayout"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/montserratmedium"
-                                android:text="@string/watermark"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="16sp" />
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
-                            <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/showWatermarkSwitch"
-                                android:layout_width="wrap_content"
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:text="@string/watermark"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                    android:id="@+id/showWatermarkSwitch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="false" />
+                            </LinearLayout>
+
+                            <!-- Watermark Upload State -->
+                            <LinearLayout
+                                android:id="@+id/watermarkUploadState"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:checked="false" />
-                        </LinearLayout>
+                                android:layout_below="@id/watermarkHeaderLayout"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical">
 
-                        <Button
-                            android:id="@+id/uploadWatermarkButton"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:enabled="false"
-                            android:text="@string/upload_watermark"
-                            android:textColor="@color/my_light_primary"
-                            app:strokeColor="@color/my_light_primary" />
+                                <!-- When no watermark yet -->
+                                <Button
+                                    android:id="@+id/uploadWatermarkButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:enabled="false"
+                                    android:text="@string/upload_watermark"
+                                    android:textColor="@color/my_light_primary"
+                                    app:icon="@drawable/si__arrow_upward_fill"
+                                    app:iconTint="@color/my_light_primary"
+                                    app:strokeColor="@color/my_light_primary" />
 
-                        <LinearLayout
-                            android:id="@+id/watermarkPreviewLayout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical"
-                            android:visibility="gone">
+                                <!-- When watermark exists -->
+                                <RelativeLayout
+                                    android:id="@+id/watermarkPreviewLayout"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:visibility="gone">
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:text="@string/watermark_preview"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="14sp" />
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/watermarkPreviewCard"
+                                        android:layout_width="140dp"
+                                        android:layout_height="70dp"
+                                        app:cardCornerRadius="4dp"
+                                        app:strokeColor="@color/my_light_outline"
+                                        app:strokeWidth="1dp">
 
-                            <ImageView
-                                android:id="@+id/watermarkImageView"
-                                android:layout_width="120dp"
-                                android:layout_height="60dp"
-                                android:layout_marginTop="4dp"
-                                android:alpha="0.5"
-                                android:background="@color/my_light_primary_container"
-                                android:scaleType="fitCenter" />
-                        </LinearLayout>
+                                        <ImageView
+                                            android:id="@+id/watermarkImageView"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:alpha="0.5"
+                                            android:padding="4dp"
+                                            android:scaleType="fitCenter" />
+                                    </com.google.android.material.card.MaterialCardView>
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentEnd="true"
+                                        android:layout_centerVertical="true"
+                                        android:orientation="horizontal">
+
+                                        <ImageButton
+                                            android:id="@+id/replaceWatermarkButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Replace Watermark"
+                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            app:tint="@color/my_light_primary" />
+
+                                        <ImageButton
+                                            android:id="@+id/deleteWatermarkButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:layout_marginStart="8dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Delete Watermark"
+                                            android:src="@drawable/material_symbols__delete"
+                                            app:tint="@color/status_unpaid" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+                            </LinearLayout>
+                        </RelativeLayout>
 
                         <!-- Signature Section -->
-                        <LinearLayout
+                        <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:layout_marginTop="24dp">
 
-                            <TextView
-                                android:layout_width="0dp"
+                            <LinearLayout
+                                android:id="@+id/signatureHeaderLayout"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="@font/montserratmedium"
-                                android:text="@string/signature"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="16sp" />
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
-                            <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/showSignatureSwitch"
-                                android:layout_width="wrap_content"
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:fontFamily="@font/montserratmedium"
+                                    android:text="@string/signature"
+                                    android:textColor="@color/my_light_on_surface"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                    android:id="@+id/showSignatureSwitch"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:checked="true" />
+                            </LinearLayout>
+
+                            <!-- Signature Upload State -->
+                            <LinearLayout
+                                android:id="@+id/signatureUploadState"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:checked="true" />
-                        </LinearLayout>
+                                android:layout_below="@id/signatureHeaderLayout"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical">
 
-                        <Button
-                            android:id="@+id/uploadSignatureButton"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="@string/create_signature"
-                            android:textColor="@color/my_light_primary"
-                            app:strokeColor="@color/my_light_primary" />
+                                <!-- When no signature yet -->
+                                <Button
+                                    android:id="@+id/uploadSignatureButton"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/create_signature"
+                                    android:textColor="@color/my_light_primary"
+                                    app:iconTint="@color/my_light_primary"
+                                    app:strokeColor="@color/my_light_primary" />
 
-                        <LinearLayout
-                            android:id="@+id/signaturePreviewLayout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical"
-                            android:visibility="gone">
+                                <!-- When signature exists -->
+                                <RelativeLayout
+                                    android:id="@+id/signaturePreviewLayout"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:visibility="gone">
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:text="@string/signature_preview"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="14sp" />
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/signaturePreviewCard"
+                                        android:layout_width="140dp"
+                                        android:layout_height="70dp"
+                                        app:cardCornerRadius="4dp"
+                                        app:strokeColor="@color/my_light_outline"
+                                        app:strokeWidth="1dp">
 
-                            <ImageView
-                                android:id="@+id/signatureImageView"
-                                android:layout_width="120dp"
-                                android:layout_height="60dp"
-                                android:layout_marginTop="4dp"
-                                android:background="@color/my_light_primary_container"
-                                android:scaleType="fitCenter" />
-                        </LinearLayout>
+                                        <ImageView
+                                            android:id="@+id/signatureImageView"
+                                            android:layout_width="match_parent"
+                                            android:layout_height="match_parent"
+                                            android:padding="4dp"
+                                            android:scaleType="fitCenter" />
+                                    </com.google.android.material.card.MaterialCardView>
+
+                                    <LinearLayout
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_alignParentEnd="true"
+                                        android:layout_centerVertical="true"
+                                        android:orientation="horizontal">
+
+                                        <ImageButton
+                                            android:id="@+id/recreateSignatureButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Recreate Signature"
+                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            app:tint="@color/my_light_primary" />
+
+                                        <ImageButton
+                                            android:id="@+id/deleteSignatureButton"
+                                            android:layout_width="40dp"
+                                            android:layout_height="40dp"
+                                            android:layout_marginStart="8dp"
+                                            android:background="?attr/selectableItemBackgroundBorderless"
+                                            android:contentDescription="Delete Signature"
+                                            android:src="@drawable/material_symbols__delete"
+                                            app:tint="@color/status_unpaid" />
+                                    </LinearLayout>
+                                </RelativeLayout>
+                            </LinearLayout>
+                        </RelativeLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
-
                 <!-- Content Settings Card -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/contentCard"

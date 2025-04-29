@@ -30,9 +30,15 @@ object EventBus {
     private val _customerAddedEvent = MutableLiveData<Boolean>()
     val customerAddedEvent: LiveData<Boolean> = _customerAddedEvent
 
+    // Flag to indicate whether to scroll to top in SalesFragment
+    private val _scrollSalesFragmentToTop = MutableLiveData<Boolean>()
+    val scrollSalesFragmentToTop: LiveData<Boolean> = _scrollSalesFragmentToTop
+
     // Existing invoice methods
     fun postInvoiceAdded() {
         _invoiceAddedEvent.postValue(true)
+        // Set the scroll flag to true when an invoice is added
+        _scrollSalesFragmentToTop.postValue(true)
     }
 
     fun postInvoiceDeleted() {
@@ -94,5 +100,10 @@ object EventBus {
     }
     fun resetCustomerAddedEvent() {
         _customerAddedEvent.value = false
+    }
+
+    // Reset scroll flag
+    fun resetScrollSalesFragmentToTop() {
+        _scrollSalesFragmentToTop.value = false
     }
 }

@@ -19,7 +19,7 @@ import java.util.Locale
 
 // Extend ListAdapter<Invoice, InvoicesAdapter.InvoiceViewHolder>
 // Pass the DiffUtil.ItemCallback object to the constructor
-class InvoicesAdapter : ListAdapter<Invoice, InvoicesAdapter.InvoiceViewHolder>(InvoiceDiffCallback) {
+class InvoiceAdapter : ListAdapter<Invoice, InvoiceAdapter.InvoiceViewHolder>(InvoiceDiffCallback) {
 
     // Click listener remains the same
     var onItemClickListener: ((Invoice) -> Unit)? = null

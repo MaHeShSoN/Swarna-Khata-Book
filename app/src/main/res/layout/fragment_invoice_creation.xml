@@ -192,7 +192,7 @@
                         android:layout_width="64dp"
                         android:layout_height="64dp"
                         android:alpha="0.5"
-                        android:src="@drawable/empty_clients"
+                        android:src="@drawable/material_symbols__person_add_outline_rounded"
                         app:tint="@color/my_light_on_surface" />
 
                     <TextView
@@ -210,8 +210,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="@string/select_customer"
-                        android:textColor="@color/my_light_primary" />
+                        app:strokeColor="@color/my_light_outline"
+                        android:textColor="@color/my_light_outline"
+                        android:text="@string/add_customer" />
                 </LinearLayout>
 
                 <androidx.constraintlayout.widget.ConstraintLayout
@@ -354,7 +355,7 @@
                         android:layout_width="64dp"
                         android:layout_height="64dp"
                         android:alpha="0.5"
-                        android:src="@drawable/tabler__box_off"
+                        android:src="@drawable/mage__box_3d_plus"
                         app:tint="@color/my_light_on_surface" />
 
                     <TextView
@@ -373,8 +374,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
+                        app:strokeColor="@color/my_light_outline"
                         android:text="@string/action_add_item_button"
-                        android:textColor="@color/my_light_primary" />
+                        android:textColor="@color/my_light_outline" />
 
                 </LinearLayout>
 
@@ -517,12 +519,15 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
+                >
 
                 <TextView
                     android:id="@+id/paymentsSectionTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingTop="16dp"
+                    android:paddingBottom="16dp"
                     android:fontFamily="@font/montserratmedium"
                     android:text="@string/title_payments"
                     android:textColor="@color/my_light_on_surface"
@@ -536,7 +541,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="top"
+                    android:padding="16dp"
+                    android:fontFamily="@font/montserratregular"
                     android:text="@string/action_add_payment"
+
                     android:textColor="@color/my_light_primary"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -558,6 +566,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
                     android:visibility="gone"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -588,6 +598,7 @@
                     android:fontFamily="@font/montserratregular"
                     android:text="@string/label_amount_paid"
                     android:textColor="@color/my_light_on_surface"
+                    android:paddingStart="16dp"
                     android:textSize="14sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/paymentsDivider" />
@@ -599,6 +610,7 @@
                     android:fontFamily="@font/montserratregular"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="14sp"
+                    android:paddingEnd="16dp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/amountPaidLabel"
                     tools:text="₹20,000.00" />
@@ -612,6 +624,8 @@
                     android:text="@string/label_balance_due"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp"
+                    android:paddingStart="16dp"
+                    android:paddingBottom="16dp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/amountPaidLabel" />
 
@@ -621,6 +635,8 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratbold"
                     android:textColor="@color/my_light_error"
+                    android:paddingEnd="16dp"
+                    android:paddingBottom="16dp"
                     android:textSize="16sp"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="@id/balanceDueLabel"
@@ -693,11 +709,12 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
+                android:fontFamily="@font/montserratregular"
                 android:layout_weight="1"
                 android:padding="12dp"
                 android:text="@string/action_cancel"
-                android:textColor="@color/my_light_primary"
-                app:strokeColor="@color/my_light_primary" />
+                android:textColor="@color/my_light_outline"
+                app:strokeColor="@color/my_light_outline" />
 
             <Button
                 android:id="@+id/saveButton"
@@ -705,10 +722,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
+                android:fontFamily="@font/montserratregular"
                 android:padding="12dp"
                 android:backgroundTint="@color/my_light_primary"
                 android:text="@string/action_save_invoice"
-                android:textColor="@color/my_light_on_primary" />
+                android:textColor="@color/white" />
         </LinearLayout>
 
         <!-- Optional: Print/Share Button -->

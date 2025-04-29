@@ -13,7 +13,7 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/action_archive"
+        android:id="@+id/action_open_invoice"
         android:title="@string/menu_open_invoice"
         app:showAsAction="never" />
     <item

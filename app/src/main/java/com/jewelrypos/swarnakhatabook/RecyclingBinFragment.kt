@@ -18,6 +18,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.RecycledItemsAdapter
@@ -28,13 +29,14 @@ import com.jewelrypos.swarnakhatabook.Utilitys.PremiumFeatureHelper
 import com.jewelrypos.swarnakhatabook.ViewModle.RecyclingBinViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentRecyclingBinBinding
 import androidx.lifecycle.ViewModelProvider
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.Repository.RecycledItemsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
+import androidx.viewpager2.widget.ViewPager2
 class RecyclingBinFragment : Fragment() {
 
     private var _binding: FragmentRecyclingBinBinding? = null
@@ -170,8 +172,18 @@ class RecyclingBinFragment : Fragment() {
     }
 
     private fun setupTabLayout() {
-        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+        // Set up the ViewPager2 with TabLayout
+        val viewPager = binding.viewPager
+        val tabLayout = binding.tabLayout
+        
+        // Create adapter for the ViewPager
+        val adapter = RecyclingBinPagerAdapter(this)
+        viewPager.adapter = adapter
+        
+        // Connect TabLayout with ViewPager2
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
+                viewPager.currentItem = tab.position
                 when (tab.position) {
                     0 -> viewModel.loadRecycledItems() // All items
                     1 -> viewModel.loadRecycledInvoices() // Only invoices
@@ -181,6 +193,47 @@ class RecyclingBinFragment : Fragment() {
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+        
+        // Update the selected tab when the ViewPager is swiped
+        viewPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                tabLayout.selectTab(tabLayout.getTabAt(position))
+            }
+        })
+    }
+    
+    // Inner adapter class for ViewPager2
+    private inner class RecyclingBinPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
+        override fun getItemCount(): Int = 2 // All items and Invoices
+
+        override fun createFragment(position: Int): Fragment {
+            // Create empty fragments as containers - they share the same RecyclerView from the parent fragment
+            return RecyclingBinTabFragment.newInstance(position)
+        }
+    }
+    
+    // Static fragment for each tab
+    class RecyclingBinTabFragment : Fragment() {
+        companion object {
+            private const val ARG_POSITION = "position"
+            
+            fun newInstance(position: Int): RecyclingBinTabFragment {
+                return RecyclingBinTabFragment().apply {
+                    arguments = Bundle().apply {
+                        putInt(ARG_POSITION, position)
+                    }
+                }
+            }
+        }
+        
+        override fun onCreateView(
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View {
+            // Return an empty view since the recyclerView is in the parent fragment
+            return View(context)
+        }
     }
 
     private fun setupSwipeRefresh() {

@@ -22,9 +22,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.Adapters.InvoicesAdapter
+import com.jewelrypos.swarnakhatabook.Adapters.InvoiceAdapter
 import com.jewelrypos.swarnakhatabook.Enums.DateFilterType
 import com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter
 import com.jewelrypos.swarnakhatabook.Events.EventBus
@@ -53,7 +54,7 @@ class SalesFragment : Fragment() {
         SalesViewModelFactory(repository, connectivityManager, requireContext())
     }
 
-    private lateinit var adapter: InvoicesAdapter
+    private lateinit var adapter: InvoiceAdapter
     private var isSearchActive = false
 
     override fun onCreateView(
@@ -74,6 +75,7 @@ class SalesFragment : Fragment() {
         setupDateFilterChips()
         setupStatusFilterChip()
         setupEmptyStateButtons()
+
 
         binding.topAppBar.overflowIcon =
             ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
@@ -316,20 +318,16 @@ class SalesFragment : Fragment() {
         val dialogView = themedDialog.getDialogView()
 
         // Set up button click listeners
-        dialogView?.findViewById<MaterialButton>(R.id.btn_view_report)?.setOnClickListener {
+        dialogView?.findViewById<MaterialCardView>(R.id.viewReportCard)?.setOnClickListener {
             openReportFile(fileUri)
             themedDialog.create().dismiss()
         }
 
-        dialogView?.findViewById<MaterialButton>(R.id.btn_share_report)?.setOnClickListener {
+        dialogView?.findViewById<MaterialCardView>(R.id.shareReportCard)?.setOnClickListener {
             shareReportFile(fileUri)
             themedDialog.create().dismiss()
         }
 
-        dialogView?.findViewById<MaterialButton>(R.id.btn_email_report)?.setOnClickListener {
-            emailReportFile(fileUri)
-            themedDialog.create().dismiss()
-        }
 
         // Set up close button
         themedDialog.setNegativeButton("Cancel") { dialog ->
@@ -387,28 +385,7 @@ class SalesFragment : Fragment() {
         }
     }
 
-    /**
-     * Opens email app to send the report as an attachment
-     */
-    private fun emailReportFile(fileUri: Uri) {
-        try {
-            val filterDescription = getFilterDescription()
-            val emailIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
-                putExtra(Intent.EXTRA_SUBJECT, "Sales Report - $filterDescription")
-                putExtra(
-                    Intent.EXTRA_TEXT,
-                    "Please find attached the sales report for $filterDescription."
-                )
-                putExtra(Intent.EXTRA_STREAM, fileUri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(Intent.createChooser(emailIntent, "Send Report via Email"))
-        } catch (e: Exception) {
-            Log.e("SalesFragment", "Error emailing report file", e)
-            Toast.makeText(requireContext(), "Cannot email report", Toast.LENGTH_SHORT).show()
-        }
-    }
+
 
 
     private fun setupSearchView() {
@@ -446,7 +423,7 @@ class SalesFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = InvoicesAdapter()
+        adapter = InvoiceAdapter()
 
         // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
@@ -457,12 +434,6 @@ class SalesFragment : Fragment() {
             val action =
                 MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
             parentNavController.navigate(action)
-            // Handle invoice click - you can navigate to details or show actions
-            Toast.makeText(
-                requireContext(),
-                "Invoice: ${invoice.invoiceNumber}",
-                Toast.LENGTH_SHORT
-            ).show()
         }
 
         binding.recyclerViewSales.apply {
@@ -494,7 +465,13 @@ class SalesFragment : Fragment() {
     private fun setupObservers() {
         salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
             // Use submitList provided by ListAdapter
-            adapter.submitList(invoices)
+            adapter.submitList(invoices) {
+                // Restore scroll position after the list is updated
+                if (_binding != null &&salesViewModel.layoutManagerState != null && invoices.isNotEmpty()) {
+                    binding.recyclerViewSales.layoutManager?.onRestoreInstanceState(salesViewModel.layoutManagerState)
+                    // Don't clear the state after restoration, so it can be used in onResume
+                }
+            }
 
             // Reset refreshing state and progress bar visibility
             binding.swipeRefreshLayout.isRefreshing = false
@@ -524,7 +501,6 @@ class SalesFragment : Fragment() {
 
     private fun setUpClickListner() {
         binding.addSaleFab.setOnClickListener {
-            AnimationUtils.pulse(it)
             // Navigate to the InvoiceCreationFragment
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
             parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)
@@ -612,7 +588,22 @@ class SalesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Save the RecyclerView scroll position
+        binding.recyclerViewSales.layoutManager?.let { lm ->
+            salesViewModel.layoutManagerState = lm.onSaveInstanceState()
+        }
+        
         super.onDestroyView()
         _binding = null
+    }
+
+    // Add onResume method to handle restoring state when returning to the fragment
+    override fun onResume() {
+        super.onResume()
+        
+        // Restore scroll position if we have a saved state and adapter has items
+        if (salesViewModel.layoutManagerState != null && adapter.itemCount > 0) {
+            binding.recyclerViewSales.layoutManager?.onRestoreInstanceState(salesViewModel.layoutManagerState)
+        }
     }
 }

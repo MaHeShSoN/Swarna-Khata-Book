@@ -1,23 +1,23 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/dashBoardFragment"
-        android:icon="@drawable/uil__graph_bar"
+        android:icon="@drawable/uim__graph_bar"
         android:title="@string/menu_home"
         />
     <item
         android:id="@+id/salesFragment"
-        android:icon="@drawable/uil__invoice"
+        android:icon="@drawable/ri__hand_coin_fill"
         android:title="@string/menu_sales" />
     <item
         android:id="@+id/inventoryFragment"
-        android:icon="@drawable/mage__box_3d"
+        android:icon="@drawable/box"
         android:title="@string/menu_inventory" />
     <item
         android:id="@+id/customerFragment"
-        android:icon="@drawable/line_md__person_twotone"
+        android:icon="@drawable/fa6_solid__users"
         android:title="@string/menu_customers" />
     <item
         android:id="@+id/moreSettingFragment"
-        android:icon="@drawable/uil__setting"
+        android:icon="@drawable/bi__three_dots_vertical"
         android:title="@string/menu_settings" />
 </menu>

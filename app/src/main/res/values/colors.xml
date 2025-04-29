@@ -163,4 +163,6 @@
     <color name="my_background_light_blue_color">#6BB4F1</color>
     <color name="my_background_light_yellow_color">#EFC958</color>
 
+    <color name="shimmer_color">#DDDDDD</color>
+
 </resources>

@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook.ViewModle
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Parcelable
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -43,6 +44,9 @@ class InventoryViewModel(
     // --- Search State ---
     var searchJob: Job? = null // Made public for cancellation in Fragment's onDestroyView
     private var currentSearchQuery = ""
+
+    // --- RecyclerView state preservation ---
+    var layoutManagerState: Parcelable? = null
 
     // --- Constants ---
     companion object {
