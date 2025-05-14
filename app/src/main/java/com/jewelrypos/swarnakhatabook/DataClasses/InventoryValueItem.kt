@@ -4,7 +4,6 @@ data class InventoryValueItem(
     val id: String,
     val name: String,
     val itemType: String,
-    val code: String,
     val stock: Double,
     val stockUnit: String,
     val metalValue: Double,

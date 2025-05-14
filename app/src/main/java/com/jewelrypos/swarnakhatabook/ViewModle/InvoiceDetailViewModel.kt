@@ -681,7 +681,7 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
     fun getDueDate(): Long? {
         return invoice.value?.dueDate
     }
-    
+
     // Method to check if due date exists
     fun hasDueDate(): Boolean {
         return invoice.value?.dueDate != null

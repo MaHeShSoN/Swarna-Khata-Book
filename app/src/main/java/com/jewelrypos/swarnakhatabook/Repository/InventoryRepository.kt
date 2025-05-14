@@ -10,6 +10,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
@@ -120,10 +121,8 @@ class InventoryRepository(
     }
 
 
-    suspend fun updateJewelleryItem(item: JewelleryItem) = suspendCoroutine<Unit> { continuation ->
-        getCurrentUserId() // Validate user is authenticated
-        
-        try {
+    suspend fun updateJewelleryItem(item: JewelleryItem): Result<Unit> {
+        return try {
             val shopId = getCurrentShopId()
             
             // Use shopData collection path
@@ -132,14 +131,12 @@ class InventoryRepository(
                 .collection("inventory")
                 .document(item.id)
                 .set(item)
-                .addOnSuccessListener {
-                    continuation.resume(Unit)
-                }
-                .addOnFailureListener { e ->
-                    continuation.resumeWithException(e)
-                }
+                .await()
+            
+            Result.success(Unit)
         } catch (e: Exception) {
-            continuation.resumeWithException(e)
+            Log.e("InventoryRepository", "Error updating jewelry item", e)
+            Result.failure(e)
         }
     }
     
@@ -236,7 +233,6 @@ class InventoryRepository(
 
         map["id"] = item.id
         map["displayName"] = item.displayName
-        map["jewelryCode"] = item.jewelryCode
         map["itemType"] = item.itemType
         map["category"] = item.category
         map["grossWeight"] = item.grossWeight
@@ -327,6 +323,154 @@ class InventoryRepository(
             Log.e(TAG, "Error getting inventory count", e)
             Result.failure(e)
         }
+    }
+
+    /**
+     * Update the total weight of a bulk stock item
+     */
+    suspend fun updateItemBulkWeight(itemId: String, newWeight: Double): Result<Unit> {
+        return try {
+            val shopId = getCurrentShopId()
+
+            firestore
+                .collection("shopData")
+                .document(shopId)
+                .collection("inventory")
+                .document(itemId)
+                .update("totalWeightGrams", newWeight)
+                .await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("InventoryRepository", "Error updating item weight", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates stock for an inventory item based on its type (weight-based or quantity-based)
+     * @param itemId The ID of the item to update
+     * @param quantityChange The change in quantity/weight (positive to add, negative to subtract)
+     * @return Result indicating success or failure
+     */
+    suspend fun updateInventoryStock(itemId: String, quantityChange: Double): Result<Unit> {
+        return try {
+            val shopId = getCurrentShopId()
+            
+            // First get the item to determine its inventory type
+            val itemDoc = firestore.collection("shopData")
+                .document(shopId)
+                .collection("inventory")
+                .document(itemId)
+                .get()
+                .await()
+            
+            if (!itemDoc.exists()) {
+                Log.e(TAG, "Item not found for stock update: $itemId")
+                return Result.failure(Exception("Item not found: $itemId"))
+            }
+            
+            val item = itemDoc.toObject(JewelleryItem::class.java)
+                ?: return Result.failure(Exception("Failed to parse item data"))
+            
+            Log.d(TAG, "Updating inventory for item $itemId: ${item.displayName}, inventoryType=${item.inventoryType}, change=$quantityChange")
+            
+            // Update based on inventory type
+            when (item.inventoryType) {
+                InventoryType.BULK_STOCK -> {
+                    // For weight-based items, update totalWeightGrams
+                    val currentWeight = item.totalWeightGrams
+                    val currentStock = item.stock
+                    
+                    // Determine the most reliable current weight value
+                    val effectiveCurrentWeight = when {
+                        // If totalWeightGrams is set, use it
+                        currentWeight > 0.0 -> currentWeight
+                        // Otherwise fall back to stock (older schema might use this)
+                        currentStock > 0.0 -> currentStock
+                        // If neither is set, start at zero
+                        else -> 0.0
+                    }
+                    
+                    val newWeight = maxOf(0.0, effectiveCurrentWeight + quantityChange) // Prevent negative weight
+                    
+                    Log.d(TAG, "Updating weight-based item $itemId: totalWeightGrams=$currentWeight, stock=$currentStock, " +
+                          "effectiveWeight=$effectiveCurrentWeight, change=$quantityChange -> newWeight=$newWeight grams")
+                    
+                    // Update both totalWeightGrams and stock to ensure consistency
+                    val updates = mutableMapOf<String, Any>().apply {
+                        put("totalWeightGrams", newWeight)
+                        put("stock", newWeight)
+                        
+                        // If grossWeight is zero but we're using totalWeightGrams for calculations, 
+                        // set a default grossWeight for future calculations based on totalWeightGrams
+                        if (item.grossWeight <= 0.0 && currentWeight > 0.0) {
+                            // If we have stock quantity information, divide by that to get per-item weight
+                            val estimatedItemWeight = if (item.stock > 1.0) {
+                                currentWeight / item.stock
+                            } else {
+                                // Default to total weight if we can't determine per-item weight
+                                currentWeight
+                            }
+                            Log.d(TAG, "Setting default grossWeight=$estimatedItemWeight for weight-based item $itemId")
+                            put("grossWeight", estimatedItemWeight)
+                        }
+                    }
+                    
+                    firestore.collection("shopData")
+                        .document(shopId)
+                        .collection("inventory")
+                        .document(itemId)
+                        .update(updates)
+                        .await()
+                    
+                    Log.d(TAG, "Successfully updated weight-based item $itemId to $newWeight grams")
+                }
+                InventoryType.IDENTICAL_BATCH -> {
+                    // For quantity-based items, update stock
+                    val currentStock = item.stock
+                    val newStock = maxOf(0.0, currentStock + quantityChange) // Prevent negative stock
+                    
+                    Log.d(TAG, "Updating quantity-based item $itemId: $currentStock -> $newStock units")
+                    
+                    firestore.collection("shopData")
+                        .document(shopId)
+                        .collection("inventory")
+                        .document(itemId)
+                        .update("stock", newStock)
+                        .await()
+                    
+                    Log.d(TAG, "Successfully updated quantity-based item $itemId to $newStock units")
+                }
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating inventory stock for item $itemId with change $quantityChange: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Updates stock for a weight-based inventory item when used in an invoice
+     * @param itemId The ID of the item
+     * @param grossWeight The gross weight used in the invoice
+     * @return Result indicating success or failure
+     */
+    suspend fun updateWeightBasedStock(itemId: String, grossWeight: Double): Result<Unit> {
+        // For weight-based items, we subtract the gross weight from total weight
+        return updateInventoryStock(itemId, -grossWeight)
+    }
+    
+    /**
+     * Updates stock for a quantity-based inventory item when used in an invoice
+     * @param itemId The ID of the item
+     * @param quantity The quantity used in the invoice (integer)
+     * @return Result indicating success or failure
+     */
+    suspend fun updateQuantityBasedStock(itemId: String, quantity: Int): Result<Unit> {
+        // For quantity-based items, we subtract the quantity from stock
+        return updateInventoryStock(itemId, -quantity.toDouble())
     }
 
     // Custom exceptions

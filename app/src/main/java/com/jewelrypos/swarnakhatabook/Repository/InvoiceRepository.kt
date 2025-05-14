@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext // Import withContext
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.Date
+import kotlin.math.abs
 
 // Define custom exceptions if not already defined elsewhere
 class UserNotAuthenticatedException(message: String) : Exception(message)
@@ -113,8 +114,10 @@ class InvoiceRepository(
             // These calls are already within withContext(Dispatchers.IO)
             if (existingInvoice == null) {
                 // This is a new invoice, update stock based on items sold/purchased
+                Log.d("Tag","WE are now updating the invoice stock for new inoview")
                 updateInventoryStockForNewInvoice(invoiceWithId)
             } else {
+                Log.d("Tag","WE are now handleing the invoice stock for  inoview")
                 // This is an existing invoice being updated, handle stock differences
                 handleInventoryStockChanges(existingInvoice, invoiceWithId)
             }
@@ -168,61 +171,125 @@ class InvoiceRepository(
             val customer = customerDoc.toObject<Customer>()
             val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
 
-            // Create maps for efficient lookup
-            val oldItemQuantities = oldInvoice.items.associate { it.itemId to it.quantity }
-            val newItemQuantities = newInvoice.items.associate { it.itemId to it.quantity }
+            Log.d(TAG, "Handling inventory changes between invoices (Wholesaler: $isWholesaler)")
 
-            // Combine all unique item IDs from both old and new invoices
-            val allItemIds = oldItemQuantities.keys + newItemQuantities.keys
+            // Create inventory repository
+            val inventoryRepository = InventoryRepository(firestore, auth, context)
 
-            // Process each unique item ID
+            // Process each item from both old and new invoices
+            val allItemIds = (oldInvoice.items.map { it.itemId } + newInvoice.items.map { it.itemId }).distinct()
+
             for (itemId in allItemIds) {
-                val oldQuantity = oldItemQuantities[itemId] ?: 0
-                val newQuantity = newItemQuantities[itemId] ?: 0
-                val quantityDifference = newQuantity - oldQuantity // Positive means more items added/increased qty
+                try {
+                    // Get item details to determine inventory type
+                    val itemDoc = getShopCollection("inventory").document(itemId).get().await()
+                    if (!itemDoc.exists()) {
+                        Log.e(TAG, "Item $itemId not found in inventory during invoice update")
+                        continue
+                    }
 
-                if (quantityDifference != 0) {
-                    // Apply the stock change for this specific item
-                    updateItemStockForInvoiceChange(itemId, quantityDifference, isWholesaler)
+                    val item = itemDoc.toObject<JewelleryItem>()
+                    if (item == null) {
+                        Log.e(TAG, "Failed to parse inventory item $itemId")
+                        continue
+                    }
+
+                    Log.d(TAG, "Processing inventory change for item $itemId (${item.displayName}), type=${item.inventoryType}")
+
+                    // Find the items in old and new invoices
+                    val oldInvoiceItem = oldInvoice.items.find { it.itemId == itemId }
+                    val newInvoiceItem = newInvoice.items.find { it.itemId == itemId }
+
+                    when (item.inventoryType) {
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                            // For weight-based items, compare the usedWeight values
+                            val oldUsedWeight = oldInvoiceItem?.usedWeight ?: 0.0
+                            val newUsedWeight = newInvoiceItem?.usedWeight ?: 0.0
+                            
+                            // If usedWeight is not set, fall back to calculating from quantity and gross weight
+                            val effectiveOldWeight = if (oldUsedWeight > 0.0) {
+                                oldUsedWeight
+                            } else {
+                                val oldQuantity = oldInvoiceItem?.quantity ?: 0
+                                val oldGrossWeight = oldInvoiceItem?.itemDetails?.grossWeight ?: 0.0
+                                oldQuantity * oldGrossWeight
+                            }
+                            
+                            val effectiveNewWeight = if (newUsedWeight > 0.0) {
+                                newUsedWeight
+                            } else {
+                                val newQuantity = newInvoiceItem?.quantity ?: 0
+                                val newGrossWeight = newInvoiceItem?.itemDetails?.grossWeight ?: 0.0
+                                newQuantity * newGrossWeight
+                            }
+                            
+                            val weightDifference = effectiveNewWeight - effectiveOldWeight
+                            
+                            if (weightDifference != 0.0) {
+                                // For weight-based items:
+                                // If wholesaler: positive difference means ADD to stock (buying more)
+                                // If consumer: positive difference means REMOVE from stock (selling more)
+                                val effectiveWeightChange = if (isWholesaler) weightDifference else -weightDifference
+                                
+                                Log.d(TAG, "Weight-based item change: oldWeight=${effectiveOldWeight}g, newWeight=${effectiveNewWeight}g, " +
+                                      "diff=${weightDifference}g, effectiveChange=${effectiveWeightChange}g " +
+                                      "(${if(effectiveWeightChange > 0) "increasing" else "decreasing"} stock)")
+                                
+                                // Update the inventory
+                                val result = inventoryRepository.updateInventoryStock(itemId, effectiveWeightChange)
+                                result.fold(
+                                    onSuccess = {
+                                        Log.d(TAG, "Successfully updated weight-based inventory for item $itemId")
+                                    },
+                                    onFailure = { error ->
+                                        Log.e(TAG, "Failed to update weight-based inventory for item $itemId: ${error.message}")
+                                    }
+                                )
+                            } else {
+                                Log.d(TAG, "No weight change for item $itemId: old=${effectiveOldWeight}g, new=${effectiveNewWeight}g")
+                            }
+                        }
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.IDENTICAL_BATCH -> {
+                            // For quantity-based items, compare the quantities
+                            val oldQuantity = oldInvoiceItem?.quantity ?: 0
+                            val newQuantity = newInvoiceItem?.quantity ?: 0
+                            val quantityDifference = newQuantity - oldQuantity
+                            
+                            if (quantityDifference != 0) {
+                                // For quantity-based items:
+                                // If wholesaler: positive difference means ADD to stock (buying more)
+                                // If consumer: positive difference means REMOVE from stock (selling more)
+                                val effectiveQuantityChange = if (isWholesaler) quantityDifference.toDouble() else -quantityDifference.toDouble()
+                                
+                                Log.d(TAG, "Quantity-based item change: oldQty=$oldQuantity, newQty=$newQuantity, " +
+                                      "diff=$quantityDifference, effectiveChange=$effectiveQuantityChange " +
+                                      "(${if(effectiveQuantityChange > 0) "increasing" else "decreasing"} stock)")
+                                
+                                // Update the inventory
+                                val result = inventoryRepository.updateInventoryStock(itemId, effectiveQuantityChange)
+                                result.fold(
+                                    onSuccess = {
+                                        Log.d(TAG, "Successfully updated quantity-based inventory for item $itemId")
+                                    },
+                                    onFailure = { error ->
+                                        Log.e(TAG, "Failed to update quantity-based inventory for item $itemId: ${error.message}")
+                                    }
+                                )
+                            } else {
+                                Log.d(TAG, "No quantity change for item $itemId: old=$oldQuantity, new=$newQuantity")
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing inventory change for item $itemId: ${e.message}", e)
+                    // Continue with other items
                 }
             }
+
             Log.d(TAG, "Finished handling inventory stock changes for updated invoice ${newInvoice.id}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling inventory stock changes for invoice ${newInvoice.id}", e)
+            Log.e(TAG, "Error handling inventory stock changes for invoice ${newInvoice.id}: ${e.message}", e)
             // Decide on error handling: log, throw, etc.
-        }
-    }
-
-    /**
-     * Updates the stock for a single item based on quantity change and customer type.
-     * Assumes it's called within a withContext(Dispatchers.IO) block.
-     */
-    private suspend fun updateItemStockForInvoiceChange(itemId: String, quantityChange: Int, isWholesaler: Boolean) {
-        if (quantityChange == 0 || itemId.isBlank()) return // No change or invalid item ID
-
-        try {
-            val inventoryRef = getShopCollection("inventory").document(itemId)
-            val inventoryItemDoc = inventoryRef.get().await()
-            val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
-
-            currentItem?.let {
-                // Determine the actual change to apply to the stock value
-                // If wholesaler: positive quantityChange means ADD to stock (buying from them)
-                // If consumer: positive quantityChange means REMOVE from stock (selling to them)
-                val effectiveStockChange = if (isWholesaler) quantityChange.toDouble() else -quantityChange.toDouble()
-                val newStock = maxOf(0.0, it.stock + effectiveStockChange) // Ensure stock doesn't go negative
-
-                // Only update if stock value actually changes
-                if (newStock != it.stock) {
-                    inventoryRef.update("stock", newStock).await()
-                    Log.d(TAG, "Stock updated for item $itemId: old=${it.stock}, change=$effectiveStockChange, new=$newStock (Wholesaler: $isWholesaler)")
-                } else {
-                    Log.d(TAG, "Stock for item $itemId unchanged: old=${it.stock}, change=$effectiveStockChange, new=$newStock")
-                }
-            } ?: Log.w(TAG, "Inventory item $itemId not found for stock update.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating stock for item $itemId during invoice change", e)
-            // Decide on error handling
         }
     }
 
@@ -238,14 +305,95 @@ class InvoiceRepository(
             val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
 
             Log.d(TAG, "Updating inventory for NEW invoice ${invoice.id} (Wholesaler: $isWholesaler)")
+            
+            // Create inventory repository
+            val inventoryRepository = InventoryRepository(firestore, auth, context)
 
             // Iterate through items and update stock individually
             invoice.items.forEach { invoiceItem ->
-                // Apply the change for each item (negative quantity for consumers, positive for wholesalers)
-                updateItemStockForInvoiceChange(invoiceItem.itemId, invoiceItem.quantity, isWholesaler)
+                try {
+                    // Get item details to determine inventory type
+                    val itemDoc = getShopCollection("inventory").document(invoiceItem.itemId).get().await()
+                    if (!itemDoc.exists()) {
+                        Log.e(TAG, "Item ${invoiceItem.itemId} not found in inventory during new invoice processing")
+                        return@forEach
+                    }
+
+                    val item = itemDoc.toObject<JewelleryItem>()
+                    if (item == null) {
+                        Log.e(TAG, "Failed to parse inventory item ${invoiceItem.itemId}")
+                        return@forEach
+                    }
+
+                    Log.d(TAG, "Processing new invoice item: id=${invoiceItem.itemId}, name=${item.displayName}, " +
+                          "type=${item.inventoryType}, quantity=${invoiceItem.quantity}, usedWeight=${invoiceItem.usedWeight}")
+
+                    when (item.inventoryType) {
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                            // For weight-based items, use the actual weight from the invoice
+                            val usedWeight = invoiceItem.usedWeight
+                            
+                            // If usedWeight is not explicitly set, calculate from quantity and gross weight
+                            val effectiveWeight = if (usedWeight > 0.0) {
+                                usedWeight
+                            } else {
+                                val grossWeight = invoiceItem.itemDetails.grossWeight
+                                if (grossWeight <= 0.0) {
+                                    Log.e(TAG, "Invalid gross weight (${grossWeight}g) for weight-based item ${invoiceItem.itemId}")
+                                    return@forEach
+                                }
+                                grossWeight * invoiceItem.quantity
+                            }
+                            
+                            // For weight-based items:
+                            // If wholesaler: positive effectiveWeight means ADD to stock (buying from them)
+                            // If consumer: positive effectiveWeight means REMOVE from stock (selling to them)
+                            val effectiveWeightChange = if (isWholesaler) effectiveWeight else -effectiveWeight
+                            
+                            Log.d(TAG, "Weight-based item: usedWeight=${usedWeight}g, effectiveWeight=${effectiveWeight}g, " +
+                                  "change=${effectiveWeightChange}g (${if(effectiveWeightChange > 0) "increasing" else "decreasing"} stock)")
+                            
+                            // Update the inventory
+                            val result = inventoryRepository.updateInventoryStock(invoiceItem.itemId, effectiveWeightChange)
+                            result.fold(
+                                onSuccess = {
+                                    Log.d(TAG, "Successfully updated weight-based inventory for new invoice item ${invoiceItem.itemId}")
+                                },
+                                onFailure = { error ->
+                                    Log.e(TAG, "Failed to update weight-based inventory for new invoice item ${invoiceItem.itemId}: ${error.message}")
+                                }
+                            )
+                        }
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.IDENTICAL_BATCH -> {
+                            // For quantity-based items:
+                            // If wholesaler: positive quantity means ADD to stock (buying from them)
+                            // If consumer: positive quantity means REMOVE from stock (selling to them)
+                            val effectiveQuantityChange = if (isWholesaler) invoiceItem.quantity.toDouble() else -invoiceItem.quantity.toDouble()
+                            
+                            Log.d(TAG, "Quantity-based item: quantity=${invoiceItem.quantity}, " +
+                                  "change=${effectiveQuantityChange} (${if(effectiveQuantityChange > 0) "increasing" else "decreasing"} stock)")
+                            
+                            // Update the inventory
+                            val result = inventoryRepository.updateInventoryStock(invoiceItem.itemId, effectiveQuantityChange)
+                            result.fold(
+                                onSuccess = {
+                                    Log.d(TAG, "Successfully updated quantity-based inventory for new invoice item ${invoiceItem.itemId}")
+                                },
+                                onFailure = { error ->
+                                    Log.e(TAG, "Failed to update quantity-based inventory for new invoice item ${invoiceItem.itemId}: ${error.message}")
+                                }
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error processing inventory for new invoice item ${invoiceItem.itemId}: ${e.message}", e)
+                    // Continue with other items
+                }
             }
+            
+            Log.d(TAG, "Finished updating inventory for NEW invoice ${invoice.id}")
         } catch (e: Exception) {
-            Log.e(TAG, "Error determining customer type or updating stock for new invoice ${invoice.id}", e)
+            Log.e(TAG, "Error determining customer type or updating stock for new invoice ${invoice.id}: ${e.message}", e)
             // Decide on error handling
         }
     }
@@ -300,11 +448,94 @@ class InvoiceRepository(
      * Assumes it's called within a withContext(Dispatchers.IO) block.
      */
     private suspend fun updateInventoryOnDeletion(invoice: Invoice, isWholesaler: Boolean) {
-        Log.d(TAG, "Reverting inventory for deleted invoice ${invoice.id} (Wholesaler: $isWholesaler)")
-        // Reverting means applying the *opposite* quantity change
-        invoice.items.forEach { item ->
-            // Pass the negative of the item quantity to reverse the stock change
-            updateItemStockForInvoiceChange(item.itemId, -item.quantity, isWholesaler)
+        Log.d(TAG, "Reverting inventory for deleted invoice ${invoice.id}, items=${invoice.items.size} (Wholesaler: $isWholesaler)")
+        
+        // Create InventoryRepository instance
+        val inventoryRepository = InventoryRepository(firestore, auth, context)
+        
+        // For each item in the invoice
+        invoice.items.forEach { invoiceItem ->
+            try {
+                Log.d(TAG, "Processing deletion reversion for invoice item: itemId=${invoiceItem.itemId}, " +
+                      "quantity=${invoiceItem.quantity}, usedWeight=${invoiceItem.usedWeight}")
+                
+                // Get the current item details to determine its type
+                val inventoryRef = getShopCollection("inventory").document(invoiceItem.itemId)
+                val inventoryItemDoc = inventoryRef.get().await()
+                
+                if (!inventoryItemDoc.exists()) {
+                    Log.e(TAG, "Item ${invoiceItem.itemId} not found in inventory during invoice deletion reversion")
+                    return@forEach
+                }
+                
+                val currentItem = inventoryItemDoc.toObject<JewelleryItem>()
+                
+                currentItem?.let {
+                    Log.d(TAG, "Found item for reversion: ${it.displayName}, type=${it.inventoryType}, " +
+                          "stock=${it.stock}${it.stockUnit}, grossWeight=${it.grossWeight}g, totalWeightGrams=${it.totalWeightGrams}g")
+                    
+                    // Reverting means applying the *opposite* quantity/weight change
+                    when (it.inventoryType) {
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                            // For weight-based items, use the actual weight from the invoice
+                            val usedWeight = invoiceItem.usedWeight
+                            
+                            // If usedWeight is not explicitly set, calculate from quantity and gross weight
+                            val effectiveWeight = if (usedWeight > 0.0) {
+                                usedWeight
+                            } else {
+                                val grossWeight = invoiceItem.itemDetails.grossWeight
+                                if (grossWeight <= 0.0) {
+                                    Log.e(TAG, "Invalid gross weight (${grossWeight}g) for weight-based item ${invoiceItem.itemId}")
+                                    return@let
+                                }
+                                grossWeight * invoiceItem.quantity
+                            }
+                            
+                            // When reverting, we do the OPPOSITE of what we would do for a new invoice
+                            // If consumer: we ADD the weight back (items return to inventory)
+                            // If wholesaler: we SUBTRACT the weight (items no longer purchased)
+                            val effectiveWeightChange = if (isWholesaler) -effectiveWeight else effectiveWeight
+                            
+                            Log.d(TAG, "Reverting weight: usedWeight=${usedWeight}g, effectiveWeight=${effectiveWeight}g, " +
+                                  "reversion=${effectiveWeightChange}g (${if(effectiveWeightChange > 0) "increasing" else "decreasing"} stock)")
+                            
+                            val result = inventoryRepository.updateInventoryStock(invoiceItem.itemId, effectiveWeightChange)
+                            result.fold(
+                                onSuccess = {
+                                    Log.d(TAG, "Successfully reverted weight-based stock for deleted invoice item ${invoiceItem.itemId}")
+                                },
+                                onFailure = { error ->
+                                    Log.e(TAG, "Failed to revert weight-based stock for deleted invoice item ${invoiceItem.itemId}: ${error.message}")
+                                }
+                            )
+                        }
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.IDENTICAL_BATCH -> {
+                            // For quantity-based items, we need to revert the quantity change
+                            // When reverting, we do the OPPOSITE of what we would do for a new invoice
+                            // If consumer: we ADD the quantity back (items return to inventory)
+                            // If wholesaler: we SUBTRACT the quantity (items no longer purchased)
+                            val effectiveQuantityChange = if (isWholesaler) -invoiceItem.quantity.toDouble() else invoiceItem.quantity.toDouble()
+                            
+                            Log.d(TAG, "Reverting quantity: quantity=${invoiceItem.quantity}, " +
+                                  "reversion=${effectiveQuantityChange} (${if(effectiveQuantityChange > 0) "increasing" else "decreasing"} stock)")
+                            
+                            val result = inventoryRepository.updateInventoryStock(invoiceItem.itemId, effectiveQuantityChange)
+                            result.fold(
+                                onSuccess = {
+                                    Log.d(TAG, "Successfully reverted quantity-based stock for deleted invoice item ${invoiceItem.itemId}")
+                                },
+                                onFailure = { error ->
+                                    Log.e(TAG, "Failed to revert quantity-based stock for deleted invoice item ${invoiceItem.itemId}: ${error.message}")
+                                }
+                            )
+                        }
+                    }
+                } ?: Log.e(TAG, "Failed to parse inventory item ${invoiceItem.itemId} during invoice deletion reversion")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reverting inventory for deleted invoice item ${invoiceItem.itemId}: ${e.message}", e)
+                // Continue with other items even if one fails
+            }
         }
     }
 

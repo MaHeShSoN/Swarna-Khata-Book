@@ -21,9 +21,13 @@
         <!-- Jewelry Type Circle Indicator -->
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/jewelryTypeIndicator"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:padding="1dp"
             android:background="@drawable/circle_gold_background"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/CircleImageView"
+            app:strokeWidth="1dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -107,6 +111,8 @@
             app:layout_constraintStart_toEndOf="@id/divider"
             app:layout_constraintTop_toBottomOf="@id/jewelryTitle"
             tools:text="Purity: 91.67%" />
+
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

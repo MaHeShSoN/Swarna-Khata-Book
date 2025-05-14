@@ -6,6 +6,7 @@
     android:layout_height="match_parent">
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/mainContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/cream_background"
@@ -24,15 +25,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- CARD 1: Item Type Selection -->
+        <!-- CARD 0: Inventory Type Selection -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/itemTypeCard"
+            android:id="@+id/inventoryTypeCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             app:cardBackgroundColor="@color/my_light_surface"
             app:cardCornerRadius="12dp"
             app:cardElevation="1dp"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/titleTextView"
             app:strokeColor="@color/my_light_outline"
@@ -48,23 +50,175 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratsemibold"
-                    android:text="@string/material_type"
+                    android:text="Inventory Type"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
+
+                <RadioGroup
+                    android:id="@+id/inventoryTypeRadioGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/quantityBasedCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        app:cardBackgroundColor="@color/my_light_surface"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="12dp">
+
+                            <RadioButton
+                                android:id="@+id/quantityBasedRadio"
+                                android:clickable="false"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:buttonTint="@color/my_light_primary" />
+
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="12dp"
+                                android:layout_marginEnd="12dp"
+                                android:contentDescription="Quantity-Based Stock Icon"
+                                android:src="@drawable/garden__123_fill_16"
+                                app:tint="@color/my_light_on_surface" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratsemibold"
+                                    android:text="Quantity-Based Stock"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratregular"
+                                    android:text="Track inventory by counting individual items or units"
+                                    android:textColor="@color/my_light_on_surface_variant"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/weightBasedCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:cardBackgroundColor="@color/my_light_surface"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="1dp"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:padding="12dp">
+
+                            <RadioButton
+                                android:id="@+id/weightBasedRadio"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:clickable="false"
+                                android:buttonTint="@color/my_light_primary" />
+
+                            <ImageView
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:layout_marginStart="12dp"
+                                android:layout_marginEnd="12dp"
+                                android:contentDescription="Weight-Based Stock Icon"
+                                android:src="@drawable/vaadin__scale"
+                                app:tint="@color/my_light_on_surface" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratsemibold"
+                                    android:text="Weight-Based Stock"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/montserratregular"
+                                    android:text="Track inventory by measuring weight or mass"
+                                    android:textColor="@color/my_light_on_surface_variant"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </RadioGroup>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CARD 2: Basic Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/basicInfoCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/inventoryTypeCard"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/basic_information"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/itemTypeChipGroup"
+                    android:layout_marginTop="16dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     app:singleSelection="true">
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/goldChip"
                         style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_marginStart="2dp"
                         android:checked="true"
+                        android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
                         android:text="@string/gold" />
 
@@ -84,12 +238,80 @@
                         android:fontFamily="@font/montserratmedium"
                         android:text="@string/other" />
                 </com.google.android.material.chip.ChipGroup>
+
+
+
+
+                <!-- Category with Add Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/categoryInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/jewellery_category"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconTint="@color/my_light_secondary"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/categoryDropdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:focusable="true"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="textFilter"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/goldImageButton1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical|center_horizontal"
+                        android:background="@drawable/gold_button_background"
+                        android:contentDescription="@string/add_category"
+                        android:padding="8dp"
+                        android:src="@drawable/material_symbols__add_rounded"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
+                        app:strokeColor="@color/my_light_outline"
+                        app:strokeWidth="1dp"
+                        app:tint="@color/my_light_on_primary" />
+                </LinearLayout>
+                <!-- Display Name -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/displayNameInputLayout"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/jewellery_name"
+                    app:endIconMode="clear_text">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/displayNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:inputType="text|textCapWords"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- CARD 2: Basic Information -->
+        <!-- NEW CARD: Item Image -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/basicInfoCard"
+            android:id="@+id/itemImageCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -97,7 +319,7 @@
             app:cardCornerRadius="12dp"
             app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/itemTypeCard"
+            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
 
@@ -111,95 +333,101 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="@font/montserratsemibold"
-                    android:text="@string/basic_information"
+                    android:text="@string/item_image"
                     android:textColor="@color/my_light_on_surface"
                     android:textSize="16sp" />
 
-                <!-- Category with Add Button -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@color/cream_background">
+
+                    <!-- Image Preview -->
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/itemImageView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:adjustViewBounds="true"
+                        android:contentDescription="@string/item_image"
+                        android:scaleType="centerInside"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize8dp" />
+
+                    <!-- Progress Overlay - Initially hidden, shown during upload -->
+                    <FrameLayout
+                        android:id="@+id/progressOverlay"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#88000000"
+                        android:visibility="gone">
+
+                        <ProgressBar
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_gravity="center"
+                            android:indeterminateTint="@color/my_light_primary" />
+                    </FrameLayout>
+
+                    <!-- Placeholder Text -->
+                    <TextView
+                        android:id="@+id/imageInstructionText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="@string/tap_to_add_image"
+                        android:textColor="@color/my_light_secondary" />
+
+                    <!-- Replace Image Button - Initially hidden, shown when an image exists -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/replaceImageButton"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|end"
+                        android:layout_margin="8dp"
+                        android:backgroundTint="@color/my_light_secondary"
+                        android:text="@string/replace"
+                        android:textColor="@color/white"
+                        android:visibility="gone"
+                        app:icon="@drawable/material_symbols__camera"
+                        app:iconTint="@color/white" />
+                </FrameLayout>
+
+                <!-- Image Selection Buttons - Simplified to just two buttons -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
                     android:orientation="horizontal">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/categoryInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/cameraButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
                         android:layout_weight="1"
-                        android:hint="@string/category"
-                        app:boxBackgroundColor="@color/my_light_surface"
-                        app:boxStrokeColor="@color/my_light_primary"
-                        app:boxStrokeWidth="1dp"
-                        app:endIconTint="@color/my_light_secondary"
-                        app:hintTextColor="@color/my_light_secondary">
+                        android:fontFamily="@font/montserratregular"
+                        android:text="@string/camera"
+                        android:textColor="@color/my_light_secondary"
+                        app:icon="@drawable/material_symbols__camera"
+                        app:iconTint="@color/my_light_secondary" />
 
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/categoryDropdown"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratregular"
-                            android:inputType="none"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/goldImageButton1"
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:layout_gravity="center_vertical"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/gold_button_background"
-                        android:contentDescription="@string/add_category"
-                        android:padding="12dp"
-                        android:src="@drawable/material_symbols__add_rounded"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
-                        app:strokeColor="@color/my_light_secondary"
-                        app:strokeWidth="1dp"
-                        app:tint="@color/my_light_on_primary" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/galleryButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:fontFamily="@font/montserratregular"
+                        android:text="@string/gallery"
+                        android:textColor="@color/my_light_secondary"
+                        app:icon="@drawable/material_symbols__gallery"
+                        app:iconTint="@color/my_light_secondary" />
                 </LinearLayout>
-                <!-- Display Name -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/displayNameInputLayout"
-                    style="@style/Widget.App.TextInputLayout.GoldForm"
-                    android:layout_width="match_parent"
-                    app:endIconMode="clear_text"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/display_name">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/displayNameEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="text|textCapWords"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-
-                <!-- Jewelry Code -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/jewelryCodeInputLayout"
-                    style="@style/Widget.App.TextInputLayout.GoldForm"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:endIconMode="clear_text"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/jewelry_code">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/jewelryCodeEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="textCapCharacters"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -213,7 +441,7 @@
             app:cardCornerRadius="12dp"
             app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
+            app:layout_constraintTop_toBottomOf="@id/itemImageCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
 
@@ -237,9 +465,9 @@
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:endIconMode="clear_text"
                     android:layout_marginTop="16dp"
                     android:hint="@string/gross_weight"
+                    app:endIconMode="clear_text"
                     app:suffixText="g">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -257,10 +485,10 @@
                     android:id="@+id/netWeightInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
                     android:layout_width="match_parent"
-                    app:endIconMode="clear_text"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/net_weight"
+                    app:endIconMode="clear_text"
                     app:suffixText="g">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -277,11 +505,11 @@
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/purityInputLayout"
                     style="@style/Widget.App.TextInputLayout.GoldForm"
-                    app:endIconMode="clear_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:hint="@string/purity_hint"
+                    app:endIconMode="clear_text"
                     app:suffixText="%">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -298,9 +526,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:layout_marginTop="16dp"
-                    >
+                    android:orientation="horizontal">
+
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/wastageInputLayout"
                         style="@style/Widget.Material3.TextInputLayout.FilledBox"
@@ -319,8 +547,8 @@
                             android:id="@+id/wastageEditText"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"
                             android:fontFamily="@font/montserratregular"
+                            android:inputType="numberDecimal"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
@@ -395,10 +623,10 @@
                         style="@style/Widget.App.TextInputLayout.GoldForm"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        app:endIconMode="clear_text"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
-                        android:hint="@string/stock_value">
+                        android:hint="@string/stock_value"
+                        app:endIconMode="clear_text">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/stockEditText"
@@ -417,12 +645,12 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        app:endIconMode="dropdown_menu"
                         android:layout_weight="1"
                         android:hint="@string/unit"
                         app:boxBackgroundColor="@color/my_light_surface"
                         app:boxStrokeColor="@color/my_light_primary"
                         app:boxStrokeWidth="1dp"
+                        app:endIconMode="dropdown_menu"
                         app:endIconTint="@color/my_light_secondary"
                         app:hintTextColor="@color/my_light_secondary">
 
@@ -436,6 +664,27 @@
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
+
+                <!-- Total Weight (for Bulk Stock) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/totalWeightInputLayout"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/total_weight_grams"
+                    android:visibility="gone"
+                    app:endIconMode="clear_text">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/totalWeightEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -460,11 +709,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:layout_marginEnd="8dp"
-                app:strokeColor="@color/my_light_outline"
-                android:textColor="@color/my_light_outline"
                 android:layout_weight="1"
                 android:fontFamily="@font/montserratregular"
-                android:text="@string/save_close" />
+                android:text="@string/save_close"
+                android:textColor="@color/my_light_outline"
+                app:strokeColor="@color/my_light_outline" />
 
             <!-- Save and Add Button -->
             <com.google.android.material.button.MaterialButton
@@ -475,9 +724,9 @@
                 android:layout_marginStart="8dp"
                 android:layout_marginTop="24dp"
                 android:layout_weight="1"
-                android:textColor="@color/cream_background"
                 android:fontFamily="@font/montserratregular"
-                android:text="@string/save_and_add" />
+                android:text="@string/save_and_add"
+                android:textColor="@color/cream_background" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
     </androidx.constraintlayout.widget.ConstraintLayout>

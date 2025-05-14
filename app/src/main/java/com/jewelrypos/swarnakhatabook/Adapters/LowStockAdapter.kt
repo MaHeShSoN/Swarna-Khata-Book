@@ -64,7 +64,6 @@ class LowStockAdapter :
 
         fun bind(item: LowStockItem) {
             itemName.text = item.name
-            itemCode.text = "Code: ${item.code}"
             itemType.text = item.itemType
 
             currentStock.text = "${item.currentStock} ${item.stockUnit}"

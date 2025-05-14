@@ -145,7 +145,6 @@ class InventoryViewModel(
                 if (currentSearchQuery.isNotEmpty()) {
                     tempList = tempList.filter { item ->
                         item.displayName.contains(currentSearchQuery, ignoreCase = true) ||
-                                item.jewelryCode.contains(currentSearchQuery, ignoreCase = true) ||
                                 item.category.contains(currentSearchQuery, ignoreCase = true) ||
                                 item.itemType.contains(currentSearchQuery, ignoreCase = true) ||
                                 item.location.contains(currentSearchQuery, ignoreCase = true) ||

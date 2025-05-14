@@ -3,6 +3,10 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+
+    <color name="material_gray">#757575</color>
+    <color name="material_gray_light">#BDBDBD</color>
+
     <!-- Your existing colors -->
     <color name="my_light_primary">#D4AF37</color>         <!-- Gold primary -->
     <color name="my_light_secondary">#8B7109</color>       <!-- Dark gold secondary -->
@@ -164,5 +168,6 @@
     <color name="my_background_light_yellow_color">#EFC958</color>
 
     <color name="shimmer_color">#DDDDDD</color>
+
 
 </resources>

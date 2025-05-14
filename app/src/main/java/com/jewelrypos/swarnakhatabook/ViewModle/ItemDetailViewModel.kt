@@ -173,9 +173,25 @@ class ItemDetailViewModel(
         }
     }
 
-    // Update item stock
+    // Update item stock based on inventory type
     fun updateStock(adjustment: Int, callback: (Boolean) -> Unit) {
         val currentItem = _jewelryItem.value ?: return
+        
+        // Handle differently based on inventory type
+        when (currentItem.inventoryType) {
+            com.jewelrypos.swarnakhatabook.Enums.InventoryType.IDENTICAL_BATCH -> {
+                // For batch items, ensure whole numbers
+                updateItemStock(currentItem, adjustment.toDouble(), callback)
+            }
+            com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                // For bulk items, adjust the total weight
+                updateBulkWeight(adjustment.toDouble(), callback)
+            }
+        }
+    }
+    
+    // Update stock for batch items
+    private fun updateItemStock(currentItem: JewelleryItem, adjustment: Double, callback: (Boolean) -> Unit) {
         val newStock = currentItem.stock + adjustment
 
         if (newStock < 0) {
@@ -209,6 +225,51 @@ class ItemDetailViewModel(
             }
         }
     }
+    
+    // Update total weight for bulk items
+    fun updateBulkWeight(adjustment: Double, callback: (Boolean) -> Unit) {
+        val currentItem = _jewelryItem.value ?: return
+        
+        // Only allow this for BULK_STOCK items
+        if (currentItem.inventoryType != com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK) {
+            _errorMessage.value = "Weight adjustment is only applicable for bulk stock items"
+            callback(false)
+            return
+        }
+        
+        val newWeight = currentItem.totalWeightGrams + adjustment
+        
+        if (newWeight < 0) {
+            _errorMessage.value = "Total weight cannot be negative"
+            callback(false)
+            return
+        }
+        
+        _isLoading.value = true
+        
+        viewModelScope.launch {
+            try {
+                val result = repository.updateItemBulkWeight(currentItem.id, newWeight)
+                result.fold(
+                    onSuccess = {
+                        // Update the local item data
+                        _jewelryItem.value = currentItem.copy(totalWeightGrams = newWeight)
+                        _isLoading.value = false
+                        callback(true)
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to update weight: ${error.message}"
+                        _isLoading.value = false
+                        callback(false)
+                    }
+                )
+            } catch (e: Exception) {
+                _errorMessage.value = "An error occurred: ${e.message}"
+                _isLoading.value = false
+                callback(false)
+            }
+        }
+    }
 
     // Update the entire item
     fun updateItem(updatedItem: JewelleryItem, callback: (Boolean) -> Unit) {
@@ -216,16 +277,21 @@ class ItemDetailViewModel(
 
         viewModelScope.launch {
             try {
-                // Since updateJewelleryItem throws exceptions on failure,
-                // we just call it directly and handle exceptions in the catch block
-                repository.updateJewelleryItem(updatedItem)
-
-                // If we reach here, it means the update was successful
-                // Reload the item to get fresh data
-                loadItem(updatedItem.id)
-                callback(true)
+                repository.updateJewelleryItem(updatedItem).fold(
+                    onSuccess = {
+                        // Update local data
+                        _jewelryItem.value = updatedItem
+                        _isLoading.value = false
+                        callback(true)
+                    },
+                    onFailure = { error ->
+                        _errorMessage.value = "Failed to update item: ${error.message}"
+                        _isLoading.value = false
+                        callback(false)
+                    }
+                )
             } catch (e: Exception) {
-                _errorMessage.value = "Failed to update item: ${e.message}"
+                _errorMessage.value = "An error occurred: ${e.message}"
                 _isLoading.value = false
                 callback(false)
             }
@@ -290,5 +356,102 @@ class ItemDetailViewModel(
         return networkCapabilities != null &&
                 (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
                         networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
+    }
+    
+    // Upload item image to Firebase Storage
+    fun uploadItemImage(imageFile: java.io.File, callback: (Boolean, String) -> Unit) {
+        if (!isOnline()) {
+            _errorMessage.value = "Cannot upload images while offline"
+            callback(false, "")
+            return
+        }
+        
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                val userId = repository.getCurrentUserId()
+                val storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().reference
+                val imagesRef = storageRef.child("users/$userId/inventory/${itemId}_${System.currentTimeMillis()}.jpg")
+                
+                // Compress the image before uploading
+                val compressedImageFile = compressImage(imageFile)
+                
+                val uploadTask = imagesRef.putFile(android.net.Uri.fromFile(compressedImageFile))
+                uploadTask.continueWithTask { task ->
+                    if (!task.isSuccessful) {
+                        throw task.exception ?: Exception("Unknown error during upload")
+                    }
+                    imagesRef.downloadUrl
+                }.addOnCompleteListener { task ->
+                    _isLoading.value = false
+                    if (task.isSuccessful) {
+                        val downloadUrl = task.result.toString()
+                        callback(true, downloadUrl)
+                    } else {
+                        Log.e("ItemDetailViewModel", "Error uploading image", task.exception)
+                        _errorMessage.value = "Failed to upload image: ${task.exception?.message}"
+                        callback(false, "")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ItemDetailViewModel", "Exception during image upload", e)
+                _errorMessage.value = "Error uploading image: ${e.message}"
+                _isLoading.value = false
+                callback(false, "")
+            }
+        }
+    }
+    
+    private suspend fun compressImage(imageFile: java.io.File): java.io.File {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // Load the bitmap from file
+                val options = android.graphics.BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath, options)
+                
+                // Calculate sample size for resizing
+                var inSampleSize = 1
+                val reqWidth = 800 // Target width
+                val reqHeight = 800 // Target height
+                
+                val height = options.outHeight
+                val width = options.outWidth
+                
+                if (height > reqHeight || width > reqWidth) {
+                    val heightRatio = Math.round(height.toFloat() / reqHeight.toFloat())
+                    val widthRatio = Math.round(width.toFloat() / reqWidth.toFloat())
+                    inSampleSize = Math.max(heightRatio, widthRatio)
+                }
+                
+                // Decode with calculated sample size
+                options.apply {
+                    inJustDecodeBounds = false
+                    inSampleSize = inSampleSize
+                }
+                
+                val bitmap = android.graphics.BitmapFactory.decodeFile(imageFile.absolutePath, options)
+                
+                // Create a temporary file for the compressed image
+                val compressedFile = java.io.File.createTempFile(
+                    "compressed_${System.currentTimeMillis()}", 
+                    ".jpg",
+                    imageFile.parentFile
+                )
+                
+                // Compress and save
+                val out = java.io.FileOutputStream(compressedFile)
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+                out.flush()
+                out.close()
+                
+                compressedFile
+            } catch (e: Exception) {
+                Log.e("ItemDetailViewModel", "Error compressing image", e)
+                // If compression fails, return the original file
+                imageFile
+            }
+        }
     }
 }

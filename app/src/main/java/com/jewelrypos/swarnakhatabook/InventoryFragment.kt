@@ -33,6 +33,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.request.CachePolicy
+import coil3.transform.CircleCropTransformation
+import coil3.size.Scale
+import coil3.request.transformations
+
 class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListener,
     JewelleryAdapter.OnItemClickListener {
 
@@ -350,8 +357,78 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                 ) {
                     inventoryViewModel.loadNextPage()
                 }
+                
+                // Implement efficient Coil preloading
+                if (dy > 0) { // Scrolling down
+                    // Get the image loader from the context
+                    val imageLoader = requireContext().imageLoader
+                    
+                    // Calculate the range of items to preload (5 items ahead)
+                    val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
+                    val preloadPosition = lastVisiblePosition + 1
+                    val preloadCount = 5 // Number of items to preload ahead
+                    val endPosition = minOf(preloadPosition + preloadCount, adapter.itemCount)
+                    
+                    // Preload images in the calculated range
+                    for (i in preloadPosition until endPosition) {
+                        // Get the item data safely using the adapter helper function
+                        adapter.getItem(i)?.let { item ->
+                            // Only preload if there's a valid image URL
+                            if (item.imageUrl.isNotEmpty()) {
+                                // Create an image request configured for efficient background caching
+                                val request = ImageRequest.Builder(requireContext())
+                                    .data(item.imageUrl)
+                                    // Match the same size as in the adapter for cache consistency
+                                    .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                                    .scale(Scale.FILL)
+                                    // Apply the same transformations for cache consistency
+                                    .transformations(CircleCropTransformation())
+                                    // Set to null target for cache-only loading (no view attached)
+                                    .target(null)
+                                    // Instead of priority, use placeholderMemoryCacheKey for caching
+                                    .placeholderMemoryCacheKey(item.imageUrl)
+                                    // Ensure we're using memory cache
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .build()
+                                
+                                // Enqueue the request
+                                imageLoader.enqueue(request)
+                            }
+                        }
+                    }
+                }
             }
         })
+        
+        // Preload initial visible images
+        recyclerView.post {
+            val layoutManager = recyclerView.layoutManager as LinearLayoutManager
+            val firstVisible = layoutManager.findFirstVisibleItemPosition()
+            val visibleCount = layoutManager.childCount
+            
+            // Get the image loader from the context
+            val imageLoader = requireContext().imageLoader
+            
+            // Preload initial visible items
+            for (i in firstVisible until (firstVisible + visibleCount)) {
+                adapter.getItem(i)?.let { item ->
+                    if (item.imageUrl.isNotEmpty()) {
+                        val request = ImageRequest.Builder(requireContext())
+                            .data(item.imageUrl)
+                            .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                            .scale(Scale.FILL)
+                            .transformations(CircleCropTransformation())
+                            .target(null)
+                            // Instead of priority, use placeholderMemoryCacheKey for caching
+                            .placeholderMemoryCacheKey(item.imageUrl)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .build()
+                        
+                        imageLoader.enqueue(request)
+                    }
+                }
+            }
+        }
     }
 
     private fun addItemButton() {

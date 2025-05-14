@@ -10,6 +10,10 @@ import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Services.FirebaseNotificationService
 import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
+import com.squareup.picasso.OkHttp3Downloader
+import com.squareup.picasso.Picasso
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 class SwarnaKhataBook : Application() {
 
@@ -45,6 +49,9 @@ class SwarnaKhataBook : Application() {
         // but we'll optimize the settings
         configureCacheSettings()
 
+        // Configure Picasso with optimized settings
+        configurePicasso()
+
         // Create notification channels on app startup
         // This is important for Android 8.0+ and should be done at startup
         NotificationChannelManager.createNotificationChannels(applicationContext)
@@ -65,5 +72,34 @@ class SwarnaKhataBook : Application() {
             .build()
 
         FirebaseFirestore.getInstance().firestoreSettings = settings
+    }
+    
+    private fun configurePicasso() {
+        try {
+            // Create custom OkHttp client with optimized settings
+            val okHttpClient = OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)     // Connection timeout
+                .readTimeout(10, TimeUnit.SECONDS)       // Read timeout
+                .cache(okhttp3.Cache(
+                    applicationContext.cacheDir,
+                    50 * 1024 * 1024  // 50 MB disk cache
+                ))
+                .build()
+            
+            // Build custom Picasso instance
+            val picasso = Picasso.Builder(applicationContext)
+                .downloader(OkHttp3Downloader(okHttpClient))  // Use OkHttp with our settings
+                .indicatorsEnabled(false)                     // Disable debug indicators
+                .loggingEnabled(false)                        // Disable logging in production
+                .defaultBitmapConfig(android.graphics.Bitmap.Config.RGB_565) // Less memory usage
+                .build()
+            
+            // Set as the global instance
+            Picasso.setSingletonInstance(picasso)
+            
+        } catch (e: Exception) {
+            // If anything goes wrong, fall back to default Picasso behavior
+            android.util.Log.e("SwarnaKhataBook", "Error configuring Picasso: ${e.message}")
+        }
     }
 }

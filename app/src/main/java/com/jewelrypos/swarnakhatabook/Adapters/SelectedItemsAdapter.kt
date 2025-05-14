@@ -52,7 +52,7 @@ class SelectedItemsAdapter(
 
         // Set basic item details
         holder.itemName.text = "${item.purity} ${item.displayName}"
-        holder.itemDetails.text = "Weight: ${item.grossWeight}g | Code: ${item.jewelryCode}"
+        holder.itemDetails.text = "Weight: ${item.grossWeight}g"
 
         // Set price
         val totalPrice = selectedItem.price * selectedItem.quantity

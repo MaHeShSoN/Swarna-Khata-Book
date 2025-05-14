@@ -160,7 +160,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
         if (settings.showLogo && settings.logoUri != null) {
             try {
-                drawShopLogo(document, 60f, h - 60f, settings.logoUri!!, stream)
+                drawShopLogo(document, 100f, h - 70, settings.logoUri!!, stream)
                 // If logo is available, move shop details to the right of logo
                 shopDetailsStartX = 113f
             } catch (e: Exception) {
@@ -632,7 +632,7 @@ class InvoicePdfGenerator(private val context: Context) {
             } else {
                 // Draw signature line
                 stream.setNonStrokingColor(AWTColor(0, 0, 0))
-                drawLine(stream, w - 180f, 90f, w - 60f, 90f, 0.5f, AWTColor(0, 0, 0))
+                drawLine(stream, w - 110, 90f, w - 40, 90f, 0.5f, AWTColor(0, 0, 0))
                 drawText(stream, "Authorized Signature", w - 120f, 80f, 9f, true)
                 drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
             }
@@ -960,7 +960,7 @@ class InvoicePdfGenerator(private val context: Context) {
         )
         columnX += columnWidths[3] * (w - 80f)
 
-        // Labor total
+        // Labour total
         drawCenteredText(
             stream,
             formatter.format(totalLabour),
@@ -2209,9 +2209,7 @@ class InvoicePdfGenerator(private val context: Context) {
             // Item description in 2 lines
             // Line 1: ItemName ItemCode
             val itemNameText = item.itemDetails.displayName
-            val itemCodeText =
-                if (item.itemDetails.jewelryCode.isNotEmpty()) " ${item.itemDetails.jewelryCode}" else ""
-            val line1Text = itemNameText + itemCodeText
+            val line1Text = itemNameText
             drawText(contentStream, line1Text, xPos + 5f, currentY, 10f, false)
 
             // Line 2: Purity (bold) @ Rate (bold and italic)
@@ -3098,26 +3096,35 @@ class InvoicePdfGenerator(private val context: Context) {
             // Create PDImageXObject from bitmap
             val logoImage = LosslessFactory.createFromImage(document, logoBitmap)
 
-            // Calculate dimensions (max 120x60)
-            val maxWidth = 120f
-            val maxHeight = 60f
-            val ratio = logoImage.width.toFloat() / logoImage.height.toFloat()
+            // Fixed dimensions for logo
+            val fixedWidth = 80f
+            val fixedHeight = 40f
+
+            // Calculate aspect ratio preserving scaling
+            val imageRatio = logoImage.width.toFloat() / logoImage.height.toFloat()
+            val targetRatio = fixedWidth / fixedHeight
 
             val width: Float
             val height: Float
 
-            if (ratio > 1) { // Wider than tall
-                width = maxWidth
-                height = width / ratio
-            } else { // Taller than wide
-                height = maxHeight
-                width = height * ratio
+            if (imageRatio > targetRatio) {
+                // Image is wider than target ratio
+                width = fixedWidth
+                height = width / imageRatio
+            } else {
+                // Image is taller than target ratio
+                height = fixedHeight
+                width = height * imageRatio
             }
 
-            // Draw logo
-            contentStream.drawImage(logoImage, x - width, y - height / 2, width, height)
+            // Center the logo within the fixed dimensions
+            val xOffset = (fixedWidth - width) / 2
+            val yOffset = (fixedHeight - height) / 2
+
+            // Draw logo with fixed positioning
+            contentStream.drawImage(logoImage, x - fixedWidth + xOffset, y - fixedHeight/2 + yOffset, width, height)
         } catch (e: Exception) {
-            Log.e("InvoicePdfGenerator", "Error loading shop logo: ${e.message}")
+            Log.e("InvoicePdfGenerator", "Error drawing logo: ${e.message}")
         }
     }
 

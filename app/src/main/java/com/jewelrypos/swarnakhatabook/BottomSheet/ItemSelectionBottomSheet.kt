@@ -25,6 +25,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.ExtraChargeAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
 
@@ -51,7 +52,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private var selectedItem: JewelleryItem = JewelleryItem(
         id = UUID.randomUUID().toString(),
         displayName = "",
-        jewelryCode = "",
         itemType = "",
         category = "",
         grossWeight = 0.0,
@@ -121,6 +121,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             setupInitialValues()
         }
 
+        setupMetalTypeChips()
         setUpDropDownMenus()
         setupChangeListeners()
         setupListeners()
@@ -227,6 +228,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     ) : ArrayAdapter<JewelleryItem>(context, R.layout.dropdown_item_inventory, items), Filterable {
 
         private var filteredItems: List<JewelleryItem> = items
+        private var selectedMetalType: String? = null // "Gold", "Silver", "Other", or null for all
 
         override fun getCount(): Int = filteredItems.size
 
@@ -246,12 +248,30 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
             // Format the display to show important details
             primaryText.text = item.displayName
-            secondaryText.text = "Code: ${item.jewelryCode} | Type: ${item.itemType}"
-            detailsText.text = "Weight: ${item.grossWeight}g | Purity: ${item.purity}"
+            
+            // Show inventory type and quick-add indicator
+            val isQuickAdded = item.id.startsWith("QUICK_") // Assuming we'll prefix quick-add items this way
+            val inventoryTypeDisplay = when(item.inventoryType) {
+                InventoryType.BULK_STOCK -> context.getString(R.string.weight_based)
+                InventoryType.IDENTICAL_BATCH -> context.getString(R.string.quantity_based)
+            }
+            
+            // Show type with quick-add indicator if applicable
+            secondaryText.text = if (isQuickAdded) {
+                "★ ${context.getString(R.string.quick_added)} | $inventoryTypeDisplay | ${item.itemType}"
+            } else {
+                "$inventoryTypeDisplay | ${item.itemType}"
+            }
 
-            // Show stock information with color coding
-            val stockDisplay = "${item.stock} ${item.stockUnit}"
-            stockText.text = stockDisplay
+
+            if(item.inventoryType == InventoryType.IDENTICAL_BATCH){
+                detailsText.text = "Weight: ${item.grossWeight}g | Purity: ${item.purity}"
+                stockText.text = "${item.stock.toInt()} ${item.stockUnit}"
+            }else if(item.inventoryType == InventoryType.BULK_STOCK){
+                stockText.text = "Total: ${item.totalWeightGrams}g"
+                detailsText.visibility = View.GONE
+            }
+
 
             // Color code based on stock level
             if (item.stock <= 1.0) {
@@ -270,15 +290,36 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             return getView(position, convertView, parent)
         }
 
+        fun setMetalTypeFilter(metalType: String?) {
+            this.selectedMetalType = metalType
+            filter.filter(null) // Apply the filter
+        }
+
         override fun getFilter(): Filter {
             return object : Filter() {
                 override fun performFiltering(constraint: CharSequence?): FilterResults {
                     val query = constraint?.toString()?.lowercase() ?: ""
 
-                    filteredItems = if (query.isEmpty()) {
-                        items
+                    // First filter by metal type if selected
+                    val metalTypeFiltered = if (selectedMetalType != null) {
+                        when (selectedMetalType) {
+                            "Gold" -> items.filter { it.itemType.contains("Gold", ignoreCase = true) }
+                            "Silver" -> items.filter { it.itemType.contains("Silver", ignoreCase = true) }
+                            "Other" -> items.filter { 
+                                !it.itemType.contains("Gold", ignoreCase = true) && 
+                                !it.itemType.contains("Silver", ignoreCase = true) 
+                            }
+                            else -> items
+                        }
                     } else {
-                        items.filter {
+                        items
+                    }
+
+                    // Then filter by search query if provided
+                    filteredItems = if (query.isEmpty()) {
+                        metalTypeFiltered
+                    } else {
+                        metalTypeFiltered.filter {
                             it.displayName.lowercase().contains(query) ||
                                     it.category.lowercase().contains(query) ||
                                     it.itemType.lowercase().contains(query)
@@ -286,7 +327,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                     }
 
                     return FilterResults().apply {
-                        values = filteredItems; count = filteredItems.size
+                        values = filteredItems
+                        count = filteredItems.size
                     }
                 }
 
@@ -302,8 +344,19 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
     // Setup inventory dropdown
     private fun setupInventoryDropdown() {
+        // Create adapter with inventory items
         val adapter = DetailedInventoryItemAdapter(requireContext(), inventoryItems)
+        
+        // Apply initial filter based on selected chip
+        val selectedMetalType = when {
+            binding.goldChip.isChecked -> "Gold"
+            binding.silverChip.isChecked -> "Silver"
+            binding.otherChip.isChecked -> "Other"
+            else -> null
+        }
+        adapter.setMetalTypeFilter(selectedMetalType)
 
+        // Set adapter to dropdown
         binding.itemNameDropdown.apply {
             setAdapter(adapter)
             setDropDownBackgroundResource(R.color.my_light_primary_container)
@@ -316,13 +369,40 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             // Set just the display name in the field
             binding.itemNameDropdown.setText(selectedItem.displayName, false)
             binding.itemNameInputLayout.isHelperTextEnabled = true
-            binding.itemNameInputLayout.helperText =
-                selectedItem.stock.toString() + " " + selectedItem.stockUnit + " " + "in inventory"
+            
+            // Show stock information based on inventory type
+            val stockUnit = if (selectedItem.inventoryType == InventoryType.BULK_STOCK) "g" else "pcs"
+            val stockDisplay = "${selectedItem.stock} $stockUnit in inventory"
+            binding.itemNameInputLayout.helperText = stockDisplay
 
+            // Update chip selection based on item type
+            when {
+                selectedItem.itemType.contains("Gold", ignoreCase = true) -> binding.goldChip.isChecked = true
+                selectedItem.itemType.contains("Silver", ignoreCase = true) -> binding.silverChip.isChecked = true
+                else -> binding.otherChip.isChecked = true
+            }
 
             // Fill other fields
             fillFieldsFromSelectedItem(selectedItem)
         }
+        
+        // Allow manual text input for quick-add
+        binding.itemNameDropdown.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val enteredText = s?.toString()?.trim() ?: ""
+                
+                // Check if entered text doesn't match any item but we have a valid name
+                if (enteredText.isNotEmpty() && 
+                    inventoryItems.none { it.displayName.equals(enteredText, ignoreCase = true) }) {
+                    
+                    // Mark as a quick-add item by showing helper text
+                    binding.itemNameInputLayout.isHelperTextEnabled = true
+                    binding.itemNameInputLayout.helperText = "New item - will be added to inventory"
+                }
+            }
+        })
     }
 
 
@@ -810,7 +890,6 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         selectedItem = JewelleryItem(
             id = UUID.randomUUID().toString(),
             displayName = "",
-            jewelryCode = "",
             itemType = "",
             category = "",
             grossWeight = 0.0,
@@ -1124,17 +1203,42 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     internal fun saveJewelryItem(closeAfterSave: Boolean) {
         // Get the display name from the dropdown
         val displayName = binding.itemNameDropdown.text.toString().trim()
-
-        // Update selectedItem with manually entered values if the user didn't select an item
-        // or if they've modified fields after selection
-        if (displayName != selectedItem.displayName || selectedItem.displayName.isEmpty()) {
-            // The user either entered a name manually or changed it after selection
-            selectedItem = selectedItem.copy(
-                id = UUID.randomUUID().toString(),
-                displayName = displayName,
-                // Keep other fields as they are in the original selectedItem
-            )
+        
+        // Check if this is a quick-add item (not from inventory)
+        val isQuickAdd = selectedItem.id == UUID.randomUUID().toString() || 
+                         (displayName != selectedItem.displayName && selectedItem.displayName.isEmpty())
+        
+        // Generate ID for quick-add items with a prefix
+        val itemId = if (isQuickAdd) {
+            "QUICK_" + UUID.randomUUID().toString()
+        } else if (editMode && itemToEdit != null) {
+            itemToEdit!!.id
+        } else {
+            selectedItem.id
         }
+
+        // Determine inventory type based on form data
+        val inventoryType = if (isQuickAdd) {
+            // For quick-add items, we'll default to quantity-based (IDENTICAL_BATCH)
+            InventoryType.IDENTICAL_BATCH
+        } else {
+            selectedItem.inventoryType
+        }
+        
+        // For quick-add, use the display name as both name and category
+        val category = if (isQuickAdd) displayName else selectedItem.category
+        
+        // Determine metal type from chip selection
+        val metalType = when {
+            binding.goldChip.isChecked -> "Gold ${binding.purityEditText.text.toString()}"
+            binding.silverChip.isChecked -> "Silver ${binding.purityEditText.text.toString()}"
+            binding.otherChip.isChecked -> "Other Metal"
+            else -> selectedItem.itemType
+        }
+        
+        // Set default stock value for quick-add items
+        val stockValue = if (isQuickAdd) 1.0 else selectedItem.stock
+        val stockUnit = if (isQuickAdd) "pcs" else selectedItem.stockUnit
 
         // Get extra charges from adapter if initialized
         val extraCharges = if (::chargeAdapter.isInitialized) {
@@ -1148,30 +1252,50 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
         // Create a jewelry item object with all the form data
         val jewelryItem = JewelleryItem(
-            id = if (editMode && itemToEdit != null) itemToEdit!!.id else selectedItem.id,
+            id = itemId,
             displayName = displayName,
-            jewelryCode = selectedItem.jewelryCode,
-            itemType = selectedItem.itemType,
-            category = selectedItem.category,
+            itemType = metalType,
+            category = category,
             grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            wastageType = binding.wastageTypeDropdown.text.toString(),  // Add this line
+            wastageType = binding.wastageTypeDropdown.text.toString(),
             purity = binding.purityEditText.text.toString(),
             makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0,
             makingChargesType = binding.mackingChargesTypeEditText.text.toString(),
-            stock = selectedItem.stock,
-            stockUnit = selectedItem.stockUnit,
+            stock = stockValue,
+            stockUnit = stockUnit,
             location = selectedItem.location,
             diamondPrice = binding.diamondPrizeEditText.text.toString().toDoubleOrNull() ?: 0.0,
             metalRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
             metalRateOn = binding.goldRateOnEditText.text.toString(),
             taxRate = binding.taxRateEditText.text.toString().toDoubleOrNull() ?: 0.0,
             totalTax = binding.taxAmountEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            listOfExtraCharges = extraCharges
+            listOfExtraCharges = extraCharges,
+            inventoryType = inventoryType
         )
 
         val calculatedPrice = binding.totalChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
+
+        // If it's a quick-add item, add it to inventory first
+        if (isQuickAdd && !editMode) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val result = inventoryRepository.addJewelleryItem(jewelryItem)
+                    withContext(Dispatchers.Main) {
+                        if (result.isSuccess) {
+                            Toast.makeText(context, "Quick-added item saved to inventory", Toast.LENGTH_SHORT).show()
+                        } else {
+                            // Continue even if inventory save fails
+                            Toast.makeText(context, "Note: Item not saved to inventory", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Log but continue with selection
+                    android.util.Log.e("ItemSelection", "Failed to save quick-add item to inventory", e)
+                }
+            }
+        }
 
         // Notify listener based on mode
         if (editMode) {
@@ -1218,5 +1342,28 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null // Add this line
+    }
+
+    private fun setupMetalTypeChips() {
+        // Set default chip selection
+        binding.goldChip.isChecked = true
+        
+        // Setup chip click listeners
+        binding.metalTypeChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            val selectedMetalType = when {
+                binding.goldChip.isChecked -> "Gold"
+                binding.silverChip.isChecked -> "Silver"
+                binding.otherChip.isChecked -> "Other"
+                else -> null // No selection
+            }
+            
+            // Apply the filter to adapter if it's initialized
+            if (inventoryItems.isNotEmpty()) {
+                val adapter = binding.itemNameDropdown.adapter
+                if (adapter is DetailedInventoryItemAdapter) {
+                    adapter.setMetalTypeFilter(selectedMetalType)
+                }
+            }
+        }
     }
 }

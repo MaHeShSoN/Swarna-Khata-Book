@@ -440,7 +440,7 @@ class SalesViewModel(
     }
 
     // Add a selected item (handles existing items by incrementing quantity)
-    fun addSelectedItem(item: JewelleryItem, price: Double) {
+    fun addSelectedItem(item: JewelleryItem, price: Double, usedWeight: Double = 0.0) {
         val currentItems = _selectedItems.value?.toMutableList() ?: mutableListOf()
         val existingItemIndex = currentItems.indexOfFirst { it.item.id == item.id }
 
@@ -450,12 +450,13 @@ class SalesViewModel(
             // Ensure quantity increases correctly
             currentItems[existingItemIndex] = existingItem.copy(
                 quantity = existingItem.quantity + 1,
-                price = price
-            ) // Update price too if needed
+                price = price,
+                usedWeight = if (usedWeight > 0.0) usedWeight else existingItem.usedWeight
+            ) // Update price and usedWeight
             Log.d("SalesViewModel", "Incremented quantity for item: ${item.id}")
         } else {
             // Add new item
-            currentItems.add(SelectedItemWithPrice(item = item, quantity = 1, price = price))
+            currentItems.add(SelectedItemWithPrice(item = item, quantity = 1, price = price, usedWeight = usedWeight))
             Log.d("SalesViewModel", "Added new selected item: ${item.id}")
         }
         _selectedItems.value = currentItems

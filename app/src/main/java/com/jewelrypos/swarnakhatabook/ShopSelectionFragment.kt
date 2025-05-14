@@ -236,6 +236,17 @@ class ShopSelectionFragment : Fragment() {
     }
     
     private fun updateShopList(shopsList: List<ShopDetails>) {
+        // If there's exactly one shop, automatically select it
+        if (shopsList.size == 1) {
+            val shopId = shopsList[0].shopId
+            if (shopId != null) {
+                android.util.Log.d("ShopSelectionFragment", "Only one shop found, automatically selecting: $shopId")
+                selectShop(shopId)
+                return
+            }
+        }
+        
+        // Otherwise, show the list
         adapter.submitList(shopsList)
         binding.progressBar.visibility = View.GONE
         binding.textViewEmptyState.visibility = View.GONE
@@ -244,6 +255,17 @@ class ShopSelectionFragment : Fragment() {
     }
     
     private fun showEmptyState(message: String = "No shops found. Create your first shop!") {
+        // If this is the default message (no shops found), navigate to CreateShopFragment
+        if (message == "No shops found. Create your first shop!") {
+            findNavController().navigate(
+                R.id.action_shopSelectionFragment_to_createShopFragment,
+                null,
+                AnimationUtils.getSlideNavOptions()
+            )
+            return
+        }
+
+        // Otherwise, show the error message
         binding.progressBar.visibility = View.GONE
         binding.recyclerViewShops.visibility = View.GONE
         binding.textViewEmptyState.text = message

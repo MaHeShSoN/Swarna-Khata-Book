@@ -230,6 +230,63 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Item Image Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/itemImageCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:visibility="visible"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/my_light_outline"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="16dp">
+                        
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/librebaskervilleregular"
+                            android:text="@string/item_image"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="18sp"/>
+                            
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/replaceImageButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/replace"
+                            android:textSize="12sp"
+                            app:icon="@drawable/solar__camera_outline"
+                            app:iconSize="18dp"/>
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/itemImage"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:scaleType="centerInside"
+                        android:contentDescription="@string/item_image"
+                        android:background="@color/cream_background"
+                        app:srcCompat="@drawable/image_placeholder"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- Weight Information Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
@@ -347,6 +404,7 @@
 
             <!-- Stock Management Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/stockManagementCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -448,6 +506,18 @@
                         android:gravity="center_vertical"
                         android:layout_marginBottom="8dp">
 
+                        <!-- Fast decrement button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/decreaseFastButton"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:contentDescription="Fast decrease stock"
+                            app:icon="@drawable/majesticons__minus_five_circle_line"
+                            app:iconTint="@color/red"
+                            app:iconSize="16dp"/>
+
+                        <!-- Normal decrement button -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/decreaseStockButton"
                             style="@style/Widget.Material3.Button.IconButton"
@@ -455,7 +525,7 @@
                             android:layout_height="48dp"
                             android:contentDescription="Decrease stock"
                             app:icon="@drawable/material_symbols__remove_rounded"
-                            app:iconTint="@color/my_light_primary"/>
+                            app:iconTint="@color/red"/>
 
                         <TextView
                             android:id="@+id/stockAdjustmentValue"
@@ -478,6 +548,7 @@
                             android:textSize="14sp"
                             android:layout_marginEnd="8dp"/>
 
+                        <!-- Normal increment button -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/increaseStockButton"
                             style="@style/Widget.Material3.Button.IconButton"
@@ -485,7 +556,18 @@
                             android:layout_height="48dp"
                             android:contentDescription="Increase stock"
                             app:icon="@drawable/material_symbols__add_rounded"
-                            app:iconTint="@color/my_light_primary"/>
+                            app:iconTint="@color/green"/>
+
+                        <!-- Fast increment button -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/increaseFastButton"
+                            style="@style/Widget.Material3.Button.IconButton"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:contentDescription="Fast increase stock"
+                            app:icon="@drawable/majesticons__plus_five_circle_line"
+                            app:iconTint="@color/green"
+                            app:iconSize="16dp"/>
                     </LinearLayout>
 
                     <TextView

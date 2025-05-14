@@ -1,8 +1,7 @@
 <resources>
     <string name="app_name">Swarna Khata Book</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="save_close">Save &amp; Close</string>
-    <string name="save_and_add">Add More</string>
+
     <string name="add_jewelry_item">Add Jewellery Item</string>
     <string name="material_type">Material Type</string>
     <string name="gold">Gold</string>
@@ -12,11 +11,7 @@
     <string name="add_category">Add Category</string>
     <string name="display_name">Display Name</string>
     <string name="jewelry_code">Jewelry Code</string>
-    <string name="weight_details">Weight Details</string>
-    <string name="gross_weight">Gross Weight</string>
-    <string name="net_weight">Net Weight</string>
     <string name="purity_hint">Purity (e.g. 91.66)</string>
-    <string name="wastage">Wastage</string>
     <string name="inventory_information">Inventory Information</string>
     <string name="stock_value">Stock Value</string>
     <string name="unit">Unit</string>
@@ -163,8 +158,6 @@
     <string name="too_many_attempts_message">PIN entry has been disabled for %1$d minutes due to multiple failed attempts.</string>
     <string name="verify_pin">Verify PIN</string>
     <string name="please_enter_your_pin">Please enter your PIN to continue</string>
-    <string name="item_updated_success">Item updated successfully</string>
-    <string name="item_update_failed">Failed to update item. Item not found in selection.</string>
     <string name="please_add_customer_first">Please Add Customer First</string>
     <string name="create_purchase_order">Create Purchase Order</string>
     <string name="save_purchase">Save Purchase</string>
@@ -210,13 +203,6 @@
     <string name="current_stock">CURRENT STOCK</string>
     <string name="reorder_level">REORDER LEVEL</string>
     <string name="ref_label">Ref:</string>
-    <string name="add_jewellery_item">Add Jewellery Item</string>
-    <string name="diamond_pricing">Diamond Pricing</string>
-    <string name="extra_charges">Extra Charges</string>
-    <string name="add_charge">+ Add Charge</string>
-    <string name="no_extra_charges">No extra charges added</string>
-    <string name="tax_information">Tax Information</string>
-    <string name="tax_applicable">Tax Applicable</string>
     <string name="signature">Signature</string>
     <string name="please_sign_below">Please sign below</string>
     <string name="clear">Clear</string>
@@ -238,7 +224,6 @@
     <string name="date_label">Date: </string>
     <string name="total_label">Total: </string>
     <string name="balance_label">Balance: </string>
-    <string name="pricing_information">Pricing Information</string>
     <string name="total_collected">Total Collected</string>
     <string name="payment_breakdown">Payment Breakdown</string>
     <string name="cash">Cash</string>
@@ -254,7 +239,6 @@
     <string name="pcs">PCS</string>
     <string name="apply_adjustment">Apply Adjustment</string>
     <string name="gold_rate">Gold Rate</string>
-    <string name="making_charges">Making Charges</string>
     <string name="usage_statistics">Usage Statistics</string>
     <string name="invoices_used_in">Invoices Used In</string>
     <string name="quantity_sold">Quantity Sold</string>
@@ -433,18 +417,6 @@
     <string name="label_anniversary">Anniversary</string>
     <string name="no_customer_found">No Customer Found</string>
     <string name="try_different_search_terms_or_create_a_new_client">Try different search terms or create a new client</string>
-    <string name="item_name">Item Name</string>
-    <string name="purity_e_g_91_66">Purity (e.g. 91.66)</string>
-    <string name="diamond_price">Diamond Price</string>
-    <string name="rate_based_on">Metal Rate Based On ?</string>
-    <string name="type">Type</string>
-    <string name="metal_rate_1_gram">Metal Rate (1 Gram)</string>
-    <string name="total_making_charges_auto_calculated">Total Making Charges (Auto Calculated)</string>
-    <string name="total_gold_charges_wt_gold_rate">Total Metal Charges (Wt*Metal Rate)</string>
-    <string name="total_charges">Total Charges</string>
-    <string name="total_extra_charges">Total Extra Charges</string>
-    <string name="tax_rate">Tax Rate</string>
-    <string name="tax_amount_auto_calculated">Tax Amount (Auto Calculated)</string>
     <string name="title_create_invoice">Create Invoice</string>
     <string name="status_unpaid">UNPAID</string>
     <string name="label_invoice_date">Invoice Date:</string>
@@ -526,30 +498,19 @@
     <string name="invoice">Invoice #</string>
     <string name="percentage">Percentage</string>
     <string name="piece">PIECE</string>
-    <string name="edit_jewellery_item">Edit Jewellery Item</string>
-    <string name="update">Update</string>
     <string name="please_fill_in_both_fields">Please fill in both fields</string>
-    <string name="gross_weight_is_required">Gross weight is required</string>
     <string name="category_is_required">Category is required</string>
     <string name="jewelry_code_is_required">Jewelry code is required</string>
-    <string name="gross_weight_must_be_greater_than_zero">Gross weight must be greater than zero</string>
-    <string name="invalid_gross_weight">Invalid gross weight</string>
     <string name="display_name_is_required">Display name is required</string>
-    <string name="net_weight_must_be_greater_than_zero">Net weight must be greater than zero</string>
-    <string name="net_weight_cannot_exceed_gross_weight">Net weight cannot exceed gross weight</string>
-    <string name="invalid_net_weight">Invalid net weight</string>
-    <string name="purity_is_required">Purity is required</string>
     <string name="wastage_cannot_be_negative">Wastage cannot be negative</string>
     <string name="wastage_type_is_required">Wastage type is required</string>
     <string name="invalid_wastage_value">Invalid wastage value</string>
     <string name="stock_value_cannot_be_negative">Stock value cannot be negative</string>
     <string name="stock_unit_is_required">Stock unit is required</string>
     <string name="invalid_stock_value">Invalid stock value</string>
-    <string name="making_charges_type">Making Charges Type</string>
     <string name="call_customer">Call customer</string>
     <string name="customer_info">Customer Info</string>
     <string name="items">Items</string>
-    <string name="add">Add</string>
     <string name="subtotal">Subtotal:</string>
     <string name="tax">Tax:</string>
     <string name="total_">Total:</string>
@@ -569,13 +530,10 @@
     <string name="balance_to_pay">Balance to Pay:</string>
     <string name="add_payment">Add Payment</string>
     <string name="customer_details">Customer Details</string>
-    <string name="add_item">Add Item</string>
     <string name="items_sold">Items Sold</string>
     <string name="payments">Payments</string>
     <string name="invoice_number">Invoice #</string>
-    <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
-    <string name="whatsapp_business_package">com.whatsapp.w4b</string>
     <string name="invoice_already_paid">Invoice is already fully paid</string>
 
 
@@ -651,5 +609,146 @@
     <string name="print_error_context_invalid">Print Error: Invalid context. %s</string>
     <string name="print_error_failed_to_start">Error starting print job: %s</string>
     <string name="print_error_preparation_failed">Error preparing print data: %s</string>
+
+    <!-- Inventory Type strings -->
+    <string name="inventory_type">Inventory Type</string>
+    <string name="single_item">Single Item (One-of-a-kind)</string>
+    <string name="batch_items">Multiple Items (Same Design)</string>
+    <string name="bulk_stock">Bulk Inventory (By Weight)</string>
+    <string name="total_weight_grams">Total Weight (grams)</string>
+
+    <!-- Image handling strings -->
+    <string name="item_image">Item Image</string>
+    <string name="tap_to_add_image">Tap to add an item image</string>
+    <string name="camera">Camera</string>
+    <string name="gallery">Gallery</string>
+    <string name="select_image_source">Select Image Source</string>
+    <string name="choose_image_source">Choose how you want to add an image</string>
+    <string name="image_upload_success">Image uploaded successfully</string>
+    <string name="image_upload_failed">Upload failed: %1$s</string>
+    <string name="no_camera_app">No camera app found</string>
+    <string name="no_gallery_app">No gallery app found</string>
+    <string name="camera_permission_required">Camera permission is required to take photos</string>
+    <string name="storage_permission_required">Storage permission is required to select photos</string>
+    <string name="image_capture_cancelled">Camera capture cancelled</string>
+    <string name="image_selection_cancelled">Image selection cancelled</string>
+    <string name="image_cropping_failed">Image cropping failed: %1$s</string>
+    <string name="error_creating_image_file">Error creating image file</string>
+    <string name="camera_not_available">Camera not available</string>
+    <string name="failed_retrieve_captured_image">Failed to retrieve captured image</string>
+    <string name="failed_retrieve_selected_image">Failed to retrieve selected image</string>
+    <string name="could_not_create_image_file">Could not create image file</string>
+    <string name="camera_error">Camera error: %1$s</string>
+    <string name="gallery_error">Gallery error: %1$s</string>
+
+    <string name="crop_image">Crop Image</string>
+    <string name="crop">Crop</string>
+
+    <string name="camera_unexpected_result">Camera returned unexpected result code: %1$d</string>
+    <string name="error_processing_camera_result">Error processing camera result: %1$s</string>
+    <string name="captured_image_empty">The captured image appears to be empty</string>
+    <string name="replace">Replace</string>
+    <string name="add_image">Add Image</string>
+
+
+
+
+
+    <string name="add_jewellery_item">Add Jewellery Item</string> <string name="edit_jewellery_item">Edit Jewellery Item</string>
+    <string name="update">Update</string>
+    <string name="update_and_close">Update &amp; Close</string> <string name="add_new_charge">Add New Charge</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_deletion">Confirm Deletion</string>
+    <string name="confirm_delete_charge">Are you sure you want to delete the charge \'%1$s\'?</string>
+    <string name="delete">Delete</string>
+    <string name="save_close">Save &amp; Close</string> <string name="save_and_add">Save and Add</string> <string name="add_charge">Add Charge</string> <string name="add_item">Add Item</string> <string name="error_loading_inventory_items">Failed to load inventory items: %1$s</string>
+    <string name="generic_error">Error: %1$s</string>
+    <string name="error_selecting_item">Error selecting item</string>
+    <string name="please_enter_valid_amount">Please enter a valid amount</string>
+    <string name="please_fill_all_fields">Please fill all fields</string>
+    <string name="please_select_item">Please select an item from the list</string>
+    <string name="amount_cannot_be_negative">Amount cannot be negative</string>
+    <string name="item_updated_success">Item updated successfully</string> <string name="item_update_failed">Failed to update item</string> <string name="dropdown_code_category">Code: %1$s | Cat: %2$s</string>
+    <string name="dropdown_weight_purity">Wt: %1$.1fg | Purity: %2$s</string>
+    <string name="type_single_item">Type: Single Item</string>
+    <string name="stock_info">Stock: %1$.1f %2$s</string>
+    <string name="total_weight_info">Total Wt: %1$.1fg</string>
+    <string name="not_applicable">N/A</string>
+    <string name="default_unit">Units</string>
+    <string name="quantity">Quantity</string>
+    <string name="bulk_stock_details">Bulk Stock Details</string>
+    <string name="weight_sold">Weight Sold</string>
+    <string name="rate_per_gram">Rate per Gram</string>
+    <string name="weight_details">Weight Details</string>
+    <string name="gross_weight">Gross Weight</string>
+    <string name="net_weight">Net Weight</string>
+    <string name="purity_e_g_91_66">Purity (e.g. 91.6)</string>
+    <string name="no_extra_charges">No extra charges added</string> <string name="item_name">Item Name</string>
+    <string name="wastage">Wastage</string>
+    <string name="type">Type</string>
+    <string name="diamond_pricing">Diamond/Stone Pricing</string>
+    <string name="diamond_price">Diamond/Stone Price</string>
+    <string name="pricing_information">Pricing Information</string>
+    <string name="rate_based_on">Rate Based On</string>
+    <string name="metal_rate_1_gram">Metal Rate (1 Gram)</string>
+    <string name="making_charges_type">Making Charges Type</string>
+    <string name="making_charges">Making Charges</string>
+    <string name="total_making_charges_auto_calculated">Total Making Charges (Auto-calculated)</string>
+    <string name="total_gold_charges_wt_gold_rate">Total Metal Value (Wt * Rate + Wastage)</string>
+    <string name="total_charges">Total Item Charges (Metal + Making + Diamond)</string>
+    <string name="extra_charges">Extra Charges</string>
+    <string name="total_extra_charges">Total Extra Charges</string>
+    <string name="tax_information">Tax Information</string>
+    <string name="tax_applicable">Tax Applicable</string>
+    <string name="tax_rate">Tax Rate (%)</string>
+    <string name="tax_amount_auto_calculated">Tax Amount (Auto-calculated)</string>
+    <string name="zero_decimal">0.00</string>
+    <string name="weight_sold_required">Weight sold is required for bulk items</string>
+    <string name="weight_must_be_positive">Weight must be greater than zero</string>
+    <string name="insufficient_bulk_stock">Weight sold exceeds available bulk stock (%1$.1fg)</string>
+    <string name="rate_per_gram_required">Rate per gram is required for bulk items</string>
+    <string name="rate_cannot_be_negative">Rate cannot be negative</string>
+    <string name="quantity_required">Quantity is required</string>
+    <string name="quantity_must_be_positive">Quantity must be greater than zero</string>
+    <string name="not_enough_stock_available">Quantity exceeds available stock (%1$d)</string>
+    <string name="gross_weight_is_required">Gross weight is required</string>
+    <string name="gross_weight_must_be_greater_than_zero">Gross weight must be greater than zero</string>
+    <string name="invalid_gross_weight">Invalid gross weight</string>
+    <string name="net_weight_must_be_greater_than_zero">Net weight must be greater than zero</string>
+    <string name="net_weight_cannot_exceed_gross_weight">Net weight cannot exceed gross weight</string>
+    <string name="invalid_net_weight">Invalid net weight</string>
+    <string name="purity_is_required">Purity is required</string>
+    <string name="purity_must_be_between_0_and_100">Purity must be between 0 and 100</string>
+    <string name="purity_required_for_fine">Purity must be greater than zero when Rate is based on Fine</string>
+    <string name="invalid_purity_value">Invalid purity value</string>
+    <string name="value_cannot_be_negative">Value cannot be negative</string>
+    <string name="invalid_number">Invalid number format</string>
+    <string name="type_required">Type selection is required</string>
+    <string name="wastage_type_required">Wastage type is required if wastage value is entered</string>
+    <string name="making_charges_type_required">Making charges type is required if making charges value is entered</string>
+    <string name="percentage_must_be_0_100">Percentage must be between 0 and 100</string>
+    <string name="rate_based_on_required">"Rate Based On" is required if metal rate is entered</string>
+    <string name="tax_rate_required">Tax rate is required when tax is applicable</string>
+    <string name="tax_rate_cannot_be_negative">Tax rate cannot be negative</string>
+    <string name="invalid_tax_rate">Invalid tax rate</string>
+    <string name="net_weight_required">Net Weight Required</string>
+    <string name="insufficient_bulk_stock_available">Insufficient Bulk Stock Available</string>
+    <string name="cannot_save_empty_invoice">Cannot Save Empty Invoice</string>
+    <string name="jewellery_name">Jewellery Name</string>
+    <string name="jewellery_category">Jewellery Category</string>
+
+    <!-- Metal type strings -->
+    <string name="metal_type">Metal Type</string>
+    <string name="quick_add_item">Quick Add Item</string>
+
+    <!-- Stock type indicators -->
+    <string name="weight_stock">Weight: %1$s g</string>
+    <string name="quantity_stock">Quantity: %1$s pcs</string>
+    <string name="quick_add_indicator">★ Quick Added</string>
+    <string name="jewellery_item_name">Jewellery Name</string>
+    <string name="quick_added">Quick Added</string>
+    <string name="weight_based">Weight Based</string>
+    <string name="quantity_based">Quantity Based</string>
 
 </resources>

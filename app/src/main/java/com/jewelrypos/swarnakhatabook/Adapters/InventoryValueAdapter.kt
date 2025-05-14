@@ -70,7 +70,6 @@ class InventoryValueAdapter :
         fun bind(item: InventoryValueItem) {
             itemName.text = item.name
             itemType.text = item.itemType
-            itemCode.text = "Code: ${item.code}"
             stockLevel.text = "Stock: ${item.stock} ${item.stockUnit}"
 
             metalValue.text = "Metal: ₹${currencyFormatter.format(item.metalValue)}"

@@ -230,15 +230,19 @@ class UpgradeActivity : AppCompatActivity() {
      */
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {
-            // Check if trial is active
-            val isTrialActive = subscriptionManager.isTrialActive()
-
-            // Check current subscription plan
+            // Check if user has an active subscription first
             val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
+            
+            // Only check trial status if there's no active subscription
+            val isTrialActive = if (currentPlan.name == "NONE") {
+                subscriptionManager.isTrialActive()
+            } else {
+                false // If there's an active subscription, trial should be considered inactive
+            }
 
             // Update UI based on current status
             runOnUiThread {
-                // Show trial badge if active
+                // Show trial banner only if trial is active AND there's no subscription
                 binding.trialBanner.visibility = if (isTrialActive) View.VISIBLE else View.GONE
 
                 // If trial is active, show days remaining
@@ -523,10 +527,15 @@ class UpgradeActivity : AppCompatActivity() {
                         hideLoadingIndicator()
                         showMessage("Subscription updated successfully!")
 
-                        // Refresh subscription status
+                        // Refresh subscription status and explicitly update trial status
                         lifecycleScope.launch {
                             try {
                                 subscriptionManager.refreshSubscriptionStatus()
+                                
+                                // Force trial banner to hide after successful purchase
+                                binding.trialBanner.visibility = View.GONE
+                                
+                                // Recheck subscription status to update UI
                                 checkSubscriptionStatus()
                             } catch (e: Exception) {
                                 Log.e("UpgradeActivity", "Error refreshing subscription status", e)

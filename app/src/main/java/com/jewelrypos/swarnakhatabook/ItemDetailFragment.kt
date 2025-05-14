@@ -2,13 +2,19 @@ package com.jewelrypos.swarnakhatabook
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.provider.OpenableColumns
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -16,15 +22,25 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.jewelrypos.swarnakhatabook.BottomSheet.ItemSelectionBottomSheet
+import com.jewelrypos.swarnakhatabook.BottomSheet.ItemBottomSheetFragment
 import com.jewelrypos.swarnakhatabook.DataClasses.ItemUsageStats
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.ItemDetailViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.ItemDetailViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentItemDetailBinding
+import java.io.File
+import java.io.IOException
 import java.text.DecimalFormat
+import coil3.imageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.request.transformations
+import coil3.size.Scale
+import coil3.transform.CircleCropTransformation
+import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
 
 class ItemDetailFragment : Fragment() {
 
@@ -36,11 +52,14 @@ class ItemDetailFragment : Fragment() {
     private val viewModel: ItemDetailViewModel by viewModels {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
-        val repository = InventoryRepository(firestore, auth,requireContext())
+        val repository = InventoryRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         ItemDetailViewModelFactory(repository, connectivityManager)
     }
+
+    private var imageUri: Uri? = null
+    private var currentImagePath: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -57,7 +76,8 @@ class ItemDetailFragment : Fragment() {
         setupObservers()
         setupClickListeners()
 
-        binding.topAppBar.overflowIcon = ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
+        binding.topAppBar.overflowIcon =
+            ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
 
         // Load item data based on passed ID
         viewModel.loadItem(args.itemId)
@@ -74,10 +94,12 @@ class ItemDetailFragment : Fragment() {
                     editItem()
                     true
                 }
+
                 R.id.action_delete -> {
                     confirmDeleteItem()
                     true
                 }
+
                 else -> false
             }
         }
@@ -108,14 +130,12 @@ class ItemDetailFragment : Fragment() {
     }
 
     private fun updateItemUI(item: JewelleryItem) {
-        // Format currency values
         val formatter = DecimalFormat("#,##,##0.00")
 
         // Update toolbar title with item name
         binding.topAppBar.title = item.displayName
 
         // Basic item information
-        binding.itemCodeValue.text = item.jewelryCode
         binding.categoryValue.text = item.category
         binding.itemTypeValue.text = item.itemType
         binding.purityValue.text = item.purity
@@ -135,18 +155,43 @@ class ItemDetailFragment : Fragment() {
         binding.netWeightValue.text = "${item.netWeight}g"
         binding.wastageValue.text = "${item.wastage}g"
 
-        // Stock information
-        binding.currentStockValue.text = "${item.stock} ${item.stockUnit}"
-        binding.stockUnitText.text = item.stockUnit
-        binding.stockAdjustmentValue.text = "0"
-        updateStockStatusIndicator(item.stock)
+        // Handle inventory type specific UI
+        when (item.inventoryType) {
+            InventoryType.IDENTICAL_BATCH -> {
+                // Stock information for IDENTICAL_BATCH
+                binding.stockManagementCard.visibility = View.VISIBLE
+                binding.stockStatusText.visibility = View.VISIBLE
+                binding.stockStatusIndicator.visibility = View.VISIBLE
+                binding.currentStockValue.text = "${item.stock} ${item.stockUnit}"
+                binding.stockUnitText.text = item.stockUnit
+                binding.stockAdjustmentValue.text = "0"
+                binding.finalStockValue.text = "Final Stock: ${item.stock} ${item.stockUnit}"
+                updateStockStatusIndicator(item.stock)
+                setupQuantityBasedStockUI()
+            }
+
+            InventoryType.BULK_STOCK -> {
+                // For bulk stock, show total weight instead of stock count
+                binding.stockManagementCard.visibility = View.VISIBLE
+                binding.stockStatusText.visibility = View.GONE
+                binding.stockStatusIndicator.visibility = View.GONE
+                binding.currentStockValue.text = "${item.totalWeightGrams}g"
+                binding.stockUnitText.text = "g"
+                binding.stockAdjustmentValue.text = "0.0"
+                binding.finalStockValue.text =
+                    "Final Weight: ${String.format("%.1f", item.totalWeightGrams)}g"
+                setupWeightBasedStockUI()
+            }
+        }
 
         // Location information
-        binding.locationValue.text = if (item.location.isNotEmpty()) item.location else "Not specified"
+        binding.locationValue.text =
+            if (item.location.isNotEmpty()) item.location else "Not specified"
 
         // Price information
         if (item.metalRate > 0) {
-            binding.goldRateValue.text = "₹${formatter.format(item.metalRate)}/g (on ${item.metalRateOn})"
+            binding.goldRateValue.text =
+                "₹${formatter.format(item.metalRate)}/g (on ${item.metalRateOn})"
             binding.goldRateLayout.visibility = View.VISIBLE
         } else {
             binding.goldRateLayout.visibility = View.GONE
@@ -161,6 +206,36 @@ class ItemDetailFragment : Fragment() {
             binding.makingChargesLayout.visibility = View.VISIBLE
         } else {
             binding.makingChargesLayout.visibility = View.GONE
+        }
+
+        // Load item image if available
+        if (item.imageUrl.isNotEmpty()) {
+            binding.itemImageCard?.visibility = View.VISIBLE
+
+
+            // Create an image request configured for efficient background caching
+            val request = ImageRequest.Builder(requireContext())
+                .data(item.imageUrl)
+                // Match the same size as in the adapter for cache consistency
+                .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                .scale(Scale.FILL)
+                // Set to null target for cache-only loading (no view attached)
+                .target(null)
+                // Instead of priority, use placeholderMemoryCacheKey for caching
+                .placeholderMemoryCacheKey(item.imageUrl)
+                // Ensure we're using memory cache
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .build()
+
+            requireContext().imageLoader.enqueue(request)
+        } else {
+            binding.itemImageCard?.visibility = View.VISIBLE
+            binding.itemImage.setImageResource(R.drawable.image_placeholder)
+        }
+
+        // Set click listener for replace image button
+        binding.replaceImageButton.setOnClickListener {
+            showImageEditOptions()
         }
 
         // Extra charges
@@ -207,8 +282,10 @@ class ItemDetailFragment : Fragment() {
                 false
             )
 
-            val nameTextView = chargeView.findViewById<android.widget.TextView>(R.id.extraChargeNameText)
-            val amountTextView = chargeView.findViewById<android.widget.TextView>(R.id.extraChargeAmountText)
+            val nameTextView =
+                chargeView.findViewById<android.widget.TextView>(R.id.extraChargeNameText)
+            val amountTextView =
+                chargeView.findViewById<android.widget.TextView>(R.id.extraChargeAmountText)
 
             nameTextView.text = charge.name
             amountTextView.text = "₹${formatter.format(charge.amount)}"
@@ -216,8 +293,6 @@ class ItemDetailFragment : Fragment() {
             binding.extraChargesContainer.addView(chargeView)
         }
     }
-
-
 
     private fun updateUsageStatsUI(stats: ItemUsageStats) {
         val formatter = DecimalFormat("#,##,##0.00")
@@ -229,7 +304,8 @@ class ItemDetailFragment : Fragment() {
 
         // Last sold date
         if (stats.lastSoldDate > 0) {
-            val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
+            val dateFormat =
+                java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
             binding.lastSoldDateValue.text = dateFormat.format(java.util.Date(stats.lastSoldDate))
         } else {
             binding.lastSoldDateValue.text = "Never sold"
@@ -237,7 +313,8 @@ class ItemDetailFragment : Fragment() {
 
         // Top customer
         if (stats.topCustomerName.isNotEmpty()) {
-            binding.topCustomerValue.text = "${stats.topCustomerName} (${stats.topCustomerQuantity} units)"
+            binding.topCustomerValue.text =
+                "${stats.topCustomerName} (${stats.topCustomerQuantity} units)"
         } else {
             binding.topCustomerValue.text = "N/A"
         }
@@ -255,82 +332,85 @@ class ItemDetailFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        // Stock adjustment buttons
-        binding.decreaseStockButton.setOnClickListener {
-            adjustStockValue(-1)
-        }
-
-        binding.increaseStockButton.setOnClickListener {
-            adjustStockValue(1)
-        }
-
         // Apply stock adjustment button
         binding.applyStockButton.setOnClickListener {
             applyStockAdjustment()
         }
     }
 
-    private fun adjustStockValue(change: Int) {
-        val currentValue = binding.stockAdjustmentValue.text.toString().toIntOrNull() ?: 0
-        val newValue = currentValue + change
-        binding.stockAdjustmentValue.text = newValue.toString()
-
-        // Update button states
-        updateAdjustmentButtonsState(newValue)
-    }
-
-    private fun updateAdjustmentButtonsState(adjustment: Int) {
-        // Current stock from the viewModel
-        val currentStock = viewModel.jewelryItem.value?.stock ?: 0.0
-
-        // Enable/disable decrease button based on potential final stock value
-        binding.decreaseStockButton.isEnabled = adjustment > -currentStock.toInt()
-
-        // Update the preview of the adjustment result
-        val finalStock = currentStock + adjustment
-        binding.finalStockValue.text = "Final: $finalStock ${viewModel.jewelryItem.value?.stockUnit ?: ""}"
-
-        // Show/hide apply button
-        binding.applyStockButton.visibility = if (adjustment != 0) View.VISIBLE else View.GONE
-    }
-
     private fun applyStockAdjustment() {
-        val adjustment = binding.stockAdjustmentValue.text.toString().toIntOrNull() ?: 0
+        val inventoryType = viewModel.jewelryItem.value?.inventoryType ?: return
 
-        if (adjustment == 0) {
-            Toast.makeText(context, "No adjustment to apply", Toast.LENGTH_SHORT).show()
-            return
-        }
+        when (inventoryType) {
+            InventoryType.IDENTICAL_BATCH -> {
+                val adjustment = binding.stockAdjustmentValue.text.toString().toIntOrNull() ?: 0
+                if (adjustment == 0) {
+                    Toast.makeText(context, "No adjustment to apply", Toast.LENGTH_SHORT).show()
+                    return
+                }
 
-        viewModel.updateStock(adjustment) { success ->
-            if (success) {
-                Toast.makeText(context, "Stock updated successfully", Toast.LENGTH_SHORT).show()
-                binding.stockAdjustmentValue.text = "0"
-                binding.applyStockButton.visibility = View.GONE
-                EventBus.postInvoiceUpdated()
-            } else {
-                Toast.makeText(context, "Failed to update stock", Toast.LENGTH_SHORT).show()
+                // For batch items, adjust count
+                viewModel.updateStock(adjustment) { success ->
+                    handleStockUpdateResult(success)
+                }
             }
+
+            InventoryType.BULK_STOCK -> {
+                val adjustment =
+                    binding.stockAdjustmentValue.text.toString().toDoubleOrNull() ?: 0.0
+                if (adjustment == 0.0) {
+                    Toast.makeText(context, "No adjustment to apply", Toast.LENGTH_SHORT).show()
+                    return
+                }
+
+                // For bulk stock, adjust weight directly
+                viewModel.updateBulkWeight(adjustment) { success ->
+                    handleStockUpdateResult(success)
+                }
+            }
+        }
+    }
+
+    private fun handleStockUpdateResult(success: Boolean) {
+        val inventoryType = viewModel.jewelryItem.value?.inventoryType
+
+        if (success) {
+            Toast.makeText(context, "Stock updated successfully", Toast.LENGTH_SHORT).show()
+
+            // Set the correct initial value based on inventory type
+            if (inventoryType == InventoryType.BULK_STOCK) {
+                binding.stockAdjustmentValue.text = "0.0"
+            } else {
+                binding.stockAdjustmentValue.text = "0"
+            }
+
+            binding.applyStockButton.visibility = View.GONE
+            EventBus.postInvoiceUpdated()
+        } else {
+            Toast.makeText(context, "Failed to update stock", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun editItem() {
         viewModel.jewelryItem.value?.let { item ->
-            val bottomSheet = ItemSelectionBottomSheet.newInstance()
+            val bottomSheet = ItemBottomSheetFragment.newInstance()
             bottomSheet.setItemForEdit(item)
 
-            bottomSheet.setOnItemSelectedListener(object : ItemSelectionBottomSheet.OnItemSelectedListener {
-                override fun onItemSelected(newItem: JewelleryItem, price: Double) {
+            bottomSheet.setOnItemAddedListener(object :
+                ItemBottomSheetFragment.OnItemAddedListener {
+                override fun onItemAdded(item: JewelleryItem) {
                     // This won't be called during editing
                 }
 
-                override fun onItemUpdated(updatedItem: JewelleryItem, price: Double) {
+                override fun onItemUpdated(updatedItem: JewelleryItem) {
                     viewModel.updateItem(updatedItem) { success ->
                         if (success) {
                             EventBus.postInventoryUpdated()
-                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Item updated successfully", Toast.LENGTH_SHORT)
+                                .show()
                         } else {
-                            Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Failed to update item", Toast.LENGTH_SHORT)
+                                .show()
                         }
                     }
                 }
@@ -380,13 +460,437 @@ class ItemDetailFragment : Fragment() {
                 Toast.makeText(context, "Item moved to recycling bin", Toast.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             } else {
-                Toast.makeText(context, "Failed to move item to recycling bin", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to move item to recycling bin", Toast.LENGTH_SHORT)
+                    .show()
             }
         }
     }
 
+    private fun showImageEditOptions() {
+        val item = viewModel.jewelryItem.value ?: return
+
+        val options = arrayOf(
+            getString(R.string.camera),
+            getString(R.string.gallery)
+        )
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(if (item.imageUrl.isEmpty()) getString(R.string.add_image) else getString(R.string.replace))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> dispatchTakePictureIntent()
+                    1 -> dispatchGalleryIntent()
+                }
+            }
+            .show()
+    }
+
+    private fun dispatchTakePictureIntent() {
+        try {
+            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            if (intent.resolveActivity(requireActivity().packageManager) != null) {
+                // Create file for the image
+                val photoFile = try {
+                    createImageFile()
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        context,
+                        getString(R.string.error_creating_image_file),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+
+                // Get URI from file
+                photoFile.also {
+                    val photoURI = FileProvider.getUriForFile(
+                        requireContext(),
+                        "${requireContext().packageName}.provider",
+                        it
+                    )
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                    startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error launching camera: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    private fun dispatchGalleryIntent() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        intent.type = "image/*"
+        try {
+            startActivityForResult(intent, REQUEST_GALLERY_PICK)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Error launching gallery: ${e.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
+    }
+
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        // Create image file name
+        val timeStamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
+            .format(java.util.Date())
+        val imageFileName = "JPEG_${timeStamp}_"
+        val storageDir =
+            requireContext().getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+
+        return File.createTempFile(
+            imageFileName,
+            ".jpg",
+            storageDir
+        ).apply {
+            currentImagePath = absolutePath
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (resultCode == android.app.Activity.RESULT_OK) {
+            when (requestCode) {
+                REQUEST_IMAGE_CAPTURE -> {
+                    currentImagePath?.let { path ->
+                        val file = File(path)
+                        if (file.exists()) {
+                            uploadImageToFirebase(file)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Error: Image file not found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                REQUEST_GALLERY_PICK -> {
+                    data?.data?.let { uri ->
+                        val file = createFileFromUri(uri)
+                        if (file != null) {
+                            uploadImageToFirebase(file)
+                        } else {
+                            Toast.makeText(context, "Error processing image", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createFileFromUri(uri: Uri): File? {
+        return try {
+            // Create a temporary file
+            val timeStamp =
+                java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
+                    .format(java.util.Date())
+            val imageFileName = "IMG_${timeStamp}"
+            val storageDir =
+                requireContext().getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+            val file = File.createTempFile(imageFileName, ".jpg", storageDir)
+
+            // Copy the content from URI to file
+            val inputStream = requireContext().contentResolver.openInputStream(uri)
+            val outputStream = java.io.FileOutputStream(file)
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            file
+        } catch (e: Exception) {
+            Log.e("ItemDetailFragment", "Error creating file from URI", e)
+            null
+        }
+    }
+
+    private fun uploadImageToFirebase(file: File) {
+        binding.progressBar.visibility = View.VISIBLE
+
+        val currentItem = viewModel.jewelryItem.value ?: return
+
+        viewModel.uploadItemImage(file) { success, imageUrl ->
+            binding.progressBar.visibility = View.GONE
+
+            if (success && imageUrl.isNotEmpty()) {
+                // Update the item with the new image URL
+                val updatedItem = currentItem.copy(imageUrl = imageUrl)
+
+                viewModel.updateItem(updatedItem) { updateSuccess ->
+                    if (updateSuccess) {
+                        Toast.makeText(
+                            context,
+                            getString(R.string.image_upload_success),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Image uploaded but failed to update item",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                Toast.makeText(context, "Failed to upload image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setupQuantityBasedStockUI() {
+        // Setup integer-based adjustment for quantity
+        binding.stockAdjustmentValue.text = "0"
+
+        // Use different step values for quantity
+        binding.decreaseStockButton.setOnClickListener {
+            adjustStockQuantity(-1)
+        }
+
+        // Set up long press listeners for continuous adjustment
+        binding.decreaseStockButton.setOnLongClickListener {
+            startContinuousAdjustment(-1, true)
+            true
+        }
+
+        binding.decreaseStockButton.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        binding.increaseStockButton.setOnClickListener {
+            adjustStockQuantity(1)
+        }
+
+        binding.increaseStockButton.setOnLongClickListener {
+            startContinuousAdjustment(1, true)
+            true
+        }
+
+        binding.increaseStockButton.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        // Add new buttons for larger adjustments
+        binding.decreaseFastButton?.setOnClickListener {
+            adjustStockQuantity(-5)
+        }
+
+        binding.decreaseFastButton?.setOnLongClickListener {
+            startContinuousAdjustment(-5, true)
+            true
+        }
+
+        binding.decreaseFastButton?.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        binding.increaseFastButton?.setOnClickListener {
+            adjustStockQuantity(5)
+        }
+
+        binding.increaseFastButton?.setOnLongClickListener {
+            startContinuousAdjustment(5, true)
+            true
+        }
+
+        binding.increaseFastButton?.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+    }
+
+    private fun setupWeightBasedStockUI() {
+        // Setup decimal-based adjustment for weight
+        binding.stockAdjustmentValue.text = "0.0"
+
+        // Use appropriate step values for weight
+        binding.decreaseStockButton.setOnClickListener {
+            adjustStockWeight(-0.5)
+        }
+
+        binding.decreaseStockButton.setOnLongClickListener {
+            startContinuousAdjustment(-0.5, false)
+            true
+        }
+
+        binding.decreaseStockButton.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        binding.increaseStockButton.setOnClickListener {
+            adjustStockWeight(0.1)
+        }
+
+        binding.increaseStockButton.setOnLongClickListener {
+            startContinuousAdjustment(0.1, false)
+            true
+        }
+
+        binding.increaseStockButton.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        // Add new buttons for larger weight adjustments
+        binding.decreaseFastButton?.setOnClickListener {
+            adjustStockWeight(-5.0)
+        }
+
+        binding.decreaseFastButton?.setOnLongClickListener {
+            startContinuousAdjustment(-5.0, false)
+            true
+        }
+
+        binding.decreaseFastButton?.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+
+        binding.increaseFastButton?.setOnClickListener {
+            adjustStockWeight(5.0)
+        }
+
+        binding.increaseFastButton?.setOnLongClickListener {
+            startContinuousAdjustment(5.0, false)
+            true
+        }
+
+        binding.increaseFastButton?.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_UP ||
+                event.action == android.view.MotionEvent.ACTION_CANCEL
+            ) {
+                stopContinuousAdjustment()
+            }
+            false
+        }
+    }
+
+    // For continuous adjustment on long press
+    private var continuousHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var adjustmentRunnable: Runnable? = null
+
+    private fun startContinuousAdjustment(value: Number, isQuantity: Boolean) {
+        stopContinuousAdjustment() // Stop any existing adjustment
+
+        adjustmentRunnable = object : Runnable {
+            override fun run() {
+                if (isQuantity) {
+                    adjustStockQuantity(value.toInt())
+                } else {
+                    adjustStockWeight(value.toDouble())
+                }
+                continuousHandler.postDelayed(this, 150) // Adjust every 150ms
+            }
+        }
+
+        // Start after a small delay
+        continuousHandler.postDelayed(adjustmentRunnable!!, 500)
+    }
+
+    private fun stopContinuousAdjustment() {
+        adjustmentRunnable?.let {
+            continuousHandler.removeCallbacks(it)
+            adjustmentRunnable = null
+        }
+    }
+
+    private fun adjustStockQuantity(change: Int) {
+        val currentValue = binding.stockAdjustmentValue.text.toString().toIntOrNull() ?: 0
+        val newValue = currentValue + change
+        binding.stockAdjustmentValue.text = newValue.toString()
+
+        // Update button states
+        updateQuantityAdjustmentButtonsState(newValue)
+    }
+
+    private fun adjustStockWeight(change: Double) {
+        val currentValue = binding.stockAdjustmentValue.text.toString().toDoubleOrNull() ?: 0.0
+        val newValue = currentValue + change
+        // Format to one decimal place
+        binding.stockAdjustmentValue.text = String.format("%.1f", newValue)
+
+        // Update button states
+        updateWeightAdjustmentButtonsState(newValue)
+    }
+
+    private fun updateQuantityAdjustmentButtonsState(adjustment: Int) {
+        // Current stock from the viewModel
+        val currentItem = viewModel.jewelryItem.value ?: return
+        val currentStock = currentItem.stock
+
+        // Enable/disable decrease button based on potential final stock value
+        binding.decreaseStockButton.isEnabled = adjustment > -currentStock.toInt()
+        binding.decreaseFastButton?.isEnabled = adjustment >= 5 - currentStock.toInt()
+
+        // Update the preview of the adjustment result
+        val finalStock = currentStock + adjustment
+        binding.finalStockValue.text = "Final Stock: $finalStock ${currentItem.stockUnit}"
+
+        // Show/hide apply button
+        binding.applyStockButton.visibility = if (adjustment != 0) View.VISIBLE else View.GONE
+    }
+
+    private fun updateWeightAdjustmentButtonsState(adjustment: Double) {
+        // Current weight from the viewModel
+        val currentItem = viewModel.jewelryItem.value ?: return
+        val currentWeight = currentItem.totalWeightGrams
+
+        // Enable/disable decrease button based on potential final weight value
+        binding.decreaseStockButton.isEnabled = adjustment > -currentWeight
+        binding.decreaseFastButton?.isEnabled = adjustment >= 5.0 - currentWeight
+
+        // Update the preview of the adjustment result
+        val finalWeight = currentWeight + adjustment
+        binding.finalStockValue.text = "Final Weight: ${String.format("%.1f", finalWeight)}g"
+
+        // Show/hide apply button
+        binding.applyStockButton.visibility = if (adjustment != 0.0) View.VISIBLE else View.GONE
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
+        stopContinuousAdjustment() // Ensure we clean up any pending callbacks
         _binding = null
+    }
+
+    companion object {
+        private const val REQUEST_IMAGE_CAPTURE = 1001
+        private const val REQUEST_GALLERY_PICK = 1002
     }
 }

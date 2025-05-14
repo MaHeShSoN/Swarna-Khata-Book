@@ -71,13 +71,47 @@
                         android:textColor="@color/my_light_primary" />
                 </LinearLayout>
 
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/metalTypeChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/goldChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_marginStart="2dp"
+                        android:checked="true"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/gold" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/silverChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/silver" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/otherChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/other" />
+                </com.google.android.material.chip.ChipGroup>
+
+
                 <!-- Item Name Dropdown (Full Width) -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/itemNameInputLayout"
                     style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/item_name"
+                    android:hint="@string/jewellery_item_name"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"

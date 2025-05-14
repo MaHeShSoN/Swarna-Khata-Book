@@ -39,6 +39,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.InvoiceItem
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Events.EventBus
 import com.jewelrypos.swarnakhatabook.Factorys.CustomerViewModelFactory
 import com.jewelrypos.swarnakhatabook.Factorys.SalesViewModelFactory
@@ -548,7 +549,7 @@ class InvoiceCreationFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val result = inventoryRepository.getAllInventoryItems()
-                
+
                 // Hide progress regardless of success or failure
                 binding.progressOverlay.visibility = View.GONE
 
@@ -615,11 +616,18 @@ class InvoiceCreationFragment : Fragment() {
             override fun onItemSelected(item: JewelleryItem, price: Double) {
                 // Default to quantity of 1 when adding a new item
                 val requestedQuantity = 1
+                
+                // Calculate usedWeight for weight-based items
+                val usedWeight = if (item.inventoryType == InventoryType.BULK_STOCK) {
+                    if (item.grossWeight > 0.0) item.grossWeight else item.totalWeightGrams
+                } else {
+                    0.0
+                }
 
                 // Check if we have enough stock
                 if (item.stock <= 0) {
                     // No stock available - warn user but still allow adding
-                    salesViewModel.addSelectedItem(item, price)
+                    salesViewModel.addSelectedItem(item, price, usedWeight)
                     Toast.makeText(
                         context,
                         getString(R.string.no_stock_available),
@@ -627,7 +635,7 @@ class InvoiceCreationFragment : Fragment() {
                     ).show()
                 } else if (requestedQuantity > item.stock) {
                     // Not enough stock - warn user but still allow adding
-                    salesViewModel.addSelectedItem(item, price)
+                    salesViewModel.addSelectedItem(item, price, usedWeight)
                     Toast.makeText(
                         context,
                         getString(R.string.not_enough_stock, item.stock),
@@ -635,7 +643,7 @@ class InvoiceCreationFragment : Fragment() {
                     ).show()
                 } else {
                     // Enough stock available
-                    salesViewModel.addSelectedItem(item, price)
+                    salesViewModel.addSelectedItem(item, price, usedWeight)
                 }
             }
 
@@ -782,12 +790,14 @@ class InvoiceCreationFragment : Fragment() {
             )
 
             val invoiceItems = itemsAdapter.getItems().map { selected ->
+                Log.d("Tag",selected.item.grossWeight.toString())
                 InvoiceItem(
                     id = UUID.randomUUID().toString(), // Ensure each item has a unique ID
                     itemId = selected.item.id,
                     quantity = selected.quantity,
                     itemDetails = selected.item,
-                    price = selected.price
+                    price = selected.price,
+                    usedWeight = if (selected.item.inventoryType == InventoryType.BULK_STOCK) selected.usedWeight else 0.0
                 )
             }
 
@@ -796,7 +806,7 @@ class InvoiceCreationFragment : Fragment() {
                 Toast.makeText(context, getString(R.string.please_add_at_least_one_item), Toast.LENGTH_SHORT).show()
                 // Re-enable button and restore text
                 binding.saveButton.isEnabled = true
-                binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true)) 
+                binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true))
                     R.string.save_purchase else R.string.save_invoice)
                 return
             }
@@ -845,16 +855,16 @@ class InvoiceCreationFragment : Fragment() {
                     if (_binding == null) return@runOnUiThread
 
                     binding.progressOverlay.visibility = View.GONE
-                    
+
                     // Re-enable button and restore text (in case of failure)
                     binding.saveButton.isEnabled = true
-                    binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true)) 
+                    binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true))
                         R.string.save_purchase else R.string.save_invoice)
 
                     if (success) {
                         // Increment the monthly invoice count
                         SwarnaKhataBook.getUserSubscriptionManager().incrementMonthlyInvoiceCount()
-                        
+
                         context?.let { ctx ->
                             Toast.makeText(ctx, getString(R.string.invoice_saved_successfully), Toast.LENGTH_SHORT)
                                 .show()
@@ -903,13 +913,13 @@ class InvoiceCreationFragment : Fragment() {
             // Handle any unexpected errors
             Log.e("InvoiceCreation", "Error saving invoice", e)
             binding.progressOverlay.visibility = View.GONE
-            
+
             // Re-enable button and restore text
             binding.saveButton.isEnabled = true
             val customer = salesViewModel.selectedCustomer.value
-            binding.saveButton.text = getString(if (customer?.customerType?.equals("Wholesaler", ignoreCase = true) == true) 
+            binding.saveButton.text = getString(if (customer?.customerType?.equals("Wholesaler", ignoreCase = true) == true)
                 R.string.save_purchase else R.string.save_invoice)
-                
+
             Toast.makeText(context, getString(R.string.error_saving_invoice, e.message), Toast.LENGTH_SHORT).show()
         }
     }

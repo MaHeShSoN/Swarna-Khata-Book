@@ -498,7 +498,6 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                         id = item.id,
                         name = item.displayName,
                         itemType = item.itemType,
-                        code = item.jewelryCode,
                         stock = item.stock,
                         stockUnit = item.stockUnit,
                         metalValue = metalValue,
@@ -681,7 +680,6 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                                 LowStockItem(
                                     id = item.id,
                                     name = item.displayName,
-                                    code = item.jewelryCode,
                                     itemType = item.itemType,
                                     currentStock = item.stock,
                                     stockUnit = item.stockUnit,

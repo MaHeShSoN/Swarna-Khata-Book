@@ -2,6 +2,7 @@ package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -155,6 +156,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         setupBrandingSection()
         setupContentSettings()
         setupBackHandler()
+        setupColorPickers()
 
         // Load existing settings
         loadSettings()
@@ -183,6 +185,14 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 hasUnsavedChanges = true
                 updatePdfPreview()
             }
+
+            if (isChecked) {
+                binding.showLogoSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.showLogoSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary_container))
+            } else {
+                binding.showLogoSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray))
+                binding.showLogoSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
+            }
         }
 
         // Upload logo button
@@ -208,14 +218,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     }
 
     private fun updateLogoVisibility(isEnabled: Boolean) {
-        // Update upload button state
-        binding.uploadLogoButton.isEnabled = isEnabled
-
-        // Show appropriate view based on whether logo exists
-        if (logoUri != null && isEnabled) {
+       if (logoUri != null) {
+            // If logo exists
             binding.uploadLogoButton.visibility = View.GONE
-            binding.logoPreviewLayout.visibility = View.VISIBLE
+            binding.logoPreviewLayout.visibility = if (isEnabled) View.VISIBLE else View.GONE
         } else {
+            // If no logo exists
             binding.uploadLogoButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
             binding.logoPreviewLayout.visibility = View.GONE
         }
@@ -229,6 +237,14 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 pdfSettings?.showWatermark = isChecked
                 hasUnsavedChanges = true
                 updatePdfPreview()
+            }
+
+            if (isChecked) {
+                binding.showWatermarkSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.showWatermarkSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary_container))
+            } else {
+                binding.showWatermarkSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray))
+                binding.showWatermarkSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
             }
         }
 
@@ -255,14 +271,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     }
 
     private fun updateWatermarkVisibility(isEnabled: Boolean) {
-        // Update upload button state
-        binding.uploadWatermarkButton.isEnabled = isEnabled
-
-        // Show appropriate view based on whether watermark exists
-        if (watermarkUri != null && isEnabled) {
+        if (watermarkUri != null) {
+            // If watermark exists
             binding.uploadWatermarkButton.visibility = View.GONE
-            binding.watermarkPreviewLayout.visibility = View.VISIBLE
+            binding.watermarkPreviewLayout.visibility = if (isEnabled) View.VISIBLE else View.GONE
         } else {
+            // If no watermark exists
             binding.uploadWatermarkButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
             binding.watermarkPreviewLayout.visibility = View.GONE
         }
@@ -276,6 +290,14 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 pdfSettings?.showSignature = isChecked
                 hasUnsavedChanges = true
                 updatePdfPreview()
+            }
+
+            if (isChecked) {
+                binding.showSignatureSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.showSignatureSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary_container))
+            } else {
+                binding.showSignatureSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray))
+                binding.showSignatureSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
             }
         }
 
@@ -302,14 +324,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     }
 
     private fun updateSignatureVisibility(isEnabled: Boolean) {
-        // Update upload button state
-        binding.uploadSignatureButton.isEnabled = isEnabled
-
-        // Show appropriate view based on whether signature exists
-        if (signatureUri != null && isEnabled) {
+        if (signatureUri != null) {
+            // If signature exists
             binding.uploadSignatureButton.visibility = View.GONE
-            binding.signaturePreviewLayout.visibility = View.VISIBLE
+            binding.signaturePreviewLayout.visibility = if (isEnabled) View.VISIBLE else View.GONE
         } else {
+            // If no signature exists
             binding.uploadSignatureButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
             binding.signaturePreviewLayout.visibility = View.GONE
         }
@@ -337,6 +357,15 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 hasUnsavedChanges = true
                 updatePdfPreview()
             }
+
+            if (isChecked) {
+                binding.showQrCodeSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.showQrCodeSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary_container))
+            } else {
+                binding.showQrCodeSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray))
+                binding.showQrCodeSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
+            }
+
         }
 
         // Setup text input fields with debounced preview updates
@@ -892,21 +921,32 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
 
     private fun setupColorPickers() {
-        // New template selection button
-
         binding.selectTemplateButton.setOnClickListener {
-            lifecycleScope.launch { // Launch coroutine inside the listener
-                val isPremium = userSubscriptionManager.isPremiumUser()
-                withContext(Dispatchers.Main) { // Switch back to main thread for UI actions
-                    if (isPremium) {
-                        navigateToTemplateSelection()
-                    } else {
-                        showPremiumFeatureDialog("Advanced invoice templates & colors") // Updated message slightly
+            lifecycleScope.launch {
+                try {
+                    // Force refresh subscription status before checking
+                    userSubscriptionManager.refreshSubscriptionStatus()
+                    val isPremium = userSubscriptionManager.isPremiumUser()
+
+                    withContext(Dispatchers.Main) {
+                        if (isPremium) {
+                            navigateToTemplateSelection()
+                        } else {
+                            showPremiumFeatureDialog("Advanced invoice templates & colors")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("InvoicePdfSettings", "Error checking premium status: ${e.message}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            requireContext(),
+                            "Error checking subscription status. Please try again.",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
         }
-
 
         // Setup color picker views
         val colorOptions = listOf(
@@ -1057,6 +1097,17 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
         )
     }
 
-
+    // Add this method to refresh premium status when fragment resumes
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            try {
+                userSubscriptionManager.refreshSubscriptionStatus()
+                checkForPremiumStatus() // This will update the premium badge visibility
+            } catch (e: Exception) {
+                Log.e("InvoicePdfSettings", "Error refreshing subscription status: ${e.message}")
+            }
+        }
+    }
 
 }

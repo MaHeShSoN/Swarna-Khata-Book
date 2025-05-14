@@ -1,10 +1,10 @@
 package com.jewelrypos.swarnakhatabook.DataClasses
 
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 
 data class JewelleryItem(
     val id: String = "",
     val displayName: String = "",
-    val jewelryCode: String = "",
     val itemType: String = "",
     val category: String = "",
     val grossWeight: Double = 0.0,
@@ -22,6 +22,8 @@ data class JewelleryItem(
     val metalRateOn: String = "",
     val taxRate: Double = 0.0,
     val totalTax: Double = 0.0,
-    val listOfExtraCharges: List<ExtraCharge> = emptyList()
-
+    val listOfExtraCharges: List<ExtraCharge> = emptyList(),
+    val inventoryType: InventoryType = InventoryType.IDENTICAL_BATCH,
+    val totalWeightGrams: Double = 0.0,
+    val imageUrl: String = ""
 )

@@ -1,30 +1,69 @@
 package com.jewelrypos.swarnakhatabook.BottomSheet
 
 import android.app.Dialog
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Filter
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.chip.ChipGroup
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
+import com.jewelrypos.swarnakhatabook.DataClasses.JewelryCategory
 import com.jewelrypos.swarnakhatabook.DataClasses.MetalItem
+import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Enums.MetalItemType
 import com.jewelrypos.swarnakhatabook.Factorys.MetalItemViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
+import com.jewelrypos.swarnakhatabook.Repository.JewelryCategoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.MetalItemViewModel
 import com.jewelrypos.swarnakhatabook.databinding.DialogInputMetalItemBinding
 import com.jewelrypos.swarnakhatabook.databinding.FragmentItemBottomSheetBinding
-
+import com.squareup.picasso.Picasso
+import coil3.imageLoader
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.size.Scale
+import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.launch
 
 open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -36,6 +75,21 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     private var _binding: FragmentItemBottomSheetBinding? = null
     val binding get() = _binding!!
 
+    // Current selected inventory type
+    private var selectedInventoryType = InventoryType.IDENTICAL_BATCH
+    
+    // Image handling variables
+    private var currentImagePath: String? = null
+    private var imageUri: Uri? = null
+    private var imageUrl: String = ""
+    private lateinit var storageRef: StorageReference
+    
+    // ActivityResultLaunchers for image capture and selection
+    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
+    private lateinit var galleryLauncher: ActivityResultLauncher<Intent>
+
+    // Constants
+    private val TAG_TEXT_WATCHERS = 12345 // Arbitrary unique value for the tag
 
     private val viewModel: MetalItemViewModel by viewModels {
         MetalItemViewModelFactory(
@@ -43,6 +97,13 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         )
     }
     private lateinit var itemTypeChipGroup: ChipGroup
+
+    private val categoryRepository by lazy {
+        JewelryCategoryRepository(
+            FirebaseFirestore.getInstance(),
+            FirebaseAuth.getInstance()
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,6 +126,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             binding.saveCloseButton.layoutParams = layoutParams
         }
 
+        // Initialize replace image button visibility
+        binding.replaceImageButton?.visibility = View.GONE
 
         return binding.root
     }
@@ -72,14 +135,21 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize radio buttons with the default selection
+        selectedInventoryType = InventoryType.IDENTICAL_BATCH
+        updateInventoryTypeRadioSelection()
+
         viewModel.items.observe(viewLifecycleOwner) { retrievedItems ->
             populateDropdown(retrievedItems)
         }
 
-        binding.itemTypeChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+        binding.itemTypeChipGroup.setOnCheckedChangeListener { group, checkedIds ->
             // No need to call retrieveItems again, just filter the current items
             populateDropdown(viewModel.items.value ?: emptyList())
         }
+
+        // Setup inventory type radio buttons
+        setupInventoryTypeRadioGroup()
 
         // If we're in edit mode, populate the form with the item data
         if (editMode && itemToEdit != null) {
@@ -89,16 +159,111 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             setupInitialValues()
         }
 
-
         setUpDropDownMenus()
         setupListeners()
-        // Set the dialog style
-//        setStyle(DialogFragment.STYLE_NORMAL, R.style.BottomSheetDialogStyle)
+        // Dynamically show/hide fields based on inventory type
+        updateFormFieldsForInventoryType()
 
+        // Add default categories on first launch
+        lifecycleScope.launch {
+            try {
+                categoryRepository.addDefaultCategories()
+            } catch (e: Exception) {
+                Log.e("ItemBottomSheet", "Error adding default categories", e)
+            }
+        }
+
+        // Set up chip group listener
+        binding.itemTypeChipGroup.setOnCheckedChangeListener { group, checkedId ->
+            when (checkedId) {
+                binding.goldChip.id -> loadCategoriesForMetalType("GOLD")
+                binding.silverChip.id -> loadCategoriesForMetalType("SILVER")
+                binding.otherChip.id -> loadCategoriesForMetalType("OTHER")
+            }
+        }
+    }
+
+    private fun setupInventoryTypeRadioGroup() {
+        // Make sure the radio group reflects the current selection state
+        updateInventoryTypeRadioSelection()
+        
+        // Use the XML-defined radio group
+        binding.inventoryTypeRadioGroup.setOnCheckedChangeListener { group, checkedId ->
+            selectedInventoryType = when (checkedId) {
+                R.id.quantityBasedRadio -> InventoryType.IDENTICAL_BATCH
+                R.id.weightBasedRadio -> InventoryType.BULK_STOCK
+                else -> InventoryType.IDENTICAL_BATCH // Default
+            }
+            updateFormFieldsForInventoryType()
+        }
+
+        // Add click listeners to the cards to handle selection
+        binding.quantityBasedCard.setOnClickListener {
+            // First clear any existing selection to avoid race conditions
+            binding.inventoryTypeRadioGroup.clearCheck()
+            // Then set our selection after a small delay to ensure UI thread has processed the clear
+            binding.inventoryTypeRadioGroup.post {
+                binding.inventoryTypeRadioGroup.check(R.id.quantityBasedRadio)
+            }
+        }
+
+        binding.weightBasedCard.setOnClickListener {
+            // First clear any existing selection to avoid race conditions
+            binding.inventoryTypeRadioGroup.clearCheck()
+            // Then set our selection after a small delay to ensure UI thread has processed the clear
+            binding.inventoryTypeRadioGroup.post {
+                binding.inventoryTypeRadioGroup.check(R.id.weightBasedRadio)
+            }
+        }
+    }
+
+    private fun updateFormFieldsForInventoryType() {
+        when (selectedInventoryType) {
+            InventoryType.IDENTICAL_BATCH -> {
+                // For batch items: Code optional, stock is editable
+                binding.stockInputLayout.visibility = View.VISIBLE
+                binding.stockTypeInputLayout.visibility = View.VISIBLE
+                binding.totalWeightInputLayout?.visibility = View.GONE
+                
+                // Show inventory information card
+                binding.inventoryCard?.visibility = View.VISIBLE
+                
+                // Show weight details for batch items
+                binding.weightCard?.visibility = View.VISIBLE
+            }
+            
+            InventoryType.BULK_STOCK -> {
+                // For bulk stock: Code not needed, show total weight, hide stock count
+                binding.stockInputLayout.visibility = View.GONE
+                binding.stockTypeInputLayout.visibility = View.GONE
+                
+                // Show inventory information card with total weight field
+                binding.inventoryCard?.visibility = View.VISIBLE
+                
+                // Hide weight details for bulk stock since they're irrelevant
+                binding.weightCard?.visibility = View.GONE
+                
+                // Create total weight field if it doesn't exist
+                if (binding.totalWeightInputLayout == null) {
+                    // This code would create the field dynamically
+                    // In a real implementation, you'd add these fields to your XML layout
+                    Toast.makeText(context, 
+                        "Please update your layout to include totalWeightInputLayout", 
+                        Toast.LENGTH_SHORT).show()
+                } else {
+                    binding.totalWeightInputLayout?.visibility = View.VISIBLE
+                }
+            }
+        }
     }
 
     private fun populateFormWithItemData(item: JewelleryItem) {
-        // Set item type chip
+        // Set inventory type radio button first
+        selectedInventoryType = item.inventoryType
+        updateInventoryTypeRadioSelection()
+        // Update form fields based on inventory type immediately
+        updateFormFieldsForInventoryType()
+        
         when (item.itemType.lowercase()) {
             "gold" -> binding.goldChip.isChecked = true
             "silver" -> binding.silverChip.isChecked = true
@@ -107,20 +272,72 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         // Fill in the fields
         binding.displayNameEditText.setText(item.displayName)
-        binding.jewelryCodeEditText.setText(item.jewelryCode)
         binding.categoryDropdown.setText(item.category)
         binding.grossWeightEditText.setText(item.grossWeight.toString())
         binding.netWeightEditText.setText(item.netWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.wastageTypeDropdown.setText(item.wastageType)
         binding.purityEditText.setText(item.purity)
-        binding.stockEditText.setText(item.stock.toString())
-        binding.stockChargesTypeEditText.setText(item.stockUnit)
+        
+        // Load the item image if available
+        if (item.imageUrl.isNotEmpty()) {
+            imageUrl = item.imageUrl
+            binding.imageInstructionText.visibility = View.GONE
+            binding.replaceImageButton?.visibility = View.VISIBLE
+            binding.cameraButton.visibility = View.GONE
+            binding.galleryButton.visibility = View.GONE
+            
+            // Load image with Coil
 
-        // Disable the jewelry code field to prevent editing the document ID reference
-        binding.jewelryCodeEditText.isEnabled = false
+            val request = ImageRequest.Builder(requireContext())
+                .data(item.imageUrl)
+                // Match the same size as in the adapter for cache consistency
+                .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                .scale(Scale.FILL)
+                // Apply the same transformations for cache consistency
+                // Set to null target for cache-only loading (no view attached)
+                .target(null)
+                // Instead of priority, use placeholderMemoryCacheKey for caching
+                .placeholderMemoryCacheKey(item.imageUrl)
+                // Ensure we're using memory cache
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .build()
+
+
+
+            requireContext().imageLoader.enqueue(request)
+        } else {
+            // No image, show camera and gallery buttons
+            binding.replaceImageButton?.visibility = View.GONE
+            binding.cameraButton.visibility = View.VISIBLE
+            binding.galleryButton.visibility = View.VISIBLE
+            binding.imageInstructionText.visibility = View.VISIBLE
+        }
+        
+        // Set fields based on inventory type
+        when (item.inventoryType) {
+            InventoryType.BULK_STOCK -> {
+                binding.totalWeightInputLayout?.let {
+                    it.editText?.setText(item.totalWeightGrams.toString())
+                }
+            }
+            else -> {
+                binding.stockEditText.setText(item.stock.toString())
+                binding.stockChargesTypeEditText.setText(item.stockUnit)
+            }
+        }
     }
 
+    private fun updateInventoryTypeRadioSelection() {
+        // Make sure both aren't checked at the same time (which should be impossible with RadioGroup)
+        binding.inventoryTypeRadioGroup.clearCheck()
+        
+        // Set the radio button based on the selected inventory type
+        when (selectedInventoryType) {
+            InventoryType.IDENTICAL_BATCH -> binding.inventoryTypeRadioGroup.check(R.id.quantityBasedRadio)
+            InventoryType.BULK_STOCK -> binding.inventoryTypeRadioGroup.check(R.id.weightBasedRadio)
+        }
+    }
 
     private fun setUpDropDownMenus() {
         //Wastage Type
@@ -132,7 +349,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         )
         binding.wastageTypeDropdown.apply {
             setAdapter(adapter0)
-            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            setDropDownBackgroundResource(R.color.cream_background)
             setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
         }
 
@@ -180,24 +397,17 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         )
         binding.categoryDropdown.apply {
             setAdapter(adapter)
-            setDropDownBackgroundResource(R.color.my_light_primary_container)
-
-            // If there are no items, set a hint text as helper
+            setDropDownBackgroundResource(R.color.cream_background)
+            
+            // Initially show dropdown if no categories
             if (itemNames.isEmpty()) {
                 binding.categoryInputLayout.helperText = "Use the + button to add a category"
                 binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.black))
-                binding.goldImageButton1.alpha = 1.0f  // Make sure button is fully visible
-                // Optional: add a gentle pulse animation to draw attention to the button
-                binding.goldImageButton1.startAnimation(
-                    android.view.animation.AnimationUtils.loadAnimation(
-                        context,
-                        android.R.anim.fade_in
-                    )
-                )
+                
+                // Don't auto-show dropdown here, let the focus listener handle it
             } else {
                 binding.categoryInputLayout.helperText = null
             }
-
         }
 
         binding.categoryDropdown.setOnItemClickListener { _, _, position, _ ->
@@ -205,12 +415,15 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 // If user clicks on the suggestion, automatically trigger the add button
                 binding.goldImageButton1.performClick()
                 binding.categoryDropdown.setText("")  // Clear the suggestion text
+            } else if (!itemNames.isEmpty()) {
+                // If a valid category is selected, auto-fill the display name
+                val selectedCategory = itemNames[position]
+                binding.displayNameEditText.setText(selectedCategory)
             }
         }
 
         // Set text colors for input fields
         binding.displayNameEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.jewelryCodeEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
         binding.grossWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
         binding.netWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
         binding.wastageEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
@@ -220,7 +433,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
         // Set text colors for labels
         binding.displayNameInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.jewelryCodeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
         binding.grossWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
         binding.netWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
         binding.wastageInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
@@ -231,86 +443,161 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.categoryInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
     }
 
+    private fun loadCategoriesForMetalType(metalType: String) {
+        lifecycleScope.launch {
+            try {
+                categoryRepository.getCategoriesByMetalType(metalType).fold(
+                    onSuccess = { categories ->
+                        val categoryNames = categories.map { it.name }
+                        
+                        // Save original categories for reference
+                        val originalCategoryNames = categoryNames.toList()
+                        
+                        val adapter = ArrayAdapter(
+                            requireContext(),
+                            R.layout.dropdown_item,
+                            categoryNames
+                        )
+                        
+                        binding.categoryDropdown.apply {
+                            setAdapter(adapter)
+                            setDropDownBackgroundResource(R.color.cream_background)
+                            
+                            // Initially show dropdown if no categories
+                            if (categoryNames.isEmpty()) {
+                                binding.categoryInputLayout.helperText = "Use the + button to add a category"
+                                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.black))
+                                
+                                // Don't auto-show dropdown here, let the focus listener handle it
+                            } else {
+                                binding.categoryInputLayout.helperText = null
+                            }
+                        }
+
+                        // Remove any existing text watchers to avoid duplicates
+                        val existingWatchers = binding.categoryDropdown.getTag(TAG_TEXT_WATCHERS) as? ArrayList<TextWatcher>
+                        if (existingWatchers != null) {
+                            for (watcher in existingWatchers) {
+                                binding.categoryDropdown.removeTextChangedListener(watcher)
+                            }
+                            existingWatchers.clear()
+                        }
+                        
+
+                        // Add item click listener
+                        binding.categoryDropdown.setOnItemClickListener { _, _, position, _ ->
+                            val selectedItem = binding.categoryDropdown.adapter.getItem(position).toString()
+                            
+                            if (selectedItem.startsWith("➕ Create new category:")) {
+                                // Extract the new category name from the suggestion
+                                val newCategoryName = selectedItem.substringAfter("\"").substringBefore("\"")
+                                
+                                // Clear the current text and prepare to create a new category
+                                binding.categoryDropdown.setText(newCategoryName, false)
+                                
+                                // Show dialog to create the new category
+                                binding.goldImageButton1.performClick()
+                            } else if (selectedItem == "Add new category with + button") {
+                                // Clear the dropdown text and click the add button
+                                binding.categoryDropdown.setText("", false)
+                                binding.goldImageButton1.performClick()
+                            } else if (originalCategoryNames.contains(selectedItem)) {
+                                // Regular category selection - auto-fill display name
+                                binding.displayNameEditText.setText(selectedItem)
+                            }
+                        }
+                    },
+                    onFailure = { e ->
+                        Log.e("ItemBottomSheet", "Error loading categories", e)
+                        Toast.makeText(
+                            requireContext(),
+                            "Error loading categories",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("ItemBottomSheet", "Error loading categories", e)
+            }
+        }
+    }
+
     fun showThemedDialog() {
+        // Get the selected metal type from the chip group
+        val selectedMetal = when (binding.itemTypeChipGroup.checkedChipId) {
+            binding.goldChip.id -> "GOLD"
+            binding.silverChip.id -> "SILVER"
+            binding.otherChip.id -> "OTHER"
+            else -> {
+                // If no chip is selected, show a message and return
+                Toast.makeText(
+                    requireContext(),
+                    "Please select a metal type first",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return
+            }
+        }
+
         // Create and customize the themed dialog
         ThemedM3Dialog(requireContext())
             .setTitle("Add Category")
-            .setLayout(R.layout.dialog_input_metal_item) // Your horizontal EditText layout
+            .setLayout(R.layout.dialog_input_metal_item)
             .setPositiveButton("Add") { dialog, dialogView ->
-                // Access the EditText fields
                 val dialogBinding = DialogInputMetalItemBinding.bind(dialogView!!)
+                val categoryName = dialogBinding.editText1.text.toString()
 
-
-                dialogBinding.editText2
-
-                // Access the AutoCompleteTextView value
-                val itemName = dialogBinding.editText1.text.toString()
-                val itemType =
-                    dialogBinding.editText2.text.toString() // Assuming editText2 is another field
-
-                if (itemType.isNotEmpty() && itemName.isNotEmpty()) {
-
-                    var selectedMetal = MetalItemType.GOLD
-                    if (itemType == MetalItemType.GOLD.toString()) {
-                        selectedMetal = MetalItemType.GOLD
+                if (categoryName.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        try {
+                            val category = JewelryCategory(
+                                name = categoryName,
+                                metalType = selectedMetal
+                            )
+                            
+                            categoryRepository.addCategory(category).fold(
+                                onSuccess = { id ->
+                                    // Reload categories for the current metal type
+                                    loadCategoriesForMetalType(selectedMetal)
+                                    // Auto-fill the category field with the new category
+                                    binding.categoryDropdown.setText(categoryName, false)
+                                    dialog.dismiss()
+                                },
+                                onFailure = { e ->
+                                    Log.e("ItemBottomSheet", "Error adding category", e)
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Error adding category",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("ItemBottomSheet", "Error adding category", e)
+                            Toast.makeText(
+                                requireContext(),
+                                "Error adding category",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
-                    if (itemType == MetalItemType.OTHER.toString()) {
-                        selectedMetal = MetalItemType.OTHER
-                    }
-                    if (itemType == MetalItemType.SILVER.toString()) {
-                        selectedMetal = MetalItemType.SILVER
-                    }
-
-
-                    processInputValues(itemName, selectedMetal)
-                    dialog.dismiss()
                 } else {
                     Toast.makeText(
                         requireContext(),
-                        getString(R.string.please_fill_in_both_fields),
+                        "Please enter a category name",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
-
-                dialog.dismiss()
             }
             .setNegativeButton(getString(R.string.cancel)) { dialog ->
                 dialog.dismiss()
             }
-            .apply {
-                // Set up the AutoCompleteTextView before showing the dialog
-                val dialogView = layoutInflater.inflate(R.layout.dialog_input_metal_item, null)
-                val dialogBinding = DialogInputMetalItemBinding.bind(dialogView)
-
-
-                // Populate AutoCompleteTextView with enum values
-                val metalTypes = MetalItemType.entries.map { it.name }
-                val adapter = ArrayAdapter(
-                    requireContext(), // Context
-                    R.layout.dropdown_item, // Default dropdown layout
-                    metalTypes
-                )
-                dialogBinding.editText2.apply {
-                    setAdapter(adapter)
-                    setDropDownBackgroundResource(R.color.my_light_primary_container)
-                }
-
-                // Set the prepared view to the dialog
-                setView(dialogView)
-            }
             .show()
-    }
-
-    private fun processInputValues(value1: String, value2: MetalItemType) {
-        val metalItem = MetalItem(value1, value2)
-        viewModel.addItem(metalItem)
-        binding.categoryDropdown.setText(value1)
     }
 
     fun validateJewelryItemForm(): Pair<Boolean, String> {
         // Get references to all form fields
         val displayName = binding.displayNameEditText.text.toString().trim()
-        val jewelryCode = binding.jewelryCodeEditText.text.toString().trim()
         val grossWeight = binding.grossWeightEditText.text.toString().trim()
         val netWeight = binding.netWeightEditText.text.toString().trim()
         val wastage = binding.wastageEditText.text.toString().trim()
@@ -319,6 +606,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         val stock = binding.stockEditText.text.toString().trim()
         val stockType = binding.stockChargesTypeEditText.text.toString().trim()
         val category = binding.categoryDropdown.text.toString().trim()
+        val totalWeight = binding.totalWeightInputLayout?.editText?.text.toString().trim() ?: ""
 
         // Basic validation for required fields
         if (displayName.isEmpty()) {
@@ -329,13 +617,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             binding.displayNameInputLayout.error = null
         }
 
-        if (jewelryCode.isEmpty()) {
-            binding.jewelryCodeInputLayout.error = getString(R.string.jewelry_code_is_required)
-            binding.jewelryCodeEditText.requestFocus()
-            return Pair(false, getString(R.string.jewelry_code_is_required))
-        } else {
-            binding.jewelryCodeInputLayout.error = null
-        }
 
         if (category.isEmpty()) {
             binding.categoryInputLayout.error = getString(R.string.category_is_required)
@@ -345,7 +626,33 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             binding.categoryInputLayout.error = null
         }
 
-        // Numeric field validations
+        // For bulk stock, validate total weight instead of gross/net weight
+        if (selectedInventoryType == InventoryType.BULK_STOCK) {
+            if (totalWeight.isEmpty()) {
+                binding.totalWeightInputLayout?.error = "Total weight is required"
+                binding.totalWeightInputLayout?.requestFocus()
+                return Pair(false, "Total weight is required")
+            } else {
+                try {
+                    val totalWeightValue = totalWeight.toDouble()
+                    if (totalWeightValue <= 0) {
+                        binding.totalWeightInputLayout?.error = "Total weight must be greater than zero"
+                        binding.totalWeightInputLayout?.requestFocus()
+                        return Pair(false, "Total weight must be greater than zero")
+                    } else {
+                        binding.totalWeightInputLayout?.error = null
+                    }
+                } catch (e: NumberFormatException) {
+                    binding.totalWeightInputLayout?.error = "Invalid total weight"
+                    binding.totalWeightInputLayout?.requestFocus()
+                    return Pair(false, "Invalid total weight")
+                }
+            }
+            // Skip other weight validations for bulk stock
+            return Pair(true, "")
+        }
+
+        // Numeric field validations for non-bulk inventory types
         // Gross Weight - required
         if (grossWeight.isEmpty()) {
             binding.grossWeightInputLayout.error = getString(R.string.gross_weight_is_required)
@@ -482,6 +789,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.grossWeightEditText.setText("0.0")
         binding.stockEditText.setText("0.0")
         binding.stockChargesTypeEditText.setText(getString(R.string.piece),false) // Default stock unit value
+        
+        // Initialize total weight field if it exists
+        binding.totalWeightInputLayout?.editText?.setText("0.0")
     }
 
 
@@ -506,12 +816,10 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             else -> "GOLD" // Default
         }
 
-
         // Create a jewelry item object with all the form data
         val jewellryItem = JewelleryItem(
             id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
             displayName = binding.displayNameEditText.text.toString().trim(),
-            jewelryCode = binding.jewelryCodeEditText.text.toString().trim(),
             itemType = itemType,
             category = binding.categoryDropdown.text.toString().trim(),
             grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
@@ -522,8 +830,10 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             stock = binding.stockEditText.text.toString().toDoubleOrNull() ?: 0.0,
             stockUnit = binding.stockChargesTypeEditText.text.toString(),
             location = "", // Empty location as it's removed
+            inventoryType = selectedInventoryType,
+            totalWeightGrams = binding.totalWeightInputLayout?.editText?.text.toString().toDoubleOrNull() ?: 0.0,
+            imageUrl = imageUrl // Use the uploaded image URL
         )
-
 
         // Notify listener based on mode
         if (editMode) {
@@ -540,9 +850,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 clearForm()
             }
         }
-
-        // Show success message
-//        Toast.makeText(context, "Jewelry item saved successfully", Toast.LENGTH_SHORT).show()
     }
 
     // Method to set the item for editing
@@ -556,7 +863,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
      */
     fun clearForm() {
         binding.displayNameEditText.text?.clear()
-        binding.jewelryCodeEditText.text?.clear()
         binding.grossWeightEditText.text?.clear()
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
@@ -565,9 +871,17 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.stockEditText.text?.clear()
         binding.stockChargesTypeEditText.setText(getString(R.string.piece),false) // Default value after clearing
 
+        // Reset image view and URL
+        imageUrl = ""
+        imageUri = null
+        binding.itemImageView.setImageResource(R.drawable.image_placeholder)
+        binding.imageInstructionText.visibility = View.VISIBLE
+        binding.replaceImageButton?.visibility = View.GONE
+        binding.cameraButton.visibility = View.VISIBLE
+        binding.galleryButton.visibility = View.VISIBLE
+
         // Reset any error states
         binding.displayNameInputLayout.error = null
-        binding.jewelryCodeInputLayout.error = null
         binding.grossWeightInputLayout.error = null
         binding.netWeightInputLayout.error = null
         binding.wastageInputLayout.error = null
@@ -582,12 +896,30 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
 
     open fun setupListeners() {
-
         binding.goldImageButton1.setOnClickListener {
             showThemedDialog()
-
         }
 
+        // Add focus listener for the category dropdown
+        binding.categoryDropdown.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                // Get the parent NestedScrollView
+                val nestedScrollView = binding.root.parent as? androidx.core.widget.NestedScrollView
+                nestedScrollView?.post {
+                    // Scroll to position of the category input with offset to show at top
+                    val targetY = binding.categoryInputLayout.y.toInt() - 50
+                    nestedScrollView.smoothScrollTo(0, targetY)
+                    
+                    // Show dropdown after scrolling
+                    binding.categoryDropdown.post { binding.categoryDropdown.showDropDown() }
+                }
+            }
+        }
+        
+        // Make the entire input layout clickable
+        binding.categoryInputLayout.setOnClickListener {
+            binding.categoryDropdown.requestFocus()
+        }
 
         // Save Button Click Listener
         binding.saveAddButton.setOnClickListener {
@@ -609,6 +941,44 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.wastageTypeDropdown.setOnItemClickListener { _, _, _, _ ->
             // Update calculated fields or validations if needed
         }
+        
+        // Image-related listeners - direct camera and gallery actions
+        binding.cameraButton.setOnClickListener {
+            dispatchTakePictureIntent()
+        }
+        
+        binding.galleryButton.setOnClickListener {
+            dispatchGalleryIntent()
+        }
+        
+        // Replace image button
+        binding.replaceImageButton?.setOnClickListener {
+            showImageSourceDialog()
+        }
+        
+        // Image view also allows direct camera capture when tapped
+        binding.itemImageView.setOnClickListener {
+            // If we already have an image, show the replace image button
+            if (imageUrl.isNotEmpty() || imageUri != null) {
+                showImageSourceDialog()
+            } else {
+                // If no image, default to camera
+                dispatchTakePictureIntent()
+            }
+        }
+    }
+
+    private fun showImageSourceDialog() {
+        val options = arrayOf(getString(R.string.camera), getString(R.string.gallery))
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.select_image_source))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> dispatchTakePictureIntent() // Camera
+                    1 -> dispatchGalleryIntent() // Gallery
+                }
+            }
+            .show()
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -650,6 +1020,474 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     companion object {
         fun newInstance(): ItemBottomSheetFragment {
             return ItemBottomSheetFragment()
+        }
+        
+        private const val REQUEST_CAMERA_PERMISSION = 100
+        private const val REQUEST_STORAGE_PERMISSION = 101
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Initialize Firebase Storage reference
+        storageRef = FirebaseStorage.getInstance().reference.child("jewelry_images")
+        
+        // Register activity launchers
+        registerActivityResultLaunchers()
+    }
+    
+    private fun registerActivityResultLaunchers() {
+        // Camera launcher - capture image with device camera
+        cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            try {
+                if (result.resultCode == android.app.Activity.RESULT_OK) {
+                    // Image captured successfully
+                    currentImagePath?.let { path ->
+                        // Create a File object from the path
+                        val imageFile = File(path)
+                        
+                        // Check if the file exists and has content
+                        if (imageFile.exists() && imageFile.length() > 0) {
+                            // Create a URI from the file using FileProvider
+                            // IMPORTANT: Use the same authority as in dispatchTakePictureIntent
+                            val uri = FileProvider.getUriForFile(
+                                requireContext(),
+                                "${requireContext().packageName}.provider",
+                                imageFile
+                            )
+                            
+                            // Save the URI for later use
+                            imageUri = uri
+                            
+                            // Display and upload the image
+                            displaySelectedImage(uri)
+                            uploadImageToFirebase(uri)
+                        } else {
+                            Toast.makeText(requireContext(), 
+                                getString(R.string.captured_image_empty), 
+                                Toast.LENGTH_SHORT).show()
+                        }
+                    } ?: run {
+                        // Try to get the image from the result data URI as a fallback
+                        result.data?.data?.let { uri ->
+                            imageUri = uri
+                            displaySelectedImage(uri)
+                            uploadImageToFirebase(uri)
+                        } ?: run {
+                            Toast.makeText(requireContext(), 
+                                getString(R.string.failed_retrieve_captured_image), 
+                                Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), 
+                    getString(R.string.error_processing_camera_result, e.message), 
+                    Toast.LENGTH_SHORT).show()
+                Log.e("ItemBottomSheet", "Camera error: ${e.message}", e)
+            }
+        }
+        
+        // Gallery launcher - pick image from device gallery
+        galleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == android.app.Activity.RESULT_OK) {
+                result.data?.data?.let { uri ->
+                    // Image selected from gallery, use it directly
+                    imageUri = uri
+                    displaySelectedImage(uri)
+                    uploadImageToFirebase(uri)
+                } ?: run {
+                    Toast.makeText(requireContext(), getString(R.string.failed_retrieve_selected_image), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+    
+    // Display the selected/cropped image in the ImageView
+    private fun displaySelectedImage(uri: Uri) {
+        try {
+            // Show the image and hide the instruction text
+            binding.imageInstructionText.visibility = View.GONE
+            
+            // Show replace button and hide camera/gallery buttons
+            binding.replaceImageButton?.visibility = View.VISIBLE
+            binding.cameraButton.visibility = View.GONE
+            binding.galleryButton.visibility = View.GONE
+
+            if (uri.scheme == "file" || uri.scheme == "content") {
+                // Try to fix rotation
+                val rotatedBitmap = fixImageRotation(uri)
+                if (rotatedBitmap != null) {
+                    // Use the rotated bitmap directly
+                    binding.itemImageView.setImageBitmap(rotatedBitmap)
+                } else {
+                    // Fall back to Coil if rotation fixing fails
+                    val request = ImageRequest.Builder(requireContext())
+                        .data(uri)
+                        // Match the same size as in the adapter for cache consistency
+                        .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                        .scale(Scale.FILL)
+                        // Apply the same transformations for cache consistency
+                        // Set to null target for cache-only loading (no view attached)
+                        .target(null)
+                        // Instead of priority, use placeholderMemoryCacheKey for caching
+                        // Ensure we're using memory cache
+                        .build()
+
+
+                    requireContext().imageLoader.enqueue(request)
+                }
+            } else {
+                // For non-file URIs, use Coil as before
+                val request = ImageRequest.Builder(requireContext())
+                    .data(uri)
+                    // Match the same size as in the adapter for cache consistency
+                    .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
+                    .scale(Scale.FILL)
+                    // Apply the same transformations for cache consistency
+                    // Set to null target for cache-only loading (no view attached)
+                    .target(null)
+                    // Instead of priority, use placeholderMemoryCacheKey for caching
+                    // Ensure we're using memory cache
+                    .build()
+
+                requireContext().imageLoader.enqueue(request)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), 
+                "Error displaying image: ${e.message}", 
+                Toast.LENGTH_SHORT).show()
+            binding.imageInstructionText.visibility = View.VISIBLE
+            binding.replaceImageButton?.visibility = View.GONE
+            binding.cameraButton.visibility = View.VISIBLE
+            binding.galleryButton.visibility = View.VISIBLE
+        }
+    }
+    
+    // Create a temporary file for storing the camera image
+    @Throws(IOException::class)
+    private fun createImageFile(): File {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val imageFileName = "JPEG_${timeStamp}_"
+        val storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        
+        return File.createTempFile(
+            imageFileName,
+            ".jpg",
+            storageDir
+        ).apply {
+            currentImagePath = absolutePath
+        }
+    }
+    
+    // Launch the camera activity to capture an image
+    private fun dispatchTakePictureIntent() {
+        try {
+            // Check for camera permission
+            if (requireContext().checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+                return
+            }
+            
+            Intent(MediaStore.ACTION_IMAGE_CAPTURE).also { takePictureIntent ->
+                // Ensure there's a camera activity to handle the intent
+                takePictureIntent.resolveActivity(requireActivity().packageManager)?.also {
+                    // Create the file where the photo should go
+                    val photoFile: File? = try {
+                        createImageFile()
+                    } catch (ex: IOException) {
+                        Toast.makeText(requireContext(), 
+                            "${getString(R.string.error_creating_image_file)}: ${ex.message}", 
+                            Toast.LENGTH_SHORT).show()
+                        null
+                    }
+                    
+                    // Continue only if the file was successfully created
+                    photoFile?.also {
+                        try {
+                            // IMPORTANT: Fix the authority to be consistent with what's in the manifest
+                            // Changed from "${requireContext().packageName}.fileprovider" to "${requireContext().packageName}.provider"
+                            val photoURI: Uri = FileProvider.getUriForFile(
+                                requireContext(),
+                                "${requireContext().packageName}.provider",
+                                it
+                            )
+                            imageUri = photoURI  // Save URI for later use
+                            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                            
+                            // Add flags to grant permission to the camera app
+                            takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                            
+                            cameraLauncher.launch(takePictureIntent)
+                        } catch (e: Exception) {
+                            Toast.makeText(requireContext(), 
+                                "Error setting up camera: ${e.message}", 
+                                Toast.LENGTH_SHORT).show()
+                            Log.e("ItemBottomSheet", "Camera setup error: ${e.message}", e)
+                        }
+                    }
+                } ?: run {
+                    Toast.makeText(requireContext(), getString(R.string.no_camera_app), Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), 
+                getString(R.string.camera_error, e.message), 
+                Toast.LENGTH_LONG).show()
+            Log.e("ItemBottomSheet", "Camera dispatch error: ${e.message}", e)
+        }
+    }
+    
+    // Launch the gallery app to select an image
+    private fun dispatchGalleryIntent() {
+        try {
+            // Check for appropriate storage permission based on Android version
+            val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            
+            if (requireContext().checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(permission), REQUEST_STORAGE_PERMISSION)
+                return
+            }
+            
+            // Proceed with gallery intent
+            val galleryIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            galleryIntent.type = "image/*"
+            try {
+                galleryLauncher.launch(galleryIntent)
+            } catch (e: ActivityNotFoundException) {
+                Toast.makeText(requireContext(), getString(R.string.no_gallery_app), Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            // Catch and log any other exceptions
+            Toast.makeText(requireContext(), getString(R.string.gallery_error, e.message), Toast.LENGTH_LONG).show()
+        }
+    }
+    
+    // Upload the selected/cropped image to Firebase Storage with compression
+    private fun uploadImageToFirebase(imageUri: Uri) {
+        try {
+            // Store the local URI as a fallback
+            val localImageUri = imageUri.toString()
+            
+            // Show a loading indicator for the upload
+            binding.itemImageView.alpha = 0.7f
+            val progressOverlay = binding.progressOverlay
+            progressOverlay?.visibility = View.VISIBLE
+            
+            // Try the upload in a safe way that won't crash if Firebase isn't configured
+            try {
+                // Create a reference to the file location with a unique name
+                val fileName = "${UUID.randomUUID()}.jpg"
+                val imageRef = storageRef.child(fileName)
+                
+                // Compress the image before uploading to reduce size - ADDED COMPRESSION
+                try {
+                    val inputStream = requireContext().contentResolver.openInputStream(imageUri)
+                    val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                    inputStream?.close()
+
+                    val rotatedBitmap = fixImageRotation(imageUri) ?: originalBitmap
+                    
+                    // First resize the image if it's too large (max dimensions of 1200px)
+                    val maxSize = 1200
+                    val resizedBitmap = compressImage(rotatedBitmap, maxSize)
+                    
+                    // Then compress the quality to reduce file size
+                    val baos = ByteArrayOutputStream()
+                    // Use quality of 50% for good balance of quality and size
+                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
+                    val uploadData = baos.toByteArray()
+                    
+                    // Upload the compressed data
+                    val uploadTask = imageRef.putBytes(uploadData)
+                    uploadTask
+                        .addOnSuccessListener { taskSnapshot ->
+                            // Get the download URL
+                            imageRef.downloadUrl.addOnSuccessListener { uri ->
+                                imageUrl = uri.toString()
+                                
+                                // Restore the image view to normal
+                                binding.itemImageView.alpha = 1.0f
+                                progressOverlay?.visibility = View.GONE
+                                
+                                Toast.makeText(requireContext(), getString(R.string.image_upload_success), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .addOnFailureListener { exception ->
+                            // Upload failed, use local URI
+                            imageUrl = localImageUri
+                            
+                            // Restore the image view to normal
+                            binding.itemImageView.alpha = 1.0f
+                            progressOverlay?.visibility = View.GONE
+                            
+                            // Log error but don't show to user unless in debug mode
+                            android.util.Log.e("FirebaseUpload", "Upload failed: ${exception.message}", exception)
+                            
+                            // If this is a permissions error, attempt to work without Firebase
+                            handleUploadError(exception)
+                        }
+                } catch (e: Exception) {
+                    // Error with compression
+                    binding.itemImageView.alpha = 1.0f
+                    progressOverlay?.visibility = View.GONE
+                    Toast.makeText(requireContext(), "Error compressing image: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Log.e("ItemBottomSheet", "Image compression error", e)
+                }
+            } catch (e: Exception) {
+                // Firebase might not be configured or initialized
+                imageUrl = localImageUri
+                binding.itemImageView.alpha = 1.0f
+                progressOverlay?.visibility = View.GONE
+                
+                // Log error but proceed with local image
+                android.util.Log.e("Firebase", "Firebase initialization error", e)
+            }
+        } catch (e: Exception) {
+            // Handle any other errors
+            binding.itemImageView.alpha = 1.0f
+            binding.progressOverlay?.visibility = View.GONE
+            Toast.makeText(requireContext(), "Image handling error: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("ItemBottomSheet", "Image handling error", e)
+        }
+    }
+
+    private fun compressImage(bitmap: Bitmap, maxSize: Int): Bitmap {
+        var width = bitmap.width
+        var height = bitmap.height
+        
+        // Only resize if image is larger than max dimensions
+        if (width > maxSize || height > maxSize) {
+            val ratio = width.toFloat() / height.toFloat()
+            if (ratio > 1) {
+                // Width is greater than height
+                width = maxSize
+                height = (width / ratio).toInt()
+            } else {
+                // Height is greater than or equal to width
+                height = maxSize
+                width = (height * ratio).toInt()
+            }
+            return Bitmap.createScaledBitmap(bitmap, width, height, true)
+        }
+        return bitmap
+    }
+
+    private fun fixImageRotation(uri: Uri): Bitmap? {
+        try {
+            // Get input stream from URI
+            val inputStream = requireContext().contentResolver.openInputStream(uri) ?: return null
+
+            // First decode image bounds
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeStream(inputStream, null, options)
+            inputStream.close()
+
+            // Decode full image
+            val newInputStream = requireContext().contentResolver.openInputStream(uri) ?: return null
+            val bitmap = BitmapFactory.decodeStream(newInputStream)
+            newInputStream.close()
+
+            // Get orientation from EXIF data
+            val inputStream2 = requireContext().contentResolver.openInputStream(uri) ?: return null
+            val exif = ExifInterface(inputStream2)
+            inputStream2.close()
+
+            val orientation = exif.getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_UNDEFINED
+            )
+
+            // Rotate bitmap according to EXIF orientation
+            return when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> rotateBitmap(bitmap, 90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> rotateBitmap(bitmap, 180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> rotateBitmap(bitmap, 270f)
+                else -> bitmap
+            }
+        } catch (e: Exception) {
+            Log.e("ItemBottomSheet", "Error fixing image rotation: ${e.message}", e)
+            return null
+        }
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix()
+        matrix.postRotate(degrees)
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+    }
+
+    private fun handleUploadError(exception: Exception) {
+        // Check if this is a permissions issue with Firebase Storage rules
+        if (exception.message?.contains("does not have access") == true) {
+            // This likely means the Firebase Storage rules need to be updated
+            Toast.makeText(
+                requireContext(),
+                "Firebase Storage permissions issue. Using local image for now.",
+                Toast.LENGTH_LONG
+            ).show()
+            
+            // Log detailed instructions for fixing the issue
+            android.util.Log.e("FirebaseUpload", """
+                Firebase Storage permission denied. To fix this:
+                1. Go to Firebase Console > Storage > Rules
+                2. Update the rules to allow writes. For testing, you can use:
+                   service firebase.storage {
+                     match /b/{bucket}/o {
+                       match /{allPaths=**} {
+                         allow read, write: if true;
+                       }
+                     }
+                   }
+                WARNING: The rule above is for development only! 
+                For production, use proper authentication.
+            """.trimIndent(), exception)
+        } else {
+            // Generic error message
+            Toast.makeText(
+                requireContext(),
+                "Upload failed: ${exception.message}",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        
+        when (requestCode) {
+            REQUEST_CAMERA_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, retry camera
+                    dispatchTakePictureIntent()
+                } else {
+                    Toast.makeText(requireContext(), getString(R.string.camera_permission_required), Toast.LENGTH_LONG).show()
+                }
+            }
+            REQUEST_STORAGE_PERMISSION -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    // Permission granted, retry gallery
+                    dispatchGalleryIntent()
+                } else {
+                    // Handle case where permission is denied
+                    val permissionName = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        "photo library"
+                    } else {
+                        "storage"
+                    }
+                    Toast.makeText(
+                        requireContext(), 
+                        getString(R.string.storage_permission_required), 
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
     }
 

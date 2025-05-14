@@ -7,7 +7,8 @@ data class InvoiceItem(
     val itemId: String = "",
     val quantity: Int = 0,
     val itemDetails: JewelleryItem = JewelleryItem(),
-    val price: Double = 0.0
+    val price: Double = 0.0,
+    val usedWeight: Double = 0.0
 ) {
     // Equality based on the unique ID, not just item details
     override fun equals(other: Any?): Boolean {

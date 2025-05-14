@@ -123,7 +123,6 @@ class RecycledItemsRepository(
         return JewelleryItem(
             id = data["id"] as? String ?: "",
             displayName = data["displayName"] as? String ?: "",
-            jewelryCode = data["jewelryCode"] as? String ?: "",
             itemType = data["itemType"] as? String ?: "",
             category = data["category"] as? String ?: "",
             grossWeight = (data["grossWeight"] as? Number)?.toDouble() ?: 0.0,

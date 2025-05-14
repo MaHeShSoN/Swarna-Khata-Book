@@ -266,7 +266,7 @@ class ShopSettingsFragment : Fragment() {
 
         // GST number validation
         if (gstNumber.isNotEmpty() && !isValidGSTNumber(gstNumber)) {
-            binding.gstNumberInputLayout.error = "Please enter a valid 15-digit GST number"
+            binding.gstNumberInputLayout.error = "Please enter a valid GST number"
             isValid = false
         } else binding.gstNumberInputLayout.error = null
 
@@ -327,29 +327,11 @@ class ShopSettingsFragment : Fragment() {
     }
 
     /**
-     * Validates if the provided string is a valid GST number
-     * GST number format: 2 digit state code + 10 digit PAN + 1 digit entity number + 1 digit check digit + Z
+     * Validates if the provided string is a valid GST number using regex pattern
+     * Format: 2 digits + 5 letters + 4 digits + 1 letter + 1 letter/digit + Z + 1 letter/digit
      */
     private fun isValidGSTNumber(gstNumber: String): Boolean {
-        // GST number should be 15 characters long
-        if (gstNumber.length != 15) return false
-        
-        // First 2 digits should be a valid state code (01-37)
-        val stateCode = gstNumber.substring(0, 2).toIntOrNull() ?: return false
-        if (stateCode < 1 || stateCode > 37) return false
-        
-        // Next 10 characters should be alphanumeric (PAN)
-        val panPart = gstNumber.substring(2, 12)
-        if (!panPart.matches("[A-Z0-9]{10}".toRegex())) return false
-        
-        // 13th digit should be a number (entity number)
-        if (!gstNumber[12].isDigit()) return false
-        
-        // 14th digit should be a letter or number (check digit)
-        if (!gstNumber[13].isLetterOrDigit()) return false
-        
-        // Last character should be 'Z'
-        return gstNumber[14] == 'Z'
+        return gstNumber.matches(Regex("^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$"))
     }
 
     override fun onDestroyView() {

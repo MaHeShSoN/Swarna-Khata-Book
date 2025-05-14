@@ -2,7 +2,7 @@
     android:color="@color/my_light_secondary">
     <item>
         <shape android:shape="oval">
-            <solid android:color="@color/my_light_primary" />
+            <solid android:color="@color/my_light_primary_container" />
         </shape>
     </item>
 </ripple>

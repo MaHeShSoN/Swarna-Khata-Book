@@ -198,6 +198,21 @@ class MoreSettingFragment : Fragment() {
         builder.show()
     }
 
+//    private fun setLocale(lang: String) {
+//        Log.d("MoreSettingFragment", "Setting locale preference to: $lang")
+//
+//        // 1. Save the selected language preference
+//        val preferences = SecurePreferences.getInstance(requireContext())
+//        preferences.edit().putString("selected_language", lang).apply()
+//        Log.d("MoreSettingFragment", "Saved 'selected_language' = $lang to SecurePreferences.")
+//
+//        // 2. Trigger Activity recreation
+//        // MainActivity's onCreate will now run again, read the new preference,
+//        // and call applyAppLocale (using AppCompatDelegate)
+//        Log.d("MoreSettingFragment", "Calling requireActivity().recreate()")
+//        requireActivity().recreate()
+//    }
+
     private fun setLocale(lang: String) {
         // Save the selected language to SecurePreferences
         val preferences = SecurePreferences.getInstance(requireContext())

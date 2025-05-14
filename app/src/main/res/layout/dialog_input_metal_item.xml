@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><!-- dialog_input.xml -->
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -6,47 +6,18 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <LinearLayout
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/textInputLayout1"
+        style="@style/Widget.App.TextInputLayout.GoldForm"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:hint="Category Name">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayout1"
-            style="@style/Widget.App.TextInputLayout.GoldForm"
-            android:layout_width="0dp"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/editText1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Item Type">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editText1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text|textCapWords" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <Space
-            android:layout_width="4dp"
-            android:layout_height="match_parent" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/textInputLayout2"
-            style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Metal Type"
-            app:boxBackgroundColor="@color/my_light_surface"
-            app:boxStrokeColor="@color/my_light_primary"
-            app:hintTextColor="@color/my_light_secondary">
-
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/editText2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text" />
-        </com.google.android.material.textfield.TextInputLayout>
-    </LinearLayout>
+            android:inputType="text|textCapWords" />
+    </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

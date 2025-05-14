@@ -197,7 +197,7 @@
                                     android:id="@+id/showLogoSwitch"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:checked="true" />
+                                    android:checked="false" />
                             </LinearLayout>
 
                             <!-- Logo Upload State -->
@@ -257,7 +257,7 @@
                                             android:layout_height="40dp"
                                             android:background="?attr/selectableItemBackgroundBorderless"
                                             android:contentDescription="Replace Logo"
-                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            android:src="@drawable/material_symbols__edit_rounded"
                                             app:tint="@color/my_light_primary" />
 
                                         <ImageButton
@@ -362,7 +362,7 @@
                                             android:layout_height="40dp"
                                             android:background="?attr/selectableItemBackgroundBorderless"
                                             android:contentDescription="Replace Watermark"
-                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            android:src="@drawable/material_symbols__edit_rounded"
                                             app:tint="@color/my_light_primary" />
 
                                         <ImageButton
@@ -405,7 +405,7 @@
                                     android:id="@+id/showSignatureSwitch"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:checked="true" />
+                                    android:checked="false" />
                             </LinearLayout>
 
                             <!-- Signature Upload State -->
@@ -464,7 +464,7 @@
                                             android:layout_height="40dp"
                                             android:background="?attr/selectableItemBackgroundBorderless"
                                             android:contentDescription="Recreate Signature"
-                                            android:src="@drawable/mdi__invoice_text_edit_outline"
+                                            android:src="@drawable/material_symbols__edit_rounded"
                                             app:tint="@color/my_light_primary" />
 
                                         <ImageButton

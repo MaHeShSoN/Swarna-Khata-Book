@@ -437,7 +437,6 @@ class PDFExportUtility(private val context: Context) {
             // Draw items
             for (item in lowStockItems) {
                 canvas.drawText(item.name, margin, yPosition, textPaint)
-                canvas.drawText(item.code, margin + 150, yPosition, textPaint)
                 canvas.drawText(item.itemType, margin + 220, yPosition, textPaint)
                 canvas.drawText("${item.currentStock} ${item.stockUnit}", margin + 300, yPosition, textPaint)
                 canvas.drawText("${item.reorderLevel}", pageWidth - margin, yPosition, amountPaint)
