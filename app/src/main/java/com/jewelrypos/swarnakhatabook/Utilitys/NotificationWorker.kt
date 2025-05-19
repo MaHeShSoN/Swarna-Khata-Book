@@ -636,11 +636,26 @@ class NotificationWorker(
     }
 
     /**
-     * Find items with low stock levels
+     * Calculate items with low stock for business overview
      */
     private fun calculateLowStockItems(items: List<JewelleryItem>): List<String> {
-        return items.filter { it.stock <= 5 }
-            .map { it.displayName }
+        // Define low stock thresholds
+        val LOW_STOCK_THRESHOLD = 5.0 // For quantity-based inventory
+        val LOW_STOCK_WEIGHT_THRESHOLD = 100.0 // For weight-based inventory (grams)
+        
+        return items.filter { item ->
+            when (item.inventoryType) {
+                com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                    // For weight-based inventory, check totalWeightGrams
+                    item.totalWeightGrams <= LOW_STOCK_WEIGHT_THRESHOLD
+                }
+                else -> {
+                    // For quantity-based inventory, check stock
+                    item.stock <= LOW_STOCK_THRESHOLD
+                }
+            }
+        }
+        .map { it.displayName }
     }
 
     /**
@@ -675,6 +690,10 @@ class NotificationWorker(
             return false
         }
 
+        // Define low stock thresholds
+        val LOW_STOCK_THRESHOLD = 5.0 // For quantity-based inventory
+        val LOW_STOCK_WEIGHT_THRESHOLD = 100.0 // For weight-based inventory (grams)
+
         // Fetch inventory items with low stock using new path structure
         val inventorySnapshot = firestore.collection("shopData")
             .document(shopId)
@@ -683,7 +702,18 @@ class NotificationWorker(
             .await()
 
         val lowStockItems = inventorySnapshot.toObjects(JewelleryItem::class.java)
-            .filter { it.stock <= 5 }
+            .filter { item ->
+                when (item.inventoryType) {
+                    com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                        // For weight-based inventory, check totalWeightGrams
+                        item.totalWeightGrams <= LOW_STOCK_WEIGHT_THRESHOLD
+                    }
+                    else -> {
+                        // For quantity-based inventory, check stock
+                        item.stock <= LOW_STOCK_THRESHOLD
+                    }
+                }
+            }
 
         if (lowStockItems.isEmpty()) return false
 
@@ -723,16 +753,27 @@ class NotificationWorker(
                 )
 
                 if (!existingItemAlert) {
+                    // Get appropriate stock level and unit based on inventory type
+                    val stockLevel = when (item.inventoryType) {
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> item.totalWeightGrams
+                        else -> item.stock
+                    }
+                    
+                    val stockUnit = when (item.inventoryType) {
+                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> "g"
+                        else -> item.stockUnit
+                    }
+
                     val notification = AppNotification(
                         customerId = "ITEM_${item.id}",
                         customerName = "Inventory Alert",
                         title = "Low Stock: ${item.displayName}",
-                        message = "Current stock: ${item.stock} ${item.stockUnit}",
+                        message = "Current stock: $stockLevel $stockUnit",
                         type = NotificationType.GENERAL,
                         status = NotificationStatus.UNREAD,
                         priority = NotificationPriority.HIGH,
                         relatedItemId = item.id,
-                        stockLevel = item.stock
+                        stockLevel = stockLevel
                     )
 
                     repository.createNotification(notification, shopId)

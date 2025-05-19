@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.SubscriptionFeatures
 import com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan
@@ -44,11 +45,11 @@ class UserSubscriptionManager(private val context: Context) {
             val editor = sharedPreferences.edit()
             editor.putLong(KEY_FIRST_USE_DATE, currentTime)
             editor.putBoolean(KEY_IS_TRIAL_ACTIVE, true)
-            editor.putInt(KEY_TRIAL_DAYS, 15) // Default to 15 days for trial
+            editor.putInt(KEY_TRIAL_DAYS, 10) // Changed from 15 to 10 days for trial to match UI messaging
             editor.apply()
             
             Log.d(TAG, "First use date recorded: ${formatDate(currentTime)}")
-            Log.d(TAG, "Trial started with 15 days duration")
+            Log.d(TAG, "Trial started with 10 days duration")
         }
     }
 
@@ -68,10 +69,10 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Gets the configured trial period in days (default 15)
+     * Gets the configured trial period in days (default 10)
      */
     fun getTrialPeriod(): Int {
-        return sharedPreferences.getInt(KEY_TRIAL_DAYS, 15) // Default 15 days
+        return sharedPreferences.getInt(KEY_TRIAL_DAYS, 10) // Changed default from 15 to 10 days
     }
 
     /**
@@ -218,8 +219,15 @@ class UserSubscriptionManager(private val context: Context) {
 
     /**
      * Resets the trial period (for testing only)
+     * Only works in debug builds for security
      */
     fun resetTrial() {
+        // Only allow trial reset in debug builds
+        if (!BuildConfig.DEBUG) {
+            Log.w(TAG, "Trial reset attempted in release build - operation denied")
+            return
+        }
+        
         val editor = sharedPreferences.edit()
         editor.remove(KEY_FIRST_USE_DATE)
         editor.putBoolean(KEY_IS_TRIAL_ACTIVE, true)
@@ -369,6 +377,127 @@ class UserSubscriptionManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing subscription: ${e.message}")
             return SubscriptionPlan.NONE
+        }
+    }
+
+    /**
+     * Constants for grace period configuration
+     */
+    companion object {
+        const val GRACE_PERIOD_DAYS = 2 // 2-day grace period after trial expiration
+        private const val KEY_GRACE_PERIOD_NOTIFIED = "grace_period_notified"
+    }
+
+    /**
+     * Checks if the user is within the grace period after trial expiration
+     * Returns true if the user should be granted access due to grace period
+     */
+    suspend fun isInGracePeriod(): Boolean {
+        // If trial is active or user is premium, no need for grace period
+        if (isTrialActive() || getCurrentSubscriptionPlan() != SubscriptionPlan.NONE) {
+            return false
+        }
+
+        val firstUseDate = getFirstUseDate() ?: return false
+        val trialPeriodDays = getTrialPeriod()
+        
+        // Calculate when the trial expired/will expire
+        val trialExpirationDate = firstUseDate + TimeUnit.DAYS.toMillis(trialPeriodDays.toLong())
+        val currentTime = System.currentTimeMillis()
+        
+        // Check if within grace period after trial expiration
+        val gracePeriodEnd = trialExpirationDate + TimeUnit.DAYS.toMillis(GRACE_PERIOD_DAYS.toLong())
+        return currentTime <= gracePeriodEnd && currentTime >= trialExpirationDate
+    }
+
+    /**
+     * Marks that the user has been notified about the grace period
+     */
+    fun markGracePeriodNotified() {
+        sharedPreferences.edit().putBoolean(KEY_GRACE_PERIOD_NOTIFIED, true).apply()
+    }
+
+    /**
+     * Checks if the user has already been notified about the grace period
+     */
+    fun hasGracePeriodBeenNotified(): Boolean {
+        return sharedPreferences.getBoolean(KEY_GRACE_PERIOD_NOTIFIED, false)
+    }
+
+    /**
+     * Resets the grace period notification status (called at the start of a new grace period)
+     */
+    fun resetGracePeriodNotification() {
+        sharedPreferences.edit().putBoolean(KEY_GRACE_PERIOD_NOTIFIED, false).apply()
+    }
+
+    /**
+     * Gets the number of days remaining in the grace period
+     * Returns 0 if not in grace period or if grace period has expired
+     */
+    suspend fun getGracePeriodDaysRemaining(): Int {
+        if (!isInGracePeriod()) {
+            return 0
+        }
+        
+        val firstUseDate = getFirstUseDate() ?: return 0
+        val trialPeriodDays = getTrialPeriod()
+        
+        // Calculate when the trial expired/will expire
+        val trialExpirationDate = firstUseDate + TimeUnit.DAYS.toMillis(trialPeriodDays.toLong())
+        val gracePeriodEnd = trialExpirationDate + TimeUnit.DAYS.toMillis(GRACE_PERIOD_DAYS.toLong())
+        val currentTime = System.currentTimeMillis()
+        
+        val remainingMillis = gracePeriodEnd - currentTime
+        return (TimeUnit.MILLISECONDS.toDays(remainingMillis) + 1).toInt() // +1 to round up
+    }
+
+    /**
+     * Result class for subscription status check
+     */
+    sealed class SubscriptionStatus {
+        /** User has an active paid subscription */
+        object ActiveSubscription : SubscriptionStatus()
+        
+        /** User is in active trial period */
+        data class ActiveTrial(val daysRemaining: Int) : SubscriptionStatus()
+        
+        /** User's trial has expired but they're in grace period */
+        data class GracePeriod(val daysRemaining: Int) : SubscriptionStatus()
+        
+        /** User's trial has expired and they need to subscribe */
+        object Expired : SubscriptionStatus() 
+    }
+    
+    /**
+     * Centralized method to check subscription status
+     * Should be used consistently throughout the app for subscription checks
+     */
+    suspend fun checkSubscriptionStatus(): SubscriptionStatus {
+        try {
+            // First check if user has active paid plan
+            val currentPlan = getCurrentSubscriptionPlan()
+            if (currentPlan != SubscriptionPlan.NONE) {
+                return SubscriptionStatus.ActiveSubscription
+            }
+            
+            // Check if trial is active
+            if (isTrialActive()) {
+                return SubscriptionStatus.ActiveTrial(getDaysRemaining())
+            }
+            
+            // Check if in grace period
+            if (isInGracePeriod()) {
+                return SubscriptionStatus.GracePeriod(getGracePeriodDaysRemaining())
+            }
+            
+            // Otherwise, subscription has expired
+            return SubscriptionStatus.Expired
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking subscription status: ${e.message}", e)
+            // Default to expired if there's an error to ensure security
+            return SubscriptionStatus.Expired
         }
     }
 }

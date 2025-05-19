@@ -151,14 +151,5 @@ class EnhancedAnimations {
             set.start()
         }
 
-        /**
-         * Animate progress indicators when values change
-         */
-        fun animateProgressChange(progressView: View, progress: Int) {
-            val animator = ObjectAnimator.ofInt(progressView, "progress", 0, progress)
-            animator.duration = 1000
-            animator.interpolator = AccelerateDecelerateInterpolator()
-            animator.start()
-        }
     }
 } 

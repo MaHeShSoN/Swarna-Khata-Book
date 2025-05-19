@@ -52,6 +52,9 @@ class OtpVarificationFragment : Fragment() {
     // Flag to prevent multiple verification attempts
     private var isVerifying = false
 
+    // Flag to prevent recursion when pasting OTP
+    private var isPasting = false
+
     // SMS retriever
     private val smsVerificationReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -74,6 +77,9 @@ class OtpVarificationFragment : Fragment() {
             }
         }
     }
+
+    // Add job tracking collection at class level
+    private val coroutineJobs = mutableListOf<kotlinx.coroutines.Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -162,12 +168,20 @@ class OtpVarificationFragment : Fragment() {
             binding.etDigit6
         )
 
+        // Add paste handler to all digit fields
+        for (digitField in otpDigits) {
+            setupPasteHandler(digitField)
+        }
+
         // Add automatic focus change when a digit is entered
         for (i in otpDigits.indices) {
             otpDigits[i].addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    // Skip focus changes during paste operation
+                    if (isPasting) return
+                    
                     // Move focus to next EditText when a digit is entered
                     if (s?.length == 1 && i < otpDigits.size - 1) {
                         otpDigits[i + 1].requestFocus()
@@ -194,6 +208,59 @@ class OtpVarificationFragment : Fragment() {
                 }
                 false
             }
+        }
+    }
+
+    private fun setupPasteHandler(editText: EditText) {
+        editText.setOnLongClickListener {
+            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = clipboard.primaryClip
+            
+            if (clip != null && clip.itemCount > 0) {
+                val pastedText = clip.getItemAt(0).text.toString().trim()
+                
+                // Check if pasted text is a valid 6-digit OTP
+                if (pastedText.matches(Regex("\\d{6}"))) {
+                    fillOtpFields(pastedText)
+                    return@setOnLongClickListener true
+                }
+            }
+            false
+        }
+        
+        // Handle standard paste event through context menu
+        editText.customSelectionActionModeCallback = object : android.view.ActionMode.Callback {
+            override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu?): Boolean {
+                return true
+            }
+
+            override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: android.view.Menu?): Boolean {
+                return true
+            }
+
+            override fun onActionItemClicked(mode: android.view.ActionMode?, item: android.view.MenuItem?): Boolean {
+                return when (item?.itemId) {
+                    android.R.id.paste -> {
+                        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = clipboard.primaryClip
+                        
+                        if (clip != null && clip.itemCount > 0) {
+                            val pastedText = clip.getItemAt(0).text.toString().trim()
+                            
+                            // Check if pasted text is a valid 6-digit OTP
+                            if (pastedText.matches(Regex("\\d{6}"))) {
+                                fillOtpFields(pastedText)
+                                mode?.finish()
+                                return true
+                            }
+                        }
+                        false
+                    }
+                    else -> false
+                }
+            }
+
+            override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
         }
     }
 
@@ -233,8 +300,23 @@ class OtpVarificationFragment : Fragment() {
 
     private fun fillOtpFields(otp: String) {
         if (otp.length == 6) {
+            // Set pasting flag to prevent focus changes during fill
+            isPasting = true
+            
             for (i in otp.indices) {
                 otpDigits[i].setText(otp[i].toString())
+            }
+            
+            // Reset pasting flag
+            isPasting = false
+            
+            // Set focus to last digit
+            otpDigits[5].requestFocus()
+            otpDigits[5].setSelection(1)
+            
+            // Verify OTP if complete
+            if (isOtpComplete() && !isVerifying) {
+                verifyOtp()
             }
         }
     }
@@ -374,7 +456,7 @@ class OtpVarificationFragment : Fragment() {
     }
 
     private fun saveUserProfile(userId: String) {
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Try to get existing user profile first
                 val userProfileResult = ShopManager.getUserProfile(userId)
@@ -425,6 +507,7 @@ class OtpVarificationFragment : Fragment() {
                 ).show()
             }
         }
+        coroutineJobs.add(job)
     }
 
     private fun navigateToShopSelection() {
@@ -446,6 +529,10 @@ class OtpVarificationFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

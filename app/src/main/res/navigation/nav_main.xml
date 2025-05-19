@@ -29,6 +29,10 @@
         android:name="com.jewelrypos.swarnakhatabook.ShopSelectionFragment"
         android:label="@string/fragment_shop_selection"
         tools:layout="@layout/fragment_shop_selection">
+        <argument
+            android:name="fromLogin"
+            app:argType="boolean"
+            android:defaultValue="false" />
         <action
             android:id="@+id/action_shopSelectionFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment"

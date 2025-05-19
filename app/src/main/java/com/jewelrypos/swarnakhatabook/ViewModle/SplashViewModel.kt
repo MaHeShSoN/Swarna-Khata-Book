@@ -91,7 +91,7 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
                                 _navigationEvent.value = NavigationEvent.NavigateToDashboard
                             } else {
                                 Log.d("SplashViewModel", "Multiple shops, no valid active ID. Navigating to ShopSelection.")
-                                _navigationEvent.value = NavigationEvent.NavigateToShopSelection
+                                _navigationEvent.value = NavigationEvent.NavigateToShopSelection(true)
                             }
                         }
                     }
@@ -151,7 +151,7 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
         object NavigateToDashboard : NavigationEvent()
         object NavigateToRegistration : NavigationEvent()
         object NavigateToCreateShop : NavigationEvent()
-        object NavigateToShopSelection : NavigationEvent()
+        data class NavigateToShopSelection(val fromLogin: Boolean = false) : NavigationEvent()
         object NoInternet : NavigationEvent()
     }
 }

@@ -4,6 +4,9 @@ import android.app.Dialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +14,8 @@ import android.widget.ArrayAdapter
 import android.widget.Filter
 import android.widget.Filterable
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.viewModels
@@ -88,6 +93,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     var editMode = false
     var itemToEdit: JewelleryItem? = null
 
+    // Add this section to properly track TextWatchers
+    private val textWatchers = mutableMapOf<TextView, TextWatcher>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -177,7 +184,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Create tax rate input field if it doesn't exist
         if (binding.taxRateInputLayout == null) {
             // Add text change listener for tax rate
-            binding.taxRateEditText.addTextChangedListener(object : TextWatcher {
+            val watcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -190,7 +197,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 override fun afterTextChanged(s: Editable?) {
                     calculateTotalTexCharges()
                 }
-            })
+            }
+            binding.taxRateEditText.addTextChangedListener(watcher)
+            textWatchers[binding.taxRateEditText] = watcher
         }
     }
 
@@ -245,41 +254,85 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             val secondaryText = view.findViewById<TextView>(R.id.secondary_text)
             val detailsText = view.findViewById<TextView>(R.id.details_text)
             val stockText = view.findViewById<TextView>(R.id.stock_text)
-
-            // Format the display to show important details
-            primaryText.text = item.displayName
             
-            // Show inventory type and quick-add indicator
-            val isQuickAdded = item.id.startsWith("QUICK_") // Assuming we'll prefix quick-add items this way
-            val inventoryTypeDisplay = when(item.inventoryType) {
-                InventoryType.BULK_STOCK -> context.getString(R.string.weight_based)
-                InventoryType.IDENTICAL_BATCH -> context.getString(R.string.quantity_based)
+            // Check if this is a quick-added item
+            val isQuickAdded = item.id.startsWith("QUICK_")
+            
+            // Set the primary text (item name) with a star for quick-added items
+            primaryText.apply {
+                text = if (isQuickAdded) "★ ${item.displayName}" else item.displayName
+                // Gold color for the star if quick-added
+                if (isQuickAdded) {
+                    val spannableString = SpannableString(text)
+                    spannableString.setSpan(
+                        ForegroundColorSpan(context.getColor(R.color.my_light_primary)),
+                        0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    text = spannableString
+                }
             }
             
-            // Show type with quick-add indicator if applicable
-            secondaryText.text = if (isQuickAdded) {
-                "★ ${context.getString(R.string.quick_added)} | $inventoryTypeDisplay | ${item.itemType}"
-            } else {
-                "$inventoryTypeDisplay | ${item.itemType}"
+            // Always hide the secondary text (inventory type)
+            secondaryText.visibility = View.GONE
+            
+            // Format based on inventory type
+            when(item.inventoryType) {
+                InventoryType.BULK_STOCK -> {
+                    // For weight-based items, hide details and show stock
+                    detailsText.visibility = View.GONE
+                    
+                    // Show total available weight next to item name
+                    stockText.text = "${item.totalWeightGrams}g"
+                    
+                    // Apply color coding based on weight thresholds for bulk stock
+                    when {
+                        item.totalWeightGrams <= 100.0 -> stockText.setTextColor(context.getColor(R.color.status_unpaid)) // Red for low stock
+                        item.totalWeightGrams <= 250.0 -> stockText.setTextColor(context.getColor(R.color.status_partial)) // Yellow for medium stock
+                        else -> stockText.setTextColor(context.getColor(R.color.status_paid)) // Green for good stock
+                    }
+                }
+                
+                InventoryType.IDENTICAL_BATCH -> {
+                    // For quantity-based items, show details and stock
+                    detailsText.text = "Weight: ${item.grossWeight}g | Purity: ${item.purity}"
+                    detailsText.visibility = View.VISIBLE
+                    
+                    // Show stock quantity next to item name
+                    stockText.text = "${item.stock.toInt()} ${item.stockUnit}"
+                    
+                    // Apply color coding based on quantity thresholds
+                    when {
+                        item.stock <= 1.0 -> stockText.setTextColor(context.getColor(R.color.status_unpaid)) // Red for very low stock
+                        item.stock <= 5.0 -> stockText.setTextColor(context.getColor(R.color.status_partial)) // Yellow for low stock
+                        else -> stockText.setTextColor(context.getColor(R.color.status_paid)) // Green for good stock
+                    }
+                }
             }
-
-
-            if(item.inventoryType == InventoryType.IDENTICAL_BATCH){
-                detailsText.text = "Weight: ${item.grossWeight}g | Purity: ${item.purity}"
-                stockText.text = "${item.stock.toInt()} ${item.stockUnit}"
-            }else if(item.inventoryType == InventoryType.BULK_STOCK){
-                stockText.text = "Total: ${item.totalWeightGrams}g"
-                detailsText.visibility = View.GONE
-            }
-
-
-            // Color code based on stock level
-            if (item.stock <= 1.0) {
-                stockText.setTextColor(context.getColor(R.color.status_unpaid))
-            } else if (item.stock <= 5.0) {
-                stockText.setTextColor(context.getColor(R.color.status_partial))
+            
+            // Add divider after each item (except the last one) in the dropdown
+            if (parent is ListView && position < filteredItems.size - 1) {
+                // Get the divider height from resources
+                val dividerHeight = context.resources.getDimensionPixelSize(R.dimen.divider_height)
+                
+                // Set bottom padding to create space for divider
+                view.setPadding(
+                    view.paddingLeft,
+                    view.paddingTop,
+                    view.paddingRight,
+                    view.paddingBottom + dividerHeight
+                )
+                
+                // Draw a divider line at the bottom
+                view.setBackgroundResource(R.drawable.dropdown_item_divider)
             } else {
-                stockText.setTextColor(context.getColor(R.color.status_paid))
+                // Reset padding if this is the last item or not in a ListView
+                view.setPadding(
+                    view.paddingLeft,
+                    view.paddingTop,
+                    view.paddingRight,
+                    view.paddingBottom
+                )
+                view.setBackgroundResource(R.color.cream_background)
             }
 
             return view
@@ -1340,8 +1393,14 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     }
 
     override fun onDestroyView() {
+        // Remove all TextWatchers to prevent memory leaks
+        textWatchers.forEach { (textView, watcher) ->
+            textView.removeTextChangedListener(watcher)
+        }
+        textWatchers.clear()
+        
         super.onDestroyView()
-        _binding = null // Add this line
+        _binding = null
     }
 
     private fun setupMetalTypeChips() {

@@ -25,6 +25,134 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+
+        <!-- CARD 2: Basic Information -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/basicInfoCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="@color/my_light_surface"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="1dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/titleTextView"
+            app:strokeColor="@color/my_light_outline"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserratsemibold"
+                    android:text="@string/basic_information"
+                    android:textColor="@color/my_light_on_surface"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/itemTypeChipGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/goldChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="2dp"
+                        android:checked="true"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/gold"
+                        android:textColor="@color/dark_gold_chip_color1"
+                        app:checkedIconTint="@color/dark_gold_chip_color"
+                        app:chipBackgroundColor="@color/gold_chip_color"
+                        app:chipIconTint="@color/dark_gold_chip_color1"
+                        app:chipStrokeColor="@color/dark_gold_chip_color" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/silverChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/silver"
+                        android:textColor="@color/dark_silver_chip_color1"
+                        app:chipBackgroundColor="@color/silver_chip_color"
+                        app:checkedIconTint="@color/dark_silver_chip_color1"
+                        app:chipIconTint="@color/dark_silver_chip_color"
+                        app:chipStrokeColor="@color/dark_silver_chip_color" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/otherChip"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratmedium"
+                        android:text="@string/other" />
+                </com.google.android.material.chip.ChipGroup>
+
+
+                <!-- Category with Add Button -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/categoryInputLayout"
+                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="@string/jewellery_category"
+                        app:boxBackgroundColor="@color/my_light_surface"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:boxStrokeWidth="1dp"
+                        app:endIconTint="@color/my_light_secondary"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/categoryDropdown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:focusable="true"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="textFilter|textCapWords"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="16sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+                <!-- Display Name -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/displayNameInputLayout"
+                    style="@style/Widget.App.TextInputLayout.GoldForm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/jewellery_name"
+                    app:endIconMode="clear_text">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/displayNameEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/montserratregular"
+                        android:inputType="text|textCapWords"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+
         <!-- CARD 0: Inventory Type Selection -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/inventoryTypeCard"
@@ -36,7 +164,7 @@
             app:cardElevation="1dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/titleTextView"
+            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
 
@@ -81,10 +209,10 @@
 
                             <RadioButton
                                 android:id="@+id/quantityBasedRadio"
-                                android:clickable="false"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:buttonTint="@color/my_light_primary" />
+                                android:buttonTint="@color/my_light_primary"
+                                android:clickable="false" />
 
                             <ImageView
                                 android:layout_width="40dp"
@@ -139,8 +267,8 @@
                                 android:id="@+id/weightBasedRadio"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:clickable="false"
-                                android:buttonTint="@color/my_light_primary" />
+                                android:buttonTint="@color/my_light_primary"
+                                android:clickable="false" />
 
                             <ImageView
                                 android:layout_width="40dp"
@@ -177,137 +305,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- CARD 2: Basic Information -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/basicInfoCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="1dp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/inventoryTypeCard"
-            app:strokeColor="@color/my_light_outline"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="@string/basic_information"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/itemTypeChipGroup"
-                    android:layout_marginTop="16dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/goldChip"
-                        style="@style/Widget.App.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_marginStart="2dp"
-                        android:checked="true"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="@string/gold" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/silverChip"
-                        style="@style/Widget.App.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="@string/silver" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/otherChip"
-                        style="@style/Widget.App.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratmedium"
-                        android:text="@string/other" />
-                </com.google.android.material.chip.ChipGroup>
-
-
-
-
-                <!-- Category with Add Button -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/categoryInputLayout"
-                        style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:hint="@string/jewellery_category"
-                        app:boxBackgroundColor="@color/my_light_surface"
-                        app:boxStrokeColor="@color/my_light_primary"
-                        app:boxStrokeWidth="1dp"
-                        app:endIconTint="@color/my_light_secondary"
-                        app:hintTextColor="@color/my_light_secondary">
-
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/categoryDropdown"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:focusable="true"
-                            android:fontFamily="@font/montserratregular"
-                            android:inputType="textFilter"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="16sp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.imageview.ShapeableImageView
-                        android:id="@+id/goldImageButton1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical|center_horizontal"
-                        android:background="@drawable/gold_button_background"
-                        android:contentDescription="@string/add_category"
-                        android:padding="8dp"
-                        android:src="@drawable/material_symbols__add_rounded"
-                        app:shapeAppearanceOverlay="@style/ShapeAppearance.App.CircleImageButton"
-                        app:strokeColor="@color/my_light_outline"
-                        app:strokeWidth="1dp"
-                        app:tint="@color/my_light_on_primary" />
-                </LinearLayout>
-                <!-- Display Name -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/displayNameInputLayout"
-                    style="@style/Widget.App.TextInputLayout.GoldForm"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="@string/jewellery_name"
-                    app:endIconMode="clear_text">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/displayNameEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="text|textCapWords"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
         <!-- NEW CARD: Item Image -->
         <com.google.android.material.card.MaterialCardView
@@ -319,7 +316,7 @@
             app:cardCornerRadius="12dp"
             app:cardElevation="1dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/basicInfoCard"
+            app:layout_constraintTop_toBottomOf="@id/inventoryTypeCard"
             app:strokeColor="@color/my_light_outline"
             app:strokeWidth="1dp">
 
@@ -390,7 +387,7 @@
                         android:text="@string/replace"
                         android:textColor="@color/white"
                         android:visibility="gone"
-                        app:icon="@drawable/material_symbols__camera"
+                        app:icon="@drawable/solar__camera_outline"
                         app:iconTint="@color/white" />
                 </FrameLayout>
 
@@ -412,7 +409,7 @@
                         android:fontFamily="@font/montserratregular"
                         android:text="@string/camera"
                         android:textColor="@color/my_light_secondary"
-                        app:icon="@drawable/material_symbols__camera"
+                        app:icon="@drawable/solar__camera_outline"
                         app:iconTint="@color/my_light_secondary" />
 
                     <com.google.android.material.button.MaterialButton

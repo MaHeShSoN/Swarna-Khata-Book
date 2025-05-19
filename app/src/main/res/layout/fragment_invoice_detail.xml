@@ -81,8 +81,12 @@
                         android:fontFamily="@font/montserratbold"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp"
+                        android:layout_marginStart="56dp"
                         app:layout_constraintStart_toEndOf="@id/invoiceNumberLabel"
                         app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/paymentStatus"
+                        android:layout_marginEnd="8dp"
+
                         tools:text="INV-001" />
 
                     <TextView
@@ -102,7 +106,7 @@
 
                     <TextView
                         android:id="@+id/dateLabel"
-                        android:layout_width="wrap_content"
+                        android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:fontFamily="@font/montserratregular"
@@ -114,18 +118,20 @@
 
                     <TextView
                         android:id="@+id/invoiceDate"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp"
+                        android:layout_marginStart="8dp"
                         app:layout_constraintStart_toEndOf="@id/dateLabel"
                         app:layout_constraintTop_toTopOf="@id/dateLabel"
+                        app:layout_constraintEnd_toEndOf="parent"
                         tools:text="15 Mar 2025" />
 
                     <TextView
                         android:id="@+id/dueDateLabel"
-                        android:layout_width="wrap_content"
+                        android:layout_width="100dp"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:fontFamily="@font/montserratregular"
@@ -137,13 +143,15 @@
 
                     <TextView
                         android:id="@+id/invoiceDueDate"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp"
+                        android:layout_marginStart="8dp"
                         app:layout_constraintStart_toEndOf="@id/dueDateLabel"
                         app:layout_constraintTop_toTopOf="@id/dueDateLabel"
+                        app:layout_constraintEnd_toEndOf="parent"
                         tools:text="15 Mar 2025" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>

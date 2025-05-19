@@ -60,6 +60,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.Job
 
 class InvoiceCreationFragment : Fragment() {
 
@@ -90,6 +91,9 @@ class InvoiceCreationFragment : Fragment() {
 
     private lateinit var itemsAdapter: SelectedItemsAdapter
     private lateinit var paymentsAdapter: PaymentsAdapter
+
+    // Add job tracking
+    private val coroutineJobs = mutableListOf<Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -546,7 +550,7 @@ class InvoiceCreationFragment : Fragment() {
         binding.progressOverlay.visibility = View.VISIBLE
 
         // Check if there are items in inventory
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val result = inventoryRepository.getAllInventoryItems()
 
@@ -580,6 +584,7 @@ class InvoiceCreationFragment : Fragment() {
                 openItemSelectionSheet()
             }
         }
+        coroutineJobs.add(job)
     }
 
 
@@ -953,6 +958,10 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

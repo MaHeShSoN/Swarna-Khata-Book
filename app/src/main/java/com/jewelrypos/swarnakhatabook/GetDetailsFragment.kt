@@ -1,5 +1,6 @@
 package com.jewelrypos.swarnakhatabook
 
+import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -65,6 +66,12 @@ class GetDetailsFragment : Fragment() {
             // Apply button animation
             AnimationUtils.pulse(it)
             if (validatePhoneNumber(binding.phoneNumberText.text.toString())) {
+                // Disable button to prevent multiple clicks
+                binding.continueButton.isEnabled = false
+
+                // Hide keyboard
+                hideKeyboard()
+                
                 // Phone number is valid, proceed with OTP
                 sendOTP()
             }
@@ -91,12 +98,17 @@ class GetDetailsFragment : Fragment() {
         }
     }
 
+    // Helper method to hide the keyboard
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(binding.phoneNumberText.windowToken, 0)
+    }
+
     // Send OTP to user's phone number
     private fun sendOTP() {
         // Show loading animation
         binding.continueButton.text = "Sending OTP..."
         binding.continueButton.isEnabled = false
-        binding.continueButton.setTextColor(resources.getColor(android.R.color.white))
 
         // Get phone number with country code (assuming India +91)
         val phoneNumber = "+91" + binding.phoneNumberText.text.toString()
@@ -122,7 +134,7 @@ class GetDetailsFragment : Fragment() {
                 Log.w(TAG, "onVerificationFailed", e)
 
                 binding.continueButton.isEnabled = true
-                binding.continueButton.text = "Submit"
+                binding.continueButton.text = "Continue"
 
                 Toast.makeText(requireContext(),
                     "Verification failed: ${e.message}",

@@ -32,6 +32,7 @@ import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 
 import com.jewelrypos.swarnakhatabook.databinding.FragmentTempleteSelectionBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -50,6 +51,8 @@ class TemplateSelectionFragment : Fragment() {
     private lateinit var templateLabels: Map<TemplateType, TextView>
 
     private var isLoadingSettings = false
+    // Add flag to track PDF preview generation state
+    private var isGeneratingPreview = false
 
     // Color options
     private val colorOptions = listOf(
@@ -65,6 +68,9 @@ class TemplateSelectionFragment : Fragment() {
     // Track premium status
     private var isPremiumUser = false
     private var selectedColorIndex = 0
+
+    // Track coroutine jobs to prevent memory leaks
+    private val coroutineJobs = mutableListOf<Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -179,7 +185,7 @@ class TemplateSelectionFragment : Fragment() {
 
     private fun checkPremiumStatus() {
         // Use UserSubscriptionManager to check premium status
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Show loading if needed
                 val subscriptionManager = com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager(requireContext())
@@ -204,6 +210,7 @@ class TemplateSelectionFragment : Fragment() {
                 isPremiumUser = false
             }
         }
+        coroutineJobs.add(job)
     }
 
     private fun updatePremiumTemplateAccess() {
@@ -229,7 +236,7 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     private fun loadSettings() {
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             // Show loading
             isLoadingSettings = true // Set flag before loading
             binding.previewProgressBar.visibility = View.VISIBLE
@@ -271,6 +278,7 @@ class TemplateSelectionFragment : Fragment() {
             isLoadingSettings = false // Reset flag
             hasUnsavedChanges = false
         }
+        coroutineJobs.add(job)
     }
 
     private fun selectTemplate(templateType: TemplateType, updatePreview: Boolean = true) {
@@ -356,9 +364,13 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     private fun updatePreview() {
+        // Only update PDF preview if we're not already generating one
+        if (isGeneratingPreview) return
+        isGeneratingPreview = true
+
         binding.previewProgressBar.visibility = View.VISIBLE
 
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Generate a sample invoice for preview
                 val sampleInvoice = createSampleInvoice()
@@ -396,21 +408,24 @@ class TemplateSelectionFragment : Fragment() {
                     }
                     .onLoad {
                         binding.previewProgressBar.visibility = View.GONE
+                        isGeneratingPreview = false
                     }
                     .load()
 
             } catch (e: Exception) {
                 Log.e("TemplateSelection", "Error generating PDF preview: ${e.message}")
                 withContext(Dispatchers.Main) {
+                    isGeneratingPreview = false
                     binding.previewProgressBar.visibility = View.GONE
                     Toast.makeText(
                         requireContext(),
-                        "Error generating preview: ${e.message}",
+                        "Error generating PDF preview: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }
         }
+        coroutineJobs.add(job)
     }
 
     private fun isPremiumTemplate(templateType: TemplateType): Boolean {
@@ -434,7 +449,7 @@ class TemplateSelectionFragment : Fragment() {
 
         // Save current settings
         pdfSettings?.let { settings ->
-            lifecycleScope.launch(Dispatchers.IO) {
+            val job = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     pdfSettingsManager.saveSettings(settings)
 
@@ -459,6 +474,7 @@ class TemplateSelectionFragment : Fragment() {
                     }
                 }
             }
+            coroutineJobs.add(job)
         }
     }
 
@@ -555,6 +571,10 @@ class TemplateSelectionFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

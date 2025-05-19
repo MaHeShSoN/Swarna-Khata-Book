@@ -160,7 +160,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="@string/add_item"
+                                android:text="Add Jewellery"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />
@@ -190,7 +190,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="8dp"
                                 android:fontFamily="@font/montserratmedium"
-                                android:text="@string/payments"
+                                android:text="@string/payment_history"
                                 android:textAlignment="center"
                                 android:textColor="@color/my_light_on_surface"
                                 android:textSize="12sp" />

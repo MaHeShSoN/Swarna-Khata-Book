@@ -43,7 +43,7 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     private val TAG = "NotificationFragment"
 
     // Handler for delayed operations
-    private val handler = Handler(Looper.getMainLooper())
+    private var handler: Handler? = Handler(Looper.getMainLooper())
     private var navigationRunnable: Runnable? = null
 
     // ViewModel initialization using Factory
@@ -489,7 +489,7 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
 
             // 2. Post the final navigation step with a delay
             // Cancel any previous runnable first
-            navigationRunnable?.let { handler.removeCallbacks(it) }
+            navigationRunnable?.let { handler?.removeCallbacks(it) }
 
             navigationRunnable = Runnable {
                 // Check if fragment is still attached and activity exists AFTER the delay
@@ -548,7 +548,7 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                     )
                 }
             }
-            handler.postDelayed(navigationRunnable!!, 300) // Post the new runnable
+            handler?.postDelayed(navigationRunnable!!, 300) // Post the new runnable
 
         } catch (e: Exception) { // Catch errors during the initial navigation step
             Log.e(TAG, "Error during initial navigation to main screen", e)
@@ -588,12 +588,11 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
     }
 
     override fun onDestroyView() {
+        // Remove all callbacks from handler to prevent memory leaks
+        handler?.removeCallbacksAndMessages(null)
+        handler = null
+        
         super.onDestroyView()
-        // Cancel any pending navigation actions when the view is destroyed
-        navigationRunnable?.let { handler.removeCallbacks(it) }
-        navigationRunnable = null
-        _binding = null // Crucial: Clear the binding reference
-        Log.d(TAG, "onDestroyView called, binding and handler callbacks cleared.")
-        // Don't call debugFirestorePermissions here as it tries to use context after the view is destroyed
+        _binding = null
     }
 }

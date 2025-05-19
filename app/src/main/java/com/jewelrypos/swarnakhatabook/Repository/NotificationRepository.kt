@@ -371,8 +371,6 @@ class NotificationRepository(
 
             // Add more specific filters based on notification type
             when (notification.type) {
-
-
                 NotificationType.PAYMENT_DUE, NotificationType.PAYMENT_OVERDUE -> {
                     // For payment notifications, check specific invoice
                     if (notification.relatedInvoiceId != null) {
@@ -451,12 +449,18 @@ class NotificationRepository(
      */
     suspend fun updateNotificationPreferences(preferences: NotificationPreferences): Result<Unit> {
         return try {
+            Log.d(TAG, "Updating notification preferences: $preferences")
+            
             val activeShopId = getActiveShopId()
+            Log.d(TAG, "Active shop ID for update: $activeShopId")
+            
             if (activeShopId.isNullOrEmpty()) {
-                Log.w(TAG, "No active shop ID available")
-                return Result.failure(Exception("No active shop ID available"))
+                val error = "No active shop ID available. Please select a shop first."
+                Log.e(TAG, error)
+                return Result.failure(Exception(error))
             }
 
+            Log.d(TAG, "Saving preferences to Firestore for shop: $activeShopId")
             firestore.collection("shopData")
                 .document(activeShopId)
                 .collection("settings")
@@ -464,6 +468,7 @@ class NotificationRepository(
                 .set(preferences)
                 .await()
 
+            Log.d(TAG, "Successfully saved preferences")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error updating notification preferences", e)
@@ -663,31 +668,27 @@ class NotificationRepository(
      * Helper to get the active shop ID
      */
     private suspend fun getActiveShopId(): String? {
+        Log.d(TAG, "Getting active shop ID")
+        
         if (context == null) {
-            Log.w(TAG, "Context is null, cannot get active shop ID")
-            
-            // Try to get the shopId from cached notifications if available
-            val shopIdFromCache = try {
-                val snapshot = firestore.collection("shopData")
-                    .limit(1)
-                    .get(com.google.firebase.firestore.Source.CACHE)
-                    .await()
-                
-                if (!snapshot.isEmpty) {
-                    val shopId = snapshot.documents.first().id
-                    Log.d(TAG, "Found shop ID from cache: $shopId")
-                    return shopId
-                }
-                null
-            } catch (e: Exception) {
-                Log.e(TAG, "Error trying to get shopId from cache", e)
-                null
-            }
-            
-            return shopIdFromCache
+            Log.e(TAG, "Context is null, cannot get active shop ID")
+            return null
         }
         
-        return SessionManager.getActiveShopId(context)
+        try {
+            val shopId = SessionManager.getActiveShopId(context)
+            Log.d(TAG, "Retrieved shop ID from SessionManager: $shopId")
+            
+            if (shopId.isNullOrEmpty()) {
+                Log.e(TAG, "No active shop ID found in SessionManager")
+                return null
+            }
+            
+            return shopId
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting active shop ID", e)
+            return null
+        }
     }
 
     // Exception classes

@@ -14,15 +14,19 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.14"
+        versionCode = 17
+        versionName = "1.17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Vector drawable optimization
+        vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
@@ -42,6 +46,18 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    bundle {
+        language {
+            enableSplit = true
+        }
+        density {
+            enableSplit = true
+        }
+        abi {
+            enableSplit = true
+        }
+    }
 }
 
 dependencies {
@@ -60,7 +76,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:3.12.4")
     testImplementation("org.robolectric:robolectric:4.8")
     testImplementation("androidx.fragment:fragment-testing:1.8.6")
@@ -108,8 +123,14 @@ dependencies {
     //For tab View
     implementation("androidx.viewpager2:viewpager2:1.1.0")
 
-    //For Image View
-    implementation("com.github.bumptech.glide:glide:4.16.0")
+    // Choose either Picasso or Coil, not both
+    implementation("com.squareup.picasso:picasso:2.8")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
+    // Remove redundant Coil dependencies as you're already using Picasso
+     implementation("io.coil-kt.coil3:coil-compose:3.1.0")
+     implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
 
     // Navigation Component
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.5")
@@ -136,15 +157,7 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:5.2.3")
     implementation("androidx.gridlayout:gridlayout:1.1.0")
 
-    implementation("com.squareup.picasso:picasso:2.8")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
-
-//    implementation("com.github.CanHub:Android-Image-Cropper:4.5.0") // Check for latest version
+    // Choose one image cropper library, not both
+//     implementation("com.github.CanHub:Android-Image-Cropper:4.5.0") // Check for latest version
     implementation("com.vanniktech:android-image-cropper:4.6.0")
-
-    implementation("io.coil-kt.coil3:coil-compose:3.1.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.1.0")
-
-
 }

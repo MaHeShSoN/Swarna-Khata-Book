@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.GstReportAdapter
 import com.jewelrypos.swarnakhatabook.Factorys.ReportViewModelFactory
@@ -16,6 +17,8 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentGstReportBinding
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 class GstReportFragment : Fragment() {
 
@@ -26,6 +29,9 @@ class GstReportFragment : Fragment() {
     private lateinit var adapter: GstReportAdapter
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
     private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    
+    // Track coroutine jobs to prevent memory leaks
+    private val coroutineJobs = mutableListOf<Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -150,20 +156,27 @@ class GstReportFragment : Fragment() {
             val startDate = viewModel.startDate.value?.let { dateFormat.format(it) } ?: ""
             val endDate = viewModel.endDate.value?.let { dateFormat.format(it) } ?: ""
 
-            val pdfExporter = PDFExportUtility(requireContext())
-            val success = pdfExporter.exportGstReport(startDate, endDate, items)
+            val job = viewLifecycleOwner.lifecycleScope.launch {
+                val pdfExporter = PDFExportUtility(requireContext())
+                val success = pdfExporter.exportGstReport(startDate, endDate, items)
 
-            if (success) {
-                Toast.makeText(requireContext(), "Report exported successfully", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(requireContext(), "Error exporting report", Toast.LENGTH_SHORT).show()
+                if (success) {
+                    Toast.makeText(requireContext(), "Report exported successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Error exporting report", Toast.LENGTH_SHORT).show()
+                }
             }
+            coroutineJobs.add(job)
         } catch (e: Exception) {
             Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

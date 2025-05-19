@@ -64,6 +64,9 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.launch
+import android.graphics.Typeface
+import android.widget.TextView
+import kotlinx.coroutines.Job
 
 open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -85,8 +88,8 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     private lateinit var storageRef: StorageReference
     
     // ActivityResultLaunchers for image capture and selection
-    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
-    private lateinit var galleryLauncher: ActivityResultLauncher<Intent>
+    private var _cameraLauncher: ActivityResultLauncher<Intent>? = null
+    private var _galleryLauncher: ActivityResultLauncher<Intent>? = null
 
     // Constants
     private val TAG_TEXT_WATCHERS = 12345 // Arbitrary unique value for the tag
@@ -103,6 +106,24 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             FirebaseFirestore.getInstance(),
             FirebaseAuth.getInstance()
         )
+    }
+
+    // Add to track coroutine jobs
+    private val coroutineJobs = mutableListOf<Job>()
+
+    // Add this at class level
+    private val textWatchers = mutableMapOf<android.widget.TextView, TextWatcher>()
+
+    // Implement a helper method for adding TextWatchers safely
+    private fun addSafeTextWatcher(view: android.widget.TextView, watcher: TextWatcher) {
+        // Remove any existing watcher for this view
+        textWatchers[view]?.let {
+            view.removeTextChangedListener(it)
+        }
+        
+        // Add the new watcher and track it
+        view.addTextChangedListener(watcher)
+        textWatchers[view] = watcher
     }
 
     override fun onCreateView(
@@ -139,13 +160,34 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         selectedInventoryType = InventoryType.IDENTICAL_BATCH
         updateInventoryTypeRadioSelection()
 
-        viewModel.items.observe(viewLifecycleOwner) { retrievedItems ->
-            populateDropdown(retrievedItems)
+        // Update to use categoryRepository instead of viewModel
+        val job = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Get all categories initially
+                categoryRepository.getCategoriesByMetalType("GOLD").fold(
+                    onSuccess = { categories ->
+                        populateDropdown(categories)
+                    },
+                    onFailure = { e ->
+                        Log.e("ItemBottomSheet", "Error loading categories", e)
+                        Toast.makeText(requireContext(), "Error loading categories", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("ItemBottomSheet", "Error loading categories", e)
+            }
         }
+        coroutineJobs.add(job)
 
         binding.itemTypeChipGroup.setOnCheckedChangeListener { group, checkedIds ->
-            // No need to call retrieveItems again, just filter the current items
-            populateDropdown(viewModel.items.value ?: emptyList())
+            // Load categories for the selected metal type
+            val metalType = when (checkedIds) {
+                binding.goldChip.id -> "GOLD"
+                binding.silverChip.id -> "SILVER"
+                binding.otherChip.id -> "OTHER"
+                else -> "GOLD" // Default
+            }
+            loadCategoriesForMetalType(metalType)
         }
 
         // Setup inventory type radio buttons
@@ -164,14 +206,15 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // Dynamically show/hide fields based on inventory type
         updateFormFieldsForInventoryType()
 
-        // Add default categories on first launch
-        lifecycleScope.launch {
+        // Add default categories on first launch (now per-user)
+        val job2 = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 categoryRepository.addDefaultCategories()
             } catch (e: Exception) {
                 Log.e("ItemBottomSheet", "Error adding default categories", e)
             }
         }
+        coroutineJobs.add(job2)
 
         // Set up chip group listener
         binding.itemTypeChipGroup.setOnCheckedChangeListener { group, checkedId ->
@@ -342,109 +385,159 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     private fun setUpDropDownMenus() {
         //Wastage Type
         val listOfWastageType = listOf<String>("Percentage", "Gram")
-        val adapter0 = ArrayAdapter(
+        val adapter0 = object : ArrayAdapter<String>(
             requireContext(),
-            R.layout.dropdown_item,
+            R.layout.dropdown_item_jewellery,
             listOfWastageType
-        )
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                
+                // Apply typography according to guidelines
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                
+                return view
+            }
+            
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent)
+                
+                // Apply typography according to guidelines
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                view.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
+                
+                return view
+            }
+        }
+        
         binding.wastageTypeDropdown.apply {
             setAdapter(adapter0)
-            setDropDownBackgroundResource(R.color.cream_background)
-            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
 
-        //Purity list
+        //Stock Unit list
         val listOfUnits = listOf<String>("PIECE", "SET", "PAIR")
 
-        val adapter3 = ArrayAdapter(
+        val adapter3 = object : ArrayAdapter<String>(
             requireContext(),
-            R.layout.dropdown_item,
+            R.layout.dropdown_item_jewellery,
             listOfUnits
-        )
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                
+                // Apply typography according to guidelines
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                
+                return view
+            }
+            
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent)
+                
+                // Apply typography according to guidelines
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                view.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
+                
+                return view
+            }
+        }
+        
         binding.stockChargesTypeEditText.apply {
             setAdapter(adapter3)
-            setDropDownBackgroundResource(R.color.cream_background)
-            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         }
     }
 
-    private fun populateDropdown(items: List<MetalItem>) {
+    private fun populateDropdown(categories: List<JewelryCategory>) {
         val selectedChipId = binding.itemTypeChipGroup.checkedChipId
         val selectedType = when (selectedChipId) {
-            binding.goldChip.id -> MetalItemType.GOLD
-            binding.silverChip.id -> MetalItemType.SILVER
-            binding.otherChip.id -> MetalItemType.OTHER
-            else -> null // No chip selected or default
+            binding.goldChip.id -> "GOLD"
+            binding.silverChip.id -> "SILVER"
+            binding.otherChip.id -> "OTHER"
+            else -> null
         }
 
-        val filteredItems = if (selectedType != null) {
-            items.filter { it.type == selectedType }
+        val filteredCategories = if (selectedType != null) {
+            categories.filter { it.metalType == selectedType }
         } else {
-            items // Show all if no chip selected
+            categories
         }
 
-        val itemNames = filteredItems.map { it.fieldName }
+        val categoryNames = filteredCategories.map { it.name }
 
-        val adapter = ArrayAdapter(
+        // Custom adapter that uses the jewelry-specific dropdown layout
+        val adapter = object : ArrayAdapter<String>(
             requireContext(),
-            R.layout.dropdown_item,
-            if (itemNames.isEmpty()) {
-                // If no items are available, add a suggestion message
+            R.layout.dropdown_item_jewellery,
+            if (categoryNames.isEmpty()) {
                 listOf("No items available - Click + to add")
             } else {
-                itemNames
+                categoryNames
             }
-        )
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                return view
+            }
+            
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getDropDownView(position, convertView, parent)
+                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                view.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
+                return view
+            }
+        }
+        
         binding.categoryDropdown.apply {
             setAdapter(adapter)
-            setDropDownBackgroundResource(R.color.cream_background)
+            setDropDownBackgroundResource(R.color.my_light_primary_container)
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
             
-            // Initially show dropdown if no categories
-            if (itemNames.isEmpty()) {
-                binding.categoryInputLayout.helperText = "Use the + button to add a category"
-                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.black))
-                
-                // Don't auto-show dropdown here, let the focus listener handle it
+            if (categoryNames.isEmpty()) {
+                binding.categoryInputLayout.helperText = "Type to add a new category"
+                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.my_light_secondary))
             } else {
                 binding.categoryInputLayout.helperText = null
             }
         }
 
         binding.categoryDropdown.setOnItemClickListener { _, _, position, _ ->
-            if (itemNames.isEmpty() && position == 0) {
-                // If user clicks on the suggestion, automatically trigger the add button
-                binding.goldImageButton1.performClick()
-                binding.categoryDropdown.setText("")  // Clear the suggestion text
-            } else if (!itemNames.isEmpty()) {
-                // If a valid category is selected, auto-fill the display name
-                val selectedCategory = itemNames[position]
-                binding.displayNameEditText.setText(selectedCategory)
-            }
+            val selectedItem = binding.categoryDropdown.adapter.getItem(position).toString()
+            binding.displayNameEditText.setText(selectedItem)
         }
 
-        // Set text colors for input fields
-        binding.displayNameEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.grossWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.netWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.wastageEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.purityEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.stockEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
-        binding.categoryDropdown.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        // Set text colors for input fields and make typography consistent
+        binding.displayNameEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.displayNameEditText.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        
+        binding.grossWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.netWeightEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.wastageEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.purityEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.stockEditText.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+        binding.categoryDropdown.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
 
-        // Set text colors for labels
-        binding.displayNameInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.grossWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.netWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.wastageInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.wastageTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.purityInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.stockInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.stockTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
-        binding.categoryInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.black)!!)
+        // Set box stroke colors for input layouts
+        binding.displayNameInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.grossWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.netWeightInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.wastageInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.wastageTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.purityInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.stockInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.stockTypeInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
+        binding.categoryInputLayout.setBoxStrokeColorStateList(ContextCompat.getColorStateList(requireContext(), R.color.my_light_outline)!!)
     }
 
     private fun loadCategoriesForMetalType(metalType: String) {
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 categoryRepository.getCategoriesByMetalType(metalType).fold(
                     onSuccess = { categories ->
@@ -453,20 +546,44 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                         // Save original categories for reference
                         val originalCategoryNames = categoryNames.toList()
                         
-                        val adapter = ArrayAdapter(
+                        // Custom adapter that uses the jewelry-specific dropdown layout
+                        val adapter = object : ArrayAdapter<String>(
                             requireContext(),
-                            R.layout.dropdown_item,
+                            R.layout.dropdown_item_jewellery,
                             categoryNames
-                        )
+                        ) {
+                            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                                val view = super.getView(position, convertView, parent)
+                                
+                                // Apply typography according to guidelines
+                                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                                
+                                return view
+                            }
+                            
+                            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                                val view = super.getDropDownView(position, convertView, parent)
+                                
+                                // Apply typography according to guidelines
+                                (view as TextView).typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                                view.setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
+                                
+                                return view
+                            }
+                        }
                         
                         binding.categoryDropdown.apply {
                             setAdapter(adapter)
-                            setDropDownBackgroundResource(R.color.cream_background)
+                            setDropDownBackgroundResource(R.color.my_light_primary_container)
+                            
+                            // Apply typography to the input field itself
+                            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                            setTextColor(ContextCompat.getColor(context, R.color.my_light_on_surface))
                             
                             // Initially show dropdown if no categories
                             if (categoryNames.isEmpty()) {
                                 binding.categoryInputLayout.helperText = "Use the + button to add a category"
-                                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.black))
+                                binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.my_light_secondary))
                                 
                                 // Don't auto-show dropdown here, let the focus listener handle it
                             } else {
@@ -495,12 +612,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                                 // Clear the current text and prepare to create a new category
                                 binding.categoryDropdown.setText(newCategoryName, false)
                                 
-                                // Show dialog to create the new category
-                                binding.goldImageButton1.performClick()
                             } else if (selectedItem == "Add new category with + button") {
                                 // Clear the dropdown text and click the add button
                                 binding.categoryDropdown.setText("", false)
-                                binding.goldImageButton1.performClick()
                             } else if (originalCategoryNames.contains(selectedItem)) {
                                 // Regular category selection - auto-fill display name
                                 binding.displayNameEditText.setText(selectedItem)
@@ -520,79 +634,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 Log.e("ItemBottomSheet", "Error loading categories", e)
             }
         }
-    }
-
-    fun showThemedDialog() {
-        // Get the selected metal type from the chip group
-        val selectedMetal = when (binding.itemTypeChipGroup.checkedChipId) {
-            binding.goldChip.id -> "GOLD"
-            binding.silverChip.id -> "SILVER"
-            binding.otherChip.id -> "OTHER"
-            else -> {
-                // If no chip is selected, show a message and return
-                Toast.makeText(
-                    requireContext(),
-                    "Please select a metal type first",
-                    Toast.LENGTH_SHORT
-                ).show()
-                return
-            }
-        }
-
-        // Create and customize the themed dialog
-        ThemedM3Dialog(requireContext())
-            .setTitle("Add Category")
-            .setLayout(R.layout.dialog_input_metal_item)
-            .setPositiveButton("Add") { dialog, dialogView ->
-                val dialogBinding = DialogInputMetalItemBinding.bind(dialogView!!)
-                val categoryName = dialogBinding.editText1.text.toString()
-
-                if (categoryName.isNotEmpty()) {
-                    lifecycleScope.launch {
-                        try {
-                            val category = JewelryCategory(
-                                name = categoryName,
-                                metalType = selectedMetal
-                            )
-                            
-                            categoryRepository.addCategory(category).fold(
-                                onSuccess = { id ->
-                                    // Reload categories for the current metal type
-                                    loadCategoriesForMetalType(selectedMetal)
-                                    // Auto-fill the category field with the new category
-                                    binding.categoryDropdown.setText(categoryName, false)
-                                    dialog.dismiss()
-                                },
-                                onFailure = { e ->
-                                    Log.e("ItemBottomSheet", "Error adding category", e)
-                                    Toast.makeText(
-                                        requireContext(),
-                                        "Error adding category",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            )
-                        } catch (e: Exception) {
-                            Log.e("ItemBottomSheet", "Error adding category", e)
-                            Toast.makeText(
-                                requireContext(),
-                                "Error adding category",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Please enter a category name",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            .setNegativeButton(getString(R.string.cancel)) { dialog ->
-                dialog.dismiss()
-            }
-            .show()
+        coroutineJobs.add(job)
     }
 
     fun validateJewelryItemForm(): Pair<Boolean, String> {
@@ -808,48 +850,58 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
     // Implementation of saveJewelryItem function to actually save the data
     private fun saveJewelryItem(closeAfterSave: Boolean) {
-        // Get the selected item type
         val itemType = when {
             binding.goldChip.isChecked -> "GOLD"
             binding.silverChip.isChecked -> "SILVER"
             binding.otherChip.isChecked -> "OTHER"
-            else -> "GOLD" // Default
+            else -> "GOLD"
         }
-
-        // Create a jewelry item object with all the form data
-        val jewellryItem = JewelleryItem(
-            id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
-            displayName = binding.displayNameEditText.text.toString().trim(),
-            itemType = itemType,
-            category = binding.categoryDropdown.text.toString().trim(),
-            grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            wastageType = binding.wastageTypeDropdown.text.toString(),
-            purity = binding.purityEditText.text.toString(),
-            stock = binding.stockEditText.text.toString().toDoubleOrNull() ?: 0.0,
-            stockUnit = binding.stockChargesTypeEditText.text.toString(),
-            location = "", // Empty location as it's removed
-            inventoryType = selectedInventoryType,
-            totalWeightGrams = binding.totalWeightInputLayout?.editText?.text.toString().toDoubleOrNull() ?: 0.0,
-            imageUrl = imageUrl // Use the uploaded image URL
-        )
-
-        // Notify listener based on mode
-        if (editMode) {
-            listener?.onItemUpdated(jewellryItem)
-        } else {
-            listener?.onItemAdded(jewellryItem)
-        }
-
-        if (closeAfterSave) {
-            dismiss()
-        } else {
-            // Only clear the form if we're not in edit mode
-            if (!editMode) {
-                clearForm()
+        val categoryName = binding.categoryDropdown.text.toString().trim()
+        // Before saving, ensure category exists for this user and metal type
+        val job = viewLifecycleOwner.lifecycleScope.launch {
+            val categoriesResult = categoryRepository.getCategoriesByMetalType(itemType)
+            val categories = categoriesResult.getOrNull() ?: emptyList()
+            val exists = categories.any { it.name.equals(categoryName, ignoreCase = true) }
+            if (!exists && categoryName.isNotEmpty()) {
+                // Auto-add the category
+                categoryRepository.addCategory(
+                    JewelryCategory(
+                        name = categoryName,
+                        metalType = itemType,
+                        isDefault = false
+                    )
+                )
+            }
+            // Now proceed to save the item as before
+            val jewellryItem = JewelleryItem(
+                id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
+                displayName = binding.displayNameEditText.text.toString().trim(),
+                itemType = itemType,
+                category = binding.categoryDropdown.text.toString().trim(),
+                grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                wastageType = binding.wastageTypeDropdown.text.toString(),
+                purity = binding.purityEditText.text.toString(),
+                stock = binding.stockEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                stockUnit = binding.stockChargesTypeEditText.text.toString(),
+                location = "", // Empty location as it's removed
+                inventoryType = selectedInventoryType,
+                totalWeightGrams = binding.totalWeightInputLayout?.editText?.text.toString().toDoubleOrNull() ?: 0.0,
+                imageUrl = imageUrl // Use the uploaded image URL
+            )
+            if (editMode) {
+                listener?.onItemUpdated(jewellryItem)
+            } else {
+                listener?.onItemAdded(jewellryItem)
+            }
+            if (closeAfterSave) {
+                dismiss()
+            } else {
+                if (!editMode) clearForm()
             }
         }
+        coroutineJobs.add(job)
     }
 
     // Method to set the item for editing
@@ -896,31 +948,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
 
 
     open fun setupListeners() {
-        binding.goldImageButton1.setOnClickListener {
-            showThemedDialog()
-        }
-
-        // Add focus listener for the category dropdown
-        binding.categoryDropdown.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                // Get the parent NestedScrollView
-                val nestedScrollView = binding.root.parent as? androidx.core.widget.NestedScrollView
-                nestedScrollView?.post {
-                    // Scroll to position of the category input with offset to show at top
-                    val targetY = binding.categoryInputLayout.y.toInt() - 50
-                    nestedScrollView.smoothScrollTo(0, targetY)
-                    
-                    // Show dropdown after scrolling
-                    binding.categoryDropdown.post { binding.categoryDropdown.showDropDown() }
-                }
-            }
-        }
-        
-        // Make the entire input layout clickable
-        binding.categoryInputLayout.setOnClickListener {
-            binding.categoryDropdown.requestFocus()
-        }
-
         // Save Button Click Listener
         binding.saveAddButton.setOnClickListener {
             if (validateAndShowErrors()) {
@@ -1038,7 +1065,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     
     private fun registerActivityResultLaunchers() {
         // Camera launcher - capture image with device camera
-        cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        _cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             try {
                 if (result.resultCode == android.app.Activity.RESULT_OK) {
                     // Image captured successfully
@@ -1049,7 +1076,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                         // Check if the file exists and has content
                         if (imageFile.exists() && imageFile.length() > 0) {
                             // Create a URI from the file using FileProvider
-                            // IMPORTANT: Use the same authority as in dispatchTakePictureIntent
                             val uri = FileProvider.getUriForFile(
                                 requireContext(),
                                 "${requireContext().packageName}.provider",
@@ -1089,7 +1115,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         }
         
         // Gallery launcher - pick image from device gallery
-        galleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        _galleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == android.app.Activity.RESULT_OK) {
                 result.data?.data?.let { uri ->
                     // Image selected from gallery, use it directly
@@ -1205,21 +1231,18 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                     // Continue only if the file was successfully created
                     photoFile?.also {
                         try {
-                            // IMPORTANT: Fix the authority to be consistent with what's in the manifest
-                            // Changed from "${requireContext().packageName}.fileprovider" to "${requireContext().packageName}.provider"
                             val photoURI: Uri = FileProvider.getUriForFile(
                                 requireContext(),
                                 "${requireContext().packageName}.provider",
                                 it
                             )
-                            imageUri = photoURI  // Save URI for later use
+                            imageUri = photoURI
                             takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
                             
-                            // Add flags to grant permission to the camera app
                             takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             
-                            cameraLauncher.launch(takePictureIntent)
+                            _cameraLauncher?.launch(takePictureIntent)
                         } catch (e: Exception) {
                             Toast.makeText(requireContext(), 
                                 "Error setting up camera: ${e.message}", 
@@ -1242,7 +1265,6 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     // Launch the gallery app to select an image
     private fun dispatchGalleryIntent() {
         try {
-            // Check for appropriate storage permission based on Android version
             val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 android.Manifest.permission.READ_MEDIA_IMAGES
             } else {
@@ -1254,16 +1276,14 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 return
             }
             
-            // Proceed with gallery intent
             val galleryIntent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             galleryIntent.type = "image/*"
             try {
-                galleryLauncher.launch(galleryIntent)
+                _galleryLauncher?.launch(galleryIntent)
             } catch (e: ActivityNotFoundException) {
                 Toast.makeText(requireContext(), getString(R.string.no_gallery_app), Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            // Catch and log any other exceptions
             Toast.makeText(requireContext(), getString(R.string.gallery_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
@@ -1489,6 +1509,53 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                 }
             }
         }
+    }
+
+    override fun onDestroyView() {
+        // Cancel all coroutine jobs
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
+        // Remove all text watchers to prevent memory leaks
+        textWatchers.forEach { (view, watcher) ->
+            view.removeTextChangedListener(watcher)
+        }
+        textWatchers.clear()
+        
+        // Clear the existing watchers that might be tracked with tags
+        val fields = listOf(
+            binding.displayNameEditText,
+            binding.grossWeightEditText,
+            binding.netWeightEditText,
+            binding.wastageEditText,
+            binding.wastageTypeDropdown,
+            binding.purityEditText,
+            binding.stockEditText,
+            binding.categoryDropdown
+        )
+        
+        fields.forEach { view ->
+            val existingWatchers = view?.getTag(TAG_TEXT_WATCHERS) as? ArrayList<TextWatcher>
+            existingWatchers?.forEach { watcher ->
+                view.removeTextChangedListener(watcher)
+            }
+        }
+        
+        // Clear image references
+        imageUri = null
+        currentImagePath = null
+        
+        // Clear binding
+        _binding = null
+        
+        super.onDestroyView()
+    }
+
+    override fun onDestroy() {
+        // Unregister activity result launchers
+        _cameraLauncher = null
+        _galleryLauncher = null
+        super.onDestroy()
     }
 
 }

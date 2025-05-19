@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Enums.NotificationType
 import com.jewelrypos.swarnakhatabook.Factorys.NotificationSettingsViewModelFactory
 import com.jewelrypos.swarnakhatabook.Repository.NotificationRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.ViewModle.NotificationSettingsViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentNotificationSettingsBinding
 
@@ -26,7 +28,8 @@ class NotificationSettingsFragment : Fragment() {
     private val viewModel: NotificationSettingsViewModel by viewModels {
         val repository = NotificationRepository(
             FirebaseFirestore.getInstance(),
-            FirebaseAuth.getInstance()
+            FirebaseAuth.getInstance(),
+            requireContext().applicationContext
         )
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -44,6 +47,10 @@ class NotificationSettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Add logging for active shop ID
+        val activeShopId = SessionManager.getActiveShopId(requireContext())
+        Log.d("NotificationSettings", "Fragment created - Active shop ID: $activeShopId")
 
         setupToolbar()
         observePreferences()
@@ -120,7 +127,9 @@ class NotificationSettingsFragment : Fragment() {
             viewModel.updatePreference(NotificationType.ANNIVERSARY, isChecked)
         }
 
+        // Add logging for switch changes
         binding.switchPaymentDue.setOnCheckedChangeListener { _, isChecked ->
+            Log.d("NotificationSettings", "Payment due switch changed to: $isChecked")
             viewModel.updatePreference(NotificationType.PAYMENT_DUE, isChecked)
             binding.paymentDueSettingsContainer.visibility = if (isChecked) View.VISIBLE else View.GONE
         }

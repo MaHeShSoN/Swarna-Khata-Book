@@ -23,11 +23,15 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import android.content.Intent
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.widget.TextView
+import androidx.lifecycle.lifecycleScope
 
 class ReportsFragment : Fragment() {
 
@@ -36,6 +40,12 @@ class ReportsFragment : Fragment() {
 
     private lateinit var viewModel: ReportViewModel
     private lateinit var reportAdapter: ReportTypeAdapter
+    
+    // Track active coroutines
+    private val activeJobs = mutableListOf<Job>()
+    
+    // Track if navigation is in progress to prevent multiple clicks
+    private var isNavigating = false
     
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -53,6 +63,10 @@ class ReportsFragment : Fragment() {
         setupObservers()
         
         // Check premium status and show info message
+        checkPremiumStatus()
+    }
+    
+    private fun checkPremiumStatus() {
         PremiumFeatureHelper.isPremiumUser(this) { isPremium ->
             if (!isPremium) {
                 // Show a non-blocking message that report generation requires premium
@@ -95,7 +109,10 @@ class ReportsFragment : Fragment() {
 
         // Setup report types recycler view
         reportAdapter = ReportTypeAdapter { reportType ->
-            navigateToReportDetail(reportType)
+            // Prevent multiple rapid clicks
+            if (!isNavigating) {
+                navigateToReportDetail(reportType)
+            }
         }
 
         binding.reportsRecyclerView.apply {
@@ -206,23 +223,37 @@ class ReportsFragment : Fragment() {
     }
 
     private fun navigateToReportDetail(reportType: ReportType) {
-        val reportAction = {
-            when (reportType.id) {
-                "sales_report" -> navigateToSalesReport()
-                "inventory_valuation" -> navigateToInventoryReport()
-                "customer_statement" -> navigateToCustomerStatementReport()
-                "gst_report" -> navigateToGstReport()
-                "low_stock" -> navigateToLowStockReport()
+        isNavigating = true
+        
+        // Add a small delay to prevent rapid double-clicks
+        val job = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val reportAction = {
+                    when (reportType.id) {
+                        "sales_report" -> navigateToSalesReport()
+                        "inventory_valuation" -> navigateToInventoryReport()
+                        "customer_statement" -> navigateToCustomerStatementReport()
+                        "gst_report" -> navigateToGstReport()
+                        "low_stock" -> navigateToLowStockReport()
+                    }
+                }
+                
+                // Use the helper to check premium status
+                PremiumFeatureHelper.checkPremiumAccess(
+                    fragment = this@ReportsFragment,
+                    featureName = "Business Reports",
+                    premiumAction = reportAction
+                )
+                
+                // Allow new navigation after a short delay
+                delay(100)
+            } catch (e: Exception) {
+                Log.e("ReportsFragment", "Navigation error: ${e.message}")
+            } finally {
+                isNavigating = false
             }
         }
-        
-        // Use the helper to check premium status
-        PremiumFeatureHelper.checkPremiumAccess(
-            fragment = this,
-            featureName = "Business Reports",
-            premiumAction = reportAction
-            // Default non-premium action will show the upgrade dialog
-        )
+        activeJobs.add(job)
     }
 
     private fun navigateToSalesReport() {
@@ -231,7 +262,6 @@ class ReportsFragment : Fragment() {
 
     private fun navigateToInventoryReport() {
         findNavController().navigate(R.id.action_reportsFragment_to_inventoryReportFragment)
-
     }
 
     private fun navigateToCustomerStatementReport() {
@@ -248,6 +278,9 @@ class ReportsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Cancel all running coroutines
+        activeJobs.forEach { it.cancel() }
+        activeJobs.clear()
         _binding = null
     }
 }

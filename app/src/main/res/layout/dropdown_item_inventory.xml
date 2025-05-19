@@ -3,61 +3,54 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:backgroundTint="@color/cream_background"
     android:background="@color/cream_background"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/primary_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="@color/cream_background"
-        android:background="@color/cream_background"
-        android:textAppearance="?attr/textAppearanceSubtitle1"
-        android:textColor="@color/my_light_on_surface"
-        android:textStyle="bold"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/secondary_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:backgroundTint="@color/cream_background"
-        android:background="@color/cream_background"
-        android:textAppearance="?attr/textAppearanceBody2"
-        android:textColor="@color/my_light_secondary"
-        android:textSize="14sp" />
-
+    <!-- Top row with item name and stock -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="4dp"
-        android:backgroundTint="@color/cream_background"
         android:background="@color/cream_background">
 
+        <!-- Primary Text: Item Name -->
         <TextView
-            android:id="@+id/details_text"
+            android:id="@+id/primary_text"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:backgroundTint="@color/cream_background"
             android:background="@color/cream_background"
-            android:textAppearance="?attr/textAppearanceBody2"
-            android:textColor="@color/my_light_on_surface"
-            android:textSize="14sp" />
+            android:textSize="14sp"
+            android:textColor="@color/my_light_on_surface" />
 
+        <!-- Stock Text: Availability -->
         <TextView
             android:id="@+id/stock_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:backgroundTint="@color/cream_background"
+            android:textSize="12sp"
             android:background="@color/cream_background"
-            android:textAppearance="?attr/textAppearanceBody2"
-            android:textStyle="bold"
-            android:textSize="14sp" />
+            android:textStyle="bold" />
     </LinearLayout>
+
+    <!-- Details Text: Weight, Purity, etc. -->
+    <TextView
+        android:id="@+id/details_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="@color/cream_background"
+        android:textSize="12sp"
+        android:textColor="@color/my_light_on_background" />
+    
+    <!-- Hidden TextView for secondary info (to be hidden) -->
+    <TextView
+        android:id="@+id/secondary_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:background="@color/cream_background" />
     
     <!-- Hidden TextView to store the image URL -->
     <TextView

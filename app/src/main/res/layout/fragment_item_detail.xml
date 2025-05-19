@@ -209,22 +209,6 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/location"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp"/>
-
-                            <TextView
-                                android:id="@+id/locationValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratregular"
-                                android:textColor="@color/my_light_on_surface"
-                                android:textSize="16sp"
-                                tools:text="Showcase 2"/>
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
@@ -264,26 +248,91 @@
                             android:text="@string/item_image"
                             android:textColor="@color/my_light_primary"
                             android:textSize="18sp"/>
-                            
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/replaceImageButton"
-                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|end"
+                            android:backgroundTint="@color/my_light_secondary"
                             android:text="@string/replace"
-                            android:textSize="12sp"
+                            android:textColor="@color/white"
                             app:icon="@drawable/solar__camera_outline"
-                            app:iconSize="18dp"/>
+                            app:iconTint="@color/white" />
+
+
                     </LinearLayout>
 
-                    <ImageView
-                        android:id="@+id/itemImage"
+                    <FrameLayout
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
-                        android:scaleType="centerInside"
-                        android:contentDescription="@string/item_image"
-                        android:background="@color/cream_background"
-                        app:srcCompat="@drawable/image_placeholder"/>
+                        android:background="@color/cream_background">
+
+
+                        <ImageView
+                            android:id="@+id/itemImage"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerInside"
+                            android:contentDescription="@string/item_image"
+                            app:srcCompat="@drawable/image_placeholder"/>
+
+                        <!-- Progress Overlay - Initially hidden, shown during upload -->
+                        <FrameLayout
+                            android:id="@+id/progressOverlay"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="#88000000"
+                            android:visibility="gone">
+
+                            <ProgressBar
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_gravity="center"
+                                android:indeterminateTint="@color/my_light_primary" />
+                        </FrameLayout>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/cameraButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:visibility="gone"
+                            android:fontFamily="@font/montserratregular"
+                            android:text="@string/camera"
+                            android:textColor="@color/my_light_secondary"
+                            app:icon="@drawable/solar__camera_outline"
+                            app:iconTint="@color/my_light_secondary" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/galleryButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:visibility="gone"
+                            android:layout_weight="1"
+                            android:fontFamily="@font/montserratregular"
+                            android:text="@string/gallery"
+                            android:textColor="@color/my_light_secondary"
+                            app:icon="@drawable/material_symbols__gallery"
+                            app:iconTint="@color/my_light_secondary" />
+
+
+                    </LinearLayout>
+
+
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

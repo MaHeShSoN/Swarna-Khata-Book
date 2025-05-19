@@ -26,6 +26,8 @@ class SubscriptionStatusFragment : Fragment() {
     private var _binding: FragmentSubscriptionStatusBinding? = null
     private val binding get() = _binding!!
     private lateinit var subscriptionManager: UserSubscriptionManager
+    private val coroutineJobs = mutableListOf<kotlinx.coroutines.Job>()
+    private var currentPlanName = "NONE"
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -50,12 +52,17 @@ class SubscriptionStatusFragment : Fragment() {
         // Setup UI
         loadSubscriptionStatus()
         setupButtons()
+
+
     }
 
     private fun loadSubscriptionStatus() {
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             // Get subscription status
             val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
+            // Store the plan name in our class variable
+            currentPlanName = currentPlan.name
+            
             val isTrialActive = subscriptionManager.isTrialActive()
             val daysRemaining = subscriptionManager.getDaysRemaining()
 
@@ -155,66 +162,80 @@ class SubscriptionStatusFragment : Fragment() {
                 """.trimIndent()
             }
         }
+        coroutineJobs.add(job)
     }
     
     private fun getBenefitsText(plan: SubscriptionPlan): String {
         return when (plan) {
             SubscriptionPlan.BASIC -> """
-                • Manage 1 shop profile
-                • 100 customer entries
-                • 100 inventory items
-                • 100 invoices per month
-                • Basic sales reports
-                • Standard invoice template
-                • Community support
+                ✓ Manage customers (add, edit, view)
+                ✓ Manage inventory (jewellery, metal items)
+                ✓ Create & manage invoices
+                ✓ Record payments
+                ✓ Basic invoice templates (limited selection)
+                ✓ Single shop management
+                ✓ Basic customer statements
+                ✓ PIN security feature
+                ✗ Limited number of invoices per month (100)
+                ✗ Limited number of customers (100)
+                ✗ Limited number of items (100)
+                ✗ No multi-shop support
+                ✗ No advanced reports
+                ✗ No premium templates
+                ✗ No custom PDF settings
+                ✗ No data export
             """.trimIndent()
             
             SubscriptionPlan.STANDARD -> """
-                • Manage up to 2 shop profiles
-                • Unlimited customers and items
-                • Unlimited invoices
-                • All standard reports
-                • Multiple invoice templates
-                • Basic customization options
-                • PIN security
-                • Low stock notifications
-                • Data export (CSV, PDF)
-                • Recycling bin feature
-                • Standard email/chat support
+                ✓ Everything in Basic plan
+                ✓ No invoice limit
+                ✓ No customer limit
+                ✓ No item limit
+                ✓ Multi-shop support (up to 2 shops)
+                ✓ More invoice templates (wider selection)
+                ✓ Basic reports (sales, inventory, low stock)
+                ✓ Recycling bin for deleted items
+                ✓ Basic data export (CSV for customers, items)
+                ✗ No advance notification
+                ✗ No backup & restore
+                ✗ No priority support
+                ✗ No multi-user access
             """.trimIndent()
             
             SubscriptionPlan.PREMIUM -> """
-                • Manage up to 3 shop profiles
-                • All Standard plan features
-                • Multi-user access
-                • Full invoice customization
-                • Advanced notifications
-                • Business insight reports
-                • Data backup & restore
-                • Priority support
+                ✓ Everything in Standard plan
+                ✓ Multi-shop support (up to 3 shops)
+                ✓ Priority support
+                ✓ Backup & restore
+                ✓ Advanced notifications
+                ✓ Multi-user access
+                ✓ Full invoice customization
+                ✓ Business insight reports
             """.trimIndent()
             
             else -> ""
         }
     }
 
-    private fun setupButtons() {
+    fun setupButtons() {
         // Upgrade button setup
         binding.upgradeButton.setOnClickListener {
-            startActivity(Intent(requireContext(), UpgradeActivity::class.java))
+            val intent = Intent(requireContext(), UpgradeActivity::class.java)
+            // Use the stored plan name
+            intent.putExtra("CURRENT_PLAN", currentPlanName)
+            startActivity(intent)
         }
 
         // Debug button (only in debug builds)
-
-
         if (BuildConfig.DEBUG) {
             binding.resetTrialButton?.visibility = View.VISIBLE
             binding.resetTrialButton?.setOnClickListener {
-                lifecycleScope.launch {
+                val job = viewLifecycleOwner.lifecycleScope.launch {
                     subscriptionManager.resetTrial()
                     subscriptionManager.updateSubscriptionPlan(SubscriptionPlan.NONE)
                     loadSubscriptionStatus()
                 }
+                coroutineJobs.add(job)
             }
         }
     }
@@ -226,6 +247,10 @@ class SubscriptionStatusFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

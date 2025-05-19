@@ -3,4 +3,17 @@
     <style name="ShapeAppearanceOverlay.App.CornerSize8dp" parent="">
         <item name="cornerSize">8dp</item>
     </style>
+    
+    <!-- Typography styles for dropdown items -->
+    <style name="TextAppearance.App.Heading3" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="fontFamily">@font/librebaskervilleregular</item>
+        <item name="android:fontFamily">@font/librebaskervilleregular</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/my_light_on_surface</item>
+    </style>
+
+    
+
+
+
 </resources> 

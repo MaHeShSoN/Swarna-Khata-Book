@@ -51,6 +51,7 @@ class InventoryViewModel(
     // --- Constants ---
     companion object {
         private const val LOW_STOCK_THRESHOLD = 5.0
+        private const val LOW_STOCK_WEIGHT_THRESHOLD = 100.0 // Weight threshold in grams
         private const val FILTER_GOLD = "GOLD"
         private const val FILTER_SILVER = "SILVER"
         private const val FILTER_OTHER = "OTHER"
@@ -137,7 +138,16 @@ class InventoryViewModel(
                 // 2. Apply Low Stock Filter (independent)
                 if (activeFiltersSet.contains(FILTER_LOW_STOCK)) {
                     tempList = tempList.filter { item ->
-                        item.stock <= LOW_STOCK_THRESHOLD
+                        when (item.inventoryType) {
+                            com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                                // For weight-based inventory, check totalWeightGrams
+                                item.totalWeightGrams <= LOW_STOCK_WEIGHT_THRESHOLD
+                            }
+                            else -> {
+                                // For quantity-based inventory, check stock
+                                item.stock <= LOW_STOCK_THRESHOLD
+                            }
+                        }
                     }
                 }
 

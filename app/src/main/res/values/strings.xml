@@ -495,7 +495,7 @@
 
     <string name="due_date">Due Date:</string>
     <string name="invoice_date">Invoice Date:</string>
-    <string name="invoice">Invoice #</string>
+    <string name="invoice">Invoice</string>
     <string name="percentage">Percentage</string>
     <string name="piece">PIECE</string>
     <string name="please_fill_in_both_fields">Please fill in both fields</string>
@@ -750,5 +750,17 @@
     <string name="quick_added">Quick Added</string>
     <string name="weight_based">Weight Based</string>
     <string name="quantity_based">Quantity Based</string>
+    <string name="add_item_image_instruction">Add Item Image Instruction</string>
+    <string name="payment_history">Payment History</string>
+
+    <!-- New grace period strings -->
+    <string name="grace_period_title">Your Trial Has Expired</string>
+    <string name="grace_period_message">Your trial period has expired, but you can continue using Swarna Khata Book for %1$d more day%2$s. Please upgrade to avoid any interruption in service.</string>
+    <string name="continue_using">Continue</string>
+
+    <!-- Subscription verification error strings -->
+    <string name="subscription_error_title">Subscription Verification Error</string>
+    <string name="subscription_error_message">There was an error checking your subscription status. Please ensure you have an internet connection and try again. If the issue persists, please contact support.</string>
+    <string name="subscription_retry">Retry</string>
 
 </resources>

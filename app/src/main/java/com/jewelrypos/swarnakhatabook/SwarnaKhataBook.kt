@@ -60,9 +60,10 @@ class SwarnaKhataBook : Application() {
     }
     
     private fun configureCacheSettings() {
-        // Configure Firestore settings to prioritize cached content and offline support
+        // Configure Firestore settings to prioritize cached content but with a reasonable size limit
         val cacheSettings = PersistentCacheSettings.newBuilder()
-            .setSizeBytes(FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+            // Use 50MB as a reasonable size limit instead of UNLIMITED
+            .setSizeBytes(50 * 1024 * 1024) // 50MB
             .build()
 
         val settings = FirebaseFirestoreSettings.Builder()

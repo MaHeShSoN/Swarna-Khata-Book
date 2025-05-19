@@ -8,10 +8,11 @@ import android.widget.TextView
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.jewelrypos.swarnakhatabook.Adapters.SettingsAdapter
+import com.google.android.material.card.MaterialCardView
+import com.jewelrypos.swarnakhatabook.DataClasses.BadgeType
 import com.jewelrypos.swarnakhatabook.DataClasses.SettingsItem
 import com.jewelrypos.swarnakhatabook.Factorys.SettingsViewModelFactory
 import com.jewelrypos.swarnakhatabook.ViewModle.SettingsViewModel
@@ -22,15 +23,11 @@ class MoreSettingFragment : Fragment() {
     private var _binding: FragmentMoreSettingBinding? = null
     private val binding get() = _binding!!
 
-    // Reference to ViewModel (will be initialized in onViewCreated)
+    // Reference to ViewModel
     private lateinit var viewModel: SettingsViewModel
-    
-    // Cache adapter instance to avoid recreation
-    private var cachedAdapter: SettingsAdapter? = null
-    private var cachedItems: List<SettingsItem>? = null
-    private var cachedPremiumStatus: Boolean? = null
 
-    private var scrollPosition = 0
+    // Cache ColorStateLists and other resources for reuse
+    private lateinit var colorCache: SettingsColorCache
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -42,16 +39,9 @@ class MoreSettingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize RecyclerView with layout manager
-        binding.settingsRecyclerView.layoutManager = LinearLayoutManager(context)
-        
-        // Restore cached adapter if available to avoid recreation
-        cachedAdapter?.let {
-            binding.settingsRecyclerView.adapter = it
-            binding.settingsRecyclerView.visibility = View.VISIBLE
-            return@let
-        }
-        
+        // Initialize ColorCache for efficient resource loading
+        colorCache = SettingsColorCache(requireContext())
+
         // Initialize ViewModel through factory
         val factory = SettingsViewModelFactory(
             requireActivity().application,
@@ -64,52 +54,134 @@ class MoreSettingFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        // Use a more efficient combined approach with transformations if possible
-        
-        // Observer for settings items list - Combined with premium status
+        // Combined observer pattern for efficient updates
         viewModel.settingsItems.observe(viewLifecycleOwner) { items ->
             if (items.isNotEmpty()) {
-                // Cache the items
-                cachedItems = items
-                
-                // Get premium status - if already cached, use that
-                val isPremium = cachedPremiumStatus ?: viewModel.isPremium.value ?: false
-                
-                // Cache premium status
-                cachedPremiumStatus = isPremium
-                
-                setupAdapter(items, isPremium)
+                // Get premium status
+                val isPremium = viewModel.isPremium.value ?: false
+
+                // Populate the settings
+                populateSettings(items, isPremium)
             }
         }
-        
-        // Observe premium status changes separately only if needed
-        if (cachedPremiumStatus == null) {
-            viewModel.isPremium.observe(viewLifecycleOwner) { isPremium ->
-                cachedPremiumStatus = isPremium
-                cachedItems?.let { items ->
-                    setupAdapter(items, isPremium)
-                }
+
+        // Observe premium status changes separately
+        viewModel.isPremium.observe(viewLifecycleOwner) { isPremium ->
+            viewModel.settingsItems.value?.let { items ->
+                populateSettings(items, isPremium)
             }
         }
     }
 
-    private fun setupAdapter(items: List<SettingsItem>, isPremium: Boolean) {
-        // Only create a new adapter if needed (not already cached with same data)
-        if (cachedAdapter == null || 
-            cachedItems != items || 
-            cachedPremiumStatus != isPremium) {
-            
-            // Create adapter with items and premium status
-            cachedAdapter = SettingsAdapter(items, isPremium) { item ->
-                handleNavigation(item, isPremium)
-            }
-            
-            // Set adapter to recycler view
-            binding.settingsRecyclerView.adapter = cachedAdapter
+    private fun populateSettings(items: List<SettingsItem>, isPremium: Boolean) {
+        // Clear all existing settings views first
+        binding.settingsContainer.removeAllViews()
+
+        // Create and add each settings item directly
+        items.forEach { item ->
+            val settingView = createSettingItemView(item, isPremium)
+            binding.settingsContainer.addView(settingView)
         }
-        
-        // Ensure visibility
-        binding.settingsRecyclerView.visibility = View.VISIBLE
+    }
+
+    private fun createSettingItemView(item: SettingsItem, isPremium: Boolean): View {
+        val inflater = LayoutInflater.from(requireContext())
+        val itemView = inflater.inflate(R.layout.item_setting, binding.settingsContainer, false)
+
+        // Get references to views
+        val cardView = itemView as MaterialCardView
+        val iconView: ImageView = itemView.findViewById(R.id.settingIconView)
+        val titleView: TextView = itemView.findViewById(R.id.settingTitle)
+        val subtitleView: TextView = itemView.findViewById(R.id.settingSubtitle)
+        val badgeView: TextView = itemView.findViewById(R.id.newBadge)
+
+        // Set content
+        iconView.setImageResource(item.iconResId)
+        titleView.text = getString(item.titleResId)
+
+        // Handle subtitle with potential format args
+        subtitleView.text = if (item.subtitleResIdArgs != null) {
+            getString(item.subtitleResId, *item.subtitleResIdArgs.toTypedArray())
+        } else {
+            getString(item.subtitleResId)
+        }
+
+        // Badge logic
+        if (item.badgeTextResId != null) {
+            badgeView.visibility = View.VISIBLE
+
+            // Resolve badge text with potential format args
+            badgeView.text = if (item.badgeTextResIdArgs != null) {
+                getString(item.badgeTextResId, *item.badgeTextResIdArgs.toTypedArray())
+            } else {
+                getString(item.badgeTextResId)
+            }
+
+            // Apply badge styling from cache
+            val (badgeBackground, badgeTextColor) = colorCache.getBadgeStyling(item.badgeType)
+            badgeView.backgroundTintList = badgeBackground
+            badgeView.setTextColor(badgeTextColor)
+        } else {
+            badgeView.visibility = View.GONE
+        }
+
+        // Apply icon tint and background
+        iconView.imageTintList = colorCache.whiteIconTint
+        iconView.backgroundTintList = colorCache.getIconBackgroundTint(item.id)
+
+        // Set click listener
+        cardView.setOnClickListener {
+            handleNavigation(item, isPremium)
+        }
+
+        return cardView
+    }
+
+    // Color cache class to efficiently manage resources
+    inner class SettingsColorCache(context: android.content.Context) {
+        // Icon tint
+        val whiteIconTint = androidx.core.content.ContextCompat.getColorStateList(context, R.color.white)
+
+        // Badge colors
+        private val premiumBadgeBackground = androidx.core.content.ContextCompat.getColorStateList(context, R.color.premium_color)
+        private val newBadgeBackground = androidx.core.content.ContextCompat.getColorStateList(context, R.color.status_paid)
+        private val daysLeftBadgeBackground = androidx.core.content.ContextCompat.getColorStateList(context, R.color.status_unpaid)
+        private val defaultBadgeBackground = androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_light_secondary)
+
+        // Text colors
+        private val blackTextColor = androidx.core.content.ContextCompat.getColor(context, R.color.black)
+        private val whiteTextColor = androidx.core.content.ContextCompat.getColor(context, R.color.white)
+
+        // Default background
+        private val defaultIconBackgroundTint = androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_grey_color)
+
+        // Icon background tints
+        private val iconBackgroundTints: Map<String, android.content.res.ColorStateList?> = mapOf(
+            "debug_subscription" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_pink_color),
+            "subscription_status" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_gold_color),
+            "shop_details" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_green_color),
+            "invoice_format" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_purple_color),
+            "invoice_template" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_blue_color),
+            "reports" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_yellow_color),
+            "recycling_bin" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_red_color),
+            "account_settings" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_orange_color),
+            "app_updates" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_teal_color),
+            "about_language" to androidx.core.content.ContextCompat.getColorStateList(context, R.color.my_background_light_pink_color)
+        )
+
+        fun getBadgeStyling(badgeType: BadgeType): Pair<android.content.res.ColorStateList?, Int> {
+            return when (badgeType) {
+                BadgeType.PREMIUM -> premiumBadgeBackground to whiteTextColor
+                BadgeType.NEW -> newBadgeBackground to whiteTextColor
+                BadgeType.DAYS_LEFT, BadgeType.EXPIRED -> daysLeftBadgeBackground to whiteTextColor
+                BadgeType.TRIAL -> defaultBadgeBackground to whiteTextColor
+                BadgeType.NONE -> defaultBadgeBackground to whiteTextColor
+            }
+        }
+
+        fun getIconBackgroundTint(itemId: String): android.content.res.ColorStateList? {
+            return iconBackgroundTints[itemId] ?: defaultIconBackgroundTint
+        }
     }
 
     // Function to handle navigation based on item clicked
@@ -198,26 +270,11 @@ class MoreSettingFragment : Fragment() {
         builder.show()
     }
 
-//    private fun setLocale(lang: String) {
-//        Log.d("MoreSettingFragment", "Setting locale preference to: $lang")
-//
-//        // 1. Save the selected language preference
-//        val preferences = SecurePreferences.getInstance(requireContext())
-//        preferences.edit().putString("selected_language", lang).apply()
-//        Log.d("MoreSettingFragment", "Saved 'selected_language' = $lang to SecurePreferences.")
-//
-//        // 2. Trigger Activity recreation
-//        // MainActivity's onCreate will now run again, read the new preference,
-//        // and call applyAppLocale (using AppCompatDelegate)
-//        Log.d("MoreSettingFragment", "Calling requireActivity().recreate()")
-//        requireActivity().recreate()
-//    }
-
     private fun setLocale(lang: String) {
         // Save the selected language to SecurePreferences
         val preferences = SecurePreferences.getInstance(requireContext())
         preferences.edit().putString("selected_language", lang).apply()
-        
+
         val locale = java.util.Locale(lang)
         java.util.Locale.setDefault(locale)
         val config = resources.configuration
@@ -225,32 +282,13 @@ class MoreSettingFragment : Fragment() {
         requireActivity().baseContext.resources.updateConfiguration(
             config, requireActivity().baseContext.resources.displayMetrics
         )
-        
+
         requireActivity().recreate()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Keep the cached adapter for faster reuse when fragment is recreated
-        // Only clear binding to prevent memory leaks
         _binding = null
     }
-    // Add onPause to save the scroll position
-    override fun onPause() {
-        super.onPause()
-        // Save scroll position
-        val layoutManager = binding.settingsRecyclerView.layoutManager as? LinearLayoutManager
-        scrollPosition = layoutManager?.findFirstVisibleItemPosition() ?: 0
-    }
 
-    // Add onResume to restore the scroll position
-    override fun onResume() {
-        super.onResume()
-        // Restore scroll position if we have items and adapter
-        if ((cachedAdapter?.itemCount ?: 0) > 0) {
-            binding.settingsRecyclerView.post {
-                (binding.settingsRecyclerView.layoutManager as? LinearLayoutManager)?.scrollToPosition(scrollPosition)
-            }
-        }
-    }
 }

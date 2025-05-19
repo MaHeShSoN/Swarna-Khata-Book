@@ -62,7 +62,10 @@ class NotificationSettingsViewModel(
     }
 
     fun updatePreference(type: NotificationType, enabled: Boolean) {
+        Log.d("NotificationSettingsVM", "Updating preference: $type to $enabled")
+        
         val currentPrefs = _preferences.value ?: NotificationPreferences()
+        Log.d("NotificationSettingsVM", "Current preferences: $currentPrefs")
 
         val updatedPrefs = when (type) {
             NotificationType.APP_UPDATE -> currentPrefs.copy(appUpdates = enabled)
@@ -74,6 +77,7 @@ class NotificationSettingsViewModel(
             NotificationType.ANNIVERSARY -> currentPrefs.copy(customerAnniversary = enabled)
         }
 
+        Log.d("NotificationSettingsVM", "Updated preferences: $updatedPrefs")
         _preferences.value = updatedPrefs
         savePreferences(updatedPrefs)
     }
@@ -101,20 +105,29 @@ class NotificationSettingsViewModel(
 
     private fun savePreferences(prefs: NotificationPreferences) {
         if (!isOnline()) {
+            Log.e("NotificationSettingsVM", "Cannot save changes while offline")
             _errorMessage.value = "Cannot save changes while offline."
             return
         }
 
         viewModelScope.launch {
             _isLoading.value = true
+            Log.d("NotificationSettingsVM", "Attempting to save preferences: $prefs")
+            
             repository.updateNotificationPreferences(prefs).fold(
                 onSuccess = {
+                    Log.d("NotificationSettingsVM", "Successfully saved preferences")
                     _saveSuccess.value = true
                     _isLoading.value = false
                 },
                 onFailure = { error ->
                     Log.e("NotificationSettingsVM", "Error saving preferences", error)
-                    _errorMessage.value = "Could not save preferences. ${error.message}"
+                    val errorMessage = when {
+                        error.message?.contains("No active shop ID") == true -> 
+                            "Please select a shop before changing notification settings"
+                        else -> "Could not save preferences. ${error.message}"
+                    }
+                    _errorMessage.value = errorMessage
                     _isLoading.value = false
                 }
             )

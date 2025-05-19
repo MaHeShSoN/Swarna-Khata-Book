@@ -15,6 +15,7 @@ import com.jewelrypos.swarnakhatabook.Repository.ShopManager
 import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentShopSelectionBinding
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.lang.Exception
 import com.google.firebase.auth.FirebaseAuth
@@ -26,9 +27,19 @@ class ShopSelectionFragment : Fragment() {
     
     private lateinit var adapter: ShopSelectionAdapter
     private var currentActiveShopId: String? = null
+    
+    // Track coroutine jobs to prevent memory leaks
+    private val coroutineJobs = mutableListOf<Job>()
+    
+    // Flag to indicate if user is trying to create a new shop
+    private var isCreatingNewShop = false
+    
+    // Flag to track if user is coming from login
+    private var isFromLogin = false
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentShopSelectionBinding.inflate(inflater, container, false)
@@ -37,6 +48,9 @@ class ShopSelectionFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        
+        // Get the fromLogin argument
+        isFromLogin = arguments?.getBoolean("fromLogin", false) ?: false
         
         // Initialize ShopManager and SessionManager if not already initialized
         context?.let {
@@ -87,6 +101,8 @@ class ShopSelectionFragment : Fragment() {
         binding.buttonCreateNewShop.setOnClickListener {
             // Apply button animation
             AnimationUtils.pulse(it)
+            // Set flag to indicate user is trying to create a new shop
+            isCreatingNewShop = true
             // Check the shop limit before allowing creation
             checkShopLimitAndNavigate()
         }
@@ -102,7 +118,7 @@ class ShopSelectionFragment : Fragment() {
             return
         }
         
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val managedShopsResult = ShopManager.getManagedShops(userId)
                 binding.progressBar.visibility = View.GONE
@@ -141,6 +157,7 @@ class ShopSelectionFragment : Fragment() {
                 ).show()
             }
         }
+        coroutineJobs.add(job)
     }
     
     private fun loadShops() {
@@ -162,13 +179,14 @@ class ShopSelectionFragment : Fragment() {
             }
             
             // Try to load shops by phone number
-            lifecycleScope.launch {
+            val job = viewLifecycleOwner.lifecycleScope.launch {
                 loadShopsByPhoneNumber(phoneNumber)
             }
+            coroutineJobs.add(job)
             return
         }
         
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // First try to get shops from user's managed shops
                 val managedShopsResult = ShopManager.getManagedShops(userId, preferCache = true)
@@ -212,6 +230,7 @@ class ShopSelectionFragment : Fragment() {
                 showEmptyState("Error loading shops: ${e.message}")
             }
         }
+        coroutineJobs.add(job)
     }
     
     private suspend fun loadShopsByPhoneNumber(phoneNumber: String) {
@@ -237,7 +256,8 @@ class ShopSelectionFragment : Fragment() {
     
     private fun updateShopList(shopsList: List<ShopDetails>) {
         // If there's exactly one shop, automatically select it
-        if (shopsList.size == 1) {
+        // BUT only if user is not trying to create a new shop AND is coming from login
+        if (shopsList.size == 1 && !isCreatingNewShop && isFromLogin) {
             val shopId = shopsList[0].shopId
             if (shopId != null) {
                 android.util.Log.d("ShopSelectionFragment", "Only one shop found, automatically selecting: $shopId")
@@ -300,6 +320,13 @@ class ShopSelectionFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Reset the flag when fragment is destroyed
+        isCreatingNewShop = false
+        
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

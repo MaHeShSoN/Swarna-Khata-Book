@@ -2,10 +2,12 @@ package com.jewelrypos.swarnakhatabook
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +23,7 @@ import com.jewelrypos.swarnakhatabook.ViewModle.SplashViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentLauncherBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.jewelrypos.swarnakhatabook.BottomSheet.PinEntryBottomSheet
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Utilitys.DataWipeManager
 import com.jewelrypos.swarnakhatabook.Utilitys.PinCheckResult
 import com.jewelrypos.swarnakhatabook.Utilitys.PinEntryDialogHandler
@@ -30,6 +33,7 @@ import com.jewelrypos.swarnakhatabook.Utilitys.PinSecurityStatus
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.launch
+import java.io.File
 
 class launcherFragment : Fragment() {
 
@@ -37,6 +41,7 @@ class launcherFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var viewModel: SplashViewModel
     private lateinit var sharedPreferences: SharedPreferences
+    private val coroutineJobs = mutableListOf<kotlinx.coroutines.Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -74,69 +79,105 @@ class launcherFragment : Fragment() {
     }
 
     private fun checkSubscriptionStatus() {
-        lifecycleScope.launch {
-            val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
-
-            // Check if trial has expired for non-premium users
-            if (!subscriptionManager.isPremiumUser() && subscriptionManager.hasTrialExpired()) {
-                // Hide loading indicator before showing dialog
-                binding.loadingIndicator.visibility = View.GONE
-                showTrialExpiredDialog()
-            } else {
-                // Trial still valid or user is premium
+        val job = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
+                
+                // Use the centralized subscription check method
+                when (val status = subscriptionManager.checkSubscriptionStatus()) {
+                    is UserSubscriptionManager.SubscriptionStatus.ActiveSubscription -> {
+                        // User has paid subscription, proceed normally
+                        checkPinAndProceed()
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.ActiveTrial -> {
+                        // User in trial period, proceed normally
+                        checkPinAndProceed()
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.GracePeriod -> {
+                        // In grace period - show notification if not already shown
+                        if (!subscriptionManager.hasGracePeriodBeenNotified()) {
+                            binding.loadingIndicator.visibility = View.GONE
+                            showGracePeriodDialog(status.daysRemaining)
+                            subscriptionManager.markGracePeriodNotified()
+                        } else {
+                            // Already notified about grace period, proceed with normal flow
+                            checkPinAndProceed()
+                        }
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.Expired -> {
+                        // Trial expired and not in grace period, show expired dialog
+                        binding.loadingIndicator.visibility = View.GONE
+                        showTrialExpiredDialog()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("LauncherFragment", "Error checking subscription: ${e.message}", e)
+                // If there's an error, proceed with normal flow to avoid blocking users
+                // but log for investigation
                 checkPinAndProceed()
             }
         }
+        coroutineJobs.add(job)
     }
 
     private fun showTrialExpiredDialog() {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Trial Period Expired")
-            .setMessage("Your 10-day trial period has expired. Please upgrade to continue using Swarna Khata Book.")
+            .setTitle(getString(R.string.trial_expired_title))
+            .setMessage(getString(R.string.trial_expired_message))
             .setCancelable(false)
-            .setPositiveButton("Upgrade") { _, _ ->
+            .setPositiveButton(getString(R.string.upgrade)) { _, _ ->
                 // Navigate to upgrade screen
-                // For demonstration, we'll just show a toast
-                Toast.makeText(requireContext(), "Navigate to upgrade screen", Toast.LENGTH_LONG).show()
-
-                // For testing - simulate an upgrade
-                upgradeToPremium()
+                navigateToUpgradeScreen()
             }
-            .setNegativeButton("Log Out") { _, _ ->
+            .setNegativeButton(getString(R.string.log_out)) { _, _ ->
                 // Log out the user
                 logoutUser()
             }
             .show()
     }
 
-    private fun upgradeToPremium() {
-        // Show loading indicator while upgrading
-        binding.loadingIndicator.visibility = View.VISIBLE
-        
-        lifecycleScope.launch {
-            val success = SwarnaKhataBook.getUserSubscriptionManager().updatePremiumStatus(true)
-            if (success) {
-                Toast.makeText(requireContext(), "Upgraded to Premium!", Toast.LENGTH_SHORT).show()
-                // Continue with normal app flow
-                checkPinAndProceed()
-            } else {
-                // Hide loading indicator on failure
-                binding.loadingIndicator.visibility = View.GONE
-                Toast.makeText(requireContext(), "Upgrade failed. Please try again.", Toast.LENGTH_SHORT).show()
-                logoutUser()
-            }
-        }
+    private fun navigateToUpgradeScreen() {
+        val intent = Intent(requireContext(), UpgradeActivity::class.java)
+        startActivity(intent)
     }
 
     private fun logoutUser() {
-        // Clear active shop
+        // Clear active shop session
         SessionManager.clearSession(requireContext())
         
         // Sign out from Firebase
         FirebaseAuth.getInstance().signOut()
 
+        // Clear app-specific data
+        clearAppSpecificData()
+
         // Navigate to login screen
         findNavController().navigate(R.id.action_launcherFragment_to_getDetailsFragment)
+    }
+
+    /**
+     * Clear app-specific data on logout
+     */
+    private fun clearAppSpecificData() {
+        try {
+            val context = requireContext()
+            
+            // Clear local databases
+            context.deleteDatabase("jewelry_app_database.db")
+            context.deleteDatabase("jewelry_pos_cache.db")
+            context.deleteDatabase("metal_item_database.db")
+            
+            // Clear Firebase cache
+            try {
+                File(context.cacheDir, "firebase_firestore.db").delete()
+                File(context.cacheDir, "firestore.sqlite").delete()
+            } catch (e: Exception) {
+                Log.e("LauncherFragment", "Error clearing Firebase cache: ${e.message}")
+            }
+            
+        } catch (e: Exception) {
+            Log.e("LauncherFragment", "Error clearing app data: ${e.message}")
+        }
     }
 
     private fun checkPinAndProceed() {
@@ -175,7 +216,10 @@ class launcherFragment : Fragment() {
                     findNavController().navigate(R.id.action_launcherFragment_to_createShopFragment)
                 }
                 is SplashViewModel.NavigationEvent.NavigateToShopSelection -> {
-                    findNavController().navigate(R.id.action_launcherFragment_to_shopSelectionFragment)
+                    val bundle = Bundle().apply {
+                        putBoolean("fromLogin", true)
+                    }
+                    findNavController().navigate(R.id.action_launcherFragment_to_shopSelectionFragment, bundle)
                 }
                 is SplashViewModel.NavigationEvent.NoInternet -> {
                     showNoInternetDialog()
@@ -260,8 +304,28 @@ class launcherFragment : Fragment() {
             }
         )
     }
+
+    private fun showGracePeriodDialog(daysRemaining: Int) {
+        val pluralSuffix = if (daysRemaining > 1) "s" else ""
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.grace_period_title))
+            .setMessage(getString(R.string.grace_period_message, daysRemaining, pluralSuffix))
+            .setPositiveButton(getString(R.string.upgrade_now)) { _, _ ->
+                navigateToUpgradeScreen()
+            }
+            .setNegativeButton(getString(R.string.continue_using)) { _, _ ->
+                // Continue with normal flow
+                checkPinAndProceed()
+            }
+            .setCancelable(false)
+            .show()
+    }
     
     override fun onDestroyView() {
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         super.onDestroyView()
         _binding = null
     }

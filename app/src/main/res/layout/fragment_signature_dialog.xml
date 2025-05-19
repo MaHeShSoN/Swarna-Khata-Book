@@ -31,7 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="200dp"
         android:layout_marginTop="16dp"
-        android:background="@drawable/signature_background">
+        android:background="@color/white">
 
         <com.jewelrypos.swarnakhatabook.Utilitys.SignatureView
             android:id="@+id/signatureView"

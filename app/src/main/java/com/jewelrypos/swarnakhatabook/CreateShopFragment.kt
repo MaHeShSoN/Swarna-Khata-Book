@@ -16,12 +16,16 @@ import com.jewelrypos.swarnakhatabook.Utilitys.AnimationUtils
 import com.jewelrypos.swarnakhatabook.Utilitys.FeatureChecker
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCreateShopBinding
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class CreateShopFragment : Fragment() {
 
     private var _binding: FragmentCreateShopBinding? = null
     private val binding get() = _binding!!
+    
+    // Track coroutine jobs to prevent memory leaks
+    private val coroutineJobs = mutableListOf<Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -122,7 +126,7 @@ class CreateShopFragment : Fragment() {
      * Check if the user has reached their shop limit based on subscription plan
      */
     private fun checkShopLimit() {
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Get current user ID
                 val userId = SessionManager.getCurrentUserId()
@@ -155,6 +159,7 @@ class CreateShopFragment : Fragment() {
                 Toast.makeText(requireContext(), "Error checking shop limits: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
+        coroutineJobs.add(job)
     }
     
     private fun createShop() {
@@ -187,7 +192,7 @@ class CreateShopFragment : Fragment() {
         )
         
         // Create shop in Firestore
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Pass both userId and phoneNumber to ensure proper association
                 val result = ShopManager.createShop(userId, phoneNumber, shopDetails)
@@ -221,6 +226,7 @@ class CreateShopFragment : Fragment() {
                 setLoading(false)
             }
         }
+        coroutineJobs.add(job)
     }
     
     private fun setLoading(isLoading: Boolean) {
@@ -238,6 +244,10 @@ class CreateShopFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Cancel all coroutine jobs to prevent memory leaks
+        coroutineJobs.forEach { it.cancel() }
+        coroutineJobs.clear()
+        
         _binding = null
     }
 }

@@ -44,6 +44,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentInvoicePdfSettingsBind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -70,6 +71,11 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
     private lateinit var userSubscriptionManager: UserSubscriptionManager // Add this
 
+    // Keep track of any active coroutine jobs
+    private var activePreviewJob: Job? = null
+    private var activeOperationJobs = mutableListOf<Job>()
+    private var previewUpdateScheduled = false
+    private var lastPreviewUpdateTime = 0L
 
     // Flag to prevent multiple concurrent preview generations
     private var isGeneratingPreview = false
@@ -398,10 +404,11 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 debounceJob?.cancel()
 
                 // Create new debounce job with 500ms delay
-                debounceJob = lifecycleScope.launch {
+                debounceJob = viewLifecycleOwner.lifecycleScope.launch {
                     delay(500) // 500ms debounce delay
                     onTextChanged(s.toString())
                 }
+                activeOperationJobs.add(debounceJob!!)
             }
         })
     }
@@ -452,7 +459,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     }
 
     private fun loadSettings() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             isLoadingSettings = true
 
             try {
@@ -531,13 +538,36 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     }
 
     private fun updatePdfPreview() {
+        // Throttle preview updates to prevent excessive PDF generation
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastPreviewUpdateTime < 1000) { // 1 second throttle
+            if (!previewUpdateScheduled) {
+                previewUpdateScheduled = true
+                viewLifecycleOwner.lifecycleScope.launch {
+                    delay(1000 - (currentTime - lastPreviewUpdateTime))
+                    previewUpdateScheduled = false
+                    lastPreviewUpdateTime = System.currentTimeMillis()
+                    generatePdfPreview()
+                }
+            }
+            return
+        }
+        
+        lastPreviewUpdateTime = currentTime
+        generatePdfPreview()
+    }
+    
+    private fun generatePdfPreview() {
         // Prevent multiple concurrent preview generations
         if (isGeneratingPreview) return
         isGeneratingPreview = true
 
         binding.previewProgressBar.visibility = View.VISIBLE
 
-        lifecycleScope.launch {
+        // Cancel any previous preview job
+        activePreviewJob?.cancel()
+        
+        activePreviewJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Generate a sample invoice for preview
                 val sampleInvoice = createSampleInvoice()
@@ -561,6 +591,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                         shopDetails,
                         "sample_invoice_preview"
                     )
+                }
+
+                // Check if coroutine is still active before continuing
+                if (!isActive) {
+                    isGeneratingPreview = false
+                    return@launch
                 }
 
                 // Load PDF into the viewer with enhanced settings
@@ -609,6 +645,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 }
             }
         }
+        activeOperationJobs.add(activePreviewJob!!)
     }
 
     override fun loadComplete(nbPages: Int) {
@@ -652,7 +689,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
         // Save current settings
         pdfSettings?.let { settings ->
-            lifecycleScope.launch(Dispatchers.IO) {
+            val job = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     pdfSettingsManager.saveSettings(settings)
 
@@ -682,6 +719,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     }
                 }
             }
+            activeOperationJobs.add(job)
         }
     }
 
@@ -698,7 +736,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     .setCancelable(false)
                     .show()
 
-                lifecycleScope.launch {
+                val job = viewLifecycleOwner.lifecycleScope.launch {
                     try {
                         // Create default settings
                         pdfSettings = PdfSettings()
@@ -758,6 +796,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                         }
                     }
                 }
+                activeOperationJobs.add(job)
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -847,6 +886,13 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Cancel all active coroutines
+        activePreviewJob?.cancel()
+        activeOperationJobs.forEach { it.cancel() }
+        activeOperationJobs.clear()
+        
+        // Clean up resources
+        pdfView.recycle()
         _binding = null
     }
 
@@ -868,7 +914,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
 
     private fun checkForPremiumStatus() {
-        lifecycleScope.launch { // Launch coroutine inside the listener
+        val job = viewLifecycleOwner.lifecycleScope.launch { // Launch coroutine with proper lifecycle scope
             val isPremium = userSubscriptionManager.isPremiumUser()
             withContext(Dispatchers.Main) { // Switch back to main thread for UI actions
                 if (isPremium) {
@@ -878,7 +924,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 }
             }
         }
-
+        activeOperationJobs.add(job)
     }
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
@@ -922,7 +968,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
     private fun setupColorPickers() {
         binding.selectTemplateButton.setOnClickListener {
-            lifecycleScope.launch {
+            val job = viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     // Force refresh subscription status before checking
                     userSubscriptionManager.refreshSubscriptionStatus()
@@ -946,6 +992,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     }
                 }
             }
+            activeOperationJobs.add(job)
         }
 
         // Setup color picker views
@@ -1100,7 +1147,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
     // Add this method to refresh premium status when fragment resumes
     override fun onResume() {
         super.onResume()
-        lifecycleScope.launch {
+        val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 userSubscriptionManager.refreshSubscriptionStatus()
                 checkForPremiumStatus() // This will update the premium badge visibility
@@ -1108,6 +1155,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                 Log.e("InvoicePdfSettings", "Error refreshing subscription status: ${e.message}")
             }
         }
+        activeOperationJobs.add(job)
     }
 
 }

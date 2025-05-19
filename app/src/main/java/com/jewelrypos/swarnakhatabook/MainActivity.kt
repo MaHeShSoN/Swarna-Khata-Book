@@ -43,6 +43,9 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import com.google.firebase.firestore.FirebaseFirestore
+import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -218,24 +221,49 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
-            // Check if the user has an active subscription
-            val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
-            val isTrialActive = subscriptionManager.isTrialActive()
-
-            // If no active subscription and trial has expired, show alert
-            if (currentPlan == com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan.NONE && !isTrialActive) {
-                // No active subscription and trial expired - show alert
-                if (subscriptionManager.hasTrialExpired()) {
-                    showTrialExpiredDialog()
+            try {
+                // Use the centralized subscription check method
+                when (val status = subscriptionManager.checkSubscriptionStatus()) {
+                    is UserSubscriptionManager.SubscriptionStatus.ActiveSubscription -> {
+                        // User has active subscription, do nothing
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.ActiveTrial -> {
+                        // Show reminder dialog if less than 3 days remaining
+                        if (status.daysRemaining <= 3) {
+                            showTrialReminderDialog(status.daysRemaining)
+                        }
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.GracePeriod -> {
+                        // Show grace period dialog if not already notified
+                        if (!subscriptionManager.hasGracePeriodBeenNotified()) {
+                            showGracePeriodDialog(status.daysRemaining)
+                            subscriptionManager.markGracePeriodNotified()
+                        }
+                    }
+                    is UserSubscriptionManager.SubscriptionStatus.Expired -> {
+                        // Trial expired and not in grace period
+                        showTrialExpiredDialog()
+                    }
                 }
-            } else if (isTrialActive) {
-                // Trial still active - show remaining days if less than 3
-                val daysRemaining = subscriptionManager.getDaysRemaining()
-                if (daysRemaining <= 3) {
-                    showTrialReminderDialog(daysRemaining)
-                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error checking subscription status: ${e.message}", e)
+                // Don't show error to user, fail silently to prevent blocking usage
             }
         }
+    }
+
+    private fun showGracePeriodDialog(daysRemaining: Int) {
+        val pluralSuffix = if (daysRemaining > 1) "s" else ""
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.grace_period_title))
+            .setMessage(getString(R.string.grace_period_message, daysRemaining, pluralSuffix))
+            .setPositiveButton(getString(R.string.upgrade_now)) { _, _ ->
+                navigateToUpgradeScreen()
+            }
+            .setNegativeButton(getString(R.string.remind_later)) { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private fun showTrialExpiredDialog() {
@@ -282,12 +310,53 @@ class MainActivity : AppCompatActivity() {
         FirebaseAuth.getInstance().signOut()
 
         // Clear any app-specific data
+        clearAppSpecificData()
 
         // Redirect to the launcher or login screen
         val intent = Intent(this, MainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
+    }
+
+    /**
+     * Clear app-specific data on logout, but preserve user's cloud data
+     * This only clears local caches without deleting Firestore data
+     */
+    private fun clearAppSpecificData() {
+        try {
+            // Clear local databases (without affecting cloud data)
+            deleteDatabase("jewelry_app_database.db")
+            deleteDatabase("jewelry_pos_cache.db")
+            deleteDatabase("metal_item_database.db")
+            
+            // Clear PIN security data if needed
+            val securePrefs = SecurePreferences.getInstance(this)
+            securePrefs.edit()
+                .remove(PinHashUtil.KEY_PIN_HASH)
+                .remove(PinHashUtil.KEY_PIN_SALT)
+                .apply()
+                
+            // Clear Firebase cache without deleting cloud data
+            try {
+                File(cacheDir, "firebase_firestore.db").delete()
+                File(cacheDir, "firestore.sqlite").delete()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error clearing Firebase cache: ${e.message}")
+            }
+            
+            // Clear app cache
+            try {
+                (application as? SwarnaKhataBook)?.let { 
+                    FirebaseFirestore.getInstance().clearPersistence()
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error clearing Firestore persistence: ${e.message}")
+            }
+            
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error clearing app-specific data: ${e.message}")
+        }
     }
 
     private fun initializeNotificationSystem() {

@@ -10,6 +10,7 @@ import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.SwarnaKhataBook
 import com.jewelrypos.swarnakhatabook.UpgradeActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -27,6 +28,7 @@ class PremiumFeatureHelper {
          * @param showToast Whether to show a toast message for non-premium users
          * @param premiumAction Action to execute if user has premium access
          * @param nonPremiumAction Optional action to execute if user doesn't have premium (defaults to showing upgrade dialog)
+         * @return The created Job that can be tracked or cancelled by the caller
          */
         fun checkPremiumAccess(
             fragment: Fragment,
@@ -34,34 +36,44 @@ class PremiumFeatureHelper {
             showToast: Boolean = true,
             premiumAction: () -> Unit,
             nonPremiumAction: (() -> Unit)? = null
-        ) {
+        ): Job {
             val context = fragment.requireContext()
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
             
-            fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val isPremium = withContext(Dispatchers.IO) {
-                    subscriptionManager.isPremiumUser()
-                }
-                
-                if (isPremium) {
-                    // User has premium access, execute the premium action
-                    premiumAction()
-                } else {
-                    // User doesn't have premium access
-                    if (showToast) {
-                        Toast.makeText(
-                            context,
-                            "Premium subscription required for $featureName",
-                            Toast.LENGTH_SHORT
-                        ).show()
+            return fragment.viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val isPremium = withContext(Dispatchers.IO) {
+                        subscriptionManager.isPremiumUser()
                     }
                     
-                    // Execute non-premium action if provided, otherwise show upgrade dialog
-                    if (nonPremiumAction != null) {
-                        nonPremiumAction()
+                    if (isPremium) {
+                        // User has premium access, execute the premium action
+                        premiumAction()
                     } else {
-                        showPremiumFeatureDialog(context, featureName)
+                        // User doesn't have premium access
+                        if (showToast) {
+                            Toast.makeText(
+                                context,
+                                "Premium subscription required for $featureName",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        
+                        // Execute non-premium action if provided, otherwise show upgrade dialog
+                        if (nonPremiumAction != null) {
+                            nonPremiumAction()
+                        } else {
+                            showPremiumFeatureDialog(context, featureName)
+                        }
                     }
+                } catch (e: Exception) {
+                    // Log error and show a message
+                    android.util.Log.e("PremiumFeatureHelper", "Error checking premium status: ${e.message}")
+                    Toast.makeText(
+                        context,
+                        "Error checking subscription status",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -89,15 +101,22 @@ class PremiumFeatureHelper {
         /**
          * Asynchronously checks if user has premium and returns result via callback
          * Useful for UI initialization that needs to know premium status
+         * @return The created Job that can be tracked or cancelled by the caller
          */
-        fun isPremiumUser(fragment: Fragment, callback: (Boolean) -> Unit) {
+        fun isPremiumUser(fragment: Fragment, callback: (Boolean) -> Unit): Job {
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
             
-            fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val isPremium = withContext(Dispatchers.IO) {
-                    subscriptionManager.isPremiumUser()
+            return fragment.viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val isPremium = withContext(Dispatchers.IO) {
+                        subscriptionManager.isPremiumUser()
+                    }
+                    callback(isPremium)
+                } catch (e: Exception) {
+                    // Log error and assume non-premium in case of error
+                    android.util.Log.e("PremiumFeatureHelper", "Error checking premium status: ${e.message}")
+                    callback(false)
                 }
-                callback(isPremium)
             }
         }
     }

@@ -41,6 +41,8 @@ import coil3.request.transformations
 import coil3.size.Scale
 import coil3.transform.CircleCropTransformation
 import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
+import coil3.load
+import coil3.request.crossfade
 
 class ItemDetailFragment : Fragment() {
 
@@ -183,11 +185,6 @@ class ItemDetailFragment : Fragment() {
                 setupWeightBasedStockUI()
             }
         }
-
-        // Location information
-        binding.locationValue.text =
-            if (item.location.isNotEmpty()) item.location else "Not specified"
-
         // Price information
         if (item.metalRate > 0) {
             binding.goldRateValue.text =
@@ -211,31 +208,51 @@ class ItemDetailFragment : Fragment() {
         // Load item image if available
         if (item.imageUrl.isNotEmpty()) {
             binding.itemImageCard?.visibility = View.VISIBLE
+            
+            // Show replace button, hide camera and gallery buttons
+            binding.replaceImageButton.visibility = View.VISIBLE
+            binding.cameraButton.visibility = View.GONE
+            binding.galleryButton.visibility = View.GONE
 
+            // Show progress overlay while loading image
+            binding.progressOverlay.visibility = View.VISIBLE
+            binding.itemImage.alpha = 0.7f
 
-            // Create an image request configured for efficient background caching
-            val request = ImageRequest.Builder(requireContext())
-                .data(item.imageUrl)
+            // Load image with Coil directly onto the ImageView
+            binding.itemImage.load(item.imageUrl) {
                 // Match the same size as in the adapter for cache consistency
-                .size(JewelleryAdapter.TARGET_WIDTH, JewelleryAdapter.TARGET_HEIGHT)
-                .scale(Scale.FILL)
-                // Set to null target for cache-only loading (no view attached)
-                .target(null)
-                // Instead of priority, use placeholderMemoryCacheKey for caching
-                .placeholderMemoryCacheKey(item.imageUrl)
-                // Ensure we're using memory cache
-                .memoryCachePolicy(CachePolicy.ENABLED)
-                .build()
+                scale(Scale.FILL)
+                crossfade(true)
 
-            requireContext().imageLoader.enqueue(request)
+                // Add loading and error handling
+                listener(
+                    onStart = {
+                        binding.progressOverlay.visibility = View.VISIBLE
+                        binding.itemImage.alpha = 0.7f
+                    },
+                    onSuccess = { _, _ ->
+                        binding.progressOverlay.visibility = View.GONE
+                        binding.itemImage.alpha = 1.0f
+                    },
+                    onError = { _, _ ->
+                        // Show placeholder on error
+                        binding.itemImage.setImageResource(R.drawable.image_placeholder)
+                        binding.progressOverlay.visibility = View.GONE
+                        binding.itemImage.alpha = 1.0f
+                    }
+                )
+            }
         } else {
+            // No image available
             binding.itemImageCard?.visibility = View.VISIBLE
             binding.itemImage.setImageResource(R.drawable.image_placeholder)
-        }
-
-        // Set click listener for replace image button
-        binding.replaceImageButton.setOnClickListener {
-            showImageEditOptions()
+            binding.progressOverlay.visibility = View.GONE
+            binding.itemImage.alpha = 1.0f
+            
+            // Hide replace button, show camera and gallery buttons
+            binding.replaceImageButton.visibility = View.GONE
+            binding.cameraButton.visibility = View.VISIBLE
+            binding.galleryButton.visibility = View.VISIBLE
         }
 
         // Extra charges
@@ -335,6 +352,30 @@ class ItemDetailFragment : Fragment() {
         // Apply stock adjustment button
         binding.applyStockButton.setOnClickListener {
             applyStockAdjustment()
+        }
+        
+        // Image related button listeners
+        binding.replaceImageButton.setOnClickListener {
+            showImageEditOptions()
+        }
+        
+        binding.cameraButton.setOnClickListener {
+            dispatchTakePictureIntent()
+        }
+        
+        binding.galleryButton.setOnClickListener {
+            dispatchGalleryIntent()
+        }
+        
+        // Item image click should also show image options
+        binding.itemImage.setOnClickListener {
+            if (viewModel.jewelryItem.value?.imageUrl?.isNotEmpty() == true) {
+                // If we have an image, show replace options
+                showImageEditOptions()
+            } else {
+                // If no image, default to camera
+                dispatchTakePictureIntent()
+            }
         }
     }
 
@@ -556,6 +597,15 @@ class ItemDetailFragment : Fragment() {
                     currentImagePath?.let { path ->
                         val file = File(path)
                         if (file.exists()) {
+                            // Create URI from file
+                            val uri = FileProvider.getUriForFile(
+                                requireContext(),
+                                "${requireContext().packageName}.provider",
+                                file
+                            )
+                            // Display image immediately
+                            displaySelectedImage(uri)
+                            // Then start upload
                             uploadImageToFirebase(file)
                         } else {
                             Toast.makeText(
@@ -569,6 +619,9 @@ class ItemDetailFragment : Fragment() {
 
                 REQUEST_GALLERY_PICK -> {
                     data?.data?.let { uri ->
+                        // Display image immediately
+                        displaySelectedImage(uri)
+                        // Create file and upload
                         val file = createFileFromUri(uri)
                         if (file != null) {
                             uploadImageToFirebase(file)
@@ -610,16 +663,28 @@ class ItemDetailFragment : Fragment() {
     }
 
     private fun uploadImageToFirebase(file: File) {
+        // Show both progress indicators
         binding.progressBar.visibility = View.VISIBLE
+        // Show the image upload progress overlay
+        binding.itemImage.alpha = 0.7f
+        binding.progressOverlay.visibility = View.VISIBLE
 
         val currentItem = viewModel.jewelryItem.value ?: return
 
         viewModel.uploadItemImage(file) { success, imageUrl ->
+            // Hide progress indicators
             binding.progressBar.visibility = View.GONE
+            binding.itemImage.alpha = 1.0f
+            binding.progressOverlay.visibility = View.GONE
 
             if (success && imageUrl.isNotEmpty()) {
                 // Update the item with the new image URL
                 val updatedItem = currentItem.copy(imageUrl = imageUrl)
+                
+                // Update UI to show the replace button instead of camera/gallery
+                binding.replaceImageButton.visibility = View.VISIBLE
+                binding.cameraButton.visibility = View.GONE
+                binding.galleryButton.visibility = View.GONE
 
                 viewModel.updateItem(updatedItem) { updateSuccess ->
                     if (updateSuccess) {
@@ -639,6 +704,58 @@ class ItemDetailFragment : Fragment() {
             } else {
                 Toast.makeText(context, "Failed to upload image", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    /**
+     * Displays the selected image in the ImageView and updates the UI elements
+     * to show the proper buttons based on having an image
+     */
+    private fun displaySelectedImage(uri: Uri?) {
+        if (uri == null) return
+        
+        try {
+            // Show the image and hide the instruction text
+
+            // Show replace button and hide camera/gallery buttons
+            binding.replaceImageButton.visibility = View.VISIBLE
+            binding.cameraButton.visibility = View.GONE
+            binding.galleryButton.visibility = View.GONE
+            
+            // Temporary show progress until image loads
+            binding.progressOverlay.visibility = View.VISIBLE
+            binding.itemImage.alpha = 0.7f
+            
+            // Display the image using Coil
+            binding.itemImage.load(uri) {
+                scale(Scale.FILL)
+                crossfade(true)
+                
+                listener(
+                    onSuccess = { _, _ ->
+                        binding.progressOverlay.visibility = View.GONE
+                        binding.itemImage.alpha = 1.0f
+                    },
+                    onError = { _, _ ->
+                        binding.progressOverlay.visibility = View.GONE
+                        binding.itemImage.alpha = 1.0f
+                        binding.itemImage.setImageResource(R.drawable.image_placeholder)
+                        Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        } catch (e: Exception) {
+            binding.progressOverlay.visibility = View.GONE
+            binding.itemImage.alpha = 1.0f
+            binding.itemImage.setImageResource(R.drawable.image_placeholder)
+            
+            // If error, revert to camera/gallery buttons
+            binding.replaceImageButton.visibility = View.GONE
+            binding.cameraButton.visibility = View.VISIBLE 
+            binding.galleryButton.visibility = View.VISIBLE
+
+            Toast.makeText(context, "Error displaying image: ${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("ItemDetailFragment", "Error displaying image", e)
         }
     }
 
@@ -802,7 +919,7 @@ class ItemDetailFragment : Fragment() {
     }
 
     // For continuous adjustment on long press
-    private var continuousHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var continuousHandler: android.os.Handler? = android.os.Handler(android.os.Looper.getMainLooper())
     private var adjustmentRunnable: Runnable? = null
 
     private fun startContinuousAdjustment(value: Number, isQuantity: Boolean) {
@@ -815,17 +932,17 @@ class ItemDetailFragment : Fragment() {
                 } else {
                     adjustStockWeight(value.toDouble())
                 }
-                continuousHandler.postDelayed(this, 150) // Adjust every 150ms
+                continuousHandler?.postDelayed(this, 150) // Adjust every 150ms
             }
         }
 
         // Start after a small delay
-        continuousHandler.postDelayed(adjustmentRunnable!!, 500)
+        continuousHandler?.postDelayed(adjustmentRunnable!!, 500)
     }
 
     private fun stopContinuousAdjustment() {
         adjustmentRunnable?.let {
-            continuousHandler.removeCallbacks(it)
+            continuousHandler?.removeCallbacks(it)
             adjustmentRunnable = null
         }
     }
@@ -885,7 +1002,10 @@ class ItemDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        stopContinuousAdjustment() // Ensure we clean up any pending callbacks
+        // Properly clean up handler to prevent memory leaks
+        stopContinuousAdjustment() 
+        continuousHandler?.removeCallbacksAndMessages(null)
+        continuousHandler = null
         _binding = null
     }
 

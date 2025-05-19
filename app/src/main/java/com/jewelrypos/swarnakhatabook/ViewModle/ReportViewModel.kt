@@ -665,25 +665,49 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                // Define low stock threshold
-                val LOW_STOCK_THRESHOLD = 5.0
+                // Define low stock thresholds
+                val LOW_STOCK_THRESHOLD = 5.0 // For quantity-based inventory
+                val LOW_STOCK_WEIGHT_THRESHOLD = 100.0 // For weight-based inventory (grams)
 
                 // Get all inventory items for this shop
                 val result = inventoryRepository.getAllInventoryItems()
 
                 result.fold(
                     onSuccess = { items ->
-                        // Filter low stock items
+                        // Filter low stock items based on inventory type
                         val lowStockItems = items
-                            .filter { it.stock <= LOW_STOCK_THRESHOLD }
+                            .filter { item ->
+                                when (item.inventoryType) {
+                                    com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> {
+                                        // For weight-based inventory, check totalWeightGrams
+                                        item.totalWeightGrams <= LOW_STOCK_WEIGHT_THRESHOLD
+                                    }
+                                    else -> {
+                                        // For quantity-based inventory, check stock
+                                        item.stock <= LOW_STOCK_THRESHOLD
+                                    }
+                                }
+                            }
                             .map { item ->
+                                // Determine appropriate reorder level based on inventory type
+                                val reorderLevel = when (item.inventoryType) {
+                                    com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> LOW_STOCK_WEIGHT_THRESHOLD
+                                    else -> LOW_STOCK_THRESHOLD
+                                }
+                                
                                 LowStockItem(
                                     id = item.id,
                                     name = item.displayName,
                                     itemType = item.itemType,
-                                    currentStock = item.stock,
-                                    stockUnit = item.stockUnit,
-                                    reorderLevel = LOW_STOCK_THRESHOLD,
+                                    currentStock = when (item.inventoryType) {
+                                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> item.totalWeightGrams
+                                        else -> item.stock
+                                    },
+                                    stockUnit = when (item.inventoryType) {
+                                        com.jewelrypos.swarnakhatabook.Enums.InventoryType.BULK_STOCK -> "g"
+                                        else -> item.stockUnit
+                                    },
+                                    reorderLevel = reorderLevel,
                                     lastSoldDate = null // This would require additional query to find
                                 )
                             }

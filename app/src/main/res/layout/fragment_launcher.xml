@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/cream_background"
     tools:context=".launcherFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -16,7 +17,7 @@
             android:layout_height="match_parent"
             android:padding="58dp"
             android:scaleType="fitCenter"
-            android:src="@drawable/swarnakhatabook"
+            android:src="@drawable/swarna_khata_book_01"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

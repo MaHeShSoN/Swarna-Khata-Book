@@ -41,6 +41,12 @@ class UpgradeActivity : AppCompatActivity() {
         billingManager = SwarnaKhataBook.getBillingManager()
         subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
 
+        // Get current plan from intent if available
+        val currentPlanFromIntent = intent.getStringExtra("CURRENT_PLAN")
+        if (currentPlanFromIntent != null && currentPlanFromIntent != "NONE") {
+            selectedPlanType = currentPlanFromIntent
+        }
+
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
             finish()
@@ -464,37 +470,19 @@ class UpgradeActivity : AppCompatActivity() {
      * Populate subscription card prices with dynamic prices from Google Play
      */
     private fun updateCardPrices() {
-        // Update prices for all cards
-        try {
-            // Monthly cards
-            val basicMonthlyPrice =
-                billingManager.getFormattedPrice(BillingManager.SKU_BASIC_MONTHLY)
-            val standardMonthlyPrice =
-                billingManager.getFormattedPrice(BillingManager.SKU_STANDARD_MONTHLY)
-            val premiumMonthlyPrice =
-                billingManager.getFormattedPrice(BillingManager.SKU_PREMIUM_MONTHLY)
+        // Set hardcoded prices for all cards
+        // Monthly prices
+        binding.basicMonthlyPrice.text = "₹99"
+        binding.standardMonthlyPrice.text = "₹199"
+        binding.premiumMonthlyPrice.text = "₹299"
 
-            // Yearly cards
-            val basicYearlyPrice = billingManager.getFormattedPrice(BillingManager.SKU_BASIC_YEARLY)
-            val standardYearlyPrice =
-                billingManager.getFormattedPrice(BillingManager.SKU_STANDARD_YEARLY)
-            val premiumYearlyPrice =
-                billingManager.getFormattedPrice(BillingManager.SKU_PREMIUM_YEARLY)
+        // Yearly prices
+        binding.basicYearlyPrice.text = "₹999"
+        binding.standardYearlyPrice.text = "₹1,999"
+        binding.premiumYearlyPrice.text = "₹2,999"
 
-            // Update card price text views if available
-            basicMonthlyPrice?.let { binding.basicMonthlyPrice.text = it }
-            standardMonthlyPrice?.let { binding.standardMonthlyPrice.text = it }
-            premiumMonthlyPrice?.let { binding.premiumMonthlyPrice.text = it }
-
-            basicYearlyPrice?.let { binding.basicYearlyPrice.text = it }
-            standardYearlyPrice?.let { binding.standardYearlyPrice.text = it }
-            premiumYearlyPrice?.let { binding.premiumYearlyPrice.text = it }
-
-            // Update purchase button text
-            updatePurchaseButtonText()
-        } catch (e: Exception) {
-            Log.e("UpgradeActivity", "Error updating card prices", e)
-        }
+        // Update purchase button text
+        updatePurchaseButtonText()
     }
 
 

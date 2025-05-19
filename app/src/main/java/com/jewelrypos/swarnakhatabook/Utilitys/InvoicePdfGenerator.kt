@@ -3,6 +3,7 @@ package com.jewelrypos.swarnakhatabook.Utilitys
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Color
 import android.net.Uri
 import android.util.Log
@@ -16,6 +17,7 @@ import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
 import com.jewelrypos.swarnakhatabook.DataClasses.Shop
 import com.jewelrypos.swarnakhatabook.Enums.TemplateType
+import com.jewelrypos.swarnakhatabook.R
 import com.tom_roush.harmony.awt.AWTColor
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import com.tom_roush.pdfbox.pdmodel.PDDocument
@@ -28,6 +30,7 @@ import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject
 import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.text.DecimalFormat
@@ -178,6 +181,32 @@ class InvoicePdfGenerator(private val context: Context) {
         // TAX INVOICE title (right side) - adjusted to match image
         stream.setNonStrokingColor(AWTColor(0, 0, 0))
         drawText(stream, "TAX INVOICE", w - 220f, h - 47f, 14f, true)
+
+        // Add "ORIGINAL FOR RECEIPT" text with rectangle - now positioned to the right with some space
+        val receiptText = "ORIGINAL FOR RECEIPT"
+        val textWidth1 = regularFont.getStringWidth(receiptText) / 1000 * 8f // Convert to actual width
+        val textHeight = 8f
+        val padding = 3f // Padding around the text
+
+        // Define gray color
+        val grayColor = AWTColor(120, 120, 120) // Medium gray
+
+        // Draw rectangle around text with gray border
+        stream.setStrokingColor(grayColor)
+        stream.setLineWidth(0.5f) // Thin border
+
+        // Rectangle coordinates - positioned to the right of "TAX INVOICE" with space
+        stream.addRect(
+            w - 110f, // Moved to the right
+            h - 50f,  // Aligned with TAX INVOICE height
+            textWidth1 + (padding * 2),
+            textHeight + (padding * 2)
+        )
+        stream.stroke() // Draw the rectangle outline
+
+        // Draw the text in gray
+        stream.setNonStrokingColor(grayColor) // Gray text
+        drawText(stream, receiptText, w - 110f + padding, h - 45f, 8f, false)
 
         // ---------- CUSTOMER AND INVOICE DETAILS SECTION ----------
         // "BILL TO" section
@@ -613,27 +642,92 @@ class InvoicePdfGenerator(private val context: Context) {
             ) // Moved more to the left (was 60f)
         }
 
+        // Reduced size for app logo
+        val appLogoBitmap = vectorToBitmap(context, R.drawable.swarna_khata_book_03, 25, 25) // Reduced from 60x60
+        val appLogoStream = ByteArrayOutputStream()
+        appLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, appLogoStream)
+        val appLogoBytes = appLogoStream.toByteArray()
+        val appLogo = PDImageXObject.createFromByteArray(document, appLogoBytes, "app_logo")
+
+// Reduced size for Play Store logo
+        val playStoreLogoBitmap = vectorToBitmap(context, R.drawable.ion__logo_google_playstore, 25, 25) // Reduced from 60x60
+        val playStoreLogoStream = ByteArrayOutputStream()
+        playStoreLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, playStoreLogoStream)
+        val playStoreLogoBytes = playStoreLogoStream.toByteArray()
+        val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
+
+// Draw enclosing rectangle for footer
+        stream.setStrokingColor(secondaryColor)
+        stream.setLineWidth(0.5f)
+        stream.addRect(w/2 - 130f, 30f, 260f, 15f)
+//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
+        stream.stroke()
+
+// Draw logos and text
+// Scale the images to appropriate size for the PDF
+        val logoWidth = 15f  // Reduced from 20f
+        val logoHeight = 15f // Reduced from 20f
+
+        //reduse 120 tp 90
+//        contentStream.drawImage(appLogo, pageWidth / 2 - 100f, 30f, logoWidth, logoHeight)
+//        contentStream.drawImage(playStoreLogo, pageWidth / 2 + 135f, 30f, logoWidth, logoHeight)
+        // Position the app logo on the left side of centered text
+        stream.drawImage(appLogo, w/2 - 125f, 30f, logoWidth, logoHeight)
+// Position the play store logo on the right side of centered text
+        stream.drawImage(playStoreLogo, w/2 + 110f, 30f, logoWidth, logoHeight)
+
+// Draw text centered between the logos
+        stream.setFont(regularFont, 7f)
+        stream.setNonStrokingColor(secondaryColor)
+        stream.beginText()
+//        stream.newLineAtOffset(pageWidth / 2 - 80f, 35f)
+        val footerText = "Invoice Created From SwarnaKhataBook, Available On Play Store"
+        val textWidth = regularFont.getStringWidth(footerText) / 1000 * 7f
+        stream.newLineAtOffset(w/2 - textWidth/2, 35f)
+        stream.showText(footerText)
+        stream.endText()
+
+        // Fix #3: Add signature implementation
+
         // Fix #3: Add signature implementation
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
                 // Draw uploaded signature image
                 try {
+                    // First draw a rectangle for signature (new code)
+                    stream.setStrokingColor(AWTColor(0, 0, 0))  // Black outline
+                    stream.setLineWidth(0.5f)  // Thin border
+                      stream.addRect(w - 150f, 90f, 120f, 30f)
+                  
+                    // Signature box
+                    stream.stroke()  // Draw the rectangle outline
+
+                    // Then draw uploaded signature image inside the box
                     drawSignatureImage(document, w - 80f, 100f, settings.signatureUri!!, stream)
                     stream.setNonStrokingColor(AWTColor(0, 0, 0))
-                    drawText(stream, "Authorized Signature", w - 120f, 80f, 9f, true)
+                    drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 9f, true)
                     drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
                 } catch (e: Exception) {
                     Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
-                    // Fall back to text-only signature line
+                    // Fall back to text-only signature line with box
+                    stream.setStrokingColor(AWTColor(0, 0, 0))
+                    stream.setLineWidth(0.5f)
+                      stream.addRect(w - 150f, 90f, 120f, 30f)  // Signature box
+                    stream.stroke()
+
                     stream.setNonStrokingColor(AWTColor(0, 0, 0))
-                    drawText(stream, "Authorized Signature", w - 120f, 80f, 10f, true)
+                    drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 10f, true)
                     drawText(stream, details.shopName, w - 120f, 65f, 9f, false)
                 }
             } else {
-                // Draw signature line
+                // Draw signature box with line
+                stream.setStrokingColor(AWTColor(0, 0, 0))
+                stream.setLineWidth(0.5f)
+                  stream.addRect(w - 150f, 90f, 120f, 30f)  // Signature box
+                stream.stroke()
+
                 stream.setNonStrokingColor(AWTColor(0, 0, 0))
-                drawLine(stream, w - 110, 90f, w - 40, 90f, 0.5f, AWTColor(0, 0, 0))
-                drawText(stream, "Authorized Signature", w - 120f, 80f, 9f, true)
+                drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 9f, true)
                 drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
             }
         } else {
@@ -641,10 +735,6 @@ class InvoicePdfGenerator(private val context: Context) {
             stream.setNonStrokingColor(AWTColor(0, 0, 0))
             drawText(stream, details.shopName, w - 120f, 65f, 10f, true)
         }
-
-        // Add bottom text (Requested feature #4)
-        stream.setNonStrokingColor(AWTColor(100, 100, 100)) // Gray color
-        drawCenteredText(stream, "Invoice Made By Swarna Khata Book", w / 2, 30f, 8f, false)
     }
 
     private fun generateLuxuryBoutiqueTemplate(
@@ -1431,7 +1521,7 @@ class InvoicePdfGenerator(private val context: Context) {
             columnX += columnWidths[1] * (w - 40f)
 
             // Gross Weight
-            val gwX = columnX + (columnWidths[2] * (w - 40f)) / 2 - 10f
+            val gwX = columnX + (columnWidths[2] * (w - 40f)) / 2 - 15f
             drawText(stream, formatter.format(grossWeight), gwX, currentY, 9f, false)
             columnX += columnWidths[2] * (w - 40f)
 
@@ -1441,7 +1531,7 @@ class InvoicePdfGenerator(private val context: Context) {
             columnX += columnWidths[3] * (w - 40f)
 
             // Net Weight
-            val nwX = columnX + (columnWidths[4] * (w - 40f)) / 2 - 10f
+            val nwX = columnX + (columnWidths[4] * (w - 40f)) / 2 - 15f
             drawText(stream, formatter.format(netWeight), nwX, currentY, 9f, false)
             columnX += columnWidths[4] * (w - 40f)
 
@@ -1451,17 +1541,17 @@ class InvoicePdfGenerator(private val context: Context) {
             columnX += columnWidths[5] * (w - 40f)
 
             // Labour
-            val lbX = columnX + (columnWidths[6] * (w - 40f)) / 2 - 10f
+            val lbX = columnX + (columnWidths[6] * (w - 40f)) / 2 - 20f
             drawText(stream, formatter.format(labour), lbX, currentY, 9f, false)
             columnX += columnWidths[6] * (w - 40f)
 
             // Gold Value
-            val gvX = columnX + (columnWidths[7] * (w - 40f)) / 2 - 10f
+            val gvX = columnX + (columnWidths[7] * (w - 40f)) / 2 - 20f
             drawText(stream, formatter.format(goldValue), gvX, currentY, 9f, false)
             columnX += columnWidths[7] * (w - 40f)
 
             // Total Value
-            val tvX = columnX + (columnWidths[8] * (w - 40f)) / 2 - 10f
+            val tvX = columnX + (columnWidths[8] * (w - 40f)) / 2 - 20f
             drawText(stream, formatter.format(itemTotal), tvX, currentY, 9f, false)
 
             currentY -= 25f
@@ -1702,7 +1792,7 @@ class InvoicePdfGenerator(private val context: Context) {
         pageHeight: Float
     ) {
         // Draw page structure with border
-        drawRectangle(contentStream, 20f, 20f, pageWidth - 40f, pageHeight - 40f, primaryColor)
+        drawRectangle(contentStream, 20f, 20f, pageWidth - 40f, pageHeight - 40f, secondaryColor)
 
         // Header section line
         drawLine(
@@ -1937,11 +2027,36 @@ class InvoicePdfGenerator(private val context: Context) {
         contentStream.showText("TAX INVOICE")
         contentStream.endText()
 
-        // Add "ORIGINAL FOR RECIPIENT" tag
         contentStream.setFont(regularFont, 8f)
+
+        // Calculate text dimensions
+        val recipientText = "ORIGINAL FOR RECIPIENT"
+        val textWidth1 = regularFont.getStringWidth(recipientText) / 1000 * 8f // Convert to actual width
+        val textHeight = 8f
+        val padding = 3f // Padding around the text
+
+        // Define gray color
+        val grayColor = AWTColor(120, 120, 120) // Medium gray
+
+        // Draw rectangle around text with gray border
+        contentStream.setStrokingColor(grayColor) // Gray border
+        contentStream.setLineWidth(0.5f) // Thin border
+
+        // Rectangle coordinates: x, y, width, height
+        // Note: y is the bottom-left corner of the rectangle
+        contentStream.addRect(
+            100f - padding,
+            pageHeight - 40f - textHeight + 3f,
+            textWidth1 + (padding * 2),
+            textHeight + (padding * 2)+3f
+        )
+        contentStream.stroke() // Draw the outlined rectangle
+
+        // Draw the text in gray
+        contentStream.setNonStrokingColor(grayColor) // Gray text
         contentStream.beginText()
         contentStream.newLineAtOffset(100f, pageHeight - 40f)
-        contentStream.showText("ORIGINAL FOR RECIPIENT")
+        contentStream.showText(recipientText)
         contentStream.endText()
 
         // Shop name and details
@@ -2068,39 +2183,113 @@ class InvoicePdfGenerator(private val context: Context) {
         contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
         // Draw signature at right bottom
+// Fix #3: Add signature implementation
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
-                drawSignatureImage(
-                    document,
-                    pageWidth - 90f,
-                    signatureY - 25f,
-                    settings.signatureUri!!,
-                    contentStream
-                )
-            }
-            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+                // Draw uploaded signature image
+                try {
+                    // First draw a rectangle for signature (new code)
+                    contentStream.setStrokingColor(AWTColor(0, 0, 0))  // Black outline
+                    contentStream.setLineWidth(0.5f)  // Thin border
+                    contentStream.addRect(pageWidth - 150f, 90f, 120f, 30f)  // Signature box
+                      // Signature box
+                    contentStream.stroke()  // Draw the rectangle outline
 
-            drawText(
-                contentStream,
-                "AUTHORISED SIGNATORY FOR",
-                pageWidth - 140f,
-                signatureY - 50f,
-                8f,
-                true
-            )
-            // Set color to black explicitly for terms and conditions
-            drawText(contentStream, shop.shopName, pageWidth - 140f, signatureY - 60f, 8f, false)
+                    // Then draw uploaded signature image inside the box
+                    drawSignatureImage(document, pageWidth - 80f, 100f, settings.signatureUri!!, contentStream)
+                    contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+                    drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 9f, true)
+                    drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 8f, false)
+                } catch (e: Exception) {
+                    Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
+                    // Fall back to text-only signature line with box
+                    contentStream.setStrokingColor(AWTColor(0, 0, 0))
+                    contentStream.setLineWidth(0.5f)
+                    contentStream.addRect(pageWidth - 150f, 90f, 120f, 30f)  // Signature box
+                    contentStream.stroke()
+
+                    contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+                    drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 10f, true)
+                    drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 9f, false)
+                }
+            } else {
+                // Draw signature box with line
+                contentStream.setStrokingColor(AWTColor(0, 0, 0))
+                contentStream.setLineWidth(0.5f)
+                contentStream.addRect(pageWidth - 150f, 90f, 120f, 30f)  // Signature box
+                contentStream.stroke()
+
+                contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+                drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 9f, true)
+                drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 8f, false)
+            }
+        } else {
+            // Shop name at the bottom right even if signature is not shown
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 10f, true)
         }
 
-        // Draw footer at bottom
+
+
+        // Draw footer with vector drawable logos at bottom and enclose in rectangle
+// Function to convert vector drawable to bitmap
+
+
+// Reduced size for app logo
+        val appLogoBitmap = vectorToBitmap(context, R.drawable.swarna_khata_book_03, 25, 25) // Reduced from 60x60
+        val appLogoStream = ByteArrayOutputStream()
+        appLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, appLogoStream)
+        val appLogoBytes = appLogoStream.toByteArray()
+        val appLogo = PDImageXObject.createFromByteArray(document, appLogoBytes, "app_logo")
+
+// Reduced size for Play Store logo
+        val playStoreLogoBitmap = vectorToBitmap(context, R.drawable.ion__logo_google_playstore, 25, 25) // Reduced from 60x60
+        val playStoreLogoStream = ByteArrayOutputStream()
+        playStoreLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, playStoreLogoStream)
+        val playStoreLogoBytes = playStoreLogoStream.toByteArray()
+        val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
+
+// Draw enclosing rectangle for footer
+        contentStream.setStrokingColor(secondaryColor)
+        contentStream.setLineWidth(0.5f)
+        contentStream.addRect(pageWidth/2 - 130f, 30f, 260f, 15f)
+//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
+        contentStream.stroke()
+
+// Draw logos and text
+// Scale the images to appropriate size for the PDF
+        val logoWidth = 15f  // Reduced from 20f
+        val logoHeight = 15f // Reduced from 20f
+
+        //reduse 120 tp 90
+//        contentStream.drawImage(appLogo, pageWidth / 2 - 100f, 30f, logoWidth, logoHeight)
+//        contentStream.drawImage(playStoreLogo, pageWidth / 2 + 135f, 30f, logoWidth, logoHeight)
+        // Position the app logo on the left side of centered text
+        contentStream.drawImage(appLogo, pageWidth/2 - 125f, 30f, logoWidth, logoHeight)
+// Position the play store logo on the right side of centered text
+        contentStream.drawImage(playStoreLogo, pageWidth/2 + 110f, 30f, logoWidth, logoHeight)
+
+// Draw text centered between the logos
         contentStream.setFont(regularFont, 7f)
         contentStream.setNonStrokingColor(secondaryColor)
         contentStream.beginText()
-        contentStream.newLineAtOffset(pageWidth / 2 - 50f, 30f)
-        contentStream.showText("Invoice created using SwarnaKhataBook")
+//        contentStream.newLineAtOffset(pageWidth / 2 - 80f, 35f)
+        val footerText = "Invoice Created From SwarnaKhataBook, Available On Play Store"
+        val textWidth = regularFont.getStringWidth(footerText) / 1000 * 7f
+        contentStream.newLineAtOffset(pageWidth/2 - textWidth/2, 35f)
+        contentStream.showText(footerText)
         contentStream.endText()
+
     }
 
+    fun vectorToBitmap(context: Context, drawableId: Int, width: Int, height: Int): Bitmap {
+        val drawable = ContextCompat.getDrawable(context, drawableId)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable?.setBounds(0, 0, canvas.width, canvas.height)
+        drawable?.draw(canvas)
+        return bitmap
+    }
 
     private fun drawImprovedStylishItemsTable(
         contentStream: PDPageContentStream,
@@ -2829,11 +3018,50 @@ class InvoicePdfGenerator(private val context: Context) {
             }
         }
 
-        // Draw thank you message
-        contentStream.setNonStrokingColor(primaryColor)
-        drawCenteredText(
-            contentStream, "Thank you for shopping with us!", pageWidth / 2, 30f, 10f, true
-        )
+// Reduced size for app logo
+        val appLogoBitmap = vectorToBitmap(context, R.drawable.swarna_khata_book_03, 25, 25) // Reduced from 60x60
+        val appLogoStream = ByteArrayOutputStream()
+        appLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, appLogoStream)
+        val appLogoBytes = appLogoStream.toByteArray()
+        val appLogo = PDImageXObject.createFromByteArray(document, appLogoBytes, "app_logo")
+
+// Reduced size for Play Store logo
+        val playStoreLogoBitmap = vectorToBitmap(context, R.drawable.ion__logo_google_playstore, 25, 25) // Reduced from 60x60
+        val playStoreLogoStream = ByteArrayOutputStream()
+        playStoreLogoBitmap.compress(Bitmap.CompressFormat.PNG, 100, playStoreLogoStream)
+        val playStoreLogoBytes = playStoreLogoStream.toByteArray()
+        val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
+
+// Draw enclosing rectangle for footer
+        contentStream.setStrokingColor(secondaryColor)
+        contentStream.setLineWidth(0.5f)
+        contentStream.addRect(pageWidth/2 - 130f, 30f, 260f, 15f)
+//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
+        contentStream.stroke()
+
+// Draw logos and text
+// Scale the images to appropriate size for the PDF
+        val logoWidth = 15f  // Reduced from 20f
+        val logoHeight = 15f // Reduced from 20f
+
+        //reduse 120 tp 90
+//        contentStream.drawImage(appLogo, pageWidth / 2 - 100f, 30f, logoWidth, logoHeight)
+//        contentStream.drawImage(playStoreLogo, pageWidth / 2 + 135f, 30f, logoWidth, logoHeight)
+        // Position the app logo on the left side of centered text
+        contentStream.drawImage(appLogo, pageWidth/2 - 125f, 30f, logoWidth, logoHeight)
+// Position the play store logo on the right side of centered text
+        contentStream.drawImage(playStoreLogo, pageWidth/2 + 110f, 30f, logoWidth, logoHeight)
+
+// Draw text centered between the logos
+        contentStream.setFont(regularFont, 7f)
+        contentStream.setNonStrokingColor(secondaryColor)
+        contentStream.beginText()
+//        contentStream.newLineAtOffset(pageWidth / 2 - 80f, 35f)
+        val footerText = "Invoice Created From SwarnaKhataBook, Available On Play Store"
+        val textWidth = regularFont.getStringWidth(footerText) / 1000 * 7f
+        contentStream.newLineAtOffset(pageWidth/2 - textWidth/2, 35f)
+        contentStream.showText(footerText)
+        contentStream.endText()
     }
 
     // Utility methods

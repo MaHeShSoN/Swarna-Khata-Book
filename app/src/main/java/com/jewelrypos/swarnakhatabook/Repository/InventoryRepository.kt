@@ -279,28 +279,87 @@ class InventoryRepository(
         }
     }
 
-    suspend fun getAllInventoryItems(source: Source = Source.DEFAULT): Result<List<JewelleryItem>> {
+    /**
+     * Get all inventory items with pagination
+     * @param pageSize Number of items per page
+     * @param lastDocument Last document snapshot for pagination
+     * @param source Data source (CACHE or SERVER)
+     * @return Result containing the list of items and the last document for pagination
+     */
+    suspend fun getAllInventoryItemsPaginated(
+        pageSize: Int = 20,
+        lastDocument: DocumentSnapshot? = null,
+        source: Source = Source.DEFAULT
+    ): Result<Pair<List<JewelleryItem>, DocumentSnapshot?>> {
         return try {
             val shopId = getCurrentShopId()
 
-            // This query gets all items without pagination
-            val snapshot = firestore.collection("shopData")
+            // Build the query with pagination
+            var query = firestore.collection("shopData")
                 .document(shopId)
                 .collection("inventory")
-                .get(source)
-                .await()
+                .limit(pageSize.toLong())
 
-            val items = snapshot.toObjects(JewelleryItem::class.java)
-            Log.d(TAG, "Loaded all ${items.size} inventory items")
-            Result.success(items)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading all inventory items", e)
-
-            // If using cache and got an error, try from server
-            if (source == Source.CACHE) {
-                return getAllInventoryItems(Source.SERVER)
+            // Add startAfter for pagination if we have a last document
+            if (lastDocument != null) {
+                query = query.startAfter(lastDocument)
             }
 
+            // Execute query
+            val snapshot = query.get(source).await()
+
+            // Convert documents to objects
+            val items = snapshot.toObjects(JewelleryItem::class.java)
+            
+            // Get the last document for next page
+            val lastDoc = if (snapshot.documents.isNotEmpty()) {
+                snapshot.documents.last()
+            } else {
+                null
+            }
+
+            Result.success(Pair(items, lastDoc))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading paginated inventory items", e)
+            
+            // If using cache and got an error, try from server
+            if (source == Source.CACHE) {
+                return getAllInventoryItemsPaginated(pageSize, lastDocument, Source.SERVER)
+            }
+            
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Get all inventory items (deprecated - use getAllInventoryItemsPaginated instead)
+     * @deprecated Use getAllInventoryItemsPaginated for better memory management
+     */
+    @Deprecated("Use getAllInventoryItemsPaginated instead to avoid memory issues with large datasets")
+    suspend fun getAllInventoryItems(source: Source = Source.DEFAULT): Result<List<JewelleryItem>> {
+        return try {
+            val shopId = getCurrentShopId()
+            val allItems = mutableListOf<JewelleryItem>()
+            var lastDocument: DocumentSnapshot? = null
+            val pageSize = 20
+
+            do {
+                val result = getAllInventoryItemsPaginated(pageSize, lastDocument, source)
+                result.fold(
+                    onSuccess = { (items, lastDoc) ->
+                        allItems.addAll(items)
+                        lastDocument = lastDoc
+                    },
+                    onFailure = { error ->
+                        return Result.failure(error)
+                    }
+                )
+            } while (lastDocument != null)
+
+            Log.d(TAG, "Loaded all ${allItems.size} inventory items")
+            Result.success(allItems)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading all inventory items", e)
             Result.failure(e)
         }
     }

@@ -47,12 +47,6 @@
             android:exported="false" >
         </activity>
 
-        <activity
-            android:name=".SubscriptionDebugActivity"
-            android:exported="false" >
-        </activity>
-
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
