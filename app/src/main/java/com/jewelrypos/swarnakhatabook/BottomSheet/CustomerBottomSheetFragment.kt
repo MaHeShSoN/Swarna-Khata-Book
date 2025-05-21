@@ -35,6 +35,7 @@ import androidx.core.widget.addTextChangedListener
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.R
@@ -56,6 +57,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     // Adapter for contact suggestions
     private var contactsAdapter: SimpleCursorAdapter? = null
+
+    // Add new property for address adapter
+    private var addressAdapter: ArrayAdapter<String>? = null
 
     interface CustomerOperationListener {
         fun onCustomerAdded(customer: Customer)
@@ -87,9 +91,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         setupFormValidation()
         setupActionButtons()
         setupBalanceTypeRadioButtons()
+        setupFinancialInfoButton()
+        setupRelationshipInfoButton()
 
         // Check permission and setup contacts autocomplete
-        checkContactsPermission() // This will call setupContactsAutocomplete if permission is granted
+        checkContactsPermission()
 
         // Toggle visibility of business fields based on customer type
         binding.customerTypeDropdown.addTextChangedListener {
@@ -105,6 +111,19 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 isEditMode = true
                 existingCustomerId = customer.id
                 populateFormWithCustomerData(customer)
+                // Show financial info if it has data
+                if (customer.openingBalance != 0.0 || customer.balanceNotes?.isNotEmpty() == true) {
+                    showFinancialInfo()
+                }
+                // Show relationship info if it has data
+                if (customer.customerSince?.isNotEmpty() == true ||
+                    customer.referredBy?.isNotEmpty() == true ||
+                    customer.birthday?.isNotEmpty() == true ||
+                    customer.anniversary?.isNotEmpty() == true ||
+                    customer.notes?.isNotEmpty() == true
+                ) {
+                    showRelationshipInfo()
+                }
             }
         }
 
@@ -127,6 +146,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             layoutParams.width = LinearLayout.LayoutParams.MATCH_PARENT
             binding.saveAndCloseButton.layoutParams = layoutParams
         }
+
+        // Setup address suggestions
+        setupAddressSuggestions()
     }
 
     // --- Contact Permission and Autocomplete Logic ---
@@ -137,7 +159,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         if (isGranted) {
             setupContactsAutocomplete()
         } else {
-            Toast.makeText(context, "Contacts permission denied. Cannot suggest contacts.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "Contacts permission denied. Cannot suggest contacts.",
+                Toast.LENGTH_SHORT
+            ).show()
             // Optionally disable the autocomplete feature or specific fields
         }
     }
@@ -179,7 +205,10 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         // Ensure the view exists and is an AutoCompleteTextView
         val autoCompleteView = binding.etFirstName as? AutoCompleteTextView
         if (autoCompleteView == null) {
-            Log.e(TAG, "setupContactsAutocomplete: etFirstName is not an AutoCompleteTextView or is null.")
+            Log.e(
+                TAG,
+                "setupContactsAutocomplete: etFirstName is not an AutoCompleteTextView or is null."
+            )
             return
         }
 
@@ -253,22 +282,25 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 )
             } catch (e: SecurityException) {
                 Log.e(TAG, "SecurityException during contact phone query.", e)
-                Toast.makeText(context, "Permission error accessing contacts.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Permission error accessing contacts.", Toast.LENGTH_SHORT)
+                    .show()
                 return@FilterQueryProvider null
             }
         }
 
         // --- Setup CursorToStringConverter ---
         // This defines how a selected item is converted to a String for the AutoCompleteTextView itself
-        contactsAdapter?.cursorToStringConverter = SimpleCursorAdapter.CursorToStringConverter { cursor ->
-            // Display only the name in the AutoCompleteTextView after selection
-            val nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-            if (nameIndex != -1) {
-                cursor.getString(nameIndex)
-            } else {
-                ""
+        contactsAdapter?.cursorToStringConverter =
+            SimpleCursorAdapter.CursorToStringConverter { cursor ->
+                // Display only the name in the AutoCompleteTextView after selection
+                val nameIndex =
+                    cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                if (nameIndex != -1) {
+                    cursor.getString(nameIndex)
+                } else {
+                    ""
+                }
             }
-        }
 
 
         // --- Handle contact selection ---
@@ -276,9 +308,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             val cursor = contactsAdapter?.getItem(position) as? Cursor
             cursor?.let {
                 // Get data directly from the cursor using column names from the Phone table
-                val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val nameIndex =
+                    it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                 val numberIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                val contactIdIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID) // Get Contact ID index
+                val contactIdIndex =
+                    it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID) // Get Contact ID index
 
                 if (nameIndex != -1 && numberIndex != -1 && contactIdIndex != -1) { // Check contactIdIndex too
                     val contactName = it.getString(nameIndex)
@@ -294,7 +328,10 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                     val formattedNumber = formatPhoneNumber(rawPhoneNumber)
 
                     // Set the text fields
-                    binding.etFirstName.setText(firstName, false) // Set name without triggering filter
+                    binding.etFirstName.setText(
+                        firstName,
+                        false
+                    ) // Set name without triggering filter
                     binding.etLastName.setText(lastName)
                     binding.phoneNumberField.setText(formattedNumber) // Set formatted number
 
@@ -302,11 +339,15 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                     // loadContactPhoto(contactId)
 
                     // Hide keyboard
-                    val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    val imm =
+                        requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     imm.hideSoftInputFromWindow(autoCompleteView.windowToken, 0)
 
                 } else {
-                    Log.e(TAG, "Could not find DISPLAY_NAME, NUMBER, or CONTACT_ID columns in cursor.")
+                    Log.e(
+                        TAG,
+                        "Could not find DISPLAY_NAME, NUMBER, or CONTACT_ID columns in cursor."
+                    )
                 }
             }
         }
@@ -345,7 +386,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         val selectionArgs = arrayOf(contactId)
         val phoneCursor: Cursor? = try {
             contentResolver.query(phoneUri, projection, selection, selectionArgs, null)
-        } catch (e: SecurityException) { null }
+        } catch (e: SecurityException) {
+            null
+        }
 
         phoneCursor?.use {
             if (it.moveToFirst()) {
@@ -399,16 +442,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
 
-    /**
-     * Placeholder function to load contact photo.
-     */
-    private fun loadContactPhoto(contactId: String) {
-        Log.d(TAG, "Placeholder: Load photo for contact ID $contactId")
-        // Implementation would involve getting PHOTO_THUMBNAIL_URI or PHOTO_URI
-        // and using an image loading library (Glide, Coil)
-    }
-
-
     // --- Other Setup Functions (Unchanged) ---
 
     private fun setupBalanceTypeRadioButtons() {
@@ -417,12 +450,17 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun setupCustomerTypeDropdown() {
         val items = listOf("Consumer", "Wholesaler")
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
+        val adapter =
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
 
         binding.customerTypeDropdown.apply {
             setAdapter(adapter)
             try {
                 setDropDownBackgroundResource(R.color.cream_background) // Ensure this color exists
+                // Pre-select "Consumer" if not in edit mode
+                if (!isEditMode) {
+                    setText("Consumer", false)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error setting dropdown background resource", e)
             }
@@ -431,7 +469,8 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun setupCountryDropdown() {
         val items = listOf("India", "United States", "United Kingdom", "Canada", "Australia")
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
+        val adapter =
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, items)
         binding.countryDropdown.setAdapter(adapter)
         if (binding.countryDropdown.text.isNullOrEmpty()) {
             binding.countryDropdown.setText("India", false)
@@ -456,8 +495,16 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             val currentDateStr = binding.customerSinceDateField.text.toString()
             try {
                 dateFormat.parse(currentDateStr)?.let { calendar.time = it }
-            } catch (e: Exception) { Log.w(TAG, "Error parsing customerSinceDate: $currentDateStr", e) }
-            DatePickerDialog(requireContext(), customerSinceListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error parsing customerSinceDate: $currentDateStr", e)
+            }
+            DatePickerDialog(
+                requireContext(),
+                customerSinceListener,
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
         }
 
         // --- Birthday Picker ---
@@ -471,8 +518,16 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             val currentBirthdayStr = binding.birthdayField.text.toString()
             try {
                 dateFormat.parse(currentBirthdayStr)?.let { calendar.time = it }
-            } catch (e: Exception) { Log.w(TAG, "Error parsing birthday: $currentBirthdayStr", e) }
-            DatePickerDialog(requireContext(), birthdayListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error parsing birthday: $currentBirthdayStr", e)
+            }
+            DatePickerDialog(
+                requireContext(),
+                birthdayListener,
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
         }
 
         // --- Anniversary Picker ---
@@ -486,14 +541,23 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             val currentAnniversaryStr = binding.anniversaryField.text.toString()
             try {
                 dateFormat.parse(currentAnniversaryStr)?.let { calendar.time = it }
-            } catch (e: Exception) { Log.w(TAG, "Error parsing anniversary: $currentAnniversaryStr", e) }
-            DatePickerDialog(requireContext(), anniversaryListener, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error parsing anniversary: $currentAnniversaryStr", e)
+            }
+            DatePickerDialog(
+                requireContext(),
+                anniversaryListener,
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
         }
     }
 
 
     private fun setupFormValidation() {
-        class ErrorClearingTextWatcher(private val textInputLayout: com.google.android.material.textfield.TextInputLayout) : TextWatcher {
+        class ErrorClearingTextWatcher(private val textInputLayout: com.google.android.material.textfield.TextInputLayout) :
+            TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
@@ -524,25 +588,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             }
         })
 
-        binding.emailField.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val email = s.toString()
-                if (email.isNotEmpty()) {
-                    if (!isValidEmail(email)) {
-                        binding.emailLayout.error = "Invalid email format"
-                        binding.emailLayout.isErrorEnabled = true
-                    } else {
-                        binding.emailLayout.error = null
-                        binding.emailLayout.isErrorEnabled = false
-                    }
-                } else {
-                    binding.emailLayout.error = null
-                    binding.emailLayout.isErrorEnabled = false
-                }
-            }
-        })
 
         binding.etFirstName.addTextChangedListener(ErrorClearingTextWatcher(binding.firstNameLayout))
         binding.etLastName.addTextChangedListener(ErrorClearingTextWatcher(binding.lastNameLayout))
@@ -582,8 +627,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             binding.streetAddressLayout to binding.streetAddressField,
             binding.cityLayout to binding.cityField,
             binding.stateLayout to binding.stateField,
-            if (binding.businessInfoCard.isVisible) binding.businessNameLayout to binding.businessNameField else null,
-            binding.emailLayout to binding.emailField // Added email for error check focus
+            if (binding.businessInfoCard.isVisible) binding.businessNameLayout to binding.businessNameField else null
             // Add other validated fields here...
         )
 
@@ -594,7 +638,8 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                     binding.scrollView.smoothScrollTo(0, layout.top)
                 }
                 field?.requestFocus() // Request focus on the associated field
-                val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                val imm =
+                    context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
                 imm?.showSoftInput(field, InputMethodManager.SHOW_IMPLICIT)
                 break
             }
@@ -604,15 +649,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun validateForm(): Boolean {
         var isValid = true
-        fun validateRequiredField(field: android.widget.EditText?, layout: com.google.android.material.textfield.TextInputLayout?, fieldName: String): Boolean {
-            if (field == null || layout == null) return true
-            return if (field.text.isNullOrBlank()) {
-                layout.error = "$fieldName is required"; layout.isErrorEnabled = true; false
-            } else {
-                layout.error = null; layout.isErrorEnabled = false; true
-            }
-        }
-        fun validateRequiredDropdown(field: AutoCompleteTextView?, layout: com.google.android.material.textfield.TextInputLayout?, fieldName: String): Boolean {
+        fun validateRequiredField(
+            field: android.widget.EditText?,
+            layout: com.google.android.material.textfield.TextInputLayout?,
+            fieldName: String
+        ): Boolean {
             if (field == null || layout == null) return true
             return if (field.text.isNullOrBlank()) {
                 layout.error = "$fieldName is required"; layout.isErrorEnabled = true; false
@@ -621,29 +662,67 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
-        if (!validateRequiredField(binding.etFirstName, binding.firstNameLayout, "First Name")) isValid = false
-        if (!validateRequiredField(binding.etLastName, binding.lastNameLayout, "Last Name")) isValid = false
-        if (!validateRequiredField(binding.phoneNumberField, binding.phoneNumberLayout, "Phone Number")) {
+        fun validateRequiredDropdown(
+            field: AutoCompleteTextView?,
+            layout: com.google.android.material.textfield.TextInputLayout?,
+            fieldName: String
+        ): Boolean {
+            if (field == null || layout == null) return true
+            return if (field.text.isNullOrBlank()) {
+                layout.error = "$fieldName is required"; layout.isErrorEnabled = true; false
+            } else {
+                layout.error = null; layout.isErrorEnabled = false; true
+            }
+        }
+
+        if (!validateRequiredField(
+                binding.etFirstName,
+                binding.firstNameLayout,
+                "First Name"
+            )
+        ) isValid = false
+        if (!validateRequiredField(
+                binding.etLastName,
+                binding.lastNameLayout,
+                "Last Name"
+            )
+        ) isValid = false
+        if (!validateRequiredField(
+                binding.phoneNumberField,
+                binding.phoneNumberLayout,
+                "Phone Number"
+            )
+        ) {
             isValid = false
         } else if (!isValidPhoneNumber(binding.phoneNumberField.text.toString())) {
             binding.phoneNumberLayout.error = "Invalid phone number format (10 digits)"
             binding.phoneNumberLayout.isErrorEnabled = true
             isValid = false
         }
-        if (!validateRequiredDropdown(binding.customerTypeDropdown, binding.customerTypeLayout, "Customer Type")) isValid = false
-        if (!validateRequiredField(binding.streetAddressField, binding.streetAddressLayout, "Street Address")) isValid = false
+        if (!validateRequiredDropdown(
+                binding.customerTypeDropdown,
+                binding.customerTypeLayout,
+                "Customer Type"
+            )
+        ) isValid = false
+        if (!validateRequiredField(
+                binding.streetAddressField,
+                binding.streetAddressLayout,
+                "Street Address"
+            )
+        ) isValid = false
         if (!validateRequiredField(binding.cityField, binding.cityLayout, "City")) isValid = false
-        if (!validateRequiredField(binding.stateField, binding.stateLayout, "State")) isValid = false
+        if (!validateRequiredField(binding.stateField, binding.stateLayout, "State")) isValid =
+            false
 
-        val email = binding.emailField.text.toString()
-        if (email.isNotEmpty() && !isValidEmail(email)) {
-            binding.emailLayout.error = "Invalid email format"; binding.emailLayout.isErrorEnabled = true; isValid = false
-        } else if (binding.emailLayout.error != null){
-            binding.emailLayout.error = null; binding.emailLayout.isErrorEnabled = false
-        }
 
         if (binding.customerTypeDropdown.text.toString() == "Wholesaler") {
-            if (!validateRequiredField(binding.businessNameField, binding.businessNameLayout, "Business Name")) isValid = false
+            if (!validateRequiredField(
+                    binding.businessNameField,
+                    binding.businessNameLayout,
+                    "Business Name"
+                )
+            ) isValid = false
         }
 
         return isValid
@@ -689,13 +768,51 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 if (arg is Customer) {
                     val originalCustomer = arg
                     val openingBalanceDifference = openingBalance - originalCustomer.openingBalance
-                    calculatedCurrentBalance = originalCustomer.currentBalance + openingBalanceDifference
-                } else { Log.e(TAG, "Argument ARG_CUSTOMER is not of type Customer.") }
+                    calculatedCurrentBalance =
+                        originalCustomer.currentBalance + openingBalanceDifference
+                } else {
+                    Log.e(TAG, "Argument ARG_CUSTOMER is not of type Customer.")
+                }
             } ?: Log.w(TAG, "Edit mode active but original customer data not found.")
         }
 
         if (balanceType == "Debit" && calculatedCurrentBalance > 0) calculatedCurrentBalance *= -1
         else if (balanceType == "Credit" && calculatedCurrentBalance < 0) calculatedCurrentBalance *= -1
+
+        // Get current address
+        val currentAddress = binding.streetAddressField.text.toString().trim()
+        val city = binding.cityField.text.toString().trim()
+        val state = binding.stateField.text.toString().trim()
+
+        // Create full address string
+        val fullAddress = listOfNotNull(
+            currentAddress,
+            city,
+            state
+        ).joinToString(", ")
+
+        // Save the address to Firestore if it's not empty
+        if (fullAddress.isNotEmpty()) {
+            saveAddressToFirestore(fullAddress)
+        }
+
+        // Get previous addresses
+        val previousAddresses = if (isEditMode) {
+            arguments?.getSerializable(ARG_CUSTOMER)?.let { arg ->
+                if (arg is Customer) {
+                    // Add current address to previous addresses if it's not already there
+                    val addresses = arg.previousAddresses.toMutableList()
+                    if (fullAddress.isNotEmpty() && !addresses.contains(fullAddress)) {
+                        addresses.add(fullAddress)
+                    }
+                    addresses
+                } else {
+                    listOf(fullAddress)
+                }
+            } ?: listOf(fullAddress)
+        } else {
+            listOf(fullAddress)
+        }
 
         return Customer(
             id = existingCustomerId ?: "",
@@ -703,12 +820,11 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             firstName = binding.etFirstName.text.toString().trim(),
             lastName = binding.etLastName.text.toString().trim(),
             phoneNumber = binding.phoneNumberField.text.toString().trim(),
-            email = binding.emailField.text.toString().trim(),
-            streetAddress = binding.streetAddressField.text.toString().trim(),
-            city = binding.cityField.text.toString().trim(),
-            state = binding.stateField.text.toString().trim(),
-            postalCode = binding.postalCodeField.text.toString().trim(),
+            streetAddress = currentAddress,
+            city = city,
+            state = state,
             country = binding.countryDropdown.text.toString(),
+            previousAddresses = previousAddresses,
             balanceType = balanceType,
             openingBalance = openingBalance,
             currentBalance = calculatedCurrentBalance,
@@ -731,15 +847,19 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.etFirstName.setText(customer.firstName)
         binding.etLastName.setText(customer.lastName)
         binding.phoneNumberField.setText(customer.phoneNumber)
-        binding.emailField.setText(customer.email ?: "")
         binding.streetAddressField.setText(customer.streetAddress)
         binding.cityField.setText(customer.city)
         binding.stateField.setText(customer.state)
-        binding.postalCodeField.setText(customer.postalCode ?: "")
         binding.countryDropdown.setText(customer.country, false)
         if (customer.balanceType == "Credit") binding.creditRadioButton.isChecked = true
         else binding.debitRadioButton.isChecked = true
-        binding.openingBalanceField.setText(String.format(Locale.US, "%.2f", customer.openingBalance))
+        binding.openingBalanceField.setText(
+            String.format(
+                Locale.US,
+                "%.2f",
+                customer.openingBalance
+            )
+        )
         binding.balanceNotesField.setText(customer.balanceNotes ?: "")
         val isBusinessCustomer = customer.customerType == "Wholesaler"
         binding.businessInfoCard.isVisible = isBusinessCustomer
@@ -764,12 +884,10 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.etFirstName.text = null
         binding.etLastName.text = null
         binding.phoneNumberField.text = null
-        binding.emailField.text = null
         binding.customerTypeDropdown.text = null
         binding.streetAddressField.text = null
         binding.cityField.text = null
         binding.stateField.text = null
-        binding.postalCodeField.text = null
         binding.countryDropdown.setText("India", false)
         binding.creditRadioButton.isChecked = true
         binding.openingBalanceField.setText("0.00")
@@ -779,7 +897,8 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.taxIdField.text = null
         binding.businessInfoCard.isVisible = false
         binding.businessInfoCardText.isVisible = false
-        val today = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Calendar.getInstance().time)
+        val today =
+            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Calendar.getInstance().time)
         binding.customerSinceDateField.setText(today)
         binding.referredByField.text = null
         binding.birthdayField.text = null
@@ -788,8 +907,8 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
         val layoutsToReset = listOf(
             binding.firstNameLayout, binding.lastNameLayout, binding.phoneNumberLayout,
-            binding.emailLayout, binding.customerTypeLayout, binding.streetAddressLayout,
-            binding.cityLayout, binding.stateLayout, binding.postalCodeLayout,
+            binding.customerTypeLayout, binding.streetAddressLayout,
+            binding.cityLayout, binding.stateLayout,
             binding.countryLayout, binding.openingBalanceLayout, binding.businessNameLayout,
             binding.gstNumberLayout, binding.taxIdLayout, binding.balanceNotesLayout,
             binding.customerSinceDateLayout, binding.referredByLayout, binding.birthdayLayout,
@@ -820,13 +939,14 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 closeParams.weight = 0f
                 binding.saveAndCloseButton.layoutParams = closeParams
             }
-            if(calledFromCustomerDetails) binding.saveAndCloseButton.text = "Update"
+            if (calledFromCustomerDetails) binding.saveAndCloseButton.text = "Update"
         }
     }
 
     fun setCalledFromInvoiceCreation(fromInvoice: Boolean) {
         calledFromInvoiceCreation = fromInvoice
     }
+
     fun setCalledFromCustomerDetails(fromDetails: Boolean) {
         calledFromCustomerDetails = fromDetails
     }
@@ -836,7 +956,8 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
         dialog.setOnShowListener { dialogInterface ->
             val bottomSheetDialog = dialogInterface as BottomSheetDialog
-            val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            val bottomSheet =
+                bottomSheetDialog.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheet?.let { sheet ->
                 val behavior = BottomSheetBehavior.from(sheet)
                 setupFullHeight(sheet)
@@ -859,6 +980,198 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         contactsAdapter?.changeCursor(null)
         contactsAdapter = null
         _binding = null
+    }
+
+    private fun setupAddressSuggestions() {
+        // Convert street address field to AutoCompleteTextView
+        val streetAddressField = binding.streetAddressField as? AutoCompleteTextView
+        if (streetAddressField == null) {
+            Log.e(TAG, "streetAddressField is not an AutoCompleteTextView")
+            return
+        }
+
+        // Create adapter for address suggestions
+        addressAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            mutableListOf()
+        )
+
+//        autoCompleteView.apply {
+//            setDropDownBackgroundResource(R.color.cream_background)
+//            setAdapter(contactsAdapter)
+//        }
+
+        streetAddressField.apply {
+            setDropDownBackgroundResource(R.color.cream_background)
+            setAdapter(addressAdapter)
+            threshold = 1
+        }
+
+        // Load addresses from Firestore
+        loadAddressesFromFirestore()
+
+        // Add text change listener to update suggestions
+        streetAddressField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                // Clear error if any
+                binding.streetAddressLayout.error = null
+                binding.streetAddressLayout.isErrorEnabled = false
+
+                // Filter addresses based on input
+                val input = s.toString().trim()
+                if (input.isNotEmpty()) {
+                    filterAddresses(input)
+                }
+            }
+        })
+
+        // Handle address selection
+        streetAddressField.setOnItemClickListener { _, _, position, _ ->
+            val selectedAddress = addressAdapter?.getItem(position) as? String
+            selectedAddress?.let {
+                // Split the address into components
+                val addressParts = it.split(", ")
+                if (addressParts.size >= 3) {
+                    binding.streetAddressField.setText(addressParts[0], false)
+                    binding.cityField.setText(addressParts[1])
+                    binding.stateField.setText(addressParts[2])
+                }
+            }
+        }
+    }
+
+    private fun loadAddressesFromFirestore() {
+        val db = FirebaseFirestore.getInstance()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        db.collection("users")
+            .document(userId)
+            .collection("addresses")
+            .get()
+            .addOnSuccessListener { documents ->
+                val addresses = documents.mapNotNull { it.getString("fullAddress") }
+                addressAdapter?.clear()
+                addressAdapter?.addAll(addresses)
+                addressAdapter?.notifyDataSetChanged()
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error loading addresses", e)
+            }
+    }
+
+    private fun filterAddresses(query: String) {
+        val db = FirebaseFirestore.getInstance()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        db.collection("users")
+            .document(userId)
+            .collection("addresses")
+            .whereGreaterThanOrEqualTo("fullAddress", query)
+            .whereLessThanOrEqualTo("fullAddress", query + '\uf8ff')
+            .get()
+            .addOnSuccessListener { documents ->
+                val addresses = documents.mapNotNull { it.getString("fullAddress") }
+                addressAdapter?.clear()
+                addressAdapter?.addAll(addresses)
+                addressAdapter?.notifyDataSetChanged()
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error filtering addresses", e)
+            }
+    }
+
+    private fun saveAddressToFirestore(address: String) {
+        val db = FirebaseFirestore.getInstance()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        val addressData = hashMapOf(
+            "fullAddress" to address,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        db.collection("users")
+            .document(userId)
+            .collection("addresses")
+            .add(addressData)
+            .addOnSuccessListener {
+                Log.d(TAG, "Address saved successfully")
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error saving address", e)
+            }
+    }
+
+    private fun setupFinancialInfoButton() {
+        binding.financialInfoButton.setOnClickListener {
+            if (binding.financialInfoContainer.visibility == View.VISIBLE) {
+                hideFinancialInfo()
+            } else {
+                showFinancialInfo()
+            }
+        }
+    }
+
+    private fun setupRelationshipInfoButton() {
+        binding.relationshipInfoButton.setOnClickListener {
+            if (binding.relationshipInfoContainer.visibility == View.VISIBLE) {
+                hideRelationshipInfo()
+            } else {
+                showRelationshipInfo()
+            }
+        }
+    }
+
+    private fun showFinancialInfo() {
+        binding.financialInfoContainer.apply {
+            alpha = 0f
+            visibility = View.VISIBLE
+            animate()
+                .alpha(1f)
+                .setDuration(300)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
+        binding.financialInfoButton.text = getString(R.string.hide_financial_info)
+    }
+
+    private fun hideFinancialInfo() {
+        binding.financialInfoContainer.animate()
+            .alpha(0f)
+            .setDuration(300)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                binding.financialInfoContainer.visibility = View.GONE
+            }
+            .start()
+        binding.financialInfoButton.text = getString(R.string.add_financial_info)
+    }
+
+    private fun showRelationshipInfo() {
+        binding.relationshipInfoContainer.apply {
+            alpha = 0f
+            visibility = View.VISIBLE
+            animate()
+                .alpha(1f)
+                .setDuration(300)
+                .setInterpolator(android.view.animation.DecelerateInterpolator())
+                .start()
+        }
+        binding.relationshipInfoButton.text = getString(R.string.hide_relationship_info)
+    }
+
+    private fun hideRelationshipInfo() {
+        binding.relationshipInfoContainer.animate()
+            .alpha(0f)
+            .setDuration(300)
+            .setInterpolator(android.view.animation.AccelerateInterpolator())
+            .withEndAction {
+                binding.relationshipInfoContainer.visibility = View.GONE
+            }
+            .start()
+        binding.relationshipInfoButton.text = getString(R.string.add_relationship_info)
     }
 
     companion object {

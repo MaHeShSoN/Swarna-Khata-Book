@@ -152,26 +152,12 @@ class NotificationFragment : Fragment(), NotificationAdapter.OnNotificationActio
                     navigateToNotificationSettings()
                     true
                 }
-                
-                R.id.action_debug -> {
-                    debugFirestorePermissions()
-                    true
-                }
+
 
                 else -> false
             }
         }
-        
-        // Add a debug option to the menu during development
-        // You should remove this in production
-        try {
-            val menu = binding.topAppBar.menu
-            menu.add(Menu.NONE, R.id.action_debug, Menu.NONE, "Debug")
-                .setIcon(android.R.drawable.ic_menu_info_details)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error adding debug menu item", e)
-        }
+
     }
 
     private fun navigateToNotificationSettings() {

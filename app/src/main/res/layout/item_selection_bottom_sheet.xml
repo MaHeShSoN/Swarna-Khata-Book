@@ -71,6 +71,7 @@
                         android:textColor="@color/my_light_primary" />
                 </LinearLayout>
 
+
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/metalTypeChipGroup"
                     android:layout_width="match_parent"
@@ -81,11 +82,16 @@
                         android:id="@+id/goldChip"
                         style="@style/Widget.App.Chip.Filter"
                         android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="2dp"
                         android:checked="true"
-                        android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
-                        android:text="@string/gold" />
+                        android:text="@string/gold"
+                        android:textColor="@color/dark_gold_chip_color1"
+                        app:checkedIconTint="@color/dark_gold_chip_color"
+                        app:chipBackgroundColor="@color/gold_chip_color"
+                        app:chipIconTint="@color/dark_gold_chip_color1"
+                        app:chipStrokeColor="@color/dark_gold_chip_color" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/silverChip"
@@ -93,7 +99,12 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
-                        android:text="@string/silver" />
+                        android:text="@string/silver"
+                        android:textColor="@color/dark_silver_chip_color1"
+                        app:chipBackgroundColor="@color/silver_chip_color"
+                        app:checkedIconTint="@color/dark_silver_chip_color1"
+                        app:chipIconTint="@color/dark_silver_chip_color"
+                        app:chipStrokeColor="@color/dark_silver_chip_color" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/otherChip"
@@ -241,6 +252,7 @@
                         android:layout_width="match_parent"
                         android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
+                        android:text="91.66"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />

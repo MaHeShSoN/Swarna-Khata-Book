@@ -176,7 +176,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Amount"
+                    android:hint="Payment"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:hintTextColor="@color/my_light_secondary"
                     app:prefixText="₹">
@@ -262,43 +262,6 @@
                     android:layout_marginTop="16dp"
                     android:visibility="gone" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/referenceInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Reference/Transaction ID"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/referenceEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="text" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/notesInputLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:hint="Notes"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/notesEditText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:gravity="top"
-                        android:inputType="textMultiLine"
-                        android:minLines="2" />
-                </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -10,10 +10,12 @@ import com.jewelrypos.swarnakhatabook.Repository.UserSubscriptionManager
 import com.jewelrypos.swarnakhatabook.Services.FirebaseNotificationService
 import com.jewelrypos.swarnakhatabook.Utilitys.AppUpdateManager
 import com.jewelrypos.swarnakhatabook.Utilitys.NotificationChannelManager
+import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
 import com.squareup.picasso.OkHttp3Downloader
 import com.squareup.picasso.Picasso
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
+import java.util.Locale
 
 class SwarnaKhataBook : Application() {
 
@@ -45,6 +47,9 @@ class SwarnaKhataBook : Application() {
         // Store instance of application
         instance = this
 
+        // Apply saved language setting
+        applySavedLanguage()
+
         // Configure Firestore only once at app startup - this is still needed early
         // but we'll optimize the settings
         configureCacheSettings()
@@ -57,6 +62,20 @@ class SwarnaKhataBook : Application() {
         NotificationChannelManager.createNotificationChannels(applicationContext)
         
         // Note: No longer initializing managers here - they will be initialized on demand
+    }
+
+    private fun applySavedLanguage() {
+        val preferences = SecurePreferences.getInstance(this)
+        val savedLanguage = preferences.getString("selected_language", null)
+        
+        if (savedLanguage != null) {
+            val locale = Locale(savedLanguage)
+            Locale.setDefault(locale)
+            val config = resources.configuration
+            config.setLocale(locale)
+            createConfigurationContext(config)
+            resources.updateConfiguration(config, resources.displayMetrics)
+        }
     }
     
     private fun configureCacheSettings() {

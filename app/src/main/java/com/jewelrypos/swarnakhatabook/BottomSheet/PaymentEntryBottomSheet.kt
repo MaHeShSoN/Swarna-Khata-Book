@@ -81,7 +81,8 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
 
     fun setAmount(amount: Double) {
         if (_binding != null) {
-            binding.amountEditText.setText(String.format("%.2f", amount))
+            // Convert double to int and set the text
+            binding.amountEditText.setText(amount.toInt().toString())
         } else {
             pendingAmount = amount
         }
@@ -93,7 +94,7 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
 
         // Apply any pending values
         pendingAmount?.let {
-            binding.amountEditText.setText(String.format("%.2f", it))
+            binding.amountEditText.setText(it.toInt().toString())
             pendingAmount = null
         }
 
@@ -117,19 +118,22 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         setupPaymentAmountSuggestions()
         setupPaymentMethodSelection()
         setupButtons()
+
+        // Pre-fill Cash as payment method
+        binding.paymentMethodDropdown.setText("Cash", false)
     }
 
     private fun setupPaymentAmountSuggestions() {
         val remainingAmount = invoiceTotal - amountPaid
 
-        binding.fullAmountButton.text = "Full (₹${String.format("%.2f", remainingAmount)})"
+        binding.fullAmountButton.text = "Full (₹${remainingAmount.toInt()})"
         binding.fullAmountButton.setOnClickListener {
-            binding.amountEditText.setText(String.format("%.2f", remainingAmount))
+            binding.amountEditText.setText(remainingAmount.toInt().toString())
         }
 
-        binding.halfAmountButton.text = "Half (₹${String.format("%.2f", remainingAmount / 2)})"
+        binding.halfAmountButton.text = "Half (₹${(remainingAmount / 2).toInt()})"
         binding.halfAmountButton.setOnClickListener {
-            binding.amountEditText.setText(String.format("%.2f", remainingAmount / 2))
+            binding.amountEditText.setText((remainingAmount / 2).toInt().toString())
         }
     }
 
@@ -567,15 +571,11 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
             val date = dateFormat.parse(dateStr)
             if (date != null) {
-                paymentDate = date.time // This should be a Long timestamp
+                paymentDate = date.time
             }
         } catch (e: Exception) {
-            // Use default current time if parsing fails
             Log.e("PaymentEntry", "Error parsing date", e)
         }
-
-
-
 
         // Create a map for method-specific details
         val details = mutableMapOf<String, Any>()
@@ -587,50 +587,40 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                     .findViewById<AutoCompleteTextView>(R.id.bankNameDropdown)
                 val bankName = bankNameDropdown?.text?.toString() ?: ""
 
-                // Get account number
                 val accountNumberField = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.accountNumberEditText)
                 val accountNumber = accountNumberField?.text?.toString() ?: ""
 
-
-                // Add to details map
                 if (bankName.isNotEmpty()) details["bankName"] = bankName
                 if (accountNumber.isNotEmpty()) details["accountNumber"] = accountNumber
-
             }
 
             "Card" -> {
-                // Get card type
                 val cardTypeDropdown = binding.additionalFieldsContainer
                     .findViewById<AutoCompleteTextView>(R.id.cardTypeDropdown)
                 val cardType = cardTypeDropdown?.text?.toString() ?: ""
 
-                // Get last 4 digits (if available)
                 val cardNumberField = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.cardNumberEditText)
                 val cardNumber = cardNumberField?.text?.toString() ?: ""
                 val last4Digits = if (cardNumber.length >= 4) cardNumber.takeLast(4) else cardNumber
 
-                // Add to details map
                 if (cardType.isNotEmpty()) details["cardType"] = cardType
                 if (last4Digits.isNotEmpty()) details["last4Digits"] = last4Digits
             }
 
             "UPI" -> {
-                // Get UPI app
                 val upiAppDropdown = binding.additionalFieldsContainer
                     .findViewById<AutoCompleteTextView>(R.id.upiAppDropdown)
                 val upiApp = upiAppDropdown?.text?.toString() ?: ""
                 val upiID = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.upiIdEditText).text.toString()
 
-                // Add to details map
                 if (upiApp.isNotEmpty()) details["upiApp"] = upiApp
                 if (upiID.isNotEmpty()) details["upiID"] = upiID
             }
 
             "Gold Exchange" -> {
-                // Get gold details
                 val weightField = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.goldWeightEditText)
                 val purityField = binding.additionalFieldsContainer
@@ -642,14 +632,12 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                 val purity = purityField?.text?.toString()?.toDoubleOrNull() ?: 0.0
                 val rate = rateField?.text?.toString()?.toDoubleOrNull() ?: 0.0
 
-                // Add to details map
                 details["weight"] = weight
                 details["purity"] = purity
                 details["rate"] = rate
             }
 
             "Silver Exchange" -> {
-                // Get silver details
                 val weightField = binding.additionalFieldsContainer
                     .findViewById<TextInputEditText>(R.id.silverWeightEditText)
                 val purityField = binding.additionalFieldsContainer
@@ -661,7 +649,6 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
                 val purity = purityField?.text?.toString()?.toDoubleOrNull() ?: 0.0
                 val rate = rateField?.text?.toString()?.toDoubleOrNull() ?: 0.0
 
-                // Add to details map
                 details["weight"] = weight
                 details["purity"] = purity
                 details["rate"] = rate
@@ -687,47 +674,15 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        // Format reference ID if appropriate for the payment method
-        val rawReference = binding.referenceEditText.text.toString().trim()
-        val formattedReference = formatReferenceId(method, rawReference)
-
         return Payment(
             amount = amount,
             method = method,
             date = paymentDate,
-            reference = formattedReference,
-            notes = binding.notesEditText.text.toString(),
-            details = details  // Add method-specific details
+            reference = "", // Empty reference
+            notes = "", // Empty notes
+            details = details
         )
     }
-
-    /**
-     * Formats reference IDs based on payment method conventions
-     */
-    private fun formatReferenceId(method: String, reference: String): String {
-        if (reference.isEmpty()) return reference
-
-        return when (method) {
-            "UPI" -> {
-                // UPI references are typically alphanumeric - ensure uppercase
-                reference.uppercase()
-            }
-
-            "Bank Transfer" -> {
-                // Bank transfer references (UTR numbers) are 22 characters for NEFT/RTGS
-                // Just trim whitespace and ensure uppercase
-                reference.uppercase()
-            }
-
-            "Card" -> {
-                // Card authorization codes are typically 6 characters
-                reference.uppercase()
-            }
-
-            else -> reference
-        }
-    }
-
 
     fun setInvoiceDetails(invoiceTotal: Double, amountPaid: Double) {
         this.invoiceTotal = invoiceTotal

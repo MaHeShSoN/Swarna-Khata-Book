@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 17
-        versionName = "1.17"
+        versionCode = 21
+        versionName = "1.21"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         

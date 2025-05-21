@@ -56,8 +56,8 @@ class InvoiceAdapter : ListAdapter<Invoice, InvoiceAdapter.InvoiceViewHolder>(In
         val formatter1 = SimpleDateFormat("dd MMM yy", Locale.getDefault()) // Consistent date format
         holder.invoiceDate.text = formatter1.format(Date(invoice.invoiceDate))
 
-        // Format currency
-        val formatter = DecimalFormat("#,##,##0.00")
+        // Format currency with no decimal places
+        val formatter = DecimalFormat("#,##,##0")
         holder.totalAmount.text = "₹${formatter.format(invoice.totalAmount)}"
 
         val balanceDue = invoice.totalAmount - invoice.paidAmount

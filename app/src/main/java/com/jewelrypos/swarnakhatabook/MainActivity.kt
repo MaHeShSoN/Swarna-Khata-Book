@@ -370,11 +370,10 @@ class MainActivity : AppCompatActivity() {
 
         val context = this // Get context once
 
-        // *** FIX: Check if app was in background, PIN exists, AND lock is ENABLED ***
-        if (wasInBackground && PinSecurityManager.hasPinBeenSetUp(context) && PinSecurityManager.isPinLockEnabled(
-                context
-            )
-        ) {
+        // Only show PIN verification if app was in background
+        if (wasInBackground && 
+            PinSecurityManager.hasPinBeenSetUp(context) && 
+            PinSecurityManager.isPinLockEnabled(context)) {
             // Only show PIN verification if lock is actually enabled
             showPinVerificationDialog()
         }

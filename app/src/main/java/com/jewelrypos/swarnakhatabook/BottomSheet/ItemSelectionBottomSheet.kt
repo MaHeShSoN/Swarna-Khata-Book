@@ -35,6 +35,7 @@ import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
 
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.SharedPrefsManager
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import com.jewelrypos.swarnakhatabook.ViewModle.InventoryViewModel
 import com.jewelrypos.swarnakhatabook.databinding.ItemSelectionBottomSheetBinding
@@ -96,6 +97,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     // Add this section to properly track TextWatchers
     private val textWatchers = mutableMapOf<TextView, TextWatcher>()
 
+    // Add SharedPrefsManager
+    private lateinit var sharedPrefsManager: SharedPrefsManager
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -116,6 +120,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize SharedPrefsManager
+        sharedPrefsManager = SharedPrefsManager(requireContext())
 
         // Initialize repository directly
         initializeRepository()
@@ -467,9 +474,31 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.wastageTypeDropdown.setText(item.wastageType ?: "Percentage", false)
         binding.purityEditText.setText(item.purity)
         binding.mackingChargesEditText.setText(item.makingCharges.toString())
-        binding.mackingChargesTypeEditText.setText(item.makingChargesType, false)
-        binding.goldRateEditText.setText(item.metalRate.toString())
-        binding.goldRateOnEditText.setText(item.metalRateOn, false)
+        
+        // Set making charges type with fallback to last used or default
+        val makingChargesType = if (item.makingChargesType.isNotEmpty()) {
+            item.makingChargesType
+        } else {
+            sharedPrefsManager.getLastMakingChargesType()
+        }
+        binding.mackingChargesTypeEditText.setText(makingChargesType, false)
+        
+        // Set gold rate with fallback to last used or default
+        val goldRate = if (item.metalRate > 0) {
+            item.metalRate
+        } else {
+            sharedPrefsManager.getLastGoldRate()
+        }
+        binding.goldRateEditText.setText(goldRate.toString())
+        
+        // Set gold rate on with fallback to last used or default
+        val goldRateOn = if (item.metalRateOn.isNotEmpty()) {
+            item.metalRateOn
+        } else {
+            sharedPrefsManager.getLastGoldRateOn()
+        }
+        binding.goldRateOnEditText.setText(goldRateOn, false)
+        
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString())
 
         // Set tax rate and update checkbox
@@ -957,7 +986,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             location = "",
             diamondPrice = 0.0,
             metalRate = 0.0,
-            metalRateOn = "Net Weight", // Default to Net Weight
+            metalRateOn = "Net Weight",
             taxRate = 0.0,
             totalTax = 0.0,
             listOfExtraCharges = emptyList()
@@ -965,16 +994,17 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
         // Set default values for UI fields
         binding.diamondPrizeEditText.setText("0.0")
-        binding.goldRateEditText.setText("0.0")
+        binding.goldRateEditText.setText(sharedPrefsManager.getLastGoldRate().toString())
         binding.wastageEditText.setText("0.0")
         binding.purityEditText.setText("0.0")
         binding.netWeightEditText.setText("0.0")
         binding.grossWeightEditText.setText("0.0")
-        binding.mackingChargesEditText.setText("0.0")
-        // Pre-select dropdown values
-        binding.mackingChargesTypeEditText.setText("PER GRAM", false)
+        binding.mackingChargesEditText.setText(sharedPrefsManager.getLastMakingCharges().toString())
+        
+        // Pre-select dropdown values with last used values
+        binding.mackingChargesTypeEditText.setText(sharedPrefsManager.getLastMakingChargesType(), false)
         binding.wastageTypeDropdown.setText("Percentage", false)
-        binding.goldRateOnEditText.setText("Net Weight", false)
+        binding.goldRateOnEditText.setText(sharedPrefsManager.getLastGoldRateOn(), false)
 
         // Set default tax values and visibility
         binding.taxApplicableCheckbox.isChecked = false
@@ -1015,6 +1045,20 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 updateCalculatedFields()
+                
+                // Save last used values
+                when (s?.hashCode()) {
+                    binding.goldRateEditText.text.hashCode() -> {
+                        binding.goldRateEditText.text.toString().toDoubleOrNull()?.let { rate ->
+                            sharedPrefsManager.saveLastGoldRate(rate)
+                        }
+                    }
+                    binding.mackingChargesEditText.text.hashCode() -> {
+                        binding.mackingChargesEditText.text.toString().toDoubleOrNull()?.let { charges ->
+                            sharedPrefsManager.saveLastMakingCharges(charges)
+                        }
+                    }
+                }
             }
         }
 
@@ -1029,15 +1073,23 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.diamondPrizeEditText.addTextChangedListener(textWatcher)
 
         // Handle dropdown item selection
-        binding.goldRateOnEditText.setOnItemClickListener { _, _, _, _ ->
+        binding.goldRateOnEditText.setOnItemClickListener { _, _, position, _ ->
             updateCalculatedFields()
+            // Save last used gold rate on
+            binding.goldRateOnEditText.text.toString().let { rateOn ->
+                sharedPrefsManager.saveLastGoldRateOn(rateOn)
+            }
         }
 
-        binding.mackingChargesTypeEditText.setOnItemClickListener { _, _, _, _ ->
+        binding.mackingChargesTypeEditText.setOnItemClickListener { _, _, position, _ ->
             updateCalculatedFields()
+            // Save last used making charges type
+            binding.mackingChargesTypeEditText.text.toString().let { type ->
+                sharedPrefsManager.saveLastMakingChargesType(type)
+            }
         }
 
-        binding.wastageTypeDropdown.setOnItemClickListener { _, _, _, _ ->
+        binding.wastageTypeDropdown.setOnItemClickListener { _, _, position, _ ->
             updateCalculatedFields()
         }
 
@@ -1283,15 +1335,15 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         
         // Determine metal type from chip selection
         val metalType = when {
-            binding.goldChip.isChecked -> "Gold ${binding.purityEditText.text.toString()}"
-            binding.silverChip.isChecked -> "Silver ${binding.purityEditText.text.toString()}"
+            binding.goldChip.isChecked -> "GOLD"
+            binding.silverChip.isChecked -> "SILVER"
             binding.otherChip.isChecked -> "Other Metal"
             else -> selectedItem.itemType
         }
         
         // Set default stock value for quick-add items
-        val stockValue = if (isQuickAdd) 1.0 else selectedItem.stock
-        val stockUnit = if (isQuickAdd) "pcs" else selectedItem.stockUnit
+        val stockValue = if (isQuickAdd) 0.0 else selectedItem.stock
+        val stockUnit = if (isQuickAdd) "PIECE" else selectedItem.stockUnit
 
         // Get extra charges from adapter if initialized
         val extraCharges = if (::chargeAdapter.isInitialized) {

@@ -76,6 +76,9 @@ import com.google.android.material.card.MaterialCardView
 import com.jewelrypos.swarnakhatabook.BottomSheet.PdfViewerBottomSheet
 import com.jewelrypos.swarnakhatabook.Utilitys.ThemedM3Dialog
 import kotlin.coroutines.cancellation.CancellationException
+import android.widget.DatePicker
+import android.app.DatePickerDialog
+import android.icu.util.Calendar
 
 class InvoiceDetailFragment : Fragment() {
 
@@ -699,10 +702,23 @@ class InvoiceDetailFragment : Fragment() {
         // Format invoice date
         val dateFormatter = SimpleDateFormat(getString(R.string.date_format), Locale.getDefault())
         binding.invoiceDate.text = dateFormatter.format(Date(invoice.invoiceDate))
+        
+        // Add click listener to invoice date for editing
+        binding.invoiceDate.setOnClickListener {
+            showDatePickerDialog(invoice.invoiceDate)
+        }
 
-        // Add due date display if it exists
+        // Add due date display and click listener if it exists
         if (invoice.dueDate != null) {
             binding.invoiceDueDate.text = dateFormatter.format(Date(invoice.dueDate!!))
+            binding.invoiceDueDate.setOnClickListener {
+                showDueDatePickerDialog(invoice.dueDate!!)
+            }
+        } else {
+            binding.invoiceDueDate.text = "Add due date"
+            binding.invoiceDueDate.setOnClickListener {
+                showDueDatePickerDialog(System.currentTimeMillis())
+            }
         }
 
         // Update payment status
@@ -1667,9 +1683,11 @@ class InvoiceDetailFragment : Fragment() {
 //                        whatsappInstalled -> {
 //                            startActivity(whatsappIntent)
 //                        }
+//
 //                        whatsappBusinessInstalled -> {
 //                            startActivity(whatsappBusinessIntent)
 //                        }
+//
 //                        else -> {
 //                            // Neither WhatsApp nor WhatsApp Business installed, use general share
 //                            val generalIntent = Intent(Intent.ACTION_SEND)
@@ -2047,6 +2065,57 @@ class InvoiceDetailFragment : Fragment() {
         }
     }
 
+    private fun showDatePickerDialog(currentDate: Long) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = currentDate
+        }
+
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val newCalendar = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth)
+                }
+                viewModel.updateInvoiceDate(newCalendar.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+
+        datePickerDialog.show()
+    }
+
+    private fun showDueDatePickerDialog(currentDate: Long) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = currentDate
+        }
+
+        val datePickerDialog = DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                val newCalendar = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth)
+                }
+                viewModel.updateDueDate(newCalendar.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+
+        // Add a "Remove Due Date" button if there's an existing due date
+        if (viewModel.invoice.value?.dueDate != null) {
+            datePickerDialog.setButton(
+                DatePickerDialog.BUTTON_NEUTRAL,
+                "Remove Due Date"
+            ) { _, _ ->
+                viewModel.updateDueDate(null)
+            }
+        }
+
+        datePickerDialog.show()
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

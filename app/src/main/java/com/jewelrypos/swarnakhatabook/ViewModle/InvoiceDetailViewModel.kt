@@ -704,4 +704,22 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
             else -> _invoice.value?.customerAddress ?: "Address not available"
         }
     }
+
+    fun updateInvoiceDate(newDate: Long) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                invoice.copy(invoiceDate = newDate)
+            },
+            successMessage = "Invoice date updated successfully"
+        )
+    }
+
+    fun updateDueDate(newDate: Long?) {
+        updateInvoice(
+            updateBlock = { invoice ->
+                invoice.copy(dueDate = newDate)
+            },
+            successMessage = "Due date updated successfully"
+        )
+    }
 }

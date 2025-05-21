@@ -609,8 +609,53 @@
     <string name="print_error_context_invalid">Print Error: Invalid context. %s</string>
     <string name="print_error_failed_to_start">Error starting print job: %s</string>
     <string name="print_error_preparation_failed">Error preparing print data: %s</string>
+    <string name="camera">Camera</string>
+    <string name="gallery">Gallery</string>
+    <string name="image_upload_success">Image uploaded successfully</string>
+
+    <string name="image_selection_cancelled">Image selection cancelled</string>
+    <string name="error_creating_image_file">Error creating image file</string>
 
     <!-- Inventory Type strings -->
+    <string name="replace">Replace</string>
+    <string name="add_image">Add Image</string>
+
+
+    <string name="add_jewellery_item">Add Jewellery Item</string>
+    <string name="edit_jewellery_item">Edit Jewellery Item</string>
+    <string name="update">Update</string>
+    <string name="add">Add</string>
+    <string name="cancel">Cancel</string>
+    <string name="save_close">Save &amp; Close</string>
+    <string name="save_and_add">Save and Add</string>
+    <string name="add_charge">Add Charge</string>
+    <string name="add_item">Add Item</string>
+    <string name="item_updated_success">Item updated successfully</string>
+    <string name="item_update_failed">Failed to update item</string>
+    <string name="weight_details">Weight Details</string>
+    <string name="gross_weight">Gross Weight</string>
+    <string name="net_weight">Net Weight</string>
+    <string name="purity_e_g_91_66">Purity (e.g. 91.6)</string>
+    <string name="no_extra_charges">No extra charges added</string>
+    <string name="item_name">Item Name</string>
+    <string name="wastage">Wastage</string>
+    <string name="type">Type</string>
+    <string name="diamond_pricing">Diamond/Stone Pricing</string>
+    <string name="diamond_price">Diamond/Stone Price</string>
+    <string name="pricing_information">Pricing Information</string>
+    <string name="rate_based_on">Metal Rate Based On</string>
+    <string name="metal_rate_1_gram">Metal Rate (1 Gram)</string>
+    <string name="making_charges_type">Making Charges Type</string>
+    <string name="making_charges">Making Charges</string>
+    <string name="total_making_charges_auto_calculated">Total Making Charges (Auto-calculated)</string>
+    <string name="total_gold_charges_wt_gold_rate">Total Metal Value (Wt * Rate + Wastage)</string>
+    <string name="total_charges">Total Item Charges (Metal + Making + Diamond)</string>
+    <string name="extra_charges">Extra Charges</string>
+    <string name="total_extra_charges">Total Extra Charges</string>
+    <string name="tax_information">Tax Information</string>
+    <string name="tax_applicable">Tax Applicable</string>
+    <string name="tax_rate">Tax Rate (%)</string>
+    <string name="tax_amount_auto_calculated">Tax Amount (Auto-calculated)</string>
     <string name="inventory_type">Inventory Type</string>
     <string name="single_item">Single Item (One-of-a-kind)</string>
     <string name="batch_items">Multiple Items (Same Design)</string>
@@ -620,20 +665,15 @@
     <!-- Image handling strings -->
     <string name="item_image">Item Image</string>
     <string name="tap_to_add_image">Tap to add an item image</string>
-    <string name="camera">Camera</string>
-    <string name="gallery">Gallery</string>
     <string name="select_image_source">Select Image Source</string>
     <string name="choose_image_source">Choose how you want to add an image</string>
-    <string name="image_upload_success">Image uploaded successfully</string>
     <string name="image_upload_failed">Upload failed: %1$s</string>
     <string name="no_camera_app">No camera app found</string>
     <string name="no_gallery_app">No gallery app found</string>
     <string name="camera_permission_required">Camera permission is required to take photos</string>
     <string name="storage_permission_required">Storage permission is required to select photos</string>
     <string name="image_capture_cancelled">Camera capture cancelled</string>
-    <string name="image_selection_cancelled">Image selection cancelled</string>
     <string name="image_cropping_failed">Image cropping failed: %1$s</string>
-    <string name="error_creating_image_file">Error creating image file</string>
     <string name="camera_not_available">Camera not available</string>
     <string name="failed_retrieve_captured_image">Failed to retrieve captured image</string>
     <string name="failed_retrieve_selected_image">Failed to retrieve selected image</string>
@@ -647,29 +687,19 @@
     <string name="camera_unexpected_result">Camera returned unexpected result code: %1$d</string>
     <string name="error_processing_camera_result">Error processing camera result: %1$s</string>
     <string name="captured_image_empty">The captured image appears to be empty</string>
-    <string name="replace">Replace</string>
-    <string name="add_image">Add Image</string>
-
-
-
-
-
-    <string name="add_jewellery_item">Add Jewellery Item</string> <string name="edit_jewellery_item">Edit Jewellery Item</string>
-    <string name="update">Update</string>
-    <string name="update_and_close">Update &amp; Close</string> <string name="add_new_charge">Add New Charge</string>
-    <string name="add">Add</string>
-    <string name="cancel">Cancel</string>
+    <string name="error_loading_inventory_items">Failed to load inventory items: %1$s</string>
+    <string name="update_and_close">Update &amp; Close</string>
+    <string name="add_new_charge">Add New Charge</string>
     <string name="confirm_deletion">Confirm Deletion</string>
     <string name="confirm_delete_charge">Are you sure you want to delete the charge \'%1$s\'?</string>
     <string name="delete">Delete</string>
-    <string name="save_close">Save &amp; Close</string> <string name="save_and_add">Save and Add</string> <string name="add_charge">Add Charge</string> <string name="add_item">Add Item</string> <string name="error_loading_inventory_items">Failed to load inventory items: %1$s</string>
     <string name="generic_error">Error: %1$s</string>
     <string name="error_selecting_item">Error selecting item</string>
     <string name="please_enter_valid_amount">Please enter a valid amount</string>
     <string name="please_fill_all_fields">Please fill all fields</string>
     <string name="please_select_item">Please select an item from the list</string>
     <string name="amount_cannot_be_negative">Amount cannot be negative</string>
-    <string name="item_updated_success">Item updated successfully</string> <string name="item_update_failed">Failed to update item</string> <string name="dropdown_code_category">Code: %1$s | Cat: %2$s</string>
+    <string name="dropdown_code_category">Code: %1$s | Cat: %2$s</string>
     <string name="dropdown_weight_purity">Wt: %1$.1fg | Purity: %2$s</string>
     <string name="type_single_item">Type: Single Item</string>
     <string name="stock_info">Stock: %1$.1f %2$s</string>
@@ -680,29 +710,7 @@
     <string name="bulk_stock_details">Bulk Stock Details</string>
     <string name="weight_sold">Weight Sold</string>
     <string name="rate_per_gram">Rate per Gram</string>
-    <string name="weight_details">Weight Details</string>
-    <string name="gross_weight">Gross Weight</string>
-    <string name="net_weight">Net Weight</string>
-    <string name="purity_e_g_91_66">Purity (e.g. 91.6)</string>
-    <string name="no_extra_charges">No extra charges added</string> <string name="item_name">Item Name</string>
-    <string name="wastage">Wastage</string>
-    <string name="type">Type</string>
-    <string name="diamond_pricing">Diamond/Stone Pricing</string>
-    <string name="diamond_price">Diamond/Stone Price</string>
-    <string name="pricing_information">Pricing Information</string>
-    <string name="rate_based_on">Rate Based On</string>
-    <string name="metal_rate_1_gram">Metal Rate (1 Gram)</string>
-    <string name="making_charges_type">Making Charges Type</string>
-    <string name="making_charges">Making Charges</string>
-    <string name="total_making_charges_auto_calculated">Total Making Charges (Auto-calculated)</string>
-    <string name="total_gold_charges_wt_gold_rate">Total Metal Value (Wt * Rate + Wastage)</string>
-    <string name="total_charges">Total Item Charges (Metal + Making + Diamond)</string>
-    <string name="extra_charges">Extra Charges</string>
-    <string name="total_extra_charges">Total Extra Charges</string>
-    <string name="tax_information">Tax Information</string>
-    <string name="tax_applicable">Tax Applicable</string>
-    <string name="tax_rate">Tax Rate (%)</string>
-    <string name="tax_amount_auto_calculated">Tax Amount (Auto-calculated)</string>
+
     <string name="zero_decimal">0.00</string>
     <string name="weight_sold_required">Weight sold is required for bulk items</string>
     <string name="weight_must_be_positive">Weight must be greater than zero</string>
@@ -762,5 +770,19 @@
     <string name="subscription_error_title">Subscription Verification Error</string>
     <string name="subscription_error_message">There was an error checking your subscription status. Please ensure you have an internet connection and try again. If the issue persists, please contact support.</string>
     <string name="subscription_retry">Retry</string>
+
+    <!-- Customer Bottom Sheet -->
+    <string name="add_financial_info">+ Add Financial Information</string>
+    <string name="hide_financial_info">- Hide Financial Information</string>
+    <string name="add_relationship_info">+ Add Relationship Information</string>
+    <string name="hide_relationship_info">- Hide Relationship Information</string>
+
+    <string name="error_image_file_not_found">Error: Image file not found.</string>
+    <string name="error_processing_image">Error processing image.</string>
+    <string name="camera_permission_denied">Camera permission denied. Cannot capture image.</string>
+    <string name="gallery_permission_denied">Gallery permission denied. Cannot select image.</string>
+    <string name="image_uploaded_but_failed_to_update_item">Image uploaded but failed to update item URL.</string>
+    <string name="failed_to_upload_image">Failed to upload image.</string>
+    <string name="failed_to_load_image">Failed To Load Image</string>
 
 </resources>

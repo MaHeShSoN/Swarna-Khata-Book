@@ -427,8 +427,6 @@
     <string name="title_relationship_information">रिश्ते की जानकारी</string>
     <string name="title_important_dates">महत्वपूर्ण तिथियां</string>
     <string name="title_notes">नोट्स</string>
-
-    <!-- Field Labels -->
     <string name="label_name">नाम</string>
     <string name="label_type">प्रकार</string>
     <string name="label_phone">फोन</string>
@@ -449,7 +447,7 @@
     <string name="item_name">वस्तु का नाम</string>
     <string name="purity_e_g_91_66">शुद्धता (जैसे 91.66)</string>
     <string name="diamond_price">हीरे का मूल्य</string>
-    <string name="rate_based_on">दर किस पर आधारित है?</string>
+    <string name="rate_based_on">धातु दर किस पर आधारित है?</string>
     <string name="type">प्रकार</string>
     <string name="metal_rate_1_gram">धातु दर (1 ग्राम)</string>
     <string name="total_making_charges_auto_calculated">कुल मेकिंग चार्ज (स्वतः गणित)</string>
@@ -458,8 +456,6 @@
     <string name="total_extra_charges">कुल अतिरिक्त चार्ज</string>
     <string name="tax_rate">कर दर</string>
     <string name="tax_amount_auto_calculated">कर राशि (स्वतः गणित)</string>
-
-    <!-- Invoice Screen -->
     <string name="title_create_invoice">बिल बनाएं</string>
     <string name="status_unpaid">अवैतनिक</string>
     <string name="label_invoice_date">बिल दिनांक:</string>
@@ -487,8 +483,6 @@
     <string name="action_save_invoice">बिल सहेजें</string>
     <string name="add_customer">ग्राहक जोड़ें</string>
     <string name="default_notification_channel_id">डिफ़ॉल्ट चैनल</string>
-
-    <!-- RecyclingBin Strings -->
     <string name="no_items_in_recycling_bin">रीसायकल बिन में कोई आइटम नहीं है</string>
     <string name="error_loading_recycled_items">रीसायकल आइटम लोड करने में त्रुटि: %1$s</string>
     <string name="unexpected_error">अप्रत्याशित त्रुटि: %1$s</string>
@@ -519,11 +513,8 @@
     <string name="restore_not_supported">इस प्रकार के आइटम के लिए पुनर्स्थापना समर्थित नहीं है</string>
     <string name="premium_required_restore_message">रीसायकल बिन से आइटम पुनर्स्थापित करने के लिए प्रीमियम पर अपग्रेड करें</string>
     <string name="restoring_items_from_bin">रीसायकल बिन से आइटम पुनर्स्थापित करना</string>
-
-    <!-- Additional subscription badge related strings for SettingsViewModel -->
     <string name="days_left">दिन शेष</string>
     <string name="trial_ends_in_days">ट्रायल %1$d दिनों में समाप्त होगा</string>
-    <!-- Add the Hindi string resources for the newly added strings -->
     <string name="days_left_format">%1$d दिन शेष</string>
     <string name="debug_subscription">डिबग सब्सक्रिप्शन</string>
     <string name="developer_tools_for_testing">सब्सक्रिप्शन सुविधाओं के परीक्षण के लिए डेवलपर टूल्स</string>
@@ -531,7 +522,6 @@
     <string name="no_inventory_items_message">इनवॉइस बनाने से पहले आपको अपनी इन्वेंट्री में ज्वेलरी आइटम जोड़ने की आवश्यकता है। क्या आप अभी अपना पहला आइटम जोड़ना चाहते हैं?</string>
     <string name="create_new_item">नया आइटम बनाएं</string>
     <string name="error_loading_inventory">इन्वेंट्री लोड करने में त्रुटि: %1$s</string>
-
     <string name="saving_invoice">चालान सहेजा जा रहा है…</string>
     <string name="you_don_t_have_any_shops_yet_create_your_first_shop_to_get_started">आपके पास अभी तक कोई दुकान नहीं है। शुरू करने के लिए अपनी पहली दुकान बनाएं।</string>
     <string name="choose_which_shop_you_want_to_work_with">चुनें कि आप किस दुकान के साथ काम करना चाहते हैं</string>
@@ -593,7 +583,6 @@
     <string name="cannot_generate_receipt">रसीद उत्पन्न नहीं कर सकते</string>
     <string name="no_payments_made">रसीद उत्पन्न नहीं कर सकते: कोई भुगतान नहीं किया गया है</string>
     <string name="error">त्रुटि</string>
-
     <string name="shop_info_not_found">दुकान की जानकारी नहीं मिली</string>
     <string name="invoice_id_not_available">चालान आईडी उपलब्ध नहीं है</string>
     <string name="invoice_marked_paid">चालान भुगतान किया गया चिह्नित किया गया</string>
@@ -604,7 +593,6 @@
     <string name="receipt">रसीद_%1$s</string>
     <string name="invoice_pdf">चालान_%1$s.pdf</string>
     <string name="date_format">dd MMM yyyy</string>
-
     <string name="application_pdf">application/pdf</string>
     <string name="whatsapp_package">com.whatsapp</string>
     <string name="marked_as_paid">भुगतान किया गया चिह्नित</string>
@@ -644,9 +632,6 @@
     <string name="advance_notification">अग्रिम सूचना</string>
     <string name="multi_user_access">मल्टी यूज़र एक्सेस</string>
     <string name="no_multi_user_access">कोई मल्टी यूज़र एक्सेस नहीं</string>
-
-
-
     <string name="cannot_print_invoice_data_missing">Cannot print: Invoice data missing.</string>
     <string name="pdf_generation_failed">Failed to generate PDF for printing.</string>
     <string name="cannot_print_activity_context_lost">Cannot print: Activity context lost.</string>
@@ -656,6 +641,119 @@
     <string name="print_error_context_invalid">Print Error: Invalid context. %s</string>
     <string name="print_error_failed_to_start">Error starting print job: %s</string>
     <string name="print_error_preparation_failed">Error preparing print data: %s</string>
+    <string name="purity_must_be_between_0_and_100">शुद्धता 0 से 100 के बीच होनी चाहिए</string>
+    <string name="purity_required_for_fine">जब दर फ़ाइन पर आधारित हो तो शुद्धता शून्य से अधिक होनी चाहिए</string>
+    <string name="invalid_purity_value">अमान्य शुद्धता मान</string>
+    <string name="value_cannot_be_negative">मान ऋणात्मक नहीं हो सकता</string>
+    <string name="invalid_number">अमान्य संख्या प्रारूप</string>
+    <string name="type_required">प्रकार का चयन आवश्यक है</string>
+    <string name="wastage_type_required">यदि बर्बादी का मान दर्ज किया गया है तो बर्बादी का प्रकार आवश्यक है</string>
+    <string name="making_charges_type_required">यदि मेकिंग चार्जेस का मान दर्ज किया गया है तो मेकिंग चार्जेस का प्रकार आवश्यक है</string>
+    <string name="percentage_must_be_0_100">प्रतिशत 0 से 100 के बीच होना चाहिए</string>
+    <string name="rate_based_on_required">यदि धातु दर दर्ज की गई है तो "दर आधारित" आवश्यक है</string>
+    <string name="tax_rate_required">यदि कर लागू है तो कर दर आवश्यक है</string>
+    <string name="tax_rate_cannot_be_negative">कर दर ऋणात्मक नहीं हो सकती</string>
+    <string name="invalid_tax_rate">अमान्य कर दर</string>
+    <string name="net_weight_required">शुद्ध वजन आवश्यक है</string>
+    <string name="insufficient_bulk_stock_available">पर्याप्त थोक स्टॉक उपलब्ध नहीं है</string>
+    <string name="cannot_save_empty_invoice">खाली चालान सहेजा नहीं जा सकता</string>
+    <string name="jewellery_name">गहने का नाम</string>
+    <string name="jewellery_category">गहने की श्रेणी</string>
+    <string name="metal_type">धातु का प्रकार</string>
+    <string name="quick_add_item">त्वरित आइटम जोड़ें</string>
+    <string name="weight_stock">वजन: %1$s ग्रा</string>
+    <string name="quantity_stock">मात्रा: %1$s नग</string>
+    <string name="quick_add_indicator">★ त्वरित जोड़ा गया</string>
+    <string name="jewellery_item_name">गहने के आइटम का नाम</string>
+    <string name="quick_added">त्वरित जोड़ा गया</string>
+    <string name="weight_based">वजन पर आधारित</string>
+    <string name="quantity_based">मात्रा पर आधारित</string>
+    <string name="add_item_image_instruction">आइटम की छवि जोड़ने के निर्देश</string>
+    <string name="payment_history">भुगतान इतिहास</string>
+    <string name="grace_period_title">आपका परीक्षण समाप्त हो गया है</string>
+    <string name="grace_period_message">आपकी परीक्षण अवधि समाप्त हो गई है, लेकिन आप %1$d और दिन%2$s के लिए स्वर्ण खाता बुक का उपयोग जारी रख सकते हैं। सेवा में किसी भी रुकावट से बचने के लिए कृपया अपग्रेड करें।</string>
+    <string name="continue_using">जारी रखें</string>
+    <string name="subscription_error_title">सदस्यता सत्यापन त्रुटि</string>
+    <string name="subscription_error_message">आपकी सदस्यता स्थिति की जाँच करते समय एक त्रुटि हुई। कृपया सुनिश्चित करें कि आपके पास इंटरनेट कनेक्शन है और पुनः प्रयास करें। यदि समस्या बनी रहती है, तो कृपया सहायता से संपर्क करें।</string>
+    <string name="subscription_retry">पुनः प्रयास करें</string>
+    <string name="add_financial_info">+ वित्तीय जानकारी जोड़ें</string>
+    <string name="hide_financial_info">- वित्तीय जानकारी छिपाएँ</string>
+    <string name="add_relationship_info">+ संबंध जानकारी जोड़ें</string>
+    <string name="hide_relationship_info">- संबंध जानकारी छिपाएँ</string>
+    <string name="error_image_file_not_found">त्रुटि: छवि फ़ाइल नहीं मिली।</string>
+    <string name="image_selection_cancelled">छवि चयन रद्द किया गया।</string>
+    <string name="error_processing_image">छवि को संसाधित करने में त्रुटि।</string>
+    <string name="camera_permission_denied">कैमरा अनुमति अस्वीकृत। छवि कैप्चर नहीं कर सकते।</string>
+    <string name="gallery_permission_denied">गैलरी अनुमति अस्वीकृत। छवि का चयन नहीं कर सकते।</string>
+    <string name="image_upload_success">छवि सफलतापूर्वक अपलोड की गई!</string>
+    <string name="image_uploaded_but_failed_to_update_item">छवि अपलोड की गई लेकिन आइटम URL अपडेट करने में विफल रहा।</string>
+    <string name="failed_to_upload_image">छवि अपलोड करने में विफल रहा।</string>
+    <string name="failed_to_load_image">छवि लोड करने में विफल रहा</string>
+    <string name="camera">कैमरा</string>
+    <string name="gallery">गैलरी</string>
+    <string name="add_image">छवि जोड़ें</string>
+    <string name="replace">बदलें</string>
+    <string name="error_creating_image_file">छवि फ़ाइल बनाने में त्रुटि।</string>
+    <string name="inventory_type">इन्वेंट्री का प्रकार</string>
+    <string name="single_item">एकल आइटम (अद्वितीय)</string>
+    <string name="batch_items">एकाधिक आइटम (समान डिज़ाइन)</string>
+    <string name="bulk_stock">बल्क इन्वेंट्री (वजन के अनुसार)</string>
+    <string name="total_weight_grams">कुल वजन (ग्राम में)</string>
+    <string name="item_image">आइटम की छवि</string>
+    <string name="tap_to_add_image">आइटम की छवि जोड़ने के लिए टैप करें</string>
+    <string name="select_image_source">छवि स्रोत चुनें</string>
+    <string name="choose_image_source">आप छवि कैसे जोड़ना चाहते हैं, चुनें</string>
+    <string name="image_upload_failed">अपलोड विफल: %1$s</string>
+    <string name="no_camera_app">कोई कैमरा ऐप नहीं मिला</string>
+    <string name="no_gallery_app">कोई गैलरी ऐप नहीं मिला</string>
+    <string name="camera_permission_required">फ़ोटो लेने के लिए कैमरा अनुमति आवश्यक है</string>
+    <string name="storage_permission_required">फ़ोटो चुनने के लिए स्टोरेज अनुमति आवश्यक है</string>
+    <string name="image_capture_cancelled">कैमरा कैप्चर रद्द किया गया</string>
+    <string name="image_cropping_failed">छवि क्रॉपिंग विफल: %1$s</string>
+    <string name="camera_not_available">कैमरा उपलब्ध नहीं है</string>
+    <string name="failed_retrieve_captured_image">कैप्चर की गई छवि पुनः प्राप्त करने में विफल रहा</string>
+    <string name="failed_retrieve_selected_image">चयनित छवि पुनः प्राप्त करने में विफल रहा</string>
+    <string name="could_not_create_image_file">छवि फ़ाइल नहीं बनाई जा सकी</string>
+    <string name="camera_error">कैमरा त्रुटि: %1$s</string>
+    <string name="gallery_error">गैलरी त्रुटि: %1$s</string>
+    <string name="crop_image">छवि क्रॉप करें</string>
+    <string name="crop">क्रॉप करें</string>
+    <string name="camera_unexpected_result">कैमरा ने अप्रत्याशित परिणाम कोड लौटाया: %1$d</string>
+    <string name="error_processing_camera_result">कैमरा परिणाम को संसाधित करने में त्रुटि: %1$s</string>
+    <string name="captured_image_empty">कैप्चर की गई छवि खाली प्रतीत होती है</string>
+    <string name="error_loading_inventory_items">इन्वेंट्री आइटम लोड करने में विफल: %1$s</string>
+    <string name="update_and_close">अपडेट करें और बंद करें</string>
+    <string name="add_new_charge">नया चार्ज जोड़ें</string>
+    <string name="confirm_deletion">हटाने की पुष्टि करें</string>
+    <string name="confirm_delete_charge">क्या आप वाकई \'%1$s\' चार्ज हटाना चाहते हैं?</string>
+    <string name="delete">हटाएँ</string>
+    <string name="generic_error">त्रुटि: %1$s</string>
+    <string name="error_selecting_item">आइटम का चयन करने में त्रुटि</string>
+    <string name="please_enter_valid_amount">कृपया एक वैध राशि दर्ज करें</string>
+    <string name="please_fill_all_fields">कृपया सभी फ़ील्ड भरें</string>
+    <string name="please_select_item">कृपया सूची से एक आइटम का चयन करें</string>
+    <string name="amount_cannot_be_negative">राशि ऋणात्मक नहीं हो सकती</string>
+    <string name="dropdown_code_category">कोड: %1$s | श्रेणी: %2$s</string>
+    <string name="dropdown_weight_purity">वजन: %1$.1fg | शुद्धता: %2$s</string>
+    <string name="type_single_item">प्रकार: एकल आइटम</string>
+    <string name="stock_info">स्टॉक: %1$.1f %2$s</string>
+    <string name="total_weight_info">कुल वजन: %1$.1fg</string>
+    <string name="not_applicable">लागू नहीं</string>
+    <string name="default_unit">इकाइयाँ</string>
+    <string name="quantity">मात्रा</string>
+    <string name="bulk_stock_details">बल्क स्टॉक विवरण</string>
+    <string name="weight_sold">बिका हुआ वजन</string>
+    <string name="rate_per_gram">प्रति ग्राम दर</string>
+    <string name="zero_decimal">0.00</string>
+    <string name="weight_sold_required">बल्क आइटम के लिए बिका हुआ वजन आवश्यक है</string>
+    <string name="weight_must_be_positive">वजन शून्य से अधिक होना चाहिए</string>
+    <string name="insufficient_bulk_stock">बिका हुआ वजन उपलब्ध थोक स्टॉक (%1$.1fg) से अधिक है</string>
+    <string name="rate_per_gram_required">बल्क आइटम के लिए प्रति ग्राम दर आवश्यक है</string>
+    <string name="rate_cannot_be_negative">दर ऋणात्मक नहीं हो सकती</string>
+    <string name="quantity_required">मात्रा आवश्यक है</string>
+    <string name="quantity_must_be_positive">मात्रा शून्य से अधिक होनी चाहिए</string>
+    <string name="not_enough_stock_available">मात्रा उपलब्ध स्टॉक (%1$d) से अधिक है</string>
+
 
 </resources>
 

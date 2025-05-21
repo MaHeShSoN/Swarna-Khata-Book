@@ -142,29 +142,6 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Email -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/emailLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/email_address_optional"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/emailField"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="textEmailAddress|textCapWords"
-                        android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -197,7 +174,7 @@
                 <!-- Street Address -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/streetAddressLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
@@ -206,7 +183,7 @@
                     app:boxStrokeColor="@color/my_light_primary"
                     app:hintTextColor="@color/my_light_secondary">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <AutoCompleteTextView
                         android:id="@+id/streetAddressField"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -263,29 +240,6 @@
                         android:textSize="14sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Postal Code -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/postalCodeLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/postal_code_optional"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/postalCodeField"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="textPostalAddress|textCapWords"
-                        android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <!-- Country -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/countryLayout"
@@ -312,129 +266,156 @@
         </com.google.android.material.card.MaterialCardView>
 
 
-        <TextView
+        <!-- Financial Information Section -->
+        <LinearLayout
+            android:id="@+id/financialInfoButtonContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
-            android:drawablePadding="2dp"
-            android:fontFamily="@font/librebaskervilleregular"
-            android:text="@string/financial_information"
-            android:textColor="@color/my_light_on_surface"
-            android:textSize="20sp" />
+            android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/financialInfoButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:text="@string/add_financial_info"
+                android:textColor="@color/my_light_outline"
+                app:strokeColor="@color/my_light_outline" />
+        </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/financialInfoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-                <!-- Opening Balance Type -->
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:text="@string/opening_balance_type"
-                    android:textColor="@color/my_light_secondary"
-                    android:textSize="16sp" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:drawablePadding="2dp"
+                android:fontFamily="@font/librebaskervilleregular"
+                android:text="@string/financial_information"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="20sp" />
 
-                <RadioGroup
-                    android:id="@+id/balanceTypeRadioGroup"
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <RadioButton
-                        android:id="@+id/creditRadioButton"
-                        android:layout_width="0dp"
+
+                    <!-- Opening Balance Type -->
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="start"
-                        android:layout_marginEnd="16dp"
-                        android:layout_weight="1"
-                        android:buttonTint="@color/my_light_primary"
-                        android:fontFamily="@font/montserratregular"
-                        android:maxWidth="320dp"
-                        android:text="@string/credit"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-
-                    <RadioButton
-                        android:id="@+id/debitRadioButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="start"
-                        android:layout_weight="1"
-                        android:buttonTint="@color/my_light_primary"
-                        android:fontFamily="@font/montserratregular"
-                        android:maxWidth="320dp"
-                        android:text="@string/debit"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </RadioGroup>
-
-                <!-- Opening Balance -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/openingBalanceLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/opening_balance"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary"
-                    app:prefixText="₹">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/openingBalanceField"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
                         android:fontFamily="@font/montserratsemibold"
-                        android:inputType="numberDecimal"
-                        android:maxWidth="488dp"
-                        android:text="0.00"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:text="@string/opening_balance_type"
+                        android:textColor="@color/my_light_secondary"
+                        android:textSize="16sp" />
 
-
-                <!-- Balance Notes -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/balanceNotesLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/balance_notes"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/balanceNotesField"
+                    <RadioGroup
+                        android:id="@+id/balanceTypeRadioGroup"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:gravity="top|start"
-                        android:inputType="textMultiLine|textCapWords"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <RadioButton
+                            android:id="@+id/creditRadioButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="start"
+                            android:layout_marginEnd="16dp"
+                            android:layout_weight="1"
+                            android:buttonTint="@color/my_light_primary"
+                            android:fontFamily="@font/montserratregular"
+                            android:maxWidth="320dp"
+                            android:text="@string/credit"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+
+                        <RadioButton
+                            android:id="@+id/debitRadioButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="start"
+                            android:layout_weight="1"
+                            android:buttonTint="@color/my_light_primary"
+                            android:fontFamily="@font/montserratregular"
+                            android:maxWidth="320dp"
+                            android:text="@string/debit"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </RadioGroup>
+
+                    <!-- Opening Balance -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/openingBalanceLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/opening_balance"
                         android:maxWidth="488dp"
-                        android:minLines="2"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary"
+                        app:prefixText="₹">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/openingBalanceField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratsemibold"
+                            android:inputType="numberDecimal"
+                            android:maxWidth="488dp"
+                            android:text="0.00"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+
+                    <!-- Balance Notes -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/balanceNotesLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/balance_notes"
+                        android:maxWidth="488dp"
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/balanceNotesField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:gravity="top|start"
+                            android:inputType="textMultiLine|textCapWords"
+                            android:maxWidth="488dp"
+                            android:minLines="2"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
         <!-- Business Information Section -->
         <TextView
@@ -537,150 +518,176 @@
 
 
         <!-- Relationship Information Section -->
-        <TextView
+        <LinearLayout
+            android:id="@+id/relationshipInfoButtonContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="8dp"
-            android:fontFamily="@font/librebaskervilleregular"
-            android:text="@string/relationship_information_optional"
-            android:textColor="@color/my_light_on_surface"
-            android:textSize="20sp" />
+            android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/my_light_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp">
-
-            <LinearLayout
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/relationshipInfoButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:text="@string/add_relationship_info"
+                android:textColor="@color/my_light_outline"
+                app:strokeColor="@color/my_light_outline" />
+        </LinearLayout>
 
-                <!-- Customer Since -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/customerSinceDateLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+        <LinearLayout
+            android:id="@+id/relationshipInfoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp"
+                android:fontFamily="@font/librebaskervilleregular"
+                android:text="@string/relationship_information_optional"
+                android:textColor="@color/my_light_on_surface"
+                android:textSize="20sp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardBackgroundColor="@color/my_light_surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/customer_since"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/customerSinceDateField"
+                    <!-- Customer Since -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/customerSinceDateLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:focusable="false"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="date"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/customer_since"
                         android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
 
-                <!-- Referred By -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/referredByLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/referred_by"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/customerSinceDateField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:focusable="false"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="date"
+                            android:maxWidth="488dp"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/referredByField"
+                    <!-- Referred By -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/referredByLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="text|textCapWords"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/referred_by"
                         android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
 
-                <!-- Birthday -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/birthdayLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/birthday"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/referredByField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="text|textCapWords"
+                            android:maxWidth="488dp"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/birthdayField"
+                    <!-- Birthday -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/birthdayLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:focusable="false"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="date"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/birthday"
                         android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
 
-                <!-- Anniversary -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/anniversaryLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:hint="@string/anniversary"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/birthdayField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:focusable="false"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="date"
+                            android:maxWidth="488dp"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/anniversaryField"
+                    <!-- Anniversary -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/anniversaryLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:focusable="false"
-                        android:fontFamily="@font/montserratregular"
-                        android:inputType="date"
+                        android:layout_marginBottom="8dp"
+                        android:hint="@string/anniversary"
                         android:maxWidth="488dp"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
 
-                <!-- Notes/Comments -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/notesLayout"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/notes_comments"
-                    android:maxWidth="488dp"
-                    app:boxStrokeColor="@color/my_light_primary"
-                    app:hintTextColor="@color/my_light_secondary">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/anniversaryField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:focusable="false"
+                            android:fontFamily="@font/montserratregular"
+                            android:inputType="date"
+                            android:maxWidth="488dp"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/notesField"
+                    <!-- Notes/Comments -->
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/notesLayout"
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/montserratregular"
-                        android:gravity="top|start"
-                        android:inputType="textMultiLine|textCapWords"
+                        android:hint="@string/notes_comments"
                         android:maxWidth="488dp"
-                        android:minLines="3"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="14sp" />
-                </com.google.android.material.textfield.TextInputLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                        app:boxStrokeColor="@color/my_light_primary"
+                        app:hintTextColor="@color/my_light_secondary">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/notesField"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="@font/montserratregular"
+                            android:gravity="top|start"
+                            android:inputType="textMultiLine|textCapWords"
+                            android:maxWidth="488dp"
+                            android:minLines="3"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
         <!-- Action Buttons -->
         <LinearLayout

@@ -63,6 +63,23 @@
 # Keep all model classes that are serialized/deserialized with Gson
 -keepclassmembers class com.jewelrypos.swarnakhatabook.model.** { *; }
 
+# Keep Firestore data classes and their serialization
+-keep class com.jewelrypos.swarnakhatabook.DataClasses.** { *; }
+-keepclassmembers class com.jewelrypos.swarnakhatabook.DataClasses.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses
+
+# Keep Firestore custom classes
+-keep class com.jewelrypos.swarnakhatabook.Enums.** { *; }
+-keepclassmembers class com.jewelrypos.swarnakhatabook.Enums.** { *; }
+
+# Keep Firestore PropertyName annotations
+-keepclassmembers class * {
+    @com.google.firebase.firestore.PropertyName <fields>;
+}
+
 # Enable R8 full mode
 -allowaccessmodification
 -repackageclasses

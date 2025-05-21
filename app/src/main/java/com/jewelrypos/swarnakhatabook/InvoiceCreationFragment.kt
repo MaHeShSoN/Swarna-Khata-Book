@@ -542,51 +542,9 @@ class InvoiceCreationFragment : Fragment() {
     }
 
     private fun selectItems() {
-        // First check if there are items in the inventory
-        val firestore = FirebaseFirestore.getInstance()
-        val auth = FirebaseAuth.getInstance()
-        val inventoryRepository = InventoryRepository(firestore, auth, requireContext())
-
-        binding.progressOverlay.visibility = View.VISIBLE
-
-        // Check if there are items in inventory
-        val job = viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val result = inventoryRepository.getAllInventoryItems()
-
-                // Hide progress regardless of success or failure
-                binding.progressOverlay.visibility = View.GONE
-
-                result.fold(
-                    onSuccess = { items ->
-                        if (items.isEmpty()) {
-                            // No items in inventory - show guidance dialog
-                            showNoItemsGuidance()
-                        } else {
-                            // Items exist - proceed with selection
-                            openItemSelectionSheet()
-                        }
-                    },
-                    onFailure = { exception ->
-                        // On error, show standard selection sheet (fallback behavior)
-                        Toast.makeText(
-                            context,
-                            getString(R.string.error_loading_inventory, exception.message),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        openItemSelectionSheet()
-                    }
-                )
-            } catch (e: Exception) {
-                binding.progressOverlay.visibility = View.GONE
-                // On exception, show standard selection sheet (fallback behavior)
-                Toast.makeText(context, getString(R.string.error_loading_inventory, e.message), Toast.LENGTH_SHORT).show()
-                openItemSelectionSheet()
-            }
-        }
-        coroutineJobs.add(job)
+        // Open item selection sheet directly
+        openItemSelectionSheet()
     }
-
 
     private fun showNoItemsGuidance() {
         // Create a dialog builder using AlertDialog.Builder
@@ -708,12 +666,12 @@ class InvoiceCreationFragment : Fragment() {
         val paid = salesViewModel.calculateTotalPaid()
         val due = total - paid
 
-        // Update standard values
-        binding.subtotalValue.text = getString(R.string.currency, String.format("%.2f", subtotal))
-        binding.taxValue.text = getString(R.string.currency, String.format("%.2f", tax))
-        binding.totalValue.text = getString(R.string.currency, String.format("%.2f", total))
-        binding.amountPaidValue.text = getString(R.string.currency, String.format("%.2f", paid))
-        binding.balanceDueValue.text = getString(R.string.currency, String.format("%.2f", due))
+        // Update standard values with integer formatting
+        binding.subtotalValue.text = getString(R.string.currency, String.format("%.0f", subtotal))
+        binding.taxValue.text = getString(R.string.currency, String.format("%.0f", tax))
+        binding.totalValue.text = getString(R.string.currency, String.format("%.0f", total))
+        binding.amountPaidValue.text = getString(R.string.currency, String.format("%.0f", paid))
+        binding.balanceDueValue.text = getString(R.string.currency, String.format("%.0f", due))
 
         // Update payment status badge
         updatePaymentStatusBadge(due, paid)
@@ -750,7 +708,7 @@ class InvoiceCreationFragment : Fragment() {
             val chargeAmount = chargeView.findViewById<TextView>(R.id.extraChargeAmountText)
 
             chargeName.text = charge.first
-            chargeAmount.text = getString(R.string.currency, String.format("%.2f", charge.second))
+            chargeAmount.text = getString(R.string.currency, String.format("%.0f", charge.second))
 
             binding.extraChargesContainer.addView(chargeView)
         }
@@ -781,6 +739,8 @@ class InvoiceCreationFragment : Fragment() {
             // Disable button and change text to indicate saving in progress
             binding.saveButton.isEnabled = false
             binding.saveButton.text = getString(R.string.saving_invoice)
+            // Change background color to gray
+            binding.saveButton.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
 
             // Create invoice object
             val invoiceNumber = generateInvoiceNumber()
@@ -813,6 +773,10 @@ class InvoiceCreationFragment : Fragment() {
                 binding.saveButton.isEnabled = true
                 binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true))
                     R.string.save_purchase else R.string.save_invoice)
+                // Restore original background color
+                binding.saveButton.setBackgroundColor(ContextCompat.getColor(requireContext(), 
+                    if (customer.customerType.equals("Wholesaler", ignoreCase = true))
+                        R.color.supplier_button_color else R.color.my_light_primary))
                 return
             }
 
@@ -865,6 +829,10 @@ class InvoiceCreationFragment : Fragment() {
                     binding.saveButton.isEnabled = true
                     binding.saveButton.text = getString(if (customer.customerType.equals("Wholesaler", ignoreCase = true))
                         R.string.save_purchase else R.string.save_invoice)
+                    // Restore original background color
+                    binding.saveButton.setBackgroundColor(ContextCompat.getColor(requireContext(), 
+                        if (customer.customerType.equals("Wholesaler", ignoreCase = true))
+                            R.color.supplier_button_color else R.color.my_light_primary))
 
                     if (success) {
                         // Increment the monthly invoice count
@@ -924,6 +892,10 @@ class InvoiceCreationFragment : Fragment() {
             val customer = salesViewModel.selectedCustomer.value
             binding.saveButton.text = getString(if (customer?.customerType?.equals("Wholesaler", ignoreCase = true) == true)
                 R.string.save_purchase else R.string.save_invoice)
+            // Restore original background color
+            binding.saveButton.setBackgroundColor(ContextCompat.getColor(requireContext(), 
+                if (customer?.customerType?.equals("Wholesaler", ignoreCase = true) == true)
+                    R.color.supplier_button_color else R.color.my_light_primary))
 
             Toast.makeText(context, getString(R.string.error_saving_invoice, e.message), Toast.LENGTH_SHORT).show()
         }

@@ -36,6 +36,7 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentOtpVarificationBinding
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import java.security.MessageDigest
 
 class OtpVarificationFragment : Fragment() {
 
@@ -111,6 +112,12 @@ class OtpVarificationFragment : Fragment() {
         // Setup OTP digit inputs
         setupOtpInputs()
 
+//        // Setup paste button
+//        binding.btnPaste.setOnClickListener {
+//            AnimationUtils.pulse(it)
+//            handlePaste()
+//        }
+
         // Setup Verify button
         binding.btnVerify.setOnClickListener {
             // Apply button animation
@@ -129,6 +136,7 @@ class OtpVarificationFragment : Fragment() {
 
         // Start SMS retriever
         startSmsRetriever()
+
     }
 
     // In onStart() method
@@ -136,14 +144,24 @@ class OtpVarificationFragment : Fragment() {
         super.onStart()
         // Register the SMS receiver
         val intentFilter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireContext().registerReceiver(
-                smsVerificationReceiver,
-                intentFilter,
-                Context.RECEIVER_NOT_EXPORTED
-            )
-        } else {
-            requireContext().registerReceiver(smsVerificationReceiver, intentFilter)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requireContext().registerReceiver(
+                    smsVerificationReceiver,
+                    intentFilter,
+                    Context.RECEIVER_NOT_EXPORTED
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                requireContext().registerReceiver(
+                    smsVerificationReceiver,
+                    intentFilter,
+                    Context.RECEIVER_EXPORTED
+                )
+            } else {
+                requireContext().registerReceiver(smsVerificationReceiver, intentFilter)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering SMS receiver: ${e.message}")
         }
     }
 
@@ -153,12 +171,11 @@ class OtpVarificationFragment : Fragment() {
         try {
             requireContext().unregisterReceiver(smsVerificationReceiver)
         } catch (e: Exception) {
-            Log.e(TAG, "Receiver not registered: ${e.message}")
+            Log.e(TAG, "Error unregistering SMS receiver: ${e.message}")
         }
     }
 
     private fun setupOtpInputs() {
-        // Get all the EditText fields in a list for easier access
         otpDigits = listOf(
             binding.etDigit,
             binding.etDigit2,
@@ -168,21 +185,48 @@ class OtpVarificationFragment : Fragment() {
             binding.etDigit6
         )
 
-        // Add paste handler to all digit fields
-        for (digitField in otpDigits) {
-            setupPasteHandler(digitField)
-        }
-
-        // Add automatic focus change when a digit is entered
+        // Add a generic TextWatcher to all digit fields
         for (i in otpDigits.indices) {
-            otpDigits[i].addTextChangedListener(object : TextWatcher {
+            val currentEditText = otpDigits[i]
+            currentEditText.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                     // Skip focus changes during paste operation
                     if (isPasting) return
-                    
-                    // Move focus to next EditText when a digit is entered
+
+                    // Check for paste/autofill/suggestion case - when more than one character is being inserted
+                    if ((s?.length ?: 0) > 1) {
+                        Log.d(TAG, "Multiple characters detected: ${s.toString()}, handling as paste")
+
+                        // Extract only digits from the pasted text
+                        val digitsOnly = s.toString().filter { it.isDigit() }
+
+                        // Check if we have 6 or more digits (we'll use the first 6)
+                        if (digitsOnly.length >= 6) {
+                            // Use only the first 6 digits
+                            fillOtpFields(digitsOnly.substring(0, 6))
+                        } else {
+                            // If not 6 digits, try to extract a 6-digit sequence
+                            val pattern = Pattern.compile("(\\d{6})")
+                            val matcher = pattern.matcher(s.toString())
+
+                            if (matcher.find()) {
+                                val otp = matcher.group(0)
+                                fillOtpFields(otp)
+                            } else {
+                                // If we still don't have 6 digits, just use what we have
+                                if (digitsOnly.isNotEmpty()) {
+                                    // Clear current field first to avoid duplicate first digit
+                                    currentEditText.setText("")
+                                    fillPartialOtp(digitsOnly)
+                                }
+                            }
+                        }
+                        return // Exit early as we've handled the paste/autofill
+                    }
+
+                    // Normal single digit input: move focus to next EditText when a digit is entered
                     if (s?.length == 1 && i < otpDigits.size - 1) {
                         otpDigits[i + 1].requestFocus()
                     }
@@ -197,37 +241,60 @@ class OtpVarificationFragment : Fragment() {
             })
 
             // Add backspace handling to move to previous digit
-            otpDigits[i].setOnKeyListener { _, keyCode, event ->
+            currentEditText.setOnKeyListener { _, keyCode, event ->
                 if (keyCode == android.view.KeyEvent.KEYCODE_DEL &&
-                    otpDigits[i].text.isEmpty() &&
+                    event.action == android.view.KeyEvent.ACTION_DOWN && // Ensure it's a key down event
+                    currentEditText.text.isEmpty() &&
                     i > 0) {
                     // Move to previous EditText on backspace when current is empty
                     otpDigits[i - 1].requestFocus()
-                    otpDigits[i - 1].text.clear()
+                    otpDigits[i - 1].text.clear() // Clear the previous field too, as user intends to go back
                     return@setOnKeyListener true
                 }
                 false
             }
         }
+        // --- Removed the loop for setupPasteHandler(digitField)
+        // because the TextWatcher now handles paste-like operations more generally.
+        // However, if you still want explicit long-press paste handling, keep it.
+        // I'd recommend relying primarily on the TextWatcher for "autofill" and clipboard suggestions.
+        // If you keep it, make sure handlePaste() also calls fillOtpFields().
+        for (digitField in otpDigits) {
+            setupPasteHandler(digitField) // Keep this if you want the long-press/context menu paste
+        }
     }
 
-    private fun setupPasteHandler(editText: EditText) {
-        editText.setOnLongClickListener {
-            val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            val clip = clipboard.primaryClip
-            
-            if (clip != null && clip.itemCount > 0) {
-                val pastedText = clip.getItemAt(0).text.toString().trim()
-                
-                // Check if pasted text is a valid 6-digit OTP
-                if (pastedText.matches(Regex("\\d{6}"))) {
-                    fillOtpFields(pastedText)
-                    return@setOnLongClickListener true
-                }
+
+    private fun fillPartialOtp(digits: String) {
+        isPasting = true
+
+        // Fill as many digits as we have
+        for (i in digits.indices) {
+            if (i < otpDigits.size) {
+                otpDigits[i].setText(digits[i].toString())
             }
-            false
         }
-        
+
+        // Set focus to the next empty field or the last filled field
+        val nextEmptyIndex = digits.length
+        if (nextEmptyIndex < otpDigits.size) {
+            otpDigits[nextEmptyIndex].requestFocus()
+        } else if (digits.isNotEmpty()) {
+            otpDigits[digits.length - 1].requestFocus()
+            otpDigits[digits.length - 1].setSelection(1) // Position cursor at the end
+        }
+
+        isPasting = false
+    }
+
+
+    private fun setupPasteHandler(editText: EditText) {
+        // Handle long press paste
+        editText.setOnLongClickListener {
+            handlePaste()
+            true
+        }
+
         // Handle standard paste event through context menu
         editText.customSelectionActionModeCallback = object : android.view.ActionMode.Callback {
             override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu?): Boolean {
@@ -241,20 +308,9 @@ class OtpVarificationFragment : Fragment() {
             override fun onActionItemClicked(mode: android.view.ActionMode?, item: android.view.MenuItem?): Boolean {
                 return when (item?.itemId) {
                     android.R.id.paste -> {
-                        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = clipboard.primaryClip
-                        
-                        if (clip != null && clip.itemCount > 0) {
-                            val pastedText = clip.getItemAt(0).text.toString().trim()
-                            
-                            // Check if pasted text is a valid 6-digit OTP
-                            if (pastedText.matches(Regex("\\d{6}"))) {
-                                fillOtpFields(pastedText)
-                                mode?.finish()
-                                return true
-                            }
-                        }
-                        false
+                        handlePaste()
+                        mode?.finish()
+                        true
                     }
                     else -> false
                 }
@@ -298,26 +354,78 @@ class OtpVarificationFragment : Fragment() {
         }
     }
 
+    private fun handlePaste() {
+        Log.d(TAG, "Paste operation initiated")
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = clipboard.primaryClip
+
+        if (clip != null && clip.itemCount > 0) {
+            val pastedText = clip.getItemAt(0).text.toString().trim()
+            Log.d(TAG, "Raw pasted text: $pastedText")
+
+            // Extract only digits from the pasted text
+            val digitsOnly = pastedText.filter { it.isDigit() }
+            Log.d(TAG, "Extracted digits: $digitsOnly")
+
+            // Check if we have exactly 6 digits
+            if (digitsOnly.length == 6) {
+                Log.d(TAG, "Found exact 6 digits, filling OTP fields")
+                fillOtpFields(digitsOnly)
+            } else {
+                // If not exactly 6 digits, try to extract a 6-digit number from the text
+                val pattern = Pattern.compile("(\\d{6})")
+                val matcher = pattern.matcher(pastedText)
+
+                if (matcher.find()) {
+                    val otp = matcher.group(0)
+                    Log.d(TAG, "Found 6-digit sequence in text: $otp")
+                    fillOtpFields(otp)
+                } else {
+                    Log.d(TAG, "No valid 6-digit sequence found in pasted text")
+                    Toast.makeText(requireContext(), "Invalid OTP format", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Log.d(TAG, "Clipboard is empty or null")
+        }
+    }
+
     private fun fillOtpFields(otp: String) {
         if (otp.length == 6) {
-            // Set pasting flag to prevent focus changes during fill
+            Log.d(TAG, "Filling OTP fields with: $otp")
+            // Set pasting flag to prevent recursive TextWatcher calls
             isPasting = true
-            
-            for (i in otp.indices) {
-                otpDigits[i].setText(otp[i].toString())
+
+            try {
+                // Clear all fields first to ensure clean state
+                otpDigits.forEach { it.text.clear() }
+
+                // Fill each field with corresponding digit
+                for (i in otp.indices) {
+                    if (i < otpDigits.size) {
+                        otpDigits[i].setText(otp[i].toString())
+                    }
+                }
+
+                // Set focus to the last digit
+                otpDigits.last().requestFocus()
+                otpDigits.last().setSelection(1) // Position cursor at the end
+
+                // Delay the verification slightly to ensure UI updates first
+                binding.root.post {
+                    // Verify OTP if complete
+                    if (isOtpComplete() && !isVerifying) {
+                        Log.d(TAG, "OTP fields filled completely, initiating verification")
+                        verifyOtp()
+                    }
+                }
+            } finally {
+                // Always reset the pasting flag, even if an exception occurs
+                isPasting = false
+                Log.d(TAG, "Paste operation completed")
             }
-            
-            // Reset pasting flag
-            isPasting = false
-            
-            // Set focus to last digit
-            otpDigits[5].requestFocus()
-            otpDigits[5].setSelection(1)
-            
-            // Verify OTP if complete
-            if (isOtpComplete() && !isVerifying) {
-                verifyOtp()
-            }
+        } else {
+            Log.d(TAG, "Invalid OTP length: ${otp.length}, expected 6")
         }
     }
 
@@ -336,22 +444,22 @@ class OtpVarificationFragment : Fragment() {
     private fun verifyOtp() {
         // Get the OTP from input fields
         val otp = getEnteredOtp()
-        
+
         if (otp.length != 6) {
             Toast.makeText(requireContext(), "Please enter a valid 6-digit OTP", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         // Prevent multiple verification attempts
         isVerifying = true
-        
+
         // Show loading state
         setLoading(true)
-        
+
         try {
             // Create credential with verification ID from args and entered OTP
             val credential = PhoneAuthProvider.getCredential(args.verificationId, otp)
-            
+
             // Sign in with credential
             signInWithPhoneAuthCredential(credential)
         } catch (e: Exception) {
@@ -365,10 +473,10 @@ class OtpVarificationFragment : Fragment() {
     private fun resendOtp() {
         Toast.makeText(requireContext(), "Resending OTP...", Toast.LENGTH_SHORT).show()
         binding.tvResend.isEnabled = false
-        
+
         // Get phone number from args
         val phoneNumber = args.phoneNumber
-        
+
         // Setup callbacks
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
@@ -378,13 +486,13 @@ class OtpVarificationFragment : Fragment() {
                     signInWithPhoneAuthCredential(credential)
                 }
             }
-            
+
             override fun onVerificationFailed(e: FirebaseException) {
                 Log.w(TAG, "onVerificationFailed", e)
                 Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_SHORT).show()
                 binding.tvResend.isEnabled = true
             }
-            
+
             override fun onCodeSent(
                 verificationId: String,
                 token: PhoneAuthProvider.ForceResendingToken
@@ -392,12 +500,12 @@ class OtpVarificationFragment : Fragment() {
                 Log.d(TAG, "onCodeSent:$verificationId")
                 Toast.makeText(requireContext(), "OTP resent successfully", Toast.LENGTH_SHORT).show()
                 binding.tvResend.isEnabled = true
-                
+
                 // Start SMS retriever to auto-fill the new OTP
                 startSmsRetriever()
             }
         }
-        
+
         // Configure and start phone verification
         val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phoneNumber)
@@ -405,7 +513,7 @@ class OtpVarificationFragment : Fragment() {
             .setActivity(requireActivity())
             .setCallbacks(callbacks)
             .build()
-            
+
         PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
@@ -461,7 +569,7 @@ class OtpVarificationFragment : Fragment() {
                 // Try to get existing user profile first
                 val userProfileResult = ShopManager.getUserProfile(userId)
                 val existingProfile = userProfileResult.getOrNull()
-                
+
                 // Create or update UserProfile
                 val userProfile = if (existingProfile != null) {
                     // Update existing profile
@@ -481,14 +589,14 @@ class OtpVarificationFragment : Fragment() {
 
                 // Save UserProfile to Firestore
                 val result = ShopManager.saveUserProfile(userProfile)
-                
+
                 if (result.isSuccess) {
                     // Create login session with phone number
                     SessionManager.createLoginSession(requireContext(), args.phoneNumber)
-                    
+
                     // Set current user ID in SessionManager (for future use)
                     SessionManager.getCurrentUserId()
-                    
+
                     // Navigate to shop selection
                     navigateToShopSelection()
                 } else {
@@ -523,16 +631,17 @@ class OtpVarificationFragment : Fragment() {
         binding.btnVerify.isEnabled = !isLoading
         binding.tvResend.isEnabled = !isLoading
         binding.btnVerify.text = if (isLoading) "Verifying..." else "Verify"
-        
+
         // Disable OTP input fields during loading
         otpDigits.forEach { it.isEnabled = !isLoading }
     }
+
 
     override fun onDestroyView() {
         // Cancel all coroutine jobs to prevent memory leaks
         coroutineJobs.forEach { it.cancel() }
         coroutineJobs.clear()
-        
+
         super.onDestroyView()
         _binding = null
     }

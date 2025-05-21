@@ -1,10 +1,14 @@
 package com.jewelrypos.swarnakhatabook
 
+import android.Manifest
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.provider.OpenableColumns
@@ -13,6 +17,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
@@ -60,8 +66,31 @@ class ItemDetailFragment : Fragment() {
         ItemDetailViewModelFactory(repository, connectivityManager)
     }
 
-    private var imageUri: Uri? = null
+    private var imageUri: Uri? = null // This can be removed if not used for anything else. The captured image URI is handled in currentImagePath.
     private var currentImagePath: String? = null
+
+    // ActivityResultLauncher for camera
+    private lateinit var cameraLauncher: ActivityResultLauncher<Uri>
+
+    // ActivityResultLauncher for gallery
+    private lateinit var galleryLauncher: ActivityResultLauncher<String>
+
+    // ActivityResultLauncher for requesting camera permission
+    private lateinit var requestCameraPermissionLauncher: ActivityResultLauncher<String>
+
+    // ActivityResultLauncher for requesting gallery/storage permission
+    private lateinit var requestGalleryPermissionLauncher: ActivityResultLauncher<String>
+
+
+    // For continuous adjustment on long press
+    private var continuousHandler: android.os.Handler? = android.os.Handler(android.os.Looper.getMainLooper())
+    private var adjustmentRunnable: Runnable? = null
+
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setupActivityResultLaunchers()
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -83,6 +112,72 @@ class ItemDetailFragment : Fragment() {
 
         // Load item data based on passed ID
         viewModel.loadItem(args.itemId)
+    }
+
+    private fun setupActivityResultLaunchers() {
+        // Initialize camera launcher
+        cameraLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+            if (success) {
+                currentImagePath?.let { path ->
+                    val file = File(path)
+                    if (file.exists()) {
+                        // Create URI from file
+                        val uri = FileProvider.getUriForFile(
+                            requireContext(),
+                            "${requireContext().packageName}.provider",
+                            file
+                        )
+                        displaySelectedImage(uri)
+                        uploadImageToFirebase(file)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            getString(R.string.error_image_file_not_found), // Add this string to your strings.xml
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                Toast.makeText(context, getString(R.string.image_capture_cancelled), Toast.LENGTH_SHORT).show() // Add this string
+            }
+        }
+
+        // Initialize gallery launcher
+        galleryLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            if (uri != null) {
+                displaySelectedImage(uri)
+                val file = createFileFromUri(uri)
+                if (file != null) {
+                    uploadImageToFirebase(file)
+                } else {
+                    Toast.makeText(context, getString(R.string.error_processing_image), Toast.LENGTH_SHORT).show() // Add this string
+                }
+            } else {
+                Toast.makeText(context, getString(R.string.image_selection_cancelled), Toast.LENGTH_SHORT).show() // Add this string
+            }
+        }
+
+        // Initialize permission launcher for camera
+        requestCameraPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                dispatchTakePictureIntent()
+            } else {
+                Toast.makeText(context, getString(R.string.camera_permission_denied), Toast.LENGTH_SHORT).show() // Add this string
+            }
+        }
+
+        // Initialize permission launcher for gallery/storage
+        requestGalleryPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                dispatchGalleryIntent()
+            } else {
+                Toast.makeText(context, getString(R.string.gallery_permission_denied), Toast.LENGTH_SHORT).show() // Add this string
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -208,7 +303,7 @@ class ItemDetailFragment : Fragment() {
         // Load item image if available
         if (item.imageUrl.isNotEmpty()) {
             binding.itemImageCard?.visibility = View.VISIBLE
-            
+
             // Show replace button, hide camera and gallery buttons
             binding.replaceImageButton.visibility = View.VISIBLE
             binding.cameraButton.visibility = View.GONE
@@ -248,7 +343,7 @@ class ItemDetailFragment : Fragment() {
             binding.itemImage.setImageResource(R.drawable.image_placeholder)
             binding.progressOverlay.visibility = View.GONE
             binding.itemImage.alpha = 1.0f
-            
+
             // Hide replace button, show camera and gallery buttons
             binding.replaceImageButton.visibility = View.GONE
             binding.cameraButton.visibility = View.VISIBLE
@@ -353,20 +448,20 @@ class ItemDetailFragment : Fragment() {
         binding.applyStockButton.setOnClickListener {
             applyStockAdjustment()
         }
-        
+
         // Image related button listeners
         binding.replaceImageButton.setOnClickListener {
             showImageEditOptions()
         }
-        
+
         binding.cameraButton.setOnClickListener {
-            dispatchTakePictureIntent()
+            checkCameraPermissionAndDispatchIntent()
         }
-        
+
         binding.galleryButton.setOnClickListener {
-            dispatchGalleryIntent()
+            checkGalleryPermissionAndDispatchIntent()
         }
-        
+
         // Item image click should also show image options
         binding.itemImage.setOnClickListener {
             if (viewModel.jewelryItem.value?.imageUrl?.isNotEmpty() == true) {
@@ -374,7 +469,7 @@ class ItemDetailFragment : Fragment() {
                 showImageEditOptions()
             } else {
                 // If no image, default to camera
-                dispatchTakePictureIntent()
+                checkCameraPermissionAndDispatchIntent()
             }
         }
     }
@@ -519,54 +614,82 @@ class ItemDetailFragment : Fragment() {
             .setTitle(if (item.imageUrl.isEmpty()) getString(R.string.add_image) else getString(R.string.replace))
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> dispatchTakePictureIntent()
-                    1 -> dispatchGalleryIntent()
+                    0 -> checkCameraPermissionAndDispatchIntent()
+                    1 -> checkGalleryPermissionAndDispatchIntent()
                 }
             }
             .show()
     }
 
+    // --- Permission and Intent Dispatching with ActivityResultLauncher ---
+
+    private fun checkCameraPermissionAndDispatchIntent() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            dispatchTakePictureIntent()
+        } else {
+            requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun checkGalleryPermissionAndDispatchIntent() {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // For Android 13 (API 33) and above, use READ_MEDIA_IMAGES
+            Manifest.permission.READ_MEDIA_IMAGES
+        } else {
+            // For older versions, use READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                permission
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            dispatchGalleryIntent()
+        } else {
+            requestGalleryPermissionLauncher.launch(permission)
+        }
+    }
+
     private fun dispatchTakePictureIntent() {
         try {
-            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if (intent.resolveActivity(requireActivity().packageManager) != null) {
-                // Create file for the image
-                val photoFile = try {
-                    createImageFile()
-                } catch (e: Exception) {
-                    Toast.makeText(
-                        context,
-                        getString(R.string.error_creating_image_file),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return
-                }
-
-                // Get URI from file
-                photoFile.also {
-                    val photoURI = FileProvider.getUriForFile(
-                        requireContext(),
-                        "${requireContext().packageName}.provider",
-                        it
-                    )
-                    intent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
-                    startActivityForResult(intent, REQUEST_IMAGE_CAPTURE)
-                }
+            val photoFile = try {
+                createImageFile()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    getString(R.string.error_creating_image_file),
+                    Toast.LENGTH_SHORT
+                ).show()
+                Log.e("ItemDetailFragment", "Error creating image file for camera: ${e.message}", e)
+                return
             }
+
+            val photoURI: Uri = FileProvider.getUriForFile(
+                requireContext(),
+                "${requireContext().packageName}.provider",
+                photoFile
+            )
+            cameraLauncher.launch(photoURI)
+
         } catch (e: Exception) {
             Toast.makeText(context, "Error launching camera: ${e.message}", Toast.LENGTH_SHORT)
                 .show()
+            Log.e("ItemDetailFragment", "Error launching camera: ${e.message}", e)
         }
     }
 
     private fun dispatchGalleryIntent() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        intent.type = "image/*"
         try {
-            startActivityForResult(intent, REQUEST_GALLERY_PICK)
+            galleryLauncher.launch("image/*") // Use GetContent contract which directly provides URI
         } catch (e: Exception) {
             Toast.makeText(context, "Error launching gallery: ${e.message}", Toast.LENGTH_SHORT)
                 .show()
+            Log.e("ItemDetailFragment", "Error launching gallery: ${e.message}", e)
         }
     }
 
@@ -584,60 +707,15 @@ class ItemDetailFragment : Fragment() {
             ".jpg",
             storageDir
         ).apply {
-            currentImagePath = absolutePath
+            currentImagePath = absolutePath // Store the path for later use
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (resultCode == android.app.Activity.RESULT_OK) {
-            when (requestCode) {
-                REQUEST_IMAGE_CAPTURE -> {
-                    currentImagePath?.let { path ->
-                        val file = File(path)
-                        if (file.exists()) {
-                            // Create URI from file
-                            val uri = FileProvider.getUriForFile(
-                                requireContext(),
-                                "${requireContext().packageName}.provider",
-                                file
-                            )
-                            // Display image immediately
-                            displaySelectedImage(uri)
-                            // Then start upload
-                            uploadImageToFirebase(file)
-                        } else {
-                            Toast.makeText(
-                                context,
-                                "Error: Image file not found",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                }
-
-                REQUEST_GALLERY_PICK -> {
-                    data?.data?.let { uri ->
-                        // Display image immediately
-                        displaySelectedImage(uri)
-                        // Create file and upload
-                        val file = createFileFromUri(uri)
-                        if (file != null) {
-                            uploadImageToFirebase(file)
-                        } else {
-                            Toast.makeText(context, "Error processing image", Toast.LENGTH_SHORT)
-                                .show()
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // Removed onActivityResult as it's replaced by ActivityResultLauncher
+    // override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) { ... }
 
     private fun createFileFromUri(uri: Uri): File? {
         return try {
-            // Create a temporary file
             val timeStamp =
                 java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.getDefault())
                     .format(java.util.Date())
@@ -646,7 +724,6 @@ class ItemDetailFragment : Fragment() {
                 requireContext().getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
             val file = File.createTempFile(imageFileName, ".jpg", storageDir)
 
-            // Copy the content from URI to file
             val inputStream = requireContext().contentResolver.openInputStream(uri)
             val outputStream = java.io.FileOutputStream(file)
             inputStream?.use { input ->
@@ -654,7 +731,6 @@ class ItemDetailFragment : Fragment() {
                     input.copyTo(output)
                 }
             }
-
             file
         } catch (e: Exception) {
             Log.e("ItemDetailFragment", "Error creating file from URI", e)
@@ -680,7 +756,7 @@ class ItemDetailFragment : Fragment() {
             if (success && imageUrl.isNotEmpty()) {
                 // Update the item with the new image URL
                 val updatedItem = currentItem.copy(imageUrl = imageUrl)
-                
+
                 // Update UI to show the replace button instead of camera/gallery
                 binding.replaceImageButton.visibility = View.VISIBLE
                 binding.cameraButton.visibility = View.GONE
@@ -696,13 +772,13 @@ class ItemDetailFragment : Fragment() {
                     } else {
                         Toast.makeText(
                             context,
-                            "Image uploaded but failed to update item",
+                            getString(R.string.image_uploaded_but_failed_to_update_item), // Add this string
                             Toast.LENGTH_SHORT
                         ).show()
                     }
                 }
             } else {
-                Toast.makeText(context, "Failed to upload image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.failed_to_upload_image), Toast.LENGTH_SHORT).show() // Add this string
             }
         }
     }
@@ -713,24 +789,22 @@ class ItemDetailFragment : Fragment() {
      */
     private fun displaySelectedImage(uri: Uri?) {
         if (uri == null) return
-        
-        try {
-            // Show the image and hide the instruction text
 
+        try {
             // Show replace button and hide camera/gallery buttons
             binding.replaceImageButton.visibility = View.VISIBLE
             binding.cameraButton.visibility = View.GONE
             binding.galleryButton.visibility = View.GONE
-            
+
             // Temporary show progress until image loads
             binding.progressOverlay.visibility = View.VISIBLE
             binding.itemImage.alpha = 0.7f
-            
+
             // Display the image using Coil
             binding.itemImage.load(uri) {
                 scale(Scale.FILL)
                 crossfade(true)
-                
+
                 listener(
                     onSuccess = { _, _ ->
                         binding.progressOverlay.visibility = View.GONE
@@ -740,7 +814,7 @@ class ItemDetailFragment : Fragment() {
                         binding.progressOverlay.visibility = View.GONE
                         binding.itemImage.alpha = 1.0f
                         binding.itemImage.setImageResource(R.drawable.image_placeholder)
-                        Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, getString(R.string.failed_to_load_image), Toast.LENGTH_SHORT).show() // Add this string
                     }
                 )
             }
@@ -748,10 +822,10 @@ class ItemDetailFragment : Fragment() {
             binding.progressOverlay.visibility = View.GONE
             binding.itemImage.alpha = 1.0f
             binding.itemImage.setImageResource(R.drawable.image_placeholder)
-            
+
             // If error, revert to camera/gallery buttons
             binding.replaceImageButton.visibility = View.GONE
-            binding.cameraButton.visibility = View.VISIBLE 
+            binding.cameraButton.visibility = View.VISIBLE
             binding.galleryButton.visibility = View.VISIBLE
 
             Toast.makeText(context, "Error displaying image: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -918,10 +992,6 @@ class ItemDetailFragment : Fragment() {
         }
     }
 
-    // For continuous adjustment on long press
-    private var continuousHandler: android.os.Handler? = android.os.Handler(android.os.Looper.getMainLooper())
-    private var adjustmentRunnable: Runnable? = null
-
     private fun startContinuousAdjustment(value: Number, isQuantity: Boolean) {
         stopContinuousAdjustment() // Stop any existing adjustment
 
@@ -1003,14 +1073,15 @@ class ItemDetailFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         // Properly clean up handler to prevent memory leaks
-        stopContinuousAdjustment() 
+        stopContinuousAdjustment()
         continuousHandler?.removeCallbacksAndMessages(null)
         continuousHandler = null
         _binding = null
     }
 
-    companion object {
-        private const val REQUEST_IMAGE_CAPTURE = 1001
-        private const val REQUEST_GALLERY_PICK = 1002
-    }
+    // No longer needed constants as we are using ActivityResultLauncher
+    // companion object {
+    //     private const val REQUEST_IMAGE_CAPTURE = 1001
+    //     private const val REQUEST_GALLERY_PICK = 1002
+    // }
 }
