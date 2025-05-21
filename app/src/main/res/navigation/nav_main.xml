@@ -102,7 +102,7 @@
             app:exitAnim="@anim/nav_default_exit_anim" />
         <action
             android:id="@+id/action_otpVarificationFragment_to_createShopFragment"
-            app:destination="@id/createShopFragment" 
+            app:destination="@id/createShopFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim" />
         <action
@@ -147,7 +147,7 @@
             app:destination="@id/itemDetailFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
-            app:popEnterAnim="@anim/slide_in_left" 
+            app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
         <action
             android:id="@+id/action_mainScreenFragment_to_invoicePdfSettingsFragment"
@@ -219,6 +219,9 @@
         <action
             android:id="@+id/action_mainScreenFragment_to_createShopFragment"
             app:destination="@id/createShopFragment" />
+        <action
+            android:id="@+id/action_mainScreenFragment_to_invoiceSummeryFragmnet"
+            app:destination="@id/invoiceSummeryFragmnet" />
     </fragment>
     <fragment
         android:id="@+id/invoiceCreationFragment"
@@ -426,4 +429,16 @@
         android:name="com.jewelrypos.swarnakhatabook.RecyclingBinFragment"
         android:label="fragment_recycling_bin"
         tools:layout="@layout/fragment_recycling_bin" />
+    <fragment
+        android:id="@+id/invoiceSummeryFragmnet"
+        android:name="com.jewelrypos.swarnakhatabook.InvoiceSummeryFragmnet"
+        android:label="fragment_invoice_summery_fragmnet"
+        tools:layout="@layout/fragment_invoice_summery_fragmnet" >
+        <argument
+            android:name="invoiceId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_invoiceSummeryFragmnet_to_invoiceDetailFragment"
+            app:destination="@id/invoiceDetailFragment" />
+    </fragment>
 </navigation>

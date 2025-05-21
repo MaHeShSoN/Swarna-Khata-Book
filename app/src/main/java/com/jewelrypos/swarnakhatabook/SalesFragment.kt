@@ -431,8 +431,9 @@ class SalesFragment : Fragment() {
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
 
             // Using the generated NavDirections class
-            val action =
-                MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
+//            val action =
+//                MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
+            val action = MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceSummeryFragmnet(invoice.invoiceNumber)
             parentNavController.navigate(action)
         }
 

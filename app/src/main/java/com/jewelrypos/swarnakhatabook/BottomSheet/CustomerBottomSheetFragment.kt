@@ -154,45 +154,65 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     // --- Contact Permission and Autocomplete Logic ---
 
     private val requestContactsPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            setupContactsAutocomplete()
-        } else {
-            Toast.makeText(
-                context,
-                "Contacts permission denied. Cannot suggest contacts.",
-                Toast.LENGTH_SHORT
-            ).show()
-            // Optionally disable the autocomplete feature or specific fields
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions[Manifest.permission.READ_CONTACTS] == true -> {
+                // READ_CONTACTS permission granted
+                setupContactsAutocomplete()
+            }
+            permissions[Manifest.permission.WRITE_CONTACTS] == true -> {
+                // WRITE_CONTACTS permission granted
+                // Continue with saving contact
+            }
+            else -> {
+                Toast.makeText(
+                    context,
+                    "Contacts permissions denied. Cannot suggest or save contacts.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
     private fun checkContactsPermission() {
-        when {
-            ContextCompat.checkSelfPermission(
+        val permissions = mutableListOf<String>()
+        
+        // Check READ_CONTACTS permission
+        if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.READ_CONTACTS
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                // Permission already granted
+            ) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.READ_CONTACTS)
+        }
+        
+        // Check WRITE_CONTACTS permission
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.WRITE_CONTACTS
+            ) != PackageManager.PERMISSION_GRANTED) {
+            permissions.add(Manifest.permission.WRITE_CONTACTS)
+        }
+
+        when {
+            permissions.isEmpty() -> {
+                // All permissions are granted
                 setupContactsAutocomplete()
             }
-
-            shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS) -> {
-                // Show rationale dialog explaining why we need contacts permission
+            permissions.any { shouldShowRequestPermissionRationale(it) } -> {
+                // Show rationale dialog explaining why we need contacts permissions
                 AlertDialog.Builder(requireContext())
                     .setTitle("Permission Needed")
-                    .setMessage("This app needs permission to read your contacts to suggest customer names and numbers as you type.")
+                    .setMessage("This app needs permission to read and save contacts to suggest customer names and numbers as you type, and to save new contacts you create.")
                     .setPositiveButton("OK") { _, _ ->
-                        requestContactsPermission.launch(Manifest.permission.READ_CONTACTS)
+                        requestContactsPermission.launch(permissions.toTypedArray())
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
             }
-
             else -> {
-                // Directly request the permission
-                requestContactsPermission.launch(Manifest.permission.READ_CONTACTS)
+                // Directly request the permissions
+                requestContactsPermission.launch(permissions.toTypedArray())
             }
         }
     }
@@ -739,6 +759,9 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private fun saveCustomer(shouldClose: Boolean) {
         val customer = createCustomerFromForm()
         try {
+            // Save contact to phone contacts if not already saved
+            saveContactToPhone(customer)
+
             if (isEditMode) {
                 listener?.onCustomerUpdated(customer)
                 Toast.makeText(context, "Customer updated successfully", Toast.LENGTH_SHORT).show()
@@ -757,6 +780,72 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
+    private fun saveContactToPhone(customer: Customer) {
+        try {
+            val contentResolver = requireContext().contentResolver
+            
+            // Create a new contact
+            val values = ArrayList<android.content.ContentValues>()
+            
+            // Insert the name
+            val nameValues = android.content.ContentValues().apply {
+                put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                put(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME, customer.firstName)
+                put(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME, customer.lastName)
+            }
+            values.add(nameValues)
+            
+            // Insert the phone number
+            val phoneValues = android.content.ContentValues().apply {
+                put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                put(ContactsContract.CommonDataKinds.Phone.NUMBER, customer.phoneNumber)
+                put(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
+            }
+            values.add(phoneValues)
+            
+            // Insert the address if available
+            if (customer.streetAddress.isNotEmpty()) {
+                val addressValues = android.content.ContentValues().apply {
+                    put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE)
+                    put(ContactsContract.CommonDataKinds.StructuredPostal.STREET, customer.streetAddress)
+                    put(ContactsContract.CommonDataKinds.StructuredPostal.CITY, customer.city)
+                    put(ContactsContract.CommonDataKinds.StructuredPostal.REGION, customer.state)
+                    put(ContactsContract.CommonDataKinds.StructuredPostal.COUNTRY, customer.country)
+                    put(ContactsContract.CommonDataKinds.StructuredPostal.TYPE, ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME)
+                }
+                values.add(addressValues)
+            }
+            
+            // Insert the contact
+            val operations = ArrayList<android.content.ContentProviderOperation>()
+            
+            // Create the contact
+            operations.add(
+                android.content.ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_TYPE, null)
+                    .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
+                    .build()
+            )
+            
+            // Add all the data
+            for (value in values) {
+                operations.add(
+                    android.content.ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+                        .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                        .withValues(value)
+                        .build()
+                )
+            }
+            
+            // Apply the operations
+            contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
+            
+            Log.d(TAG, "Contact saved successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving contact to phone", e)
+            // Don't show error to user as this is a background operation
+        }
+    }
 
     private fun createCustomerFromForm(): Customer {
         val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"

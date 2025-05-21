@@ -705,21 +705,21 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
         }
     }
 
-    fun updateInvoiceDate(newDate: Long) {
+    fun updateDueDate(dueDate: Long?) {
         updateInvoice(
             updateBlock = { invoice ->
-                invoice.copy(invoiceDate = newDate)
+                invoice.copy(dueDate = dueDate)
             },
-            successMessage = "Invoice date updated successfully"
+            successMessage = "Due date updated successfully"
         )
     }
 
-    fun updateDueDate(newDate: Long?) {
+    fun updateInvoiceDate(invoiceDate: Long) {
         updateInvoice(
             updateBlock = { invoice ->
-                invoice.copy(dueDate = newDate)
+                invoice.copy(invoiceDate = invoiceDate)
             },
-            successMessage = "Due date updated successfully"
+            successMessage = "Invoice date updated successfully"
         )
     }
 }

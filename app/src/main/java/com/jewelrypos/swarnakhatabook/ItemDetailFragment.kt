@@ -427,8 +427,25 @@ class ItemDetailFragment : Fragment() {
         if (stats.topCustomerName.isNotEmpty()) {
             binding.topCustomerValue.text =
                 "${stats.topCustomerName} (${stats.topCustomerQuantity} units)"
+            
+            // Add click listener to copy customer name
+            binding.topCustomerValue.setOnClickListener {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("Customer Name", stats.topCustomerName)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(requireContext(), "Customer name copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            
+            // Make the text view look clickable
+            binding.topCustomerValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+            binding.topCustomerValue.isClickable = true
+            binding.topCustomerValue.isFocusable = true
         } else {
             binding.topCustomerValue.text = "N/A"
+            binding.topCustomerValue.setOnClickListener(null)
+            binding.topCustomerValue.setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_on_surface))
+            binding.topCustomerValue.isClickable = false
+            binding.topCustomerValue.isFocusable = false
         }
 
         // Update performance indicator

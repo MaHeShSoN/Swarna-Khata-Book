@@ -474,11 +474,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         val adapter = object : ArrayAdapter<String>(
             requireContext(),
             R.layout.dropdown_item_jewellery,
-            if (categoryNames.isEmpty()) {
-                listOf("No items available - Click + to add")
-            } else {
-                categoryNames
-            }
+            categoryNames
         ) {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val view = super.getView(position, convertView, parent)
@@ -582,7 +578,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                             
                             // Initially show dropdown if no categories
                             if (categoryNames.isEmpty()) {
-                                binding.categoryInputLayout.helperText = "Use the + button to add a category"
+                                binding.categoryInputLayout.helperText = "Type to add a new category"
                                 binding.categoryInputLayout.setHelperTextColor(ContextCompat.getColorStateList(requireContext(), R.color.my_light_secondary))
                                 
                                 // Don't auto-show dropdown here, let the focus listener handle it
