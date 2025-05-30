@@ -4,7 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/cream_background">
+    android:background="@color/cream_background"
+    tools:context=".InvoiceDetailFragment"
+    >
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBarLayout"
@@ -21,7 +23,8 @@
             app:popupTheme="@style/CustomPopupMenu"
             app:title="Invoice Details"
             app:titleTextAppearance="@style/ToolbarTitle"
-            app:titleTextColor="@color/white" />
+            app:titleTextColor="@color/white"
+            />
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -32,6 +35,8 @@
         android:paddingStart="2dp"
         android:paddingTop="0dp"
         android:paddingEnd="2dp"
+        android:background="@color/cream_background"
+        android:indeterminateTint="@color/my_light_outline"
         app:layout_anchor="@id/appBarLayout"
         app:layout_anchorGravity="bottom" />
 

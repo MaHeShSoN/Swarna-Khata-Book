@@ -4,6 +4,7 @@ package com.jewelrypos.swarnakhatabook
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -42,7 +43,7 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
         val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        CustomerViewModelFactory(repository, connectivityManager)
+        CustomerViewModelFactory(repository, connectivityManager,requireContext())
     }
 
     private var customer: Customer? = null
@@ -219,6 +220,10 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
         // Set toolbar title
         binding.topAppBar.title = "${customer.firstName} ${customer.lastName}"
 
+        // Log balance display details
+        Log.d("CustomerDetailFragment", "Customer ${customer.firstName} balance display:")
+        Log.d("CustomerDetailFragment", "Current Balance: ${customer.currentBalance}")
+
         // Set up ViewPager with TabLayout
         val adapter = CustomerDetailViewPagerAdapter(this, customer)
         binding.viewPager.adapter = adapter
@@ -237,7 +242,6 @@ class CustomerDetailFragment : Fragment(), CustomerBottomSheetFragment.CustomerO
         if (currentFragment is CustomerDashboardFragment) {
             currentFragment.updateCustomer(customer)
         }
-
     }
 
     private fun openCustomerEditBottomSheet(customer: Customer) {

@@ -32,7 +32,11 @@
             android:id="@+id/recyclerViewSales"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:visibility="visible" />
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:visibility="visible"
+            />
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 

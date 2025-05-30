@@ -439,6 +439,17 @@
             app:argType="string" />
         <action
             android:id="@+id/action_invoiceSummeryFragmnet_to_invoiceDetailFragment"
-            app:destination="@id/invoiceDetailFragment" />
+            app:destination="@id/invoiceDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_invoiceSummeryFragmnet_to_customerDetailFragment"
+            app:destination="@id/customerDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 </navigation>

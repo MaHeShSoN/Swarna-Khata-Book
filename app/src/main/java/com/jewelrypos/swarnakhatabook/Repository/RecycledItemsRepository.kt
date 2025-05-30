@@ -402,6 +402,7 @@ class RecycledItemsRepository(
         map["customerType"] = customer.customerType
         map["firstName"] = customer.firstName
         map["lastName"] = customer.lastName
+        map["fullNameSearchable"] = "${customer.firstName} ${customer.lastName}".lowercase()
         map["phoneNumber"] = customer.phoneNumber
         map["email"] = customer.email ?: ""
         map["streetAddress"] = customer.streetAddress
@@ -436,6 +437,7 @@ class RecycledItemsRepository(
             customerType = data["customerType"] as? String ?: "",
             firstName = data["firstName"] as? String ?: "",
             lastName = data["lastName"] as? String ?: "",
+            fullNameSearchable = data["fullNameSearchable"] as? String ?: "${data["firstName"] as? String ?: ""} ${data["lastName"] as? String ?: ""}".lowercase(),
             phoneNumber = data["phoneNumber"] as? String ?: "",
             email = data["email"] as? String ?: "",
             streetAddress = data["streetAddress"] as? String ?: "",

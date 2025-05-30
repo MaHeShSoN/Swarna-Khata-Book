@@ -202,6 +202,7 @@
                         android:layout_width="match_parent"
                         android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
+                        android:selectAllOnFocus="true"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -226,6 +227,7 @@
                         android:id="@+id/netWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:selectAllOnFocus="true"
                         android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
@@ -253,6 +255,7 @@
                         android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:text="91.66"
+                        android:selectAllOnFocus="true"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -284,6 +287,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:fontFamily="@font/montserratregular"
+                            android:selectAllOnFocus="true"
                             android:inputType="numberDecimal"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
@@ -376,6 +380,7 @@
                             android:fontFamily="@font/montserratregular"
                             android:layout_height="wrap_content"
                             android:inputType="numberDecimal"
+                            android:selectAllOnFocus="true"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="16sp" />
                     </com.google.android.material.textfield.TextInputLayout>
@@ -457,6 +462,7 @@
                         android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:inputType="numberDecimal"
+                        android:selectAllOnFocus="true"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
@@ -503,6 +509,7 @@
                         android:layout_width="match_parent"
                         android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
+                        android:selectAllOnFocus="true"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />

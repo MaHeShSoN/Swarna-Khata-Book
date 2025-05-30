@@ -19,7 +19,7 @@ object SessionManager {
     private const val KEY_IS_LOGGED_IN = "is_logged_in"
 
     private val _activeShopIdLiveData = MutableLiveData<String?>()
-    val activeShopIdLiveData: LiveData<String?> = _activeShopIdLiveData
+    open val activeShopIdLiveData: LiveData<String?> = _activeShopIdLiveData
 
     private lateinit var sharedPreferences: SharedPreferences
 

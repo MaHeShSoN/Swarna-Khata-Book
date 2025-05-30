@@ -38,7 +38,7 @@ class CustomerDashboardFragment : Fragment() {
         val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        CustomerViewModelFactory(repository, connectivityManager)
+        CustomerViewModelFactory(repository, connectivityManager,requireContext())
     }
 
     companion object {
@@ -83,55 +83,29 @@ class CustomerDashboardFragment : Fragment() {
         // Set the balance type (Credit/Debit)
         binding.balanceTypeText.text = customer.balanceType
 
-        // Determine balance status and color
-        val balanceText = when {
-            customer.currentBalance != 0.0 -> {
-                when {
-                    customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                        "To Receive: ₹${formatter.format(customer.currentBalance)}"
-
-                    customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                        "To Pay: ₹${formatter.format(customer.currentBalance)}"
-
-                    else -> "Balance: ₹${formatter.format(customer.currentBalance)}"
-                }
+        // New balance display logic using currentBalance as the single source of truth
+//
+        val balanceText = when{
+            customer.balanceType == "Baki" -> {
+                requireContext().getString(R.string.baki_amount, formatter.format(customer.currentBalance))
             }
-
-            else -> "Balance: ₹0.00"
+            customer.balanceType == "Jama" -> {
+                requireContext().getString(R.string.jama_amount, formatter.format(customer.currentBalance))
+            }
+            else -> {
+                requireContext().getString(R.string.settled_amount, "0.00")
+            }
         }
 
-        // Set balance text color based on balance type and amount
-        val balanceColor = when {
-            customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.status_paid
-                ) // Green for money to receive
-            customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.status_unpaid
-                ) // Red for money to pay
-            else ->
-                ContextCompat.getColor(
-                    requireContext(),
-                    R.color.my_light_secondary
-                ) // Neutral color for zero balance
+        // Set balance text color based on balance type
+        val balanceColor = when{
+            customer.balanceType == "Baki" -> ContextCompat.getColor(requireContext(), R.color.status_unpaid) // Red for Baki
+            customer.balanceType == "Jama" -> ContextCompat.getColor(requireContext(), R.color.status_paid) // Green for Jama
+            else -> ContextCompat.getColor(requireContext(), R.color.my_light_secondary) // Neutral for Settled
         }
 
         binding.currentBalanceText.text = balanceText
         binding.currentBalanceText.setTextColor(balanceColor)
-
-        // Color the balance based on balance type and amount
-        val textColor = when {
-            (customer.balanceType == "Credit" && customer.currentBalance > 0) ||
-                    (customer.balanceType == "Debit" && customer.currentBalance <= 0) ->
-                ContextCompat.getColor(requireContext(), R.color.status_paid)
-
-            else ->
-                ContextCompat.getColor(requireContext(), R.color.status_unpaid)
-        }
-        binding.currentBalanceText.setTextColor(textColor)
 
         // Set the opening balance
         binding.openingBalanceText.text = "₹${formatter.format(customer.openingBalance)}"

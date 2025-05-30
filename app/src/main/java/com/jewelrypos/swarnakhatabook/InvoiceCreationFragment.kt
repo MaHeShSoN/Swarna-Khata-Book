@@ -86,7 +86,7 @@ class InvoiceCreationFragment : Fragment() {
         val repository = CustomerRepository(firestore, auth, requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        CustomerViewModelFactory(repository, connectivityManager)
+        CustomerViewModelFactory(repository, connectivityManager,requireContext())
     }
 
     private lateinit var itemsAdapter: SelectedItemsAdapter
@@ -94,6 +94,15 @@ class InvoiceCreationFragment : Fragment() {
 
     // Add job tracking
     private val coroutineJobs = mutableListOf<Job>()
+
+    // Add enum for tracking current step
+    private enum class InvoiceStep {
+        SELECT_CUSTOMER,
+        ADD_ITEMS,
+        ADD_PAYMENT
+    }
+
+    private var currentStep = InvoiceStep.SELECT_CUSTOMER
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -109,11 +118,14 @@ class InvoiceCreationFragment : Fragment() {
         initializeViews()
         setupListeners()
         setupDatePicker()
-        setupDueDatePicker() // Setup due date picker
+        setupDueDatePicker()
         observePayments()
 
         // Set default due date (15 days from invoice date)
         setDefaultDueDate()
+
+        // Highlight the first step (Select Customer)
+        highlightCurrentStep(InvoiceStep.SELECT_CUSTOMER)
 
         // Check for a customer ID passed as an argument first
         val passedCustomerId = arguments?.getString("customerId")
@@ -253,6 +265,9 @@ class InvoiceCreationFragment : Fragment() {
                 binding.addItemButton.visibility = View.VISIBLE
                 binding.itemsSectionTitle.visibility = View.VISIBLE
                 binding.itemViewWithDetailes.visibility = View.VISIBLE
+                
+                // When items are added, highlight the Add Payment button
+                highlightCurrentStep(InvoiceStep.ADD_PAYMENT)
             }
         }
     }
@@ -389,39 +404,52 @@ class InvoiceCreationFragment : Fragment() {
         val formatter = DecimalFormat("#,##,##0.00")
 
         // Adjust balance display based on customer type and balance type
-        val balanceText = when {
-            customer.currentBalance != 0.0 -> {
-                when {
-                    isWholesaler && customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                        getString(R.string.they_owe, formatter.format(customer.currentBalance))
+//        val balanceText = when {
+//            customer.currentBalance != 0.0 -> {
+//                when {
+//                    isWholesaler && customer.currentBalance > 0 ->
+//                        requireContext().getString(R.string.baki_amount, formatter.format(customer.currentBalance))
+//
+//                    isWholesaler && customer.currentBalance < 0 ->
+//                        requireContext().getString(R.string.jama_amount, formatter.format(-customer.currentBalance))
+//
+//                    customer.currentBalance > 0 ->
+//                        requireContext().getString(R.string.baki_amount, formatter.format(customer.currentBalance))
+//
+//                    customer.currentBalance < 0 ->
+//                        requireContext().getString(R.string.jama_amount, formatter.format(-customer.currentBalance))
+//
+//                    else -> requireContext().getString(R.string.settled_amount, "0.00")
+//                }
+//            }
+//            // Otherwise fall back to opening balance
+//            isWholesaler && customer.openingBalance > 0 ->
+//                requireContext().getString(R.string.baki_amount, formatter.format(customer.openingBalance))
+//
+//            isWholesaler && customer.openingBalance < 0 ->
+//                requireContext().getString(R.string.jama_amount, formatter.format(-customer.openingBalance))
+//
+//            customer.openingBalance > 0 ->
+//                requireContext().getString(R.string.baki_amount, formatter.format(customer.openingBalance))
+//
+//            customer.openingBalance < 0 ->
+//                requireContext().getString(R.string.jama_amount, formatter.format(-customer.openingBalance))
+//
+//            else -> requireContext().getString(R.string.settled_amount, "0.00")
+//        }
 
-                    isWholesaler && customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                        getString(R.string.you_owe, formatter.format(customer.currentBalance))
-
-                    customer.balanceType == "Credit" && customer.currentBalance > 0 ->
-                        getString(R.string.to_receive, formatter.format(customer.currentBalance))
-
-                    customer.balanceType == "Debit" && customer.currentBalance > 0 ->
-                        getString(R.string.to_pay_amount, formatter.format(customer.currentBalance))
-
-                    else -> getString(R.string.balance_amount, formatter.format(customer.currentBalance))
-                }
+        val balanceText = when{
+            customer.balanceType == "Baki" -> {
+                requireContext().getString(R.string.baki_amount, formatter.format(customer.currentBalance))
             }
-            // Otherwise fall back to opening balance
-            isWholesaler && customer.balanceType == "Debit" && customer.openingBalance > 0 ->
-                getString(R.string.they_owe, formatter.format(customer.openingBalance))
-
-            isWholesaler && customer.balanceType == "Credit" && customer.openingBalance > 0 ->
-                getString(R.string.you_owe, formatter.format(customer.openingBalance))
-
-            customer.balanceType == "Credit" && customer.openingBalance > 0 ->
-                getString(R.string.to_receive, formatter.format(customer.openingBalance))
-
-            customer.balanceType == "Debit" && customer.openingBalance > 0 ->
-                getString(R.string.to_pay_amount, formatter.format(customer.openingBalance))
-
-            else -> getString(R.string.balance_amount, formatter.format(customer.openingBalance))
+            customer.balanceType == "Jama" -> {
+                requireContext().getString(R.string.jama_amount, formatter.format(customer.currentBalance))
+            }
+            else -> {
+                requireContext().getString(R.string.settled_amount, "0.00")
+            }
         }
+
         binding.customerBalance.text = balanceText
 
         // Set customer/supplier address
@@ -434,6 +462,9 @@ class InvoiceCreationFragment : Fragment() {
 
         // Store customer type in Tag for later use in other methods
         binding.customerCard.tag = if (isWholesaler) "wholesaler" else "consumer"
+
+        // After customer is selected, highlight the Add Items button
+        highlightCurrentStep(InvoiceStep.ADD_ITEMS)
     }
 
     private fun selectCustomer() {
@@ -927,6 +958,43 @@ class InvoiceCreationFragment : Fragment() {
         val datePart = dateFormat.format(Date())
         val random = (10..99).random()
         return "PAY-$datePart-$random"
+    }
+
+    private fun highlightCurrentStep(step: InvoiceStep) {
+        currentStep = step
+        
+        // Reset all buttons to default state
+        binding.selectCustomerButton.apply {
+            setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.my_light_surface))
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+            strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.my_light_primary)
+        }
+        
+        binding.selectAddItemForFirstTimeButton.apply {
+            setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.my_light_surface))
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+            strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.my_light_primary)
+        }
+
+
+        // Highlight current step button
+        when (step) {
+            InvoiceStep.SELECT_CUSTOMER -> {
+                binding.selectCustomerButton.apply {
+                    setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                    strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.my_light_primary)
+                }
+            }
+            InvoiceStep.ADD_ITEMS -> {
+                binding.selectAddItemForFirstTimeButton.apply {
+                    setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                    setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                    strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.my_light_primary)
+                }
+            }
+            InvoiceStep.ADD_PAYMENT -> {}
+        }
     }
 
     override fun onDestroyView() {

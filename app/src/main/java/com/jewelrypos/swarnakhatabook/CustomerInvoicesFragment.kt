@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,6 +23,8 @@ import com.jewelrypos.swarnakhatabook.Repository.CustomerSelectionManager
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.SalesViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerInvoicesBinding
+import kotlinx.coroutines.launch
+import androidx.paging.PagingData
 
 class CustomerInvoicesFragment : Fragment() {
 
@@ -178,7 +181,10 @@ class CustomerInvoicesFragment : Fragment() {
             binding.swipeRefreshLayout.isRefreshing = false
             binding.progressBar.visibility = View.GONE
 
-            adapter.submitList(invoices)
+            // Convert the list to PagingData and submit it
+            viewLifecycleOwner.lifecycleScope.launch {
+                adapter.submitData(PagingData.from(invoices))
+            }
 
             // Update empty state
             if (invoices.isEmpty()) {

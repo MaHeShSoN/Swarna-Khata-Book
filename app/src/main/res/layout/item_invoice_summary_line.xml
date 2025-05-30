@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/summaryItemName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="@font/montserratsemibold"
+            android:textColor="@color/my_light_on_surface"
+            android:textSize="15sp"
+            tools:text="Gold Chain 22K (10.500 gm)" />
+
+        <TextView
+            android:id="@+id/summaryItemTotalValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/librebaskervillebold"
+            android:textColor="@color/my_light_primary"
+            android:textSize="16sp"
+            tools:text="₹65,000.00" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/summaryItemPurityRate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFamily="@font/montserratregular"
+        android:textColor="@color/my_light_secondary"
+        android:textSize="12sp"
+        tools:text="91.6% @ ₹6,500/gm" />
+
+</LinearLayout>

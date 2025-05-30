@@ -276,7 +276,7 @@ class InvoicePdfGenerator(private val context: Context) {
             "Stone Wt",
             "Net.Wt",
             "Stone Value",
-            "Gold Value",
+            "Metal Value",
             "Labour",
             "Total Value"
         )
@@ -858,7 +858,7 @@ class InvoicePdfGenerator(private val context: Context) {
             "Weight",
             "Stone Value",
             "Labor",
-            "Gold Value",
+            "Metal Value",
             "Amount"
         )
         val columnWidths = floatArrayOf(0.30f, 0.08f, 0.12f, 0.12f, 0.12f, 0.12f, 0.14f)
@@ -1406,7 +1406,7 @@ class InvoicePdfGenerator(private val context: Context) {
             "Net Wt",
             "Stone Value",
             "Labour",
-            "Gold Value",
+            "Metal Value",
             "Total Value"
         )
         val columnWidths =

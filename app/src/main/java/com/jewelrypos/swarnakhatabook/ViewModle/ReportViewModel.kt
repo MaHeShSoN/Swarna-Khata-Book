@@ -28,6 +28,7 @@ import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -37,6 +38,8 @@ import java.util.Locale
 
 class ReportViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val TAG = "ReportViewModel"
+
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val activeShopId: String?
@@ -44,6 +47,13 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     private val invoiceRepository: InvoiceRepository
     private val customerRepository: CustomerRepository
     private val inventoryRepository: InventoryRepository
+
+    // Synchronization objects
+    private val salesReportLock = Any()
+    private val gstReportLock = Any()
+    private var isInitialized = false
+    private var isSalesReportLoading = false
+    private var isGstReportLoading = false
 
     // Date range for reports
     private val _startDate = MutableLiveData<Date>()
@@ -104,14 +114,25 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     private val _topCustomers = MutableLiveData<List<CustomerSalesData>?>()
     val topCustomers: LiveData<List<CustomerSalesData>?> = _topCustomers
 
+    private var isGeneratingReport = false
+    private var currentReportJob: kotlinx.coroutines.Job? = null
+
     init {
+        Log.d(TAG, "Initializing ReportViewModel")
+        if (isInitialized) {
+            Log.d(TAG, "ReportViewModel already initialized, skipping")
+
+        }
+
         // Get the active shop ID from SessionManager
         activeShopId = SessionManager.getActiveShopId(application.applicationContext)
+        Log.d(TAG, "Active shop ID: $activeShopId")
 
         // Initialize repositories with application context
         invoiceRepository = InvoiceRepository(firestore, auth, application.applicationContext)
         customerRepository = CustomerRepository(firestore, auth, application.applicationContext)
         inventoryRepository = InventoryRepository(firestore, auth, application.applicationContext)
+        Log.d(TAG, "Repositories initialized")
 
         // Set default date range to current month
         val calendar = Calendar.getInstance()
@@ -129,161 +150,184 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
         _startDate.value = startDate
         _endDate.value = endDate
+        Log.d(TAG, "Default date range set: $startDate to $endDate")
 
         // Load customers for selection
         loadCustomers()
-
-        loadSalesReport()
+        
+        // Initialize reports
+        viewModelScope.launch {
+            loadSalesReport()
+            generateGstReport()
+        }
+        
+        isInitialized = true
+        Log.d(TAG, "ReportViewModel initialization completed")
     }
 
     fun setDateRange(start: Date, end: Date) {
+        Log.d(TAG, "Setting new date range: $start to $end")
         _startDate.value = start
         _endDate.value = end
         loadSalesReport()
-        // Refresh data for currently selected report if any
     }
 
     fun selectCustomer(customer: Customer) {
+        Log.d(TAG, "Selecting customer: ${customer.firstName} (ID: ${customer.id})")
         _selectedCustomer.value = customer
         loadCustomerStatement(customer)
     }
 
     fun clearSelectedCustomer() {
+        Log.d(TAG, "Clearing selected customer")
         _selectedCustomer.value = null
         _customerTransactions.value = emptyList()
     }
 
-
     fun loadSalesReport() {
-        val start = _startDate.value ?: return // Need dates to load
-        val end = _endDate.value ?: return
+        synchronized(salesReportLock) {
+            if (isSalesReportLoading) {
+                Log.d(TAG, "Sales report loading already in progress, skipping")
+                return
+            }
 
-        // Ensure we have an active shop ID
-        if (activeShopId.isNullOrEmpty()) {
-            _errorMessage.postValue("No active shop selected")
-            return
-        }
+            val start = _startDate.value ?: return
+            val end = _endDate.value ?: return
+            Log.d(TAG, "Loading sales report for period: $start to $end")
 
-        _isLoading.value = true
-        viewModelScope.launch {
-            try {
-                // Pass the active shop ID to the repository method
-                val invoices = invoiceRepository.getInvoicesBetweenDates(start, end)
+            if (activeShopId.isNullOrEmpty()) {
+                Log.e(TAG, "No active shop selected")
+                _errorMessage.postValue("No active shop selected")
+                return
+            }
 
-                if (invoices.isNullOrEmpty()) {
+            isSalesReportLoading = true
+            _isLoading.value = true
+            
+            viewModelScope.launch {
+                try {
+                    Log.d(TAG, "Fetching invoices between dates")
+                    val invoices = invoiceRepository.getInvoicesBetweenDates(start, end)
+                    Log.d(TAG, "Retrieved ${invoices?.size ?: 0} invoices")
+
+                    if (invoices.isNullOrEmpty()) {
+                        Log.d(TAG, "No sales data found for the selected period")
+                        _salesReportData.postValue(null)
+                        _topSellingItems.postValue(emptyList())
+                        _topCustomers.postValue(emptyList())
+                    } else {
+                        Log.d(TAG, "Processing sales data")
+                        // --- Calculate Sales Report Data ---
+                        val totalSales = invoices.sumOf { it.totalAmount }
+                        val totalPaid = invoices.sumOf { it.paidAmount }
+                        val unpaidAmount = totalSales - totalPaid
+                        val collectionRate = if (totalSales > 0) (totalPaid / totalSales) * 100 else 0.0
+                        val invoiceCount = invoices.size
+
+                        // Calculate Sales by Category
+                        val salesByCategory = invoices.flatMap { it.items }
+                            .groupBy {
+                                it.itemDetails?.category ?: "Uncategorized"
+                            } // Assumes JewelleryItem has category
+                            .mapValues { entry -> entry.value.sumOf { item -> item.price * item.quantity } }
+                            .map { SalesByCategoryItem(it.key, it.value) }
+
+                        // --- Calculate Sales by Customer Type ---
+                        // FIXME: This calculation cannot be done directly as Invoice object lacks customerType.
+                        // Requires fetching Customer objects based on customerId or removing this metric.
+                        // Commenting out for now:
+                        /*
+                        val salesByCustomerType = invoices
+                            // Needs logic to fetch customer type based on it.customerId
+                            .groupBy { fetchedCustomerTypeMap[it.customerId] ?: "Unknown" }
+                            .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
+                            .map { SalesByCustomerTypeItem(it.key, it.value) }
+                        */
+                        // Assigning empty list temporarily
+                        val salesByCustomerType = emptyList<SalesByCustomerTypeItem>()
+
+
+                        // Calculate Sales by Date
+                        // Assuming Invoice has 'invoiceDate: Long'
+                        val salesByDate = invoices
+                            .groupBy { invoice ->
+                                // Format Long timestamp to a date string (e.g., "dd MMM yyyy")
+                                val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                                dateFormat.format(Date(invoice.invoiceDate))
+                            }
+                            .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
+                            .map { SalesByDateItem(it.key, it.value) }
+                            .sortedBy { it.date } // Sort by date string (basic sort)
+
+
+                        val reportData = SalesReportData(
+                            totalSales = totalSales,
+                            paidAmount = totalPaid,
+                            unpaidAmount = unpaidAmount,
+                            collectionRate = collectionRate,
+                            invoiceCount = invoiceCount,
+                            salesByCategory = salesByCategory,
+                            salesByCustomerType = salesByCustomerType, // Using empty list for now
+                            salesByDate = salesByDate
+                        )
+                        _salesReportData.postValue(reportData)
+
+
+                        // --- Calculate Top Selling Items ---
+                        // Assuming InvoiceItem has 'itemDetails: JewelleryItem' and JewelleryItem has 'displayName: String'
+                        val itemSales = invoices.flatMap { it.items }
+                            .groupBy {
+                                it.itemDetails?.displayName ?: "Unknown Item"
+                            } // Group by display name
+                            .map { entry ->
+                                val name = entry.key
+                                val quantity = entry.value.sumOf { item -> item.quantity }
+                                val revenue = entry.value.sumOf { item -> item.price * item.quantity }
+                                ItemSalesData(name, quantity, revenue)
+                            }
+                            .sortedByDescending { it.totalRevenue }
+                            .take(5)
+                        _topSellingItems.postValue(itemSales)
+
+
+                        // --- Calculate Top Customers (Corrected) ---
+                        // Group by customerId first
+                        val customerSales = invoices
+                            .filter { it.customerId.isNotBlank() } // Ensure customerId exists
+                            .groupBy { it.customerId } // Group by customer ID string
+                            .map { entry ->
+                                val customerId = entry.key
+                                val customerInvoices = entry.value // List of invoices for this customer
+                                val totalValue = customerInvoices.sumOf { inv -> inv.totalAmount }
+                                val count = customerInvoices.size
+                                // Get customer name from the first invoice (assuming it's consistent)
+                                val name =
+                                    customerInvoices.firstOrNull()?.customerName?.trim() ?: customerId
+
+                                CustomerSalesData(
+                                    name.ifBlank { customerId },
+                                    totalValue,
+                                    count
+                                ) // Use ID if name is blank
+                            }
+                            .sortedByDescending { it.totalPurchaseValue } // Sort by purchase value
+                            .take(5) // Take top 5
+                        _topCustomers.postValue(customerSales)
+
+                        _errorMessage.postValue(null) // Clear previous error
+                    }
+
+                    Log.d(TAG, "Sales report data processed successfully")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error loading sales report", e)
+                    _errorMessage.postValue("Error loading sales report: ${e.localizedMessage}")
                     _salesReportData.postValue(null)
-                    _topSellingItems.postValue(emptyList())
-                    _topCustomers.postValue(emptyList())
-                    // _errorMessage.postValue("No sales data found for the selected period.") // Optional message
-                } else {
-                    // --- Calculate Sales Report Data ---
-                    val totalSales = invoices.sumOf { it.totalAmount }
-                    val totalPaid = invoices.sumOf { it.paidAmount }
-                    val unpaidAmount = totalSales - totalPaid
-                    val collectionRate = if (totalSales > 0) (totalPaid / totalSales) * 100 else 0.0
-                    val invoiceCount = invoices.size
-
-                    // Calculate Sales by Category
-                    val salesByCategory = invoices.flatMap { it.items }
-                        .groupBy {
-                            it.itemDetails?.category ?: "Uncategorized"
-                        } // Assumes JewelleryItem has category
-                        .mapValues { entry -> entry.value.sumOf { item -> item.price * item.quantity } }
-                        .map { SalesByCategoryItem(it.key, it.value) }
-
-                    // --- Calculate Sales by Customer Type ---
-                    // FIXME: This calculation cannot be done directly as Invoice object lacks customerType.
-                    // Requires fetching Customer objects based on customerId or removing this metric.
-                    // Commenting out for now:
-                    /*
-                    val salesByCustomerType = invoices
-                        // Needs logic to fetch customer type based on it.customerId
-                        .groupBy { fetchedCustomerTypeMap[it.customerId] ?: "Unknown" }
-                        .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
-                        .map { SalesByCustomerTypeItem(it.key, it.value) }
-                    */
-                    // Assigning empty list temporarily
-                    val salesByCustomerType = emptyList<SalesByCustomerTypeItem>()
-
-
-                    // Calculate Sales by Date
-                    // Assuming Invoice has 'invoiceDate: Long'
-                    val salesByDate = invoices
-                        .groupBy { invoice ->
-                            // Format Long timestamp to a date string (e.g., "dd MMM yyyy")
-                            val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-                            dateFormat.format(Date(invoice.invoiceDate))
-                        }
-                        .mapValues { entry -> entry.value.sumOf { inv -> inv.totalAmount } }
-                        .map { SalesByDateItem(it.key, it.value) }
-                        .sortedBy { it.date } // Sort by date string (basic sort)
-
-
-                    val reportData = SalesReportData(
-                        totalSales = totalSales,
-                        paidAmount = totalPaid,
-                        unpaidAmount = unpaidAmount,
-                        collectionRate = collectionRate,
-                        invoiceCount = invoiceCount,
-                        salesByCategory = salesByCategory,
-                        salesByCustomerType = salesByCustomerType, // Using empty list for now
-                        salesByDate = salesByDate
-                    )
-                    _salesReportData.postValue(reportData)
-
-
-                    // --- Calculate Top Selling Items ---
-                    // Assuming InvoiceItem has 'itemDetails: JewelleryItem' and JewelleryItem has 'displayName: String'
-                    val itemSales = invoices.flatMap { it.items }
-                        .groupBy {
-                            it.itemDetails?.displayName ?: "Unknown Item"
-                        } // Group by display name
-                        .map { entry ->
-                            val name = entry.key
-                            val quantity = entry.value.sumOf { item -> item.quantity }
-                            val revenue = entry.value.sumOf { item -> item.price * item.quantity }
-                            ItemSalesData(name, quantity, revenue)
-                        }
-                        .sortedByDescending { it.totalRevenue }
-                        .take(5)
-                    _topSellingItems.postValue(itemSales)
-
-
-                    // --- Calculate Top Customers (Corrected) ---
-                    // Group by customerId first
-                    val customerSales = invoices
-                        .filter { it.customerId.isNotBlank() } // Ensure customerId exists
-                        .groupBy { it.customerId } // Group by customer ID string
-                        .map { entry ->
-                            val customerId = entry.key
-                            val customerInvoices = entry.value // List of invoices for this customer
-                            val totalValue = customerInvoices.sumOf { inv -> inv.totalAmount }
-                            val count = customerInvoices.size
-                            // Get customer name from the first invoice (assuming it's consistent)
-                            val name =
-                                customerInvoices.firstOrNull()?.customerName?.trim() ?: customerId
-
-                            CustomerSalesData(
-                                name.ifBlank { customerId },
-                                totalValue,
-                                count
-                            ) // Use ID if name is blank
-                        }
-                        .sortedByDescending { it.totalPurchaseValue } // Sort by purchase value
-                        .take(5) // Take top 5
-                    _topCustomers.postValue(customerSales)
-
-                    _errorMessage.postValue(null) // Clear previous error
+                    _topSellingItems.postValue(null)
+                    _topCustomers.postValue(null)
+                } finally {
+                    isSalesReportLoading = false
+                    _isLoading.postValue(false)
                 }
-
-            } catch (e: Exception) {
-                _errorMessage.postValue("Error loading sales report: ${e.localizedMessage}")
-                _salesReportData.postValue(null)
-                _topSellingItems.postValue(null)
-                _topCustomers.postValue(null)
-                Log.e("ReportViewModel", "Error loading sales report", e)
-            } finally {
-                _isLoading.postValue(false)
             }
         }
     }
@@ -463,7 +507,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 // Get all inventory items for this shop
-                val result = inventoryRepository.getAllInventoryItems()
+                val result = inventoryRepository.getInventoryItemsForDropdown()
 
                 result.fold(
                     onSuccess = { items ->
@@ -550,87 +594,171 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
     // GST Report
     fun generateGstReport() {
-        if (activeShopId.isNullOrEmpty()) {
-            _errorMessage.value = "No active shop selected"
-            return
-        }
+        synchronized(gstReportLock) {
+            if (isGstReportLoading) {
+                Log.d(TAG, "GST report generation already in progress, skipping")
+                return
+            }
 
-        _isLoading.value = true
-        viewModelScope.launch {
-            try {
-                // Load all invoices in date range
-                val startTimestamp = startDate.value?.time ?: 0
-                val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
+            Log.d(TAG, "Starting GST report generation")
+            
+            if (activeShopId.isNullOrEmpty()) {
+                Log.e(TAG, "No active shop selected for GST report")
+                _errorMessage.value = "No active shop selected"
+                return
+            }
 
-                val allInvoices = withContext(Dispatchers.IO) {
-                    // Get all invoices for this shop
-                    val allInvoicesList = mutableListOf<Invoice>()
-                    var hasMoreInvoices = true
-                    var loadNextPage = false
+            isGstReportLoading = true
+            _isLoading.value = true
+            
+            currentReportJob = viewModelScope.launch {
+                try {
+                    val startTimestamp = startDate.value?.time ?: 0
+                    val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
+                    Log.d(TAG, "GST Report date range: ${Date(startTimestamp)} to ${Date(endTimestamp)}")
 
-                    while (hasMoreInvoices) {
-                        val result = invoiceRepository.fetchInvoicesPaginated(loadNextPage)
+                    val allInvoices = withContext(Dispatchers.IO) {
+                        Log.d(TAG, "Fetching invoices from Firestore")
+                        // Get all invoices for this shop
+                        val allInvoicesList = mutableListOf<Invoice>()
+                        var hasMoreInvoices = true
+                        var loadNextPage = false
+                        var pageCount = 0
+                        var lastFetchTime = System.currentTimeMillis()
 
-                        result.fold(
-                            onSuccess = { invoices ->
-                                if (invoices.isEmpty()) {
-                                    hasMoreInvoices = false
-                                } else {
-                                    allInvoicesList.addAll(invoices)
-                                    loadNextPage = true
-                                }
-                            },
-                            onFailure = {
-                                hasMoreInvoices = false
-                                throw it
+                        while (hasMoreInvoices) {
+                            // Check if job was cancelled
+                            if (!isActive) {
+                                Log.d(TAG, "generateGstReport: Report generation cancelled")
+                                return@withContext emptyList()
                             }
-                        )
+
+                            pageCount++
+                            Log.d(TAG, "generateGstReport: Fetching page $pageCount")
+                            
+                            // Add timeout check
+                            val currentTime = System.currentTimeMillis()
+                            if (currentTime - lastFetchTime > 10000) { // 10 second timeout
+                                Log.e(TAG, "generateGstReport: Fetch timeout on page $pageCount")
+                                throw Exception("Invoice fetch timeout")
+                            }
+                            
+                            val result = invoiceRepository.fetchInvoicesPaginated(loadNextPage)
+                            lastFetchTime = System.currentTimeMillis()
+
+                            result.fold(
+                                onSuccess = { invoices ->
+                                    if (invoices.isEmpty()) {
+                                        Log.d(TAG, "generateGstReport: No more invoices to fetch")
+                                        hasMoreInvoices = false
+                                    } else {
+                                        Log.d(TAG, "generateGstReport: Fetched ${invoices.size} invoices in page $pageCount")
+                                        allInvoicesList.addAll(invoices)
+                                        loadNextPage = true
+                                    }
+                                },
+                                onFailure = { error ->
+                                    Log.e(TAG, "generateGstReport: Error fetching invoices", error)
+                                    hasMoreInvoices = false
+                                    throw error
+                                }
+                            )
+                        }
+
+                        Log.d(TAG, "generateGstReport: Total invoices fetched: ${allInvoicesList.size}")
+
+                        // Filter by date range
+                        val filteredInvoices = allInvoicesList.filter { invoice ->
+                            invoice.invoiceDate in startTimestamp..endTimestamp
+                        }
+                        
+                        Log.d(TAG, "generateGstReport: Invoices in date range: ${filteredInvoices.size}")
+                        filteredInvoices
                     }
 
-                    // Filter by date range
-                    allInvoicesList.filter { invoice ->
-                        invoice.invoiceDate in startTimestamp..endTimestamp
+                    if (allInvoices.isEmpty()) {
+                        Log.d(TAG, "generateGstReport: No invoices found in date range")
+                        withContext(Dispatchers.Main) {
+                            _gstReportItems.value = emptyList()
+                            _isLoading.value = false
+                            _errorMessage.value = "No invoices found for the selected period"
+                        }
+                        return@launch
                     }
+
+                    Log.d(TAG, "Processing ${allInvoices.size} invoices for GST report")
+                    processInvoicesForGstReport(allInvoices)
+
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) {
+                        Log.d(TAG, "generateGstReport: Report generation cancelled")
+                    } else {
+                        Log.e(TAG, "Failed to generate GST report", e)
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "Failed to generate GST report: ${e.message}"
+                            _isLoading.value = false
+                            _gstReportItems.value = emptyList()
+                        }
+                    }
+                } finally {
+                    isGstReportLoading = false
+                    currentReportJob = null
+                    Log.d(TAG, "GST report generation completed")
                 }
-
-                // Process invoices to extract GST information
-                processInvoicesForGstReport(allInvoices)
-
-            } catch (e: Exception) {
-                _errorMessage.value = "Failed to generate GST report: ${e.message}"
-                _isLoading.value = false
-                Log.e("ReportViewModel", "Error generating GST report", e)
             }
         }
     }
 
     private fun processInvoicesForGstReport(invoices: List<Invoice>) {
+        Log.d(TAG, "Processing ${invoices.size} invoices for GST report")
         viewModelScope.launch(Dispatchers.Default) {
             try {
-                // Group invoice items by tax rate
-                val taxRateGroups =
-                    mutableMapOf<Double, MutableList<Pair<Double, Double>>>() // taxRate -> List of (taxableAmount, taxAmount)
-
+                val taxRateGroups = mutableMapOf<Double, MutableList<Pair<Double, Double>>>()
+                
                 invoices.forEach { invoice ->
+                    if (!isActive) {
+                        Log.d(TAG, "processInvoicesForGstReport: Processing cancelled")
+                        return@launch
+                    }
+
+                    Log.d(TAG, "processInvoicesForGstReport: Processing invoice ${invoice.invoiceNumber}")
                     invoice.items.forEach { invoiceItem ->
                         val item = invoiceItem.itemDetails
                         val quantity = invoiceItem.quantity
                         val itemPrice = invoiceItem.price
-
-                        // Calculate taxable amount (price before tax)
                         val taxRate = item.taxRate
-                        val taxableAmount = (itemPrice * quantity) / (1 + taxRate / 100)
-                        val taxAmount = itemPrice * quantity - taxableAmount
+                        val totalAmount = itemPrice * quantity
+                        val taxableAmount = totalAmount
+                        val taxAmount = totalAmount - taxableAmount
+
+                        Log.d(TAG, """
+                            Processing item ${item.displayName}:
+                            - Tax Rate: $taxRate%
+                            - Quantity: $quantity
+                            - Total Amount: $totalAmount
+                            - Taxable Amount: $taxableAmount
+                            - Tax Amount: $taxAmount
+                        """.trimIndent())
 
                         val taxRateList = taxRateGroups.getOrPut(taxRate) { mutableListOf() }
                         taxRateList.add(Pair(taxableAmount, taxAmount))
                     }
                 }
 
+                Log.d(TAG, "Found ${taxRateGroups.size} different tax rates")
+                
                 // Convert to report items
                 val gstItems = taxRateGroups.map { (taxRate, amounts) ->
                     val totalTaxableAmount = amounts.sumOf { it.first }
                     val totalTaxAmount = amounts.sumOf { it.second }
+
+                    Log.d(TAG, """
+                        processInvoicesForGstReport: Tax Rate $taxRate%
+                        - Total Taxable Amount: $totalTaxableAmount
+                        - Total Tax Amount: $totalTaxAmount
+                        - CGST: ${totalTaxAmount / 2}
+                        - SGST: ${totalTaxAmount / 2}
+                    """.trimIndent())
 
                     GstReportItem(
                         taxRate = taxRate,
@@ -641,16 +769,24 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                     )
                 }.sortedBy { it.taxRate }
 
+                Log.d(TAG, "processInvoicesForGstReport: Generated ${gstItems.size} GST report items")
+
                 withContext(Dispatchers.Main) {
+                    if (gstItems.isEmpty()) {
+                        Log.d(TAG, "processInvoicesForGstReport: No GST data found")
+                        _errorMessage.value = "No GST data found for the selected period"
+                    }
                     _gstReportItems.value = gstItems
                     _isLoading.value = false
+                    Log.d(TAG, "processInvoicesForGstReport: GST report generation completed successfully")
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error processing GST data", e)
                 withContext(Dispatchers.Main) {
                     _errorMessage.value = "Error processing GST data: ${e.message}"
                     _isLoading.value = false
+                    _gstReportItems.value = emptyList()
                 }
-                Log.e("ReportViewModel", "Error processing GST data", e)
             }
         }
     }
@@ -670,7 +806,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 val LOW_STOCK_WEIGHT_THRESHOLD = 100.0 // For weight-based inventory (grams)
 
                 // Get all inventory items for this shop
-                val result = inventoryRepository.getAllInventoryItems()
+                val result = inventoryRepository.getInventoryItemsForDropdown()
 
                 result.fold(
                     onSuccess = { items ->

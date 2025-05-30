@@ -19,6 +19,11 @@ import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 import java.util.Date
 import kotlin.math.abs
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 // Define custom exceptions if not already defined elsewhere
 class UserNotAuthenticatedException(message: String) : Exception(message)
@@ -42,7 +47,7 @@ class InvoiceRepository(
     private var isLastPage = false
 
     // Get current active shop ID from SessionManager
-    private fun getCurrentShopId(): String {
+    internal fun getCurrentShopId(): String {
         return SessionManager.getActiveShopId(context)
             ?: throw ShopNotSelectedException("No active shop selected.")
     }
@@ -65,13 +70,22 @@ class InvoiceRepository(
      * Also updates customer balance and inventory stock accordingly.
      */
     suspend fun saveInvoice(invoice: Invoice): Result<Unit> = withContext(Dispatchers.IO) {
-        // All code within this block executes on the IO dispatcher
         try {
-            // Prepare invoice with ID
+            // Calculate payment status based on amounts
+            val paymentStatus = when {
+                invoice.paidAmount >= invoice.totalAmount -> "PAID"
+                invoice.paidAmount > 0 -> "PARTIAL"
+                else -> "UNPAID"
+            }
+
+            // Prepare invoice with ID and payment status
             val invoiceWithId = if (invoice.id.isEmpty()) {
-                invoice.copy(id = invoice.invoiceNumber) // Use invoiceNumber as ID if ID is missing
+                invoice.copy(
+                    id = invoice.invoiceNumber,
+                    paymentStatus = paymentStatus
+                )
             } else {
-                invoice
+                invoice.copy(paymentStatus = paymentStatus)
             }
 
             // Get existing invoice (if any) for comparison
@@ -84,7 +98,7 @@ class InvoiceRepository(
                         .toObject(Invoice::class.java)
                 } catch (e: Exception) {
                     Log.w(TAG, "Could not retrieve existing invoice for update check: ${e.message}")
-                    null /* Handle gracefully, treat as new if fetch fails */
+                    null
                 }
             } else {
                 null
@@ -95,35 +109,25 @@ class InvoiceRepository(
             val unpaidAmountAfter = invoiceWithId.totalAmount - invoiceWithId.paidAmount
             val balanceChange = unpaidAmountAfter - unpaidAmountBefore
 
-            // --- Perform updates sequentially ---
-
-            // 1. Save/Update the invoice document itself
+            // Save/Update the invoice document
             getShopCollection("invoices")
                 .document(invoiceWithId.id)
-                .set(invoiceWithId) // set() overwrites or creates
+                .set(invoiceWithId)
                 .await()
-            Log.d(TAG, "Invoice document saved/updated: ${invoiceWithId.id}")
+            Log.d(
+                TAG,
+                "Invoice document saved/updated: ${invoiceWithId.id} with status: $paymentStatus"
+            )
 
-            // 2. Update customer balance (if necessary and customer exists)
+            // Update customer balance if needed
             if (balanceChange != 0.0 && invoiceWithId.customerId.isNotEmpty()) {
-                // Encapsulate balance update logic - this call is already within withContext(Dispatchers.IO)
                 updateCustomerBalanceForSave(invoiceWithId.customerId, balanceChange)
-            } else {
-                Log.d(
-                    TAG,
-                    "No balance change needed or customer ID missing: change=$balanceChange, customerId=${invoiceWithId.customerId}"
-                )
             }
 
-            // 3. Update inventory stock (handle new vs existing invoice)
-            // These calls are already within withContext(Dispatchers.IO)
+            // Update inventory stock
             if (existingInvoice == null) {
-                // This is a new invoice, update stock based on items sold/purchased
-                Log.d("Tag", "WE are now updating the invoice stock for new inoview")
                 updateInventoryStockForNewInvoice(invoiceWithId)
             } else {
-                Log.d("Tag", "WE are now handleing the invoice stock for  inoview")
-                // This is an existing invoice being updated, handle stock differences
                 handleInventoryStockChanges(existingInvoice, invoiceWithId)
             }
 
@@ -138,29 +142,94 @@ class InvoiceRepository(
      * Helper to update customer balance during saveInvoice.
      * Assumes it's called within a withContext(Dispatchers.IO) block.
      */
+
     private suspend fun updateCustomerBalanceForSave(customerId: String, balanceChange: Double) {
         try {
-            if (balanceChange == 0.0) return // Skip if no change
+            if (balanceChange == 0.0) {
+                Log.d(TAG, "No balance change needed for customer $customerId.")
+                return // Skip if no change
+            }
 
-            // Get current customer document
             val customerDocRef = getShopCollection("customers").document(customerId)
             val customerDoc = customerDocRef.get().await()
 
             if (!customerDoc.exists()) {
-                Log.w(TAG, "Customer $customerId not found for balance update")
+                Log.w(TAG, "Customer $customerId not found for balance update.")
                 return
             }
 
-            // Get current balance
-            val currentBalance = customerDoc.getDouble("currentBalance") ?: 0.0
-            val newBalance = currentBalance + balanceChange
+            val currentBalanceValue = customerDoc.getDouble("currentBalance") ?: 0.0
+            // Default to "Baki" if balanceType is missing or null, which is consistent with new customer creation.
+            val currentBalanceType = customerDoc.getString("balanceType") ?: "Baki"
 
-            // Update balance
-            customerDocRef.update("currentBalance", newBalance).await()
-            Log.d(TAG, "Updated customer $customerId balance: $currentBalance -> $newBalance")
+            var finalBalanceValue: Double
+            var finalBalanceType: String
+
+            Log.d(TAG, "Updating balance for customer $customerId: currentBalance=$currentBalanceValue, currentType=$currentBalanceType, balanceChange=$balanceChange")
+
+            if (currentBalanceType == "Baki") {
+                // Customer currently owes the shop (Baki)
+                // balanceChange > 0 means they owe more
+                // balanceChange < 0 means they owe less (payment/credit)
+                val newPotentialBaki = currentBalanceValue + balanceChange
+                if (newPotentialBaki >= 0) {
+                    // Still Baki or settled
+                    finalBalanceValue = newPotentialBaki
+                    finalBalanceType = "Baki"
+                } else {
+                    // Flipped to Jama (shop owes customer)
+                    finalBalanceValue = abs(newPotentialBaki)
+                    finalBalanceType = "Jama"
+                }
+            } else { // currentBalanceType == "Jama"
+                // Shop currently owes customer (Jama) / Customer has advance
+                // balanceChange > 0 means shop owes less (customer used advance for a purchase)
+                // balanceChange < 0 means shop owes more (customer added more advance/refund)
+                val newPotentialJama = currentBalanceValue - balanceChange
+                if (newPotentialJama >= 0) {
+                    // Still Jama or settled
+                    finalBalanceValue = newPotentialJama
+                    finalBalanceType = "Jama"
+                } else {
+                    // Flipped to Baki (customer owes shop)
+                    finalBalanceValue = abs(newPotentialJama)
+                    finalBalanceType = "Baki"
+                }
+            }
+
+            // Normalize if very close to zero, treat as settled (0.0)
+            if (abs(finalBalanceValue) < 0.001) {
+                finalBalanceValue = 0.0
+                // When settled, we can default to Baki (or Jama consistently, Baki is fine)
+                // If it was Jama and becomes 0, it could stay Jama 0.0, or become Baki 0.0.
+                // For simplicity, if it's 0, let's ensure a consistent type.
+                // If the calculation naturally resulted in 0.0 Baki from Jama, or 0.0 Jama from Baki, that's okay.
+                // This primarily handles the type if it becomes exactly 0.
+                if (finalBalanceValue == 0.0 && finalBalanceType == "Jama" && balanceChange > 0 && currentBalanceType == "Jama"){
+                    // If it was Jama, and a purchase made it exactly 0, it's still technically Jama (fully utilized advance)
+                    finalBalanceType = "Jama" // or "Baki" if you prefer Baki 0.0 as the universal "settled" state
+                } else if (finalBalanceValue == 0.0 && finalBalanceType == "Baki" && balanceChange < 0 && currentBalanceType == "Baki") {
+                    // If it was Baki, and a payment made it exactly 0
+                    finalBalanceType = "Baki"
+                }
+                // If it flipped type and landed on 0, the determined finalBalanceType is already correct.
+            }
+
+
+            Log.d(TAG, "Customer $customerId: finalBalanceValue=$finalBalanceValue, finalBalanceType=$finalBalanceType")
+
+            customerDocRef.update(
+                mapOf(
+                    "currentBalance" to finalBalanceValue,
+                    "balanceType" to finalBalanceType,
+                    "lastUpdatedAt" to System.currentTimeMillis() // Also update lastUpdatedAt
+                )
+            ).await()
+            Log.d(TAG, "Updated customer $customerId balance: $currentBalanceValue ($currentBalanceType) -> $finalBalanceValue ($finalBalanceType)")
+
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating customer balance for $customerId", e)
-            // Could rethrow if critical, but usually better to log and continue
+            Log.e(TAG, "Error updating customer balance for $customerId during save/update", e)
+            // Decide if rethrowing is necessary or if logging is sufficient
         }
     }
 
@@ -702,33 +771,147 @@ class InvoiceRepository(
      */
     private suspend fun updateCustomerBalanceOnDeletion(
         invoice: Invoice,
-        customer: Customer,
-        isWholesaler: Boolean
+        customer: Customer, // Pass the fetched Customer object with its current balance state
+        isWholesaler: Boolean // isWholesaler might not be directly needed here if logic is self-contained
     ) {
         try {
-            val unpaidAmount = invoice.totalAmount - invoice.paidAmount
-            // To revert the balance change, we apply the negative of the original change
-            val originalBalanceChange = calculateFinalBalanceChange(customer, unpaidAmount)
-            val balanceReversion = -originalBalanceChange
+            // The amount that was unpaid for this specific invoice.
+            // This is the value that contributed to the balanceChange when the invoice was saved.
+            val invoiceUnpaidAmount = invoice.totalAmount - invoice.paidAmount
 
-            val newBalance = customer.currentBalance + balanceReversion
+            // To revert, we apply the negative of this invoice's impact.
+            // This 'balanceChangeForReversion' will be fed into the same core logic
+            // as updateCustomerBalanceForSave.
+            val balanceChangeForReversion = -invoiceUnpaidAmount
 
-            getShopCollection("customers").document(invoice.customerId)
-                .update("currentBalance", newBalance).await()
-            Log.d(
-                TAG,
-                "Reverted customer balance for ${invoice.customerId}: newBalance=$newBalance (reversion=$balanceReversion)"
-            )
+            Log.d(TAG, "Reverting balance for customer ${invoice.customerId} due to invoice ${invoice.id} deletion.")
+            Log.d(TAG, "Invoice unpaid amount was: $invoiceUnpaidAmount, so balanceChangeForReversion is: $balanceChangeForReversion")
+
+            // Fetch the most up-to-date customer document to avoid stale data issues,
+            // though 'customer' param should ideally be fresh. Re-fetching adds robustness.
+            val customerDocRef = getShopCollection("customers").document(invoice.customerId)
+            val customerDocSnapshot = customerDocRef.get().await()
+            if (!customerDocSnapshot.exists()) {
+                Log.w(TAG, "Customer ${invoice.customerId} not found for balance reversion during deletion.")
+                return
+            }
+
+            val currentBalanceValue = customerDocSnapshot.getDouble("currentBalance") ?: 0.0
+            val currentBalanceType = customerDocSnapshot.getString("balanceType") ?: "Baki"
+
+            var finalRevertedBalanceValue: Double
+            var finalRevertedBalanceType: String
+
+            Log.d(TAG, "Customer ${invoice.customerId} before reversion: currentBalance=$currentBalanceValue, currentType=$currentBalanceType")
+
+            // Apply the balanceChangeForReversion using the standard logic
+            if (currentBalanceType == "Baki") {
+                val newPotentialBaki = currentBalanceValue + balanceChangeForReversion
+                if (newPotentialBaki >= 0) {
+                    finalRevertedBalanceValue = newPotentialBaki
+                    finalRevertedBalanceType = "Baki"
+                } else {
+                    finalRevertedBalanceValue = abs(newPotentialBaki)
+                    finalRevertedBalanceType = "Jama"
+                }
+            } else { // currentBalanceType == "Jama"
+                val newPotentialJama = currentBalanceValue - balanceChangeForReversion
+                if (newPotentialJama >= 0) {
+                    finalRevertedBalanceValue = newPotentialJama
+                    finalRevertedBalanceType = "Jama"
+                } else {
+                    finalRevertedBalanceValue = abs(newPotentialJama)
+                    finalRevertedBalanceType = "Baki"
+                }
+            }
+            
+            if (abs(finalRevertedBalanceValue) < 0.001) {
+                finalRevertedBalanceValue = 0.0
+                // Consistent settled type handling as in save
+                if (finalRevertedBalanceValue == 0.0 && finalRevertedBalanceType == "Jama" && balanceChangeForReversion > 0 && currentBalanceType == "Jama"){
+                    finalRevertedBalanceType = "Jama"
+                } else if (finalRevertedBalanceValue == 0.0 && finalRevertedBalanceType == "Baki" && balanceChangeForReversion < 0 && currentBalanceType == "Baki") {
+                    finalRevertedBalanceType = "Baki"
+                }
+            }
+
+            Log.d(TAG, "Customer ${invoice.customerId} after reversion: finalBalanceValue=$finalRevertedBalanceValue, finalBalanceType=$finalRevertedBalanceType")
+
+            customerDocRef.update(
+                mapOf(
+                    "currentBalance" to finalRevertedBalanceValue,
+                    "balanceType" to finalRevertedBalanceType,
+                    "lastUpdatedAt" to System.currentTimeMillis()
+                )
+            ).await()
+            Log.d(TAG, "Reverted customer balance for ${invoice.customerId} due to invoice deletion: newBalance=$finalRevertedBalanceValue ($finalRevertedBalanceType)")
 
         } catch (e: Exception) {
-            Log.e(
-                TAG,
-                "Error reverting customer balance for ${invoice.customerId} during invoice deletion",
-                e
-            )
-            // Decide on error handling
+            Log.e(TAG, "Error reverting customer balance for ${invoice.customerId} during invoice deletion", e)
         }
     }
+
+    /**
+     * Moves an invoice to the recycling bin instead of permanently deleting it.
+     * This replaces the original deleteInvoice method.
+     */
+    suspend fun moveInvoiceToRecycleBin(invoiceNumber: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Moving invoice to recycling bin: $invoiceNumber")
+
+                // First, get the invoice to be "deleted"
+                val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
+                val invoiceDoc = invoiceRef.get().await()
+
+                if (!invoiceDoc.exists()) {
+                    return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
+                }
+
+                val invoice = invoiceDoc.toObject<Invoice>()
+                    ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
+
+                // Create a RecycledItemsRepository to handle the recycling bin operation
+                val recycledItemsRepository = RecycledItemsRepository(firestore, auth, context)
+
+                // Move to recycling bin
+                val recycleResult = recycledItemsRepository.moveInvoiceToRecycleBin(invoice)
+
+                // If successful, proceed with all the usual reversion of inventory and customer balance changes
+                if (recycleResult.isSuccess) {
+                    // Get customer details for type checking
+                    val customerDoc =
+                        getShopCollection("customers").document(invoice.customerId).get().await()
+                    val customer = customerDoc.toObject<Customer>()
+                    val isWholesaler =
+                        customer?.customerType.equals("Wholesaler", ignoreCase = true)
+
+                    // Revert inventory changes
+                    updateInventoryOnDeletion(invoice, isWholesaler)
+
+                    // Revert customer balance change
+                    if (invoice.customerId.isNotEmpty() && customer != null) {
+                        updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+                    }
+
+                    // Delete the invoice from active invoices
+                    invoiceRef.delete().await()
+
+                    Log.d(TAG, "Successfully moved invoice to recycling bin: $invoiceNumber")
+                    Result.success(Unit)
+                } else {
+                    // If recycling failed, propagate the error
+                    Result.failure(
+                        recycleResult.exceptionOrNull()
+                            ?: Exception("Unknown error recycling invoice")
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error moving invoice to recycling bin: ${e.message}", e)
+                Result.failure(e)
+            }
+        }
+
 
     /**
      * Fetches invoices with pagination, ensuring Firestore operations run on the IO dispatcher.
@@ -864,129 +1047,267 @@ class InvoiceRepository(
     // --- Helper Methods ---
 
     /**
-     * Calculates the final balance change to apply based on customer type and balance type.
-     * This is pure calculation, does not need Dispatchers.IO itself.
+     * Fetches invoices with pagination, ensuring Firestore operations run on the IO dispatcher.
      */
-    private fun calculateFinalBalanceChange(customer: Customer, balanceChange: Double): Double {
-        val isWholesaler = customer.customerType.equals("Wholesaler", ignoreCase = true)
-        // Determine effect based on customer type and their balance convention
-        return if (isWholesaler) {
-            // For Wholesaler (Supplier):
-            // If their balance is Debit (we owe them), positive change means we owe more.
-            // If their balance is Credit (they owe us), positive change means they owe us less.
-            if (customer.balanceType.uppercase() == "DEBIT") balanceChange else -balanceChange
-        } else {
-            // For Consumer:
-            // If their balance is Debit (we owe them - unusual?), positive change means we owe less.
-            // If their balance is Credit (they owe us), positive change means they owe more.
-            if (customer.balanceType.uppercase() == "DEBIT") -balanceChange else balanceChange
+    suspend fun getInvoices(
+        page: Int,
+        pageSize: Int,
+        dateFilter: com.jewelrypos.swarnakhatabook.Enums.DateFilterType,
+        statusFilter: com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter,
+        searchQuery: String
+    ): List<Invoice> {
+        try {
+            val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
+            val shopId = getCurrentShopId()
+
+            Log.d(TAG, "Fetching invoices - Page: $page, Size: $pageSize, ShopId: $shopId")
+
+            // Start with base query
+            var query = getShopCollection("invoices")
+                .orderBy("invoiceDate", Query.Direction.DESCENDING)
+
+            // Apply date filter
+            query = applyDateFilter(query, dateFilter)
+            Log.d(TAG, "Applied date filter: $dateFilter")
+
+            // Apply status filter
+            query = applyStatusFilter(query, statusFilter)
+            Log.d(TAG, "Applied status filter: $statusFilter")
+
+            // Apply search query if present
+            if (searchQuery.isNotEmpty()) {
+                query = query.whereGreaterThanOrEqualTo("invoiceNumber", searchQuery)
+                    .whereLessThanOrEqualTo("invoiceNumber", searchQuery + '\uf8ff')
+                Log.d(TAG, "Applied search query: $searchQuery")
+            }
+
+            // Apply pagination
+            query = query.limit(pageSize.toLong())
+
+            // If not first page, get the last document from previous page
+            if (page > 0) {
+                // Get the last document from the previous page
+                val lastDocSnapshot = query.get().await().documents.lastOrNull()
+                if (lastDocSnapshot != null) {
+                    query = query.startAfter(lastDocSnapshot)
+                    Log.d(TAG, "Starting after document: ${lastDocSnapshot.id}")
+                }
+            }
+
+            // Execute query
+            val snapshot = query.get().await()
+            val invoices = snapshot.documents.mapNotNull { doc ->
+                try {
+                    doc.toObject(Invoice::class.java)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error converting document ${doc.id} to Invoice", e)
+                    null
+                }
+            }
+
+            Log.d(TAG, "Fetched ${invoices.size} invoices for page $page")
+            return invoices
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching invoices for page $page: ${e.message}", e)
+            throw Exception("Failed to fetch invoices: ${e.message}")
         }
     }
 
-    /**
-     * Moves an invoice to the recycling bin instead of permanently deleting it.
-     * This replaces the original deleteInvoice method.
-     */
-    suspend fun moveInvoiceToRecycleBin(invoiceNumber: String): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            try {
-                Log.d(TAG, "Moving invoice to recycling bin: $invoiceNumber")
+    private fun applyDateFilter(
+        query: Query,
+        dateFilter: com.jewelrypos.swarnakhatabook.Enums.DateFilterType
+    ): Query {
+        val calendar = Calendar.getInstance()
+        val now = System.currentTimeMillis()
 
-                // First, get the invoice to be "deleted"
-                val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
-                val invoiceDoc = invoiceRef.get().await()
+        return when (dateFilter) {
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.TODAY -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfDay = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfDay)
+            }
 
-                if (!invoiceDoc.exists()) {
-                    return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
-                }
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.YESTERDAY -> {
+                calendar.timeInMillis = now
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfYesterday = calendar.timeInMillis
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endOfYesterday = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfYesterday)
+                    .whereLessThanOrEqualTo("invoiceDate", endOfYesterday)
+            }
 
-                val invoice = invoiceDoc.toObject<Invoice>()
-                    ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.THIS_WEEK -> {
+                calendar.timeInMillis = now
+                // Set to start of current week (Sunday)
+                calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfWeek = calendar.timeInMillis
 
-                // Create a RecycledItemsRepository to handle the recycling bin operation
-                val recycledItemsRepository = RecycledItemsRepository(firestore, auth, context)
+                // Set to end of current week (Saturday)
+                calendar.add(Calendar.DAY_OF_WEEK, 6)
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endOfWeek = calendar.timeInMillis
 
-                // Move to recycling bin
-                val recycleResult = recycledItemsRepository.moveInvoiceToRecycleBin(invoice)
+                Log.d(
+                    TAG,
+                    "THIS_WEEK filter - Start: ${Date(startOfWeek)}, End: ${Date(endOfWeek)}"
+                )
 
-                // If successful, proceed with all the usual reversion of inventory and customer balance changes
-                if (recycleResult.isSuccess) {
-                    // Get customer details for type checking
-                    val customerDoc =
-                        getShopCollection("customers").document(invoice.customerId).get().await()
-                    val customer = customerDoc.toObject<Customer>()
-                    val isWholesaler =
-                        customer?.customerType.equals("Wholesaler", ignoreCase = true)
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfWeek)
+                    .whereLessThanOrEqualTo("invoiceDate", endOfWeek)
+            }
 
-                    // Revert inventory changes
-                    updateInventoryOnDeletion(invoice, isWholesaler)
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.THIS_MONTH -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfMonth = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfMonth)
+            }
 
-                    // Revert customer balance change
-                    if (invoice.customerId.isNotEmpty() && customer != null) {
-                        updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.LAST_MONTH -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val endOfLastMonth = calendar.timeInMillis - 1
+                calendar.add(Calendar.MONTH, -1)
+                val startOfLastMonth = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfLastMonth)
+                    .whereLessThanOrEqualTo("invoiceDate", endOfLastMonth)
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.THIS_QUARTER -> {
+                calendar.timeInMillis = now
+                val currentMonth = calendar.get(Calendar.MONTH)
+                val firstMonthOfQuarter = (currentMonth / 3) * 3
+                calendar.set(Calendar.MONTH, firstMonthOfQuarter)
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfQuarter = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfQuarter)
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.THIS_YEAR -> {
+                calendar.timeInMillis = now
+                calendar.set(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfYear = calendar.timeInMillis
+                query.whereGreaterThanOrEqualTo("invoiceDate", startOfYear)
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.DateFilterType.ALL_TIME -> query
+        }
+    }
+
+    private fun applyStatusFilter(
+        query: Query,
+        statusFilter: com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter
+    ): Query {
+        return when (statusFilter) {
+            com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter.PAID -> {
+                // For paid invoices, paidAmount equals totalAmount
+                query.whereEqualTo("paymentStatus", "PAID")
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter.PARTIAL -> {
+                // For partial payments, paidAmount is greater than 0 but less than totalAmount
+                query.whereEqualTo("paymentStatus", "PARTIAL")
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter.UNPAID -> {
+                // For unpaid invoices, paidAmount is 0
+                query.whereEqualTo("paymentStatus", "UNPAID")
+            }
+
+            com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter.ALL -> query
+        }
+    }
+
+    fun getAllInvoicesForShop(): Flow<PagingData<Invoice>> {
+        val shopId = SessionManager.getActiveShopId(context)
+
+        if (shopId == null) {
+            return flowOf(PagingData.empty())
+        }
+
+        val query = firestore.collection("shopData")
+            .document(shopId)
+            .collection("invoices")
+            .orderBy("invoiceDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                InvoicePagingSource(query, firestore)
+            }
+        ).flow
+    }
+
+    // For dashboard calculations where we need the full list
+    suspend fun getAllInvoicesListForShop(): List<Invoice> {
+        val shopId = SessionManager.getActiveShopId(context)
+        Log.d("DashBoardFragment", "Fetching all invoices for shop: $shopId")
+        if (shopId == null) {
+            return emptyList()
+        }
+
+        return try {
+            val snapshot = firestore.collection("shopData")
+                .document(shopId)
+                .collection("invoices")
+                .orderBy("invoiceDate", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { document ->
+                try {
+                    document.toObject(Invoice::class.java)?.apply {
+                        id = document.id
                     }
-
-                    // Delete the invoice from active invoices
-                    invoiceRef.delete().await()
-
-                    Log.d(TAG, "Successfully moved invoice to recycling bin: $invoiceNumber")
-                    Result.success(Unit)
-                } else {
-                    // If recycling failed, propagate the error
-                    Result.failure(
-                        recycleResult.exceptionOrNull()
-                            ?: Exception("Unknown error recycling invoice")
-                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error converting document to Invoice: ${e.message}")
+                    null
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error moving invoice to recycling bin: ${e.message}", e)
-                Result.failure(e)
+            }.also { invoices ->
+                Log.d(TAG, "Successfully fetched ${invoices.size} invoices for sales insights")
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching invoices for sales insights: ${e.message}")
+            emptyList()
         }
-
-    /**
-     * Permanently deletes an invoice, bypassing the recycling bin.
-     * This should only be used in specific cases or when deleting from the recycling bin.
-     */
-    suspend fun permanentlyDeleteInvoice(invoiceNumber: String): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            try {
-                Log.d(TAG, "Permanently deleting invoice: $invoiceNumber")
-
-                // This is the original deleteInvoice logic
-                val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
-                val invoiceDoc = invoiceRef.get().await()
-
-                if (!invoiceDoc.exists()) {
-                    return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
-                }
-
-                val invoice = invoiceDoc.toObject<Invoice>()
-                    ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
-
-                // Get customer details for type checking
-                val customerDoc =
-                    getShopCollection("customers").document(invoice.customerId).get().await()
-                val customer = customerDoc.toObject<Customer>()
-                val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
-
-                // Revert inventory changes
-                updateInventoryOnDeletion(invoice, isWholesaler)
-
-                // Revert customer balance change
-                if (invoice.customerId.isNotEmpty() && customer != null) {
-                    updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
-                }
-
-                // Delete the invoice
-                invoiceRef.delete().await()
-
-                Log.d(TAG, "Successfully deleted invoice permanently: $invoiceNumber")
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error permanently deleting invoice: ${e.message}", e)
-                Result.failure(e)
-            }
-        }
-
+    }
 }

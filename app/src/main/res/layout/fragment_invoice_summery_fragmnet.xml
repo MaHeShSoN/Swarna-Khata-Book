@@ -4,11 +4,11 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/cream_background"
-    tools:context=".InvoiceSummeryFragmnet"
-    >
+    android:background="@color/my_light_surface"
+    tools:context=".InvoiceSummeryFragmnet">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -18,11 +18,27 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
             app:navigationIcon="@drawable/famicons__arrow_back"
+            app:menu="@menu/invoice_summery_menu"
+            app:popupTheme="@style/CustomPopupMenu"
+            app:subtitleTextAppearance="@style/ToolbarTitle3"
+            app:subtitleTextColor="@color/white"
+            app:titleTextAppearance="@style/ToolbarTitle2"
             app:titleTextColor="@color/white" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:layout_anchor="@id/appBarLayout"
+        app:layout_anchorGravity="center_horizontal|bottom" />
+
     <androidx.core.widget.NestedScrollView
+        android:background="@color/my_light_surface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -34,20 +50,46 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Invoice Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/invoiceNumber"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/librebaskervillebold"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="24sp"
-                    tools:text="INV-240716-1234" />
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/invoiceNumber"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/librebaskervillebold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="24sp"
+                        tools:text="INV-240716-1234" />
+
+                    <Space
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/paymentStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/status_badge_background"
+                        android:fontFamily="@font/montserratmedium"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@color/white"
+                        android:textSize="12sp"
+
+                        tools:text="STATUS" />
+
+                </LinearLayout>
+
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -59,7 +101,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratmedium"
-                        android:text="Date: "
+                        android:text="Invoice Date: "
                         android:textAllCaps="true"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="10sp" />
@@ -92,31 +134,19 @@
 
                 </LinearLayout>
 
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/paymentStatus"
-                    style="@style/Widget.Material3.Chip.Assist"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:fontFamily="@font/montserratmedium"
-                    android:text="STATUS"
-                    android:textColor="@color/white"
-                    android:textSize="12sp"
-                    app:chipBackgroundColor="@color/status_unpaid" />
 
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/my_light_outline" />
+                android:layout_marginTop="8dp"
+                android:background="@color/my_light_on_surface" />
 
-            <!-- Action Buttons Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"
                 android:orientation="horizontal">
 
@@ -124,12 +154,10 @@
                     android:id="@+id/actionMarkPaid"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
-                    app:strokeColor="@color/green"
-                    app:strokeWidth="1dp">
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -159,12 +187,10 @@
                     android:id="@+id/actionPreview"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
-                    app:strokeColor="@color/my_light_outline"
-                    app:strokeWidth="1dp">
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -184,7 +210,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:fontFamily="@font/montserratmedium"
-                            android:text="Preview"
+                            android:text="Open"
                             android:textColor="@color/my_light_primary"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -194,12 +220,10 @@
                     android:id="@+id/actionSavePdf"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
-                    app:strokeColor="@color/status_in_progress"
-                    app:strokeWidth="1dp">
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -229,12 +253,10 @@
                     android:id="@+id/actionEditInvoice"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
-                    app:strokeColor="@color/my_light_tertiary"
-                    app:strokeWidth="1dp">
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -264,12 +286,10 @@
                     android:id="@+id/actionDeleteInvoice"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
                     android:layout_weight="1"
                     app:cardBackgroundColor="@color/my_light_surface"
                     app:cardCornerRadius="8dp"
-                    app:strokeColor="@color/red"
-                    app:strokeWidth="1dp">
+                    app:strokeWidth="0dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -299,63 +319,13 @@
             </LinearLayout>
 
 
-            <!-- Customer Details Section -->
-            <TextView
-                android:id="@+id/customerSectionTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:fontFamily="@font/librebaskervilleregular"
-                android:text="Customer Details"
-                android:textColor="@color/my_light_on_surface"
-                android:textSize="20sp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/customerName"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:fontFamily="@font/montserratsemibold"
-                    android:textColor="@color/my_light_on_surface"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/customerPhone"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:textColor="@color/my_light_on_background"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/customerAddress"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="@font/montserratregular"
-                    android:textColor="@color/my_light_on_background"
-                    android:textSize="14sp" />
-
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/my_light_outline" />
-
-            <!-- Items Section -->
             <TextView
                 android:id="@+id/itemsSectionTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="8dp"
                 android:fontFamily="@font/librebaskervilleregular"
-                android:text="Items"
+                android:text="Items Details"
                 android:textColor="@color/my_light_on_surface"
                 android:textSize="20sp" />
 
@@ -365,9 +335,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
-                tools:itemCount="3" />
+                tools:itemCount="3"
+                tools:listitem="@layout/item_invoice_summary_line" />
 
-            <!-- Financial Summary -->
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="8dp"
+                android:background="@color/my_light_on_surface" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -376,7 +353,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     android:orientation="horizontal">
 
                     <TextView
@@ -397,36 +374,33 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
-                <!-- Dynamic Extra Charges -->
                 <LinearLayout
                     android:id="@+id/extraChargesLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:orientation="vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
                     tools:visibility="visible">
 
-                    <!-- Extra charges will be added here programmatically -->
                     <TextView
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:fontFamily="@font/montserratmedium"
                         android:text="Extra Charges"
                         android:textColor="@color/my_light_on_background"
                         android:textSize="14sp" />
 
-                    <LinearLayout
-                        android:id="@+id/extraChargesContainer"
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/extraChargesValue"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- Example extra charge item -->
-                        <!-- Include R.layout.item_extra_charge_layout -->
-
-                    </LinearLayout>
+                        android:fontFamily="@font/montserratsemibold"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="14sp"
+                        tools:text="₹1,200.00" />
                 </LinearLayout>
-
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -452,10 +426,16 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@color/my_light_on_surface" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
 
                     <TextView
@@ -481,10 +461,9 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/my_light_outline" />
+                android:layout_marginTop="8dp"
+                android:background="@color/my_light_on_surface" />
 
-            <!-- Payments Section -->
             <TextView
                 android:id="@+id/paymentsSectionTitle"
                 android:layout_width="match_parent"
@@ -508,13 +487,13 @@
                 android:visibility="gone"
                 tools:visibility="visible" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/paymentsRecyclerView"
+            <LinearLayout
+                android:id="@+id/paymentsSummaryContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false"
-                tools:itemCount="2" />
+                android:fontFamily="@font/montserratmedium"
+                android:orientation="vertical" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -546,6 +525,12 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/my_light_on_surface" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -576,10 +561,9 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/my_light_outline" />
+                android:layout_marginTop="8dp"
+                android:background="@color/my_light_on_surface" />
 
-            <!-- Notes Section -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

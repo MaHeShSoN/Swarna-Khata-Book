@@ -9,6 +9,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.*
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge // Assuming needed
@@ -19,14 +20,15 @@ import com.jewelrypos.swarnakhatabook.DataClasses.SelectedItemWithPrice
 import com.jewelrypos.swarnakhatabook.Enums.DateFilterType
 import com.jewelrypos.swarnakhatabook.Enums.PaymentStatusFilter
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
+import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job // Import Job
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
+import java.util.*
+import androidx.lifecycle.asFlow
 
 class SalesViewModel(
     private val repository: InvoiceRepository,
@@ -34,7 +36,33 @@ class SalesViewModel(
     private val context: Context
 ) : ViewModel() {
 
-    // --- LiveData for UI State ---
+    // Paging configuration
+    private val pageSize = 15
+
+    // Paged data flow for SalesFragment
+    private val _pagedInvoices = MutableStateFlow<PagingData<Invoice>>(PagingData.empty())
+    val pagedInvoices: StateFlow<PagingData<Invoice>> = _pagedInvoices.asStateFlow()
+
+    // Paged data for invoices
+    val allInvoices: Flow<PagingData<Invoice>> = SessionManager.activeShopIdLiveData
+        .asFlow()
+        .flatMapLatest { shopId ->
+            if (shopId != null) {
+                repository.getAllInvoicesForShop()
+            } else {
+                flowOf(PagingData.empty())
+            }
+        }
+        .cachedIn(viewModelScope)
+
+    // Loading state
+    private val _isLoading = MutableLiveData<Boolean>(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    // Error messages
+    private val _errorMessage = MutableLiveData<String>()
+    val errorMessage: LiveData<String> = _errorMessage
+
     // Selected customer for new order/invoice
     private val _selectedCustomer = MutableLiveData<Customer?>() // Allow null initially
     val selectedCustomer: LiveData<Customer?> = _selectedCustomer
@@ -50,14 +78,6 @@ class SalesViewModel(
     // Filtered Invoices list for display
     private val _invoices = MutableLiveData<List<Invoice>>()
     val invoices: LiveData<List<Invoice>> = _invoices
-
-    // Loading state (covers both fetching and filtering)
-    private val _isLoading = MutableLiveData<Boolean>(false)
-    val isLoading: LiveData<Boolean> = _isLoading
-
-    // Error messages
-    private val _errorMessage = MutableLiveData<String>()
-    val errorMessage: LiveData<String> = _errorMessage
 
     // Optional: LiveData specifically for customer's invoices if needed separately
     private val _customerInvoices = MutableLiveData<List<Invoice>>()
@@ -78,9 +98,30 @@ class SalesViewModel(
     // Coroutine Job for managing the asynchronous filter operation
     private var filterJob: Job? = null
 
+    // Dashboard data
+    private val _dashboardData = MutableLiveData<DashboardData>()
+    val dashboardData: LiveData<DashboardData> = _dashboardData
+
+    data class DashboardData(
+        val totalAmount: Double,
+        val paidAmount: Double,
+        val unpaidAmount: Double,
+        val todaySales: Double,
+        val salesByDate: Map<String, Double>
+    )
+
     init {
-        // Load the initial data when the ViewModel is created
-        loadFirstPage()
+        // Initialize dashboard data
+        _dashboardData.value = DashboardData(0.0, 0.0, 0.0, 0.0, emptyMap())
+        
+        // Observe shop changes to refresh dashboard data
+        SessionManager.activeShopIdLiveData.observeForever { shopId ->
+            if (shopId != null) {
+                refreshDashboardData()
+            }
+        }
+
+        loadInvoices()
     }
 
     // --- Getters for current filter state (used by UI to sync) ---
@@ -131,6 +172,7 @@ class SalesViewModel(
             Log.d("SalesViewModel", "Filters applied, result count: ${filteredList.size}")
         }
     }
+
 
     /**
      * Checks if an invoice matches the given date filter type.
@@ -313,7 +355,7 @@ class SalesViewModel(
         if (currentStatusFilter != filterType) {
             currentStatusFilter = filterType
             Log.d("SalesViewModel", "Payment status filter set to: $filterType")
-            applyFilters() // Calls the async applyFilters method
+            loadInvoices()
         }
     }
 
@@ -324,7 +366,7 @@ class SalesViewModel(
         if (currentDateFilter != filterType) {
             currentDateFilter = filterType
             Log.d("SalesViewModel", "Date filter set to: $filterType")
-            applyFilters() // Calls the async applyFilters method
+            loadInvoices()
         }
     }
 
@@ -335,11 +377,10 @@ class SalesViewModel(
      */
     fun searchInvoices(query: String) {
         val newQuery = query.trim().lowercase()
-        // Only trigger filtering if the actual query text has changed
         if (currentSearchQuery != newQuery) {
             currentSearchQuery = newQuery
             Log.d("SalesViewModel", "Search query set to: '$newQuery'")
-            applyFilters() // Calls the async applyFilters method
+            loadInvoices()
         }
     }
 
@@ -423,11 +464,9 @@ class SalesViewModel(
             currentDateFilter = DateFilterType.ALL_TIME
             currentStatusFilter = PaymentStatusFilter.ALL
             currentSearchQuery = ""
-            Log.d("SalesViewModel", "Filters reset during refresh.")
-            // No need to call applyFilters here, loadFirstPage will do it after fetch
+            Log.d("SalesViewModel", "Filters reset during refresh")
         }
-        // Trigger loading the first page. It will cancel existing jobs and apply filters after fetch.
-        loadFirstPage()
+        loadInvoices()
     }
 
     fun getCurrentSearchQuery(): String = currentSearchQuery
@@ -456,7 +495,14 @@ class SalesViewModel(
             Log.d("SalesViewModel", "Incremented quantity for item: ${item.id}")
         } else {
             // Add new item
-            currentItems.add(SelectedItemWithPrice(item = item, quantity = 1, price = price, usedWeight = usedWeight))
+            currentItems.add(
+                SelectedItemWithPrice(
+                    item = item,
+                    quantity = 1,
+                    price = price,
+                    usedWeight = usedWeight
+                )
+            )
             Log.d("SalesViewModel", "Added new selected item: ${item.id}")
         }
         _selectedItems.value = currentItems
@@ -715,5 +761,152 @@ class SalesViewModel(
     // Companion Object (Optional: for constants like TAG)
     companion object {
         private const val TAG = "SalesViewModel"
+    }
+
+    private fun loadInvoices() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+
+                // Load paginated data for SalesFragment
+                val pagingSource = InvoicePagingSource(
+                    repository = repository,
+                    dateFilter = currentDateFilter,
+                    statusFilter = currentStatusFilter,
+                    searchQuery = currentSearchQuery
+                )
+
+                val pager = Pager(
+                    config = PagingConfig(
+                        pageSize = pageSize,
+                        enablePlaceholders = false,
+                        prefetchDistance = 2,
+                        initialLoadSize = pageSize * 2,
+                        maxSize = pageSize * 3
+                    ),
+                    pagingSourceFactory = { pagingSource }
+                )
+
+                // Collect paged data
+                pager.flow
+                    .cachedIn(viewModelScope)
+                    .collectLatest { pagingData ->
+                        _pagedInvoices.value = pagingData
+                    }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Failed to load invoices"
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private fun refreshDashboardData() {
+        viewModelScope.launch {
+            try {
+                val shopId = SessionManager.activeShopIdLiveData.value ?: return@launch
+                Log.d("SalesViewModel", "Refreshing dashboard data for shop: $shopId")
+                
+                // Get all invoices for the shop
+                val invoices = repository.getAllInvoicesListForShop()
+                Log.d("SalesViewModel", "Fetched ${invoices.size} invoices for dashboard")
+                
+                // Calculate total amounts
+                val totalAmount = invoices.sumOf { it.totalAmount }
+                val paidAmount = invoices.sumOf { it.paidAmount }
+                val unpaidAmount = totalAmount - paidAmount
+                
+                // Calculate today's sales
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                
+                val todaySales = invoices
+                    .filter { it.invoiceDate >= today }
+                    .sumOf { it.totalAmount }
+                
+                // Group sales by date
+                val salesByDate = invoices
+                    .groupBy { 
+                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            .format(Date(it.invoiceDate))
+                    }
+                    .mapValues { entry -> entry.value.sumOf { it.totalAmount } }
+                
+                Log.d("SalesViewModel", """
+                    Calculated dashboard data:
+                    - Total Amount: $totalAmount
+                    - Paid Amount: $paidAmount
+                    - Unpaid Amount: $unpaidAmount
+                    - Today's Sales: $todaySales
+                    - Sales by Date entries: ${salesByDate.size}
+                """.trimIndent())
+                
+                // Update dashboard data
+                _dashboardData.value = DashboardData(
+                    totalAmount = totalAmount,
+                    paidAmount = paidAmount,
+                    unpaidAmount = unpaidAmount,
+                    todaySales = todaySales,
+                    salesByDate = salesByDate
+                )
+            } catch (e: Exception) {
+                Log.e("SalesViewModel", "Error refreshing dashboard data: ${e.message}", e)
+                _errorMessage.value = "Error loading dashboard data: ${e.message}"
+            }
+        }
+    }
+}
+
+// PagingSource implementation
+class InvoicePagingSource(
+    private val repository: InvoiceRepository,
+    private val dateFilter: DateFilterType,
+    private val statusFilter: PaymentStatusFilter,
+    private val searchQuery: String
+) : PagingSource<Int, Invoice>() {
+
+    override fun getRefreshKey(state: PagingState<Int, Invoice>): Int? {
+        return state.anchorPosition?.let { anchorPosition ->
+            state.closestPageToPosition(anchorPosition)?.prevKey?.plus(1)
+                ?: state.closestPageToPosition(anchorPosition)?.nextKey?.minus(1)
+        }
+    }
+
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Invoice> {
+        return try {
+            val page = params.key ?: 0
+            val pageSize = params.loadSize
+
+            Log.d("InvoicePagingSource", "Loading page $page with size $pageSize")
+            Log.d(
+                "InvoicePagingSource",
+                "Filters - Date: $dateFilter, Status: $statusFilter, Search: $searchQuery"
+            )
+
+            val invoices = repository.getInvoices(
+                page = page,
+                pageSize = pageSize,
+                dateFilter = dateFilter,
+                statusFilter = statusFilter,
+                searchQuery = searchQuery
+            )
+
+            Log.d("InvoicePagingSource", "Loaded ${invoices.size} invoices for page $page")
+
+            // If we got fewer items than requested, we're at the end
+            val isLastPage = invoices.size < pageSize
+
+            LoadResult.Page(
+                data = invoices,
+                prevKey = if (page == 0) null else page - 1,
+                nextKey = if (isLastPage) null else page + 1
+            )
+        } catch (e: Exception) {
+            Log.e("InvoicePagingSource", "Error loading page ${params.key}", e)
+            LoadResult.Error(e)
+        }
     }
 }

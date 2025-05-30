@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.chip.Chip
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.JewelleryAdapter
@@ -39,6 +40,10 @@ import coil3.request.CachePolicy
 import coil3.transform.CircleCropTransformation
 import coil3.size.Scale
 import coil3.request.transformations
+import kotlinx.coroutines.flow.collectLatest
+import androidx.paging.LoadState
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListener,
     JewelleryAdapter.OnItemClickListener {
@@ -58,21 +63,26 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         InventoryViewModelFactory(repository, connectivityManager, requireContext())
     }
     private lateinit var adapter: JewelleryAdapter
-    private var isSearchActive = false // Track search state
+    private var isSearchActive = false // Track search state (still useful for UI state)
 
     // Define filter type constants matching ViewModel
     companion object {
-        private const val FILTER_GOLD = "GOLD"
-        private const val FILTER_SILVER = "SILVER"
-        private const val FILTER_OTHER = "OTHER"
-        private const val FILTER_LOW_STOCK = "LOW_STOCK"
+        // Use constants from ViewModel directly
+        private const val FILTER_GOLD = InventoryViewModel.FILTER_GOLD
+        private const val FILTER_SILVER = InventoryViewModel.FILTER_SILVER
+        private const val FILTER_OTHER = InventoryViewModel.FILTER_OTHER
+        private const val FILTER_LOW_STOCK = InventoryViewModel.FILTER_LOW_STOCK
     }
+
+    private var isLayoutStateRestored = false // Flag for state restoration
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentInventoryBinding.inflate(inflater, container, false)
+
+         isLayoutStateRestored = false // Reset state restoration flag
 
         binding.addItemFab.setOnClickListener {
             AnimationUtils.pulse(it)
@@ -82,7 +92,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setUpRecyclerView()
         setupSearchView()
         setupFilterChips() // Setup chip listeners
-        setupObservers()
+        setupObservers() // Setup observers for PagingData and LoadState
         setupEventBusObservers()
         setupSwipeRefresh()
         setupEmptyStateButtons()
@@ -98,7 +108,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
             shop?.let {
                 Log.d("InventoryFragment", "Shop changed to: ${shop.shopName}")
-                // Refresh data when shop changes
+                // Refresh data and clear filters when shop changes
                 inventoryViewModel.refreshDataAndClearFilters()
             }
         }
@@ -108,8 +118,9 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         // Observe inventory update events
         EventBus.inventoryUpdatedEvent.observe(viewLifecycleOwner) { updated ->
             if (updated) {
-                // Refresh data and clear filters when an inventory update event is received
-                inventoryViewModel.refreshDataAndClearFilters()
+                // Refresh data when an inventory update event is received
+                Log.d("InventoryFragment", "Inventory update event received, refreshing PagingData.")
+                 adapter.refresh() // Trigger Paging 3 refresh
                 // Reset the event to avoid handling it multiple times
                 EventBus.resetInventoryUpdatedEvent()
 
@@ -121,8 +132,9 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         // Observe inventory delete events
         EventBus.inventoryDeletedEvent.observe(viewLifecycleOwner) { deleted ->
             if (deleted) {
-                // Refresh data and clear filters when an inventory delete event is received
-                inventoryViewModel.refreshDataAndClearFilters()
+                // Refresh data when an inventory delete event is received
+                Log.d("InventoryFragment", "Inventory delete event received, refreshing PagingData.")
+                 adapter.refresh() // Trigger Paging 3 refresh
                 // Reset the event to avoid handling it multiple times
                 EventBus.resetInventoryDeletedEvent()
 
@@ -134,38 +146,125 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
 
     private fun setupObservers() {
-        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
-            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing UI
-            adapter.updateList(items) // Update the adapter with filtered/searched list
-            
-            // Restore state after the adapter update has been processed by layout
-            binding.recyclerViewInventory.post {
-                if (_binding != null &&inventoryViewModel.layoutManagerState != null && items.isNotEmpty()) {
-                    binding.recyclerViewInventory.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
-                    // Don't clear the state after restoration, so it can be used in onResume
-                }
+        Log.d("InventoryFragment", "setupObservers: Method called")
+
+        // Observe the PagingData flow from the ViewModel
+        viewLifecycleOwner.lifecycleScope.launch {
+            inventoryViewModel.jewelleryItemsFlow.collectLatest { pagingData ->
+                Log.d("InventoryFragment", "New PagingData received, submitting to adapter.")
+                adapter.submitData(pagingData) // Submit PagingData to the adapter
+                 Log.d("InventoryFragment", "PagingData submitted. Scroll/state restoration will be handled by LoadState observer.")
             }
-            
-            updateUIState(items.isEmpty()) // Update empty state based on the filtered list
         }
+
+        // Observe LoadState from the adapter to handle UI state (loading, empty)
+        // Also triggers state restoration when NotLoading and list is not empty
+        viewLifecycleOwner.lifecycleScope.launch {
+            adapter.loadStateFlow.collectLatest { loadStates ->
+                Log.d("InventoryFragment", "Load states updated: $loadStates")
+                _binding?.let { currentBinding ->
+                    val refreshState = loadStates.refresh // State of the initial load or refresh
+                    val isListEmpty = adapter.itemCount == 0 // Check item count in the adapter after updates
+                     Log.d("InventoryFragment", "Is list empty: $isListEmpty (Adapter count: ${adapter.itemCount})")
+
+                    // Update swipe refresh indicator
+                    currentBinding.swipeRefreshLayout.isRefreshing = refreshState is LoadState.Loading
+
+                    when (refreshState) {
+                        is LoadState.Loading -> {
+                             // Show progress bar only if not already refreshing via swipe
+                             if (!currentBinding.swipeRefreshLayout.isRefreshing) {
+                                currentBinding.progressBar.visibility = View.VISIBLE
+                             } else {
+                                // Hide progress bar if swipe refresh is active
+                                currentBinding.progressBar.visibility = View.GONE
+                             }
+                            currentBinding.recyclerViewInventory.visibility = View.GONE
+                            currentBinding.emptyStateLayout.visibility = View.GONE
+                            currentBinding.emptySearchLayout.visibility = View.GONE
+                            Log.d("InventoryFragment", "LoadState: Loading (Refresh)")
+                        }
+                        is LoadState.Error -> {
+                            currentBinding.progressBar.visibility = View.GONE
+                            currentBinding.swipeRefreshLayout.isRefreshing = false // Stop refreshing on error
+                            currentBinding.recyclerViewInventory.visibility = View.GONE
+                            currentBinding.emptyStateLayout.visibility = View.GONE
+                            currentBinding.emptySearchLayout.visibility = View.GONE
+
+                            val errorMessage = refreshState.error.localizedMessage ?: "Unknown error loading inventory"
+                            Toast.makeText(requireContext(), "Error loading inventory: $errorMessage", Toast.LENGTH_LONG).show()
+                            Log.e("InventoryFragment", "Paging refresh error: $errorMessage", refreshState.error)
+
+                            // Optionally show empty state or a specific error view if list is empty and error occurs
+                            if (isListEmpty) {
+                                 // Decide which empty state to show based on search/filters
+                                 showEmptyState(inventoryViewModel.searchQuery.value, inventoryViewModel.activeFilters.value) // Use public flow value
+                             }
+                        }
+                        is LoadState.NotLoading -> {
+                            currentBinding.progressBar.visibility = View.GONE
+                            currentBinding.swipeRefreshLayout.isRefreshing = false // Stop refreshing
+
+                            Log.d("CustomerFragment", "LoadState NotLoading, checking item count: ${adapter.itemCount}")
+
+                             // Update UI state based on whether the list is empty and filters/search are active
+                             showEmptyState(inventoryViewModel.searchQuery.value, inventoryViewModel.activeFilters.value) // Use public flow value
+
+
+                            // Restore state if not already restored and state exists
+                            if (!isLayoutStateRestored && inventoryViewModel.layoutManagerState != null && !isListEmpty) {
+                                currentBinding.recyclerViewInventory.post {
+                                     Log.d("InventoryFragment", "Posting layout manager state restoration.")
+                                     // Ensure binding is still valid and state hasn't been restored in another post
+                                    if (_binding != null && !isLayoutStateRestored && inventoryViewModel.layoutManagerState != null) {
+                                        Log.d("InventoryFragment", "Restoring layout manager state inside post block.")
+                                        _binding?.recyclerViewInventory?.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
+                                        isLayoutStateRestored = true // Set flag after attempting restoration
+                                        Log.d("InventoryFragment", "Set isLayoutStateRestored to true after posting restoration.")
+                                    } else {
+                                        Log.d("InventoryFragment", "Skipping state restoration inside post block (inner conditions not met).")
+                                    }
+                                }
+                            } else {
+                                Log.d("InventoryFragment", "Skipping immediate state restoration check (outer conditions not met: isLayoutStateRestored=${isLayoutStateRestored}, layoutManagerState=${inventoryViewModel.layoutManagerState != null}, isListEmpty=${isListEmpty}).")
+                            }
+                        }
+                    }
+                }
+                 // Observe append and prepend states if you want separate indicators
+                 // val appendState = loadStates.append
+                 // val prependState = loadStates.prepend
+            }
+        }
+
+        // Observe search query and active filters to update UI state reactively
+         viewLifecycleOwner.lifecycleScope.launch {
+             inventoryViewModel.searchQuery
+                 .collectLatest { query ->
+                 isSearchActive = query.isNotEmpty() // Update search active flag
+                 Log.d("InventoryFragment", "Observed search query change: '$query', isSearchActive=$isSearchActive")
+                  // UI state update is now primarily driven by LoadState observer
+             }
+         }
+
+         viewLifecycleOwner.lifecycleScope.launch {
+             inventoryViewModel.activeFilters
+                  .collectLatest { filters ->
+                  Log.d("InventoryFragment", "Observed active filters change: $filters")
+                  // Sync chip states when filters change
+                  syncChipStates(filters)
+                  // UI state update is now primarily driven by LoadState observer
+             }
+         }
+
 
         inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
             if (!errorMessage.isNullOrEmpty()) { // Check if message is not null or empty
+                Log.e("InventoryFragment", "Action Error message: $errorMessage")
                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                 // Optionally clear the error message in ViewModel after showing
+                 // inventoryViewModel.clearErrorMessage() // Add this method if needed
             }
-            binding.swipeRefreshLayout.isRefreshing = false // Stop refreshing UI on error
-        }
-
-        inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // Show progress bar only if not already refreshing via swipe
-            if (!binding.swipeRefreshLayout.isRefreshing) {
-                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            }
-        }
-
-        // Observe active filters to update chip UI state
-        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
-            syncChipStates(activeFilters) // Call helper to update chip visuals
         }
     }
 
@@ -180,127 +279,149 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                 override fun onQueryTextSubmit(query: String?): Boolean {
                     // Submitting usually implies the user is done typing
                     query?.let {
-                        isSearchActive = it.isNotEmpty()
-                        inventoryViewModel.searchItems(it)
+                        inventoryViewModel.searchItems(it) // Update ViewModel StateFlow
                     }
-                    return true
+                    searchView.clearFocus() // Hide keyboard
+                    return true // Indicate query is handled
                 }
 
                 override fun onQueryTextChange(newText: String?): Boolean {
                     // Trigger search with debounce in ViewModel
-                    isSearchActive = !newText.isNullOrEmpty()
-                    inventoryViewModel.searchItems(newText ?: "")
-                    return true
+                    inventoryViewModel.searchItems(newText ?: "") // Update ViewModel StateFlow
+                    return true // Indicate query is handled
                 }
             })
 
-            // Handle clearing the search
+            // Handle clearing the search by clicking the 'X' icon
             setOnCloseListener {
-                isSearchActive = false
-                inventoryViewModel.searchItems("") // Trigger filter with empty query
-                clearFocus()
-                onActionViewCollapsed() // Collapse the search view
-                true
-            }
-            // Optional: Handle closing the search view by clicking the 'X' icon inside it
-            val closeButton = findViewById<View>(androidx.appcompat.R.id.search_close_btn)
-            closeButton?.setOnClickListener {
-                setQuery("", false) // Clear the query
-                onActionViewCollapsed() // Collapse the search view
-                isSearchActive = false
-                inventoryViewModel.searchItems("") // Trigger filter with empty query
-                clearFocus()
+                inventoryViewModel.searchItems("") // Clear search in ViewModel
+                 true // Indicate close is handled
             }
         }
     }
 
     private fun setupFilterChips() {
-        // --- Important: Use a helper function to attach listeners ---
-        // This prevents issues when observing activeFilters LiveData later
-        attachChipListeners()
+        // Initial sync might be needed if ViewModel already has state
+         syncChipStates(inventoryViewModel.activeFilters.value) // Use public flow value for initial sync
+
+        // Use setOnCheckedStateChangeListener for Material3 ChipGroup (Metal Types)
+        binding.filterChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+             // Convert checked IDs to filter constants and update ViewModel
+             handleMetalTypeChipChange(checkedIds)
+        }
+
+        // Set OnCheckedChangeListener for the Low Stock chip (independent)
+         binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
+             handleLowStockChipChange(isChecked)
+         }
     }
 
-    private fun attachChipListeners() {
-        binding.chipGold.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter(FILTER_GOLD, isChecked)
-        }
-        binding.chipSilver.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter(FILTER_SILVER, isChecked)
-        }
-        binding.chipOther.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter(FILTER_OTHER, isChecked)
-        }
-        binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
-            inventoryViewModel.toggleFilter(FILTER_LOW_STOCK, isChecked)
-        }
+    // Handles state changes for the Metal Type ChipGroup
+    private fun handleMetalTypeChipChange(checkedIds: List<Int>) {
+         Log.d("InventoryFragment", "Metal Type chip group state changed. Checked IDs: $checkedIds")
+
+         // Determine the selected metal type filter based on checked IDs (should be only one)
+         val selectedMetalType = when (checkedIds.firstOrNull()) {
+             R.id.chipGold -> FILTER_GOLD
+             R.id.chipSilver -> FILTER_SILVER
+             R.id.chipOther -> FILTER_OTHER
+             else -> null // No metal type chip selected
+         }
+
+         // Update the ViewModel's filters. Leverage ViewModel's toggleFilter
+         // to ensure mutual exclusivity is handled correctly internally.
+         // We need to inform the ViewModel about the new *single* selected type,
+         // and it will handle turning off the others.
+
+         val currentFilters = inventoryViewModel.activeFilters.value.toMutableSet()
+         val newFilters = mutableSetOf<String>()
+
+         // Add the selected metal type filter if any
+         if (selectedMetalType != null) {
+             newFilters.add(selectedMetalType)
+         }
+
+         // Keep the state of the Low Stock filter as it's independent
+         if (currentFilters.contains(FILTER_LOW_STOCK)) {
+             newFilters.add(FILTER_LOW_STOCK)
+         }
+
+         // Update the ViewModel's entire set of active filters
+         // The ViewModel should have a method to set the *entire* filter set,
+         // or we use toggleFilter appropriately. Let's use toggleFilter.
+
+         // Turn off all existing type filters first
+         if (currentFilters.contains(FILTER_GOLD)) inventoryViewModel.toggleFilter(FILTER_GOLD, false)
+         if (currentFilters.contains(FILTER_SILVER)) inventoryViewModel.toggleFilter(FILTER_SILVER, false)
+         if (currentFilters.contains(FILTER_OTHER)) inventoryViewModel.toggleFilter(FILTER_OTHER, false)
+
+         // Turn on the newly selected type filter (if any)
+         if (selectedMetalType != null) {
+             inventoryViewModel.toggleFilter(selectedMetalType, true)
+         }
+
+         // The low stock state is handled by its own listener.
+         Log.d("InventoryFragment", "Processed Metal Type chip change. ViewModel filter state will be updated.")
     }
+
+    // Handles state changes for the Low Stock chip
+    private fun handleLowStockChipChange(isChecked: Boolean) {
+         Log.d("InventoryFragment", "Low Stock chip state changed: $isChecked")
+         inventoryViewModel.toggleFilter(FILTER_LOW_STOCK, isChecked) // Toggle the LOW_STOCK filter in ViewModel
+         Log.d("InventoryFragment", "Toggled LOW_STOCK filter in ViewModel to $isChecked.")
+    }
+
 
     private fun syncChipStates(activeFilters: Set<String>) {
-        // --- Detach listeners temporarily to prevent feedback loops ---
-        binding.chipGold.setOnCheckedChangeListener(null)
-        binding.chipSilver.setOnCheckedChangeListener(null)
-        binding.chipOther.setOnCheckedChangeListener(null)
-        binding.chipLowStock.setOnCheckedChangeListener(null)
+        // --- Temporarily detach listeners to prevent feedback loops ---
+        binding.filterChipGroup.setOnCheckedStateChangeListener(null)
+         binding.chipLowStock.setOnCheckedChangeListener(null) // Detach Low Stock listener
 
-        // --- Set checked states based on ViewModel ---
+        // --- Set checked states based on ViewModel's active filters ---
         binding.chipGold.isChecked = activeFilters.contains(FILTER_GOLD)
         binding.chipSilver.isChecked = activeFilters.contains(FILTER_SILVER)
         binding.chipOther.isChecked = activeFilters.contains(FILTER_OTHER)
         binding.chipLowStock.isChecked = activeFilters.contains(FILTER_LOW_STOCK)
 
         // --- Re-attach listeners ---
-        attachChipListeners()
+        binding.filterChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            handleMetalTypeChipChange(checkedIds)
+        }
+         binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
+             handleLowStockChipChange(isChecked)
+         }
+        Log.d("InventoryFragment", "Synced chip states with filters: $activeFilters")
     }
 
 
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
-            inventoryViewModel.refreshData()
+            Log.d("InventoryFragment", "Swipe to refresh triggered.")
+             adapter.refresh() // Trigger Paging 3 refresh
         }
     }
 
-    private fun setUpObserver() {
-        inventoryViewModel.jewelleryItems.observe(viewLifecycleOwner) { items ->
-            binding.swipeRefreshLayout.isRefreshing = false
-            adapter.updateList(items) // Update the adapter with filtered/searched list
-            updateUIState(items.isEmpty()) // Update empty state based on the filtered list
-        }
+    /**
+     * Updates the visibility of empty state layouts based on list content, search, and filters.
+     */
+    private fun showEmptyState(currentSearchQuery: String, activeFilters: Set<String>) {
+        val isListEmpty = adapter.itemCount == 0
+        val hasActiveFiltersOrSearch = currentSearchQuery.isNotEmpty() || activeFilters.isNotEmpty()
 
-        inventoryViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
-            if (!errorMessage.isNullOrEmpty()) {
-                Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
-            }
-            binding.swipeRefreshLayout.isRefreshing = false
-        }
-
-        inventoryViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // Show progress bar only if not refreshing via swipe
-            if (!binding.swipeRefreshLayout.isRefreshing) {
-                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            }
-        }
-
-        // Observe active filters to update chip UI
-        inventoryViewModel.activeFilters.observe(viewLifecycleOwner) { activeFilters ->
-            syncChipStates(activeFilters)
-        }
-    }
-
-    private fun updateUIState(isEmpty: Boolean) {
-        val hasActiveFilters = inventoryViewModel.activeFilters.value?.isNotEmpty() == true
-
-        if (isEmpty && (isSearchActive || hasActiveFilters)) {
-            // No results matching search or filters
+        if (isListEmpty) {
+            if (hasActiveFiltersOrSearch) { // Check if any filter OR search is active
+                Log.d("InventoryFragment", "List is empty, showing empty search layout (filters/search active).")
             binding.emptySearchLayout.visibility = View.VISIBLE
             binding.recyclerViewInventory.visibility = View.GONE
             binding.emptyStateLayout.visibility = View.GONE
-        } else if (isEmpty) {
-            // No items in inventory at all
+            } else {
+                Log.d("InventoryFragment", "List is empty, showing default empty state.")
             binding.emptyStateLayout.visibility = View.VISIBLE
             binding.recyclerViewInventory.visibility = View.GONE
             binding.emptySearchLayout.visibility = View.GONE
+            }
         } else {
-            // Show recycler view with items
+            Log.d("InventoryFragment", "List is not empty, showing RecyclerView.")
             binding.recyclerViewInventory.visibility = View.VISIBLE
             binding.emptyStateLayout.visibility = View.GONE
             binding.emptySearchLayout.visibility = View.GONE
@@ -316,16 +437,15 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
         // Clear filters/search button in the empty search state
         binding.clearFilterButton.setOnClickListener {
-            // Clear search view
+            // Clear search view UI
             val searchView =
                 binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
-            searchView.setQuery("", false) // Clear query
+            searchView.setQuery("", false) // Clear query visually
             searchView.isIconified = true // Collapse the view
-            searchView.onActionViewCollapsed(); // Ensure it fully collapses
+            searchView.onActionViewCollapsed() // Ensure it fully collapses
 
-
-            // Clear filters in ViewModel
-            inventoryViewModel.clearAllFilters() // This should also trigger applyFiltersAndSearch
+            // Clear filters and search in ViewModel (this triggers PagingData refresh)
+            inventoryViewModel.refreshDataAndClearFilters()
         }
 
         // Add item button in the empty search state
@@ -337,26 +457,25 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     private fun setUpRecyclerView() {
         val recyclerView: RecyclerView = binding.recyclerViewInventory
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        // Pass 'this' as the click listener
-        adapter = JewelleryAdapter(emptyList(), this)
+        // Pass 'this' as the click listener to the PagingDataAdapter constructor
+        adapter = JewelleryAdapter(this)
         recyclerView.adapter = adapter
 
+        // Add LoadStateAdapter for loading indicators at the top/bottom (optional but recommended)
+        // recyclerView.adapter = adapter.withLoadStateFooter(
+        //    loading = YourLoadingIndicatorAdapter()
+        // )
+
+
+        // Coil preloading logic - keep but adapt to use adapter.peek(position) or adapter.getItem(position)
+        // No longer need manual loadNextPage checks here as Paging 3 handles it
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val layoutManager = recyclerView.layoutManager as LinearLayoutManager
                 val visibleItemCount = layoutManager.childCount
-                val totalItemCount = layoutManager.itemCount
+                val totalItemCount = adapter.itemCount // Use adapter.itemCount
                 val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-
-                // Load more when user is near the end of the list
-                if (inventoryViewModel.isLoading.value == false &&
-                    totalItemCount > 0 && // Ensure list is not empty
-                    (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 && // Trigger near end
-                    firstVisibleItemPosition >= 0
-                ) {
-                    inventoryViewModel.loadNextPage()
-                }
                 
                 // Implement efficient Coil preloading
                 if (dy > 0) { // Scrolling down
@@ -367,12 +486,14 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                     val lastVisiblePosition = layoutManager.findLastVisibleItemPosition()
                     val preloadPosition = lastVisiblePosition + 1
                     val preloadCount = 5 // Number of items to preload ahead
+                    // Use adapter.itemCount from PagingDataAdapter
                     val endPosition = minOf(preloadPosition + preloadCount, adapter.itemCount)
                     
                     // Preload images in the calculated range
                     for (i in preloadPosition until endPosition) {
-                        // Get the item data safely using the adapter helper function
-                        adapter.getItem(i)?.let { item ->
+                        // Get the item data safely using adapter.peek() or adapter.getItem()
+                         // peek is more efficient as it doesn't trigger loading
+                        adapter.peek(i)?.let { item ->
                             // Only preload if there's a valid image URL
                             if (item.imageUrl.isNotEmpty()) {
                                 // Create an image request configured for efficient background caching
@@ -385,8 +506,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                                     .transformations(CircleCropTransformation())
                                     // Set to null target for cache-only loading (no view attached)
                                     .target(null)
-                                    // Instead of priority, use placeholderMemoryCacheKey for caching
-                                    .placeholderMemoryCacheKey(item.imageUrl)
+                                    // Use data as memory cache key for cache consistency
+                                    .memoryCacheKey(item.imageUrl)
                                     // Ensure we're using memory cache
                                     .memoryCachePolicy(CachePolicy.ENABLED)
                                     .build()
@@ -400,7 +521,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
             }
         })
         
-        // Preload initial visible images
+        // Preload initial visible images - keep this
         recyclerView.post {
             val layoutManager = recyclerView.layoutManager as LinearLayoutManager
             val firstVisible = layoutManager.findFirstVisibleItemPosition()
@@ -411,7 +532,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
             
             // Preload initial visible items
             for (i in firstVisible until (firstVisible + visibleCount)) {
-                adapter.getItem(i)?.let { item ->
+                 // Use adapter.peek()
+                adapter.peek(i)?.let { item ->
                     if (item.imageUrl.isNotEmpty()) {
                         val request = ImageRequest.Builder(requireContext())
                             .data(item.imageUrl)
@@ -419,8 +541,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                             .scale(Scale.FILL)
                             .transformations(CircleCropTransformation())
                             .target(null)
-                            // Instead of priority, use placeholderMemoryCacheKey for caching
-                            .placeholderMemoryCacheKey(item.imageUrl)
+                            // Use data as memory cache key for cache consistency
+                            .memoryCacheKey(item.imageUrl)
                             .memoryCachePolicy(CachePolicy.ENABLED)
                             .build()
                         
@@ -435,44 +557,36 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         // Show the bottom sheet immediately for responsive UI
         showBottomSheetDialog()
         
-        // Check inventory count in the background
+        // Check inventory count in the background BEFORE showing the bottom sheet
+        // This logic should be called BEFORE showing the sheet to prevent opening
+        // the sheet only to immediately dismiss it.
+        // Let's move the check outside the showBottomSheetDialog() call.
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                checkInventoryLimitInBackground()
+                val inventoryCount = inventoryViewModel.getTotalInventoryCount()
+
+                val (isLimitReached, maxLimit) = FeatureChecker.isInventoryLimitReached(requireContext(), inventoryCount)
+
+                if (isLimitReached) {
+                     withContext(Dispatchers.Main) {
+                         // Dismiss the bottom sheet if it was shown before checking
+                         val bottomSheet = childFragmentManager.findFragmentByTag("ItemBottomSheet") as? ItemBottomSheetFragment
+                         bottomSheet?.dismissAllowingStateLoss()
+
+                         FeatureChecker.showUpgradeDialogForLimit(requireContext(), "inventory items", maxLimit)
+                     }
+                } else {
+                     // If limit is NOT reached, then show the bottom sheet
+                     // showBottomSheetDialog() // Already called above
+                }
             } catch (e: Exception) {
                 Log.e("InventoryFragment", "Error checking inventory limits: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Error checking inventory limits: ${e.message}", Toast.LENGTH_SHORT).show()
+                     // If there was an error checking limit, you might still want to show the sheet,
+                     // or handle the error differently. For now, we log and toast.
                 }
             }
-        }
-    }
-    
-    /**
-     * Checks inventory limits in the background and dismisses the bottom sheet if the limit is reached
-     */
-    private suspend fun checkInventoryLimitInBackground() {
-        try {
-            // Get total inventory item count from repository
-            val inventoryCount = inventoryViewModel.getTotalInventoryCount()
-            
-            // Check if inventory limit is reached
-            val (isLimitReached, maxLimit) = FeatureChecker.isInventoryLimitReached(requireContext(), inventoryCount)
-            
-            // If limit is reached, dismiss the bottom sheet and show upgrade dialog
-            if (isLimitReached) {
-                withContext(Dispatchers.Main) {
-                    // Find and dismiss the bottom sheet
-                    val bottomSheet = childFragmentManager.findFragmentByTag("ItemBottomSheet") as? ItemBottomSheetFragment
-                    bottomSheet?.dismissAllowingStateLoss()
-                    
-                    // Show upgrade dialog
-                    FeatureChecker.showUpgradeDialogForLimit(requireContext(), "inventory items", maxLimit)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e("InventoryFragment", "Error in background inventory limit check: ${e.message}", e)
-            // Don't dismiss the sheet if there's an error checking, just log it
         }
     }
 
@@ -485,15 +599,33 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
 
     // --- ItemBottomSheetFragment.OnItemAddedListener Implementation ---
     override fun onItemAdded(item: JewelleryItem) {
-        inventoryViewModel.addJewelleryItem(item)
-        // Optionally show a success message
-        Toast.makeText(requireContext(), "Item added successfully", Toast.LENGTH_SHORT).show()
+         Log.d("InventoryFragment", "onItemAdded callback received.")
+        inventoryViewModel.addJewelleryItem(item).observe(viewLifecycleOwner) { result ->
+            if (result.isSuccess) {
+                adapter.refresh()
+                 // EventBus.postInventoryUpdated() // ViewModel triggers refresh, EventBus might be redundant here or used for other screens
+                Toast.makeText(requireContext(), "${item.displayName} added successfully", Toast.LENGTH_SHORT).show()
+                 // PagingData refresh is triggered by ViewModel after successful add
+            } else {
+                Toast.makeText(requireContext(), "Error adding item: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                 Log.e("InventoryFragment", "Error adding item via ViewModel", result.exceptionOrNull())
+            }
+        }
     }
 
     override fun onItemUpdated(item: JewelleryItem) {
-        inventoryViewModel.updateJewelleryItem(item)
-        // Optionally show a success message
-        Toast.makeText(requireContext(), "Item updated successfully", Toast.LENGTH_SHORT).show()
+         Log.d("InventoryFragment", "onItemUpdated callback received.")
+        inventoryViewModel.updateJewelleryItem(item).observe(viewLifecycleOwner) { result ->
+            if (result.isSuccess) {
+                 // EventBus.postInventoryUpdated() // ViewModel triggers refresh
+                Toast.makeText(requireContext(), "${item.displayName} updated successfully", Toast.LENGTH_SHORT).show()
+                 // PagingData refresh is triggered by ViewModel after successful update
+            } else {
+                val errorMessage = result.exceptionOrNull()?.message ?: "Unknown error updating item"
+                Log.e("InventoryFragment", "Error updating item via ViewModel: $errorMessage")
+                Toast.makeText(requireContext(), "Error updating ${item.displayName}: $errorMessage", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     // --- JewelleryAdapter.OnItemClickListener Implementation ---
@@ -508,28 +640,38 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         item?.let { bottomSheetFragment.setItemForEdit(it) } // Pass item for editing if provided
         // Ensure you use childFragmentManager if calling from within another fragment
         bottomSheetFragment.show(childFragmentManager, "ItemBottomSheet")
+         Log.d("InventoryFragment", "Showing item bottom sheet dialog.")
     }
 
     override fun onDestroyView() {
         // Save the RecyclerView scroll position
+        if (_binding?.recyclerViewInventory?.adapter?.itemCount ?: 0 > 0) {
         binding.recyclerViewInventory.layoutManager?.let { lm ->
             inventoryViewModel.layoutManagerState = lm.onSaveInstanceState()
+                 Log.d("InventoryFragment", "Saved layout manager state in onDestroyView (list not empty). State: ${inventoryViewModel.layoutManagerState}")
+             }
+        } else {
+             // If the list is empty, clear the saved state as it's no longer valid
+             if (inventoryViewModel.layoutManagerState != null) {
+                  Log.d("InventoryFragment", "List is empty in onDestroyView, clearing saved state.")
+                  inventoryViewModel.layoutManagerState = null
+             } else {
+                  Log.d("InventoryFragment", "List is empty in onDestroyView, and ViewModel state is null. Nothing to clear.")
+             }
         }
-        
-        // Cancel any ongoing search job to prevent leaks
-        inventoryViewModel.searchItems("") // Clear search on destroy
-        inventoryViewModel.searchJob?.cancel()
+
         super.onDestroyView()
         _binding = null
+        Log.d("InventoryFragment", "onDestroyView: binding set to null.")
     }
     
     // Add onResume method to handle restoring state when returning to the fragment
     override fun onResume() {
         super.onResume()
-        
-        // Restore scroll position if we have a saved state and adapter has items
-        if (inventoryViewModel.layoutManagerState != null && adapter.itemCount > 0) {
-            binding.recyclerViewInventory.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
-        }
+        Log.d("InventoryFragment", "onResume called.")
+         // State restoration is now handled in the LoadState observer after data is loaded.
+         // This ensures state is restored only when the list has items.
+         // The flag `isLayoutStateRestored` helps prevent multiple restorations.
+         // It's reset in onCreateView.
     }
 }

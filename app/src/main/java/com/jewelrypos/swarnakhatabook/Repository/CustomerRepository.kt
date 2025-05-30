@@ -10,7 +10,12 @@ import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerBottomSheetFragment.Companion.TAG
 import com.jewelrypos.swarnakhatabook.DataClasses.Customer
 import com.jewelrypos.swarnakhatabook.Utilitys.SessionManager
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 
 class CustomerRepository(
     private val firestore: FirebaseFirestore,
@@ -94,20 +99,28 @@ class CustomerRepository(
 
     // Add a new customer
     suspend fun addCustomer(customer: Customer): Result<Customer> = try {
+        Log.d("CustomerRepository", "addCustomer: Starting customer addition")
         val shopId = getCurrentShopId()
+        Log.d("CustomerRepository", "addCustomer: Shop ID: $shopId")
 
         // Create document with auto-generated ID
-        val docRef =
-            firestore.collection("shopData").document(shopId).collection("customers").document()
+        val docRef = firestore.collection("shopData").document(shopId).collection("customers").document()
+        Log.d("CustomerRepository", "addCustomer: Created document reference with ID: ${docRef.id}")
 
-        // Set ID in customer object
-        val customerWithId = customer.copy(id = docRef.id)
+        // Set ID in customer object and calculate fullNameSearchable
+        val customerWithId = customer.copy(
+            id = docRef.id,
+            fullNameSearchable = "${customer.firstName} ${customer.lastName}".lowercase()
+        )
+        Log.d("CustomerRepository", "addCustomer: Customer object prepared with ID: ${customerWithId.id}")
 
         // Save to Firestore
         docRef.set(customerWithId).await()
+        Log.d("CustomerRepository", "addCustomer: Customer saved to Firestore successfully")
 
         Result.success(customerWithId)
     } catch (e: Exception) {
+        Log.e("CustomerRepository", "addCustomer: Error adding customer", e)
         Result.failure(e)
     }
 
@@ -115,9 +128,14 @@ class CustomerRepository(
     suspend fun updateCustomer(customer: Customer): Result<Unit> = try {
         val shopId = getCurrentShopId()
 
+        // Calculate fullNameSearchable and update customer
+        val updatedCustomer = customer.copy(
+            fullNameSearchable = "${customer.firstName} ${customer.lastName}".lowercase()
+        )
+
         // Update existing document
         firestore.collection("shopData").document(shopId).collection("customers")
-            .document(customer.id).set(customer).await()
+            .document(customer.id).set(updatedCustomer).await()
 
         Result.success(Unit)
     } catch (e: Exception) {
@@ -306,6 +324,102 @@ class CustomerRepository(
     } catch (e: Exception) {
         Log.e(TAG, "Error getting customer count: ${e.message}")
         Result.failure(e)
+    }
+
+    fun getAllCustomersForShop(): Flow<PagingData<Customer>> {
+        val shopId = SessionManager.getActiveShopId(context)
+        val userId = auth.currentUser?.uid
+
+        if (shopId == null || userId == null) {
+            return flowOf(PagingData.empty())
+        }
+
+        val query = firestore.collection("shopData")
+            .document(shopId)
+            .collection("customers")
+            .orderBy("name", com.google.firebase.firestore.Query.Direction.ASCENDING)
+
+        return Pager(
+            config = PagingConfig(
+                pageSize = 20,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = {
+                CustomerPagingSource(
+                    firestore = firestore,
+                    shopId = shopId,
+                    searchQuery = query.toString(),
+                    customerType = "Consumer"  //
+                )
+            }
+        ).flow
+    }
+
+    fun getPaginatedCustomers(
+        shopId: String,
+        searchQuery: String,
+        customerType: String?,
+        // Add sort parameters if you want them to be configurable from ViewModel
+        // sortField: String = "createdAt",
+        // sortDirection: Query.Direction = Query.Direction.DESCENDING
+    ): Flow<PagingData<Customer>> {
+        // val userId = auth.currentUser?.uid // You might need userId for rules, but PagingSource directly uses shopId for collection path
+
+        return Pager(
+            config = PagingConfig(
+                pageSize = pageSize, // Use the same constant
+                enablePlaceholders = false // Typically false for network sources
+                // prefetchDistance: Can be configured
+            ),
+            pagingSourceFactory = {
+                CustomerPagingSource(
+                    firestore = firestore,
+                    shopId = shopId,
+                    searchQuery = searchQuery,
+                    customerType = customerType
+                    // Pass sort parameters if needed
+                )
+            }
+        ).flow
+    }
+
+    // For dashboard calculations where we need the full list
+    suspend fun getAllCustomersListForShop(): List<Customer> {
+        Log.d("CustomerRepository", "getAllCustomersListForShop: Starting to fetch customers")
+        val shopId = SessionManager.getActiveShopId(context)
+        val userId = auth.currentUser?.uid
+
+        if (shopId == null || userId == null) {
+            Log.e("CustomerRepository", "getAllCustomersListForShop: No shop ID or user ID found")
+            return emptyList()
+        }
+
+        return try {
+            Log.d("CustomerRepository", "getAllCustomersListForShop: Fetching customers from Firestore")
+
+            val snapshot = firestore.collection("shopData")
+                .document(shopId)
+                .collection("customers")
+                .get()
+                .await()
+
+            Log.d("CustomerRepository", "getAllCustomersListForShop: Received ${snapshot.documents.size} customers")
+            val customers = snapshot.documents.mapNotNull { document ->
+                try {
+                    document.toObject(Customer::class.java)?.apply {
+                        id = document.id
+                    }
+                } catch (e: Exception) {
+                    Log.e("CustomerRepository", "getAllCustomersListForShop: Error parsing customer document ${document.id}", e)
+                    null
+                }
+            }
+            Log.d("CustomerRepository", "getAllCustomersListForShop: Successfully parsed ${customers.size} customers")
+            customers
+        } catch (e: Exception) {
+            Log.e("CustomerRepository", "getAllCustomersListForShop: Error fetching customers", e)
+            emptyList()
+        }
     }
 
     // Custom exceptions for shop-related issues

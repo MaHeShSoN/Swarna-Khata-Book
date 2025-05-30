@@ -39,6 +39,8 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentSalesBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.paging.LoadState
+import kotlinx.coroutines.flow.collectLatest
 
 class SalesFragment : Fragment() {
 
@@ -239,7 +241,7 @@ class SalesFragment : Fragment() {
 
     private fun exportSalesReport() {
         // Check if we have data to export
-        val currentInvoices = adapter.currentList
+        val currentInvoices = adapter.snapshot().items
         if (currentInvoices.isEmpty()) {
             Toast.makeText(requireContext(), "No sales data to export", Toast.LENGTH_SHORT).show()
             return
@@ -386,8 +388,6 @@ class SalesFragment : Fragment() {
     }
 
 
-
-
     private fun setupSearchView() {
         with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
             queryHint = "Search invoice number, customer..."
@@ -427,13 +427,11 @@ class SalesFragment : Fragment() {
 
         // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
-
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
-
-            // Using the generated NavDirections class
-//            val action =
-//                MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceDetailFragment(invoice.invoiceNumber)
-            val action = MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceSummeryFragmnet(invoice.invoiceNumber)
+            val action =
+                MainScreenFragmentDirections.actionMainScreenFragmentToInvoiceSummeryFragmnet(
+                    invoice.invoiceNumber
+                )
             parentNavController.navigate(action)
         }
 
@@ -441,53 +439,57 @@ class SalesFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             adapter = this@SalesFragment.adapter
 
-            // Add scroll listener for pagination
-            addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                    super.onScrolled(recyclerView, dx, dy)
+            // Add RecyclerView animations
+            AnimationUtils.animateRecyclerView(this)
 
-                    val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                    val visibleItemCount = layoutManager.childCount
-                    val totalItemCount = layoutManager.itemCount
-                    val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
 
-                    // Load more when user is near the end of the list
-                    if (!salesViewModel.isLoading.value!! &&
-                        (visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5 &&
-                        firstVisibleItemPosition >= 0
-                    ) {
-                        salesViewModel.loadNextPage()
-                    }
+        }
+
+        // Collect paged data
+        viewLifecycleOwner.lifecycleScope.launch {
+            salesViewModel.pagedInvoices.collectLatest { pagingData ->
+                if (isAdded && _binding != null) {
+                    adapter.submitData(pagingData)
                 }
-            })
+            }
+        }
+
+        // Observe adapter loading state
+        viewLifecycleOwner.lifecycleScope.launch {
+            adapter.loadStateFlow.collectLatest { loadStates ->
+                if (!isAdded || _binding == null) return@collectLatest
+
+                // Update UI based on load states
+                binding.progressBar.visibility =
+                    if (loadStates.refresh is LoadState.Loading) View.VISIBLE else View.GONE
+
+                // Handle errors
+                val error = when {
+                    loadStates.refresh is LoadState.Error -> loadStates.refresh as LoadState.Error
+                    loadStates.append is LoadState.Error -> loadStates.append as LoadState.Error
+                    loadStates.prepend is LoadState.Error -> loadStates.prepend as LoadState.Error
+                    else -> null
+                }
+
+                error?.let {
+                    Log.e("SalesFragment", "Error loading data: ${it.error}")
+                    Toast.makeText(requireContext(), it.error.localizedMessage, Toast.LENGTH_LONG)
+                        .show()
+                }
+
+                // Update empty state visibility
+                val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
+                updateUIState(isEmpty)
+            }
         }
     }
 
     private fun setupObservers() {
-        salesViewModel.invoices.observe(viewLifecycleOwner) { invoices ->
-            // Use submitList provided by ListAdapter
-            adapter.submitList(invoices) {
-                // Restore scroll position after the list is updated
-                if (_binding != null &&salesViewModel.layoutManagerState != null && invoices.isNotEmpty()) {
-                    binding.recyclerViewSales.layoutManager?.onRestoreInstanceState(salesViewModel.layoutManagerState)
-                    // Don't clear the state after restoration, so it can be used in onResume
-                }
-            }
-
-            // Reset refreshing state and progress bar visibility
-            binding.swipeRefreshLayout.isRefreshing = false
-            binding.progressBar.visibility = View.GONE
-
-            // Synchronize UI with ViewModel filter state
-            syncFiltersWithViewModel()
-
-            // Update UI based on search results or empty state
-            // Make sure to check if the submitted list is empty
-            updateUIState(invoices.isEmpty())
-        }
-
         salesViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // Only show progress bar if not already refreshing via swipe
+            if (!binding.swipeRefreshLayout.isRefreshing) {
+                binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            }
         }
 
         salesViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
@@ -496,6 +498,17 @@ class SalesFragment : Fragment() {
                 Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
                 binding.swipeRefreshLayout.isRefreshing = false
                 binding.progressBar.visibility = View.GONE
+            }
+        }
+
+        // Observe paged data to handle refresh state
+        viewLifecycleOwner.lifecycleScope.launch {
+            salesViewModel.pagedInvoices.collectLatest { pagingData ->
+                if (isAdded && _binding != null) {
+                    adapter.submitData(pagingData)
+                    // Stop refresh animation after data is loaded
+                    binding.swipeRefreshLayout.isRefreshing = false
+                }
             }
         }
     }
@@ -589,22 +602,7 @@ class SalesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        // Save the RecyclerView scroll position
-        binding.recyclerViewSales.layoutManager?.let { lm ->
-            salesViewModel.layoutManagerState = lm.onSaveInstanceState()
-        }
-        
         super.onDestroyView()
         _binding = null
-    }
-
-    // Add onResume method to handle restoring state when returning to the fragment
-    override fun onResume() {
-        super.onResume()
-        
-        // Restore scroll position if we have a saved state and adapter has items
-        if (salesViewModel.layoutManagerState != null && adapter.itemCount > 0) {
-            binding.recyclerViewSales.layoutManager?.onRestoreInstanceState(salesViewModel.layoutManagerState)
-        }
     }
 }

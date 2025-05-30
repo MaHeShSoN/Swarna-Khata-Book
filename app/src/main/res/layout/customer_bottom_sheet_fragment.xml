@@ -334,6 +334,16 @@
                         android:text="@string/opening_balance_type"
                         android:textColor="@color/my_light_secondary"
                         android:textSize="16sp" />
+                    <!-- text to Show the Errer -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:id="@+id/helperTextError"
+                        android:fontFamily="@font/montserratsemibold"
+                        android:text="@string/balance_type_cannot_be_changed_after_creation"
+                        android:textColor="@color/my_dark_error"
+                        android:textSize="12sp" />
 
                     <RadioGroup
                         android:id="@+id/balanceTypeRadioGroup"
@@ -343,7 +353,7 @@
                         android:orientation="horizontal">
 
                         <RadioButton
-                            android:id="@+id/creditRadioButton"
+                            android:id="@+id/jamaRadioButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_gravity="start"
@@ -352,12 +362,12 @@
                             android:buttonTint="@color/my_light_primary"
                             android:fontFamily="@font/montserratregular"
                             android:maxWidth="320dp"
-                            android:text="@string/credit"
+                            android:text="Jama"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
                         <RadioButton
-                            android:id="@+id/debitRadioButton"
+                            android:id="@+id/bakiRadioButton"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_gravity="start"
@@ -365,7 +375,7 @@
                             android:buttonTint="@color/my_light_primary"
                             android:fontFamily="@font/montserratregular"
                             android:maxWidth="320dp"
-                            android:text="@string/debit"
+                            android:text="Baki"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
                     </RadioGroup>

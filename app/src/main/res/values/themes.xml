@@ -108,6 +108,16 @@
         <item name="android:textSize">24sp</item>
         <item name="android:textColor">@color/white</item>
     </style>
+    <style name="ToolbarTitle2" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+    <style name="ToolbarTitle3" parent="TextAppearance.Material3.ActionBar.Title">
+        <item name="android:fontFamily">@font/librebaskervillebold</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
 
     <style name="CustomBottomSheetDialogTheme" parent="Theme.Design.Light.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/CustomBottomSheetStyle</item>

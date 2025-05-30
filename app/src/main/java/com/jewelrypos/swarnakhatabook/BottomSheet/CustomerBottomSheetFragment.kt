@@ -32,6 +32,8 @@ import androidx.appcompat.app.AlertDialog // Added import for rationale dialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.VIEW_MODEL_STORE_OWNER_KEY
+import androidx.transition.Visibility
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -43,6 +45,7 @@ import com.jewelrypos.swarnakhatabook.databinding.CustomerBottomSheetFragmentBin
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.math.abs
 
 class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -161,10 +164,12 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 // READ_CONTACTS permission granted
                 setupContactsAutocomplete()
             }
+
             permissions[Manifest.permission.WRITE_CONTACTS] == true -> {
                 // WRITE_CONTACTS permission granted
                 // Continue with saving contact
             }
+
             else -> {
                 Toast.makeText(
                     context,
@@ -177,20 +182,22 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun checkContactsPermission() {
         val permissions = mutableListOf<String>()
-        
+
         // Check READ_CONTACTS permission
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.READ_CONTACTS
-            ) != PackageManager.PERMISSION_GRANTED) {
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             permissions.add(Manifest.permission.READ_CONTACTS)
         }
-        
+
         // Check WRITE_CONTACTS permission
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.WRITE_CONTACTS
-            ) != PackageManager.PERMISSION_GRANTED) {
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
             permissions.add(Manifest.permission.WRITE_CONTACTS)
         }
 
@@ -199,6 +206,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                 // All permissions are granted
                 setupContactsAutocomplete()
             }
+
             permissions.any { shouldShowRequestPermissionRationale(it) } -> {
                 // Show rationale dialog explaining why we need contacts permissions
                 AlertDialog.Builder(requireContext())
@@ -210,6 +218,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                     .setNegativeButton("Cancel", null)
                     .show()
             }
+
             else -> {
                 // Directly request the permissions
                 requestContactsPermission.launch(permissions.toTypedArray())
@@ -465,7 +474,16 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     // --- Other Setup Functions (Unchanged) ---
 
     private fun setupBalanceTypeRadioButtons() {
-        binding.creditRadioButton.isChecked = true // Default to credit
+
+        // Default to jama (previously Credit)
+        binding.jamaRadioButton.isChecked = true
+
+        // If in edit mode, disable balance type selection
+        if (isEditMode) {
+            binding.jamaRadioButton.isEnabled = false
+            binding.bakiRadioButton.isEnabled = false
+            binding.openingBalanceField.isEnabled = false
+        }
     }
 
     private fun setupCustomerTypeDropdown() {
@@ -783,42 +801,60 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     private fun saveContactToPhone(customer: Customer) {
         try {
             val contentResolver = requireContext().contentResolver
-            
+
             // Create a new contact
             val values = ArrayList<android.content.ContentValues>()
-            
+
             // Insert the name
             val nameValues = android.content.ContentValues().apply {
-                put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE)
+                put(
+                    ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE
+                )
                 put(ContactsContract.CommonDataKinds.StructuredName.GIVEN_NAME, customer.firstName)
                 put(ContactsContract.CommonDataKinds.StructuredName.FAMILY_NAME, customer.lastName)
             }
             values.add(nameValues)
-            
+
             // Insert the phone number
             val phoneValues = android.content.ContentValues().apply {
-                put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
+                put(
+                    ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE
+                )
                 put(ContactsContract.CommonDataKinds.Phone.NUMBER, customer.phoneNumber)
-                put(ContactsContract.CommonDataKinds.Phone.TYPE, ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE)
+                put(
+                    ContactsContract.CommonDataKinds.Phone.TYPE,
+                    ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE
+                )
             }
             values.add(phoneValues)
-            
+
             // Insert the address if available
             if (customer.streetAddress.isNotEmpty()) {
                 val addressValues = android.content.ContentValues().apply {
-                    put(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE)
-                    put(ContactsContract.CommonDataKinds.StructuredPostal.STREET, customer.streetAddress)
+                    put(
+                        ContactsContract.Data.MIMETYPE,
+                        ContactsContract.CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE
+                    )
+                    put(
+                        ContactsContract.CommonDataKinds.StructuredPostal.STREET,
+                        customer.streetAddress
+                    )
                     put(ContactsContract.CommonDataKinds.StructuredPostal.CITY, customer.city)
                     put(ContactsContract.CommonDataKinds.StructuredPostal.REGION, customer.state)
                     put(ContactsContract.CommonDataKinds.StructuredPostal.COUNTRY, customer.country)
-                    put(ContactsContract.CommonDataKinds.StructuredPostal.TYPE, ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME)
+                    put(
+                        ContactsContract.CommonDataKinds.StructuredPostal.TYPE,
+                        ContactsContract.CommonDataKinds.StructuredPostal.TYPE_HOME
+                    )
                 }
                 values.add(addressValues)
             }
-            
+
             // Insert the contact
             val operations = ArrayList<android.content.ContentProviderOperation>()
-            
+
             // Create the contact
             operations.add(
                 android.content.ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
@@ -826,7 +862,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                     .withValue(ContactsContract.RawContacts.ACCOUNT_NAME, null)
                     .build()
             )
-            
+
             // Add all the data
             for (value in values) {
                 operations.add(
@@ -836,10 +872,10 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
                         .build()
                 )
             }
-            
+
             // Apply the operations
             contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
-            
+
             Log.d(TAG, "Contact saved successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error saving contact to phone", e)
@@ -848,85 +884,110 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun createCustomerFromForm(): Customer {
-        val balanceType = if (binding.creditRadioButton.isChecked) "Credit" else "Debit"
-        val openingBalance = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
-        var calculatedCurrentBalance = openingBalance
-
-        if (isEditMode) {
-            arguments?.getSerializable(ARG_CUSTOMER)?.let { arg ->
-                if (arg is Customer) {
-                    val originalCustomer = arg
-                    val openingBalanceDifference = openingBalance - originalCustomer.openingBalance
-                    calculatedCurrentBalance =
-                        originalCustomer.currentBalance + openingBalanceDifference
-                } else {
-                    Log.e(TAG, "Argument ARG_CUSTOMER is not of type Customer.")
-                }
-            } ?: Log.w(TAG, "Edit mode active but original customer data not found.")
-        }
-
-        if (balanceType == "Debit" && calculatedCurrentBalance > 0) calculatedCurrentBalance *= -1
-        else if (balanceType == "Credit" && calculatedCurrentBalance < 0) calculatedCurrentBalance *= -1
-
-        // Get current address
-        val currentAddress = binding.streetAddressField.text.toString().trim()
+        val firstName = binding.etFirstName.text.toString().trim()
+        val lastName = binding.etLastName.text.toString().trim()
+        val phone = binding.phoneNumberField.text.toString().trim()
+        val streetAddress = binding.streetAddressField.text.toString().trim()
         val city = binding.cityField.text.toString().trim()
         val state = binding.stateField.text.toString().trim()
+        val country = binding.countryDropdown.text.toString()
+        val customerType = binding.customerTypeDropdown.text.toString()
 
-        // Create full address string
-        val fullAddress = listOfNotNull(
-            currentAddress,
-            city,
-            state
-        ).joinToString(", ")
+        val balanceAmountInput = binding.openingBalanceField.text.toString().toDoubleOrNull() ?: 0.0
+        // binding.jamaRadioButton is "Jama", binding.debitRadioButton is "Baki"
+        val selectedBalanceTypeUi = if (binding.jamaRadioButton.isChecked) "Jama" else "Baki"
 
-        // Save the address to Firestore if it's not empty
-        if (fullAddress.isNotEmpty()) {
-            saveAddressToFirestore(fullAddress)
-        }
-
-        // Get previous addresses
-        val previousAddresses = if (isEditMode) {
-            arguments?.getSerializable(ARG_CUSTOMER)?.let { arg ->
-                if (arg is Customer) {
-                    // Add current address to previous addresses if it's not already there
-                    val addresses = arg.previousAddresses.toMutableList()
-                    if (fullAddress.isNotEmpty() && !addresses.contains(fullAddress)) {
-                        addresses.add(fullAddress)
-                    }
-                    addresses
-                } else {
-                    listOf(fullAddress)
-                }
-            } ?: listOf(fullAddress)
+        val existingCustomer = if (isEditMode && existingCustomerId != null) {
+            arguments?.getSerializable(ARG_CUSTOMER) as? Customer
         } else {
-            listOf(fullAddress)
+            null
         }
+
+        val finalId =
+            existingCustomerId ?: "" // Let repository handle ID for new customer if it's truly new
+
+        val finalOpeningBalance: Double
+        val finalCurrentBalance: Double
+        val finalBalanceType: String // To store the type associated with the opening balance
+        val finalCreatedAt: Long
+
+        if (isEditMode && existingCustomer != null) {
+//            if there is no change in opening balance, preserve existing values or change it with the new value
+            finalOpeningBalance =
+                existingCustomer.openingBalance // Preserve original opening balance
+            finalCurrentBalance =
+                existingCustomer.currentBalance // Preserve current balance (updated by transactions elsewhere)
+            finalBalanceType = existingCustomer.balanceType     // Preserve original balance type
+            finalCreatedAt =
+                existingCustomer.createdAt         // Preserve original creation timestamp
+        } else {
+            // New customer
+            finalOpeningBalance = balanceAmountInput
+            finalCurrentBalance =
+                finalOpeningBalance // Initially, current balance is the opening balance
+            finalBalanceType = selectedBalanceTypeUi
+            finalCreatedAt = System.currentTimeMillis()
+        }
+
+//        val email = binding.emailField.text.toString().trim(    ).let { if (it.isEmpty()) null else it }
+        val businessName =
+            if (binding.businessInfoCard.isVisible) binding.businessNameField.text.toString().trim()
+                .let { if (it.isEmpty()) null else it } else null
+        val gstNumber =
+            if (binding.businessInfoCard.isVisible) binding.gstNumberField.text.toString().trim()
+                .let { if (it.isEmpty()) null else it } else null
+        val taxId =
+            if (binding.businessInfoCard.isVisible) binding.taxIdField.text.toString().trim()
+                .let { if (it.isEmpty()) null else it } else null
+        val customerSince = binding.customerSinceDateField.text.toString().trim()
+            .let { if (it.isEmpty()) null else it }
+        val referredBy =
+            binding.referredByField.text.toString().trim().let { if (it.isEmpty()) null else it }
+        val birthday =
+            binding.birthdayField.text.toString().trim().let { if (it.isEmpty()) null else it }
+        val anniversary =
+            binding.anniversaryField.text.toString().trim().let { if (it.isEmpty()) null else it }
+        val balanceNotes =
+            binding.balanceNotesField.text.toString().trim().let { if (it.isEmpty()) null else it }
+        val notes = binding.notesField.text.toString().trim().let { if (it.isEmpty()) null else it }
+
+
+        Log.d("CustomerBottomSheet", "Creating/Updating customer with:")
+        Log.d("CustomerBottomSheet", "ID: $finalId, EditMode: $isEditMode")
+        Log.d(
+            "CustomerBottomSheet",
+            "Selected UI Balance Type: $selectedBalanceTypeUi, Input Amount: $balanceAmountInput"
+        )
+        Log.d("CustomerBottomSheet", "Final Balance Type: $finalBalanceType")
+        Log.d("CustomerBottomSheet", "Final Opening Balance: $finalOpeningBalance")
+        Log.d("CustomerBottomSheet", "Final Current Balance: $finalCurrentBalance")
+        Log.d("CustomerBottomSheet", "Final CreatedAt: $finalCreatedAt")
+
 
         return Customer(
-            id = existingCustomerId ?: "",
-            customerType = binding.customerTypeDropdown.text.toString(),
-            firstName = binding.etFirstName.text.toString().trim(),
-            lastName = binding.etLastName.text.toString().trim(),
-            phoneNumber = binding.phoneNumberField.text.toString().trim(),
-            streetAddress = currentAddress,
+            id = finalId,
+            firstName = firstName,
+            lastName = lastName,
+            phoneNumber = phone,
+            streetAddress = streetAddress,
             city = city,
             state = state,
-            country = binding.countryDropdown.text.toString(),
-            previousAddresses = previousAddresses,
-            balanceType = balanceType,
-            openingBalance = openingBalance,
-            currentBalance = calculatedCurrentBalance,
-            balanceNotes = binding.balanceNotesField.text.toString().trim(),
-            businessName = binding.businessNameField.text.toString().trim(),
-            gstNumber = binding.gstNumberField.text.toString().trim(),
-            taxId = binding.taxIdField.text.toString().trim(),
-            customerSince = binding.customerSinceDateField.text.toString(),
-            referredBy = binding.referredByField.text.toString().trim(),
-            birthday = binding.birthdayField.text.toString(),
-            anniversary = binding.anniversaryField.text.toString(),
-            notes = binding.notesField.text.toString().trim(),
-            lastUpdatedAt = System.currentTimeMillis()
+            country = country,
+            customerType = customerType,
+            balanceType = finalBalanceType,
+            openingBalance = finalOpeningBalance,
+            currentBalance = finalCurrentBalance,
+            createdAt = finalCreatedAt,
+            lastUpdatedAt = System.currentTimeMillis(), // Always update this
+            businessName = businessName.toString(),
+            gstNumber = gstNumber.toString(),
+            taxId = taxId.toString(),
+            customerSince = customerSince.toString(),
+            referredBy = referredBy.toString(),
+            birthday = birthday.toString(),
+            anniversary = anniversary.toString(),
+            balanceNotes = balanceNotes.toString(),
+            notes = notes.toString()
         )
     }
 
@@ -939,16 +1000,30 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.streetAddressField.setText(customer.streetAddress)
         binding.cityField.setText(customer.city)
         binding.stateField.setText(customer.state)
-        binding.countryDropdown.setText(customer.country, false)
-        if (customer.balanceType == "Credit") binding.creditRadioButton.isChecked = true
-        else binding.debitRadioButton.isChecked = true
+        binding.countryDropdown.setText(
+            customer.country ?: "India",
+            false
+        ) // Provide default for country
+
+
+
+        if (customer.balanceType == "Jama") {
+            binding.jamaRadioButton.isChecked = true
+            binding.bakiRadioButton.isChecked = false
+        } else if (customer.balanceType == "Baki") {
+            binding.bakiRadioButton.isChecked = true
+            binding.jamaRadioButton.isChecked = false
+        }
+
+        // The openingBalanceField in UI should show the absolute value of customer.openingBalance
         binding.openingBalanceField.setText(
             String.format(
                 Locale.US,
                 "%.2f",
-                customer.openingBalance
+                abs(customer.openingBalance) // Display absolute value of opening balance
             )
         )
+
         binding.balanceNotesField.setText(customer.balanceNotes ?: "")
         val isBusinessCustomer = customer.customerType == "Wholesaler"
         binding.businessInfoCard.isVisible = isBusinessCustomer
@@ -978,7 +1053,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         binding.cityField.text = null
         binding.stateField.text = null
         binding.countryDropdown.setText("India", false)
-        binding.creditRadioButton.isChecked = true
+        binding.jamaRadioButton.isChecked = true
         binding.openingBalanceField.setText("0.00")
         binding.balanceNotesField.text = null
         binding.businessNameField.text = null
@@ -1172,26 +1247,6 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             }
     }
 
-    private fun saveAddressToFirestore(address: String) {
-        val db = FirebaseFirestore.getInstance()
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-
-        val addressData = hashMapOf(
-            "fullAddress" to address,
-            "timestamp" to System.currentTimeMillis()
-        )
-
-        db.collection("users")
-            .document(userId)
-            .collection("addresses")
-            .add(addressData)
-            .addOnSuccessListener {
-                Log.d(TAG, "Address saved successfully")
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Error saving address", e)
-            }
-    }
 
     private fun setupFinancialInfoButton() {
         binding.financialInfoButton.setOnClickListener {

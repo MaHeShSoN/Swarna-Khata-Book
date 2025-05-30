@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/print_invoice"
+        android:title="Print Invoice" />
+    <item
+        android:id="@+id/save_invoice"
+        android:title="Downlode Invoice" />
+    <item
+        android:id="@+id/call_customer"
+        android:title="Call Customer" />
+    <item
+        android:id="@+id/duplicate_invoice"
+        android:title="Duplicate Invoice" />
+
+    <item
+        android:id="@+id/about_customer"
+        android:title="About Customer" />
+</menu>

@@ -216,165 +216,135 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        android:orientation="horizontal">
+                        android:fontFamily="@font/librebaskervilleregular"
+                        android:text="@string/sales_overview"
+                        android:textColor="@color/my_light_primary"
+                        android:textSize="18sp" />
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:fontFamily="@font/librebaskervilleregular"
-                            android:text="@string/sales_overview"
-                            android:textColor="@color/my_light_primary"
-                            android:textSize="18sp" />
-
-                        <Spinner
-                            android:id="@+id/periodSelector"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
-                    </LinearLayout>
-
-
-                    <com.github.mikephil.charting.charts.BarChart
-                        android:id="@+id/itemPerformanceChart"
+                    <com.github.mikephil.charting.charts.PieChart
+                        android:id="@+id/salesPieChart"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
-                        android:layout_marginTop="16dp" />
+                        android:layout_height="250dp"
+                        android:layout_marginBottom="16dp" />
 
-
-                    <!-- Sales Metrics -->
+                    <!-- Three Column Layout for Sales Info -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:baselineAligned="false"
-                        android:orientation="horizontal">
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal">
 
-                        <!-- Total Sales -->
+                        <!-- Labels Row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:orientation="horizontal"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
+                            android:layout_marginBottom="8dp">
 
                             <TextView
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/total_sales"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
+                                android:layout_weight="1"
+                                android:text="Total Sales"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp"
+                                android:fontFamily="@font/montserratmedium" />
 
                             <TextView
-                                android:id="@+id/totalSalesValue"
-                                android:layout_width="wrap_content"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:fontFamily="@font/montserratbold"
-                                android:gravity="center"
-                                android:maxLines="1"
-                                android:text="₹0.00"
-                                android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:layout_weight="1"
+                                android:text="Total Received"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp"
+                                android:fontFamily="@font/montserratmedium" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Total Due"
+                                android:textAlignment="center"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp"
+                                android:fontFamily="@font/montserratmedium" />
                         </LinearLayout>
 
-                        <!-- Invoice Count -->
+                        <!-- Values Row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
+                            android:orientation="horizontal"
+                            android:gravity="center">
 
                             <TextView
-                                android:layout_width="wrap_content"
+                                android:id="@+id/tvTotalAmount"
+                                android:layout_width="0dp"
                                 android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/invoices"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <TextView
-                                android:id="@+id/invoiceCountValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:fontFamily="@font/montserratbold"
-                                android:gravity="center"
-                                android:maxLines="1"
-                                android:text="0"
+                                android:layout_weight="1"
+                                android:textAlignment="center"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="14sp" />
+                                android:textSize="16sp"
+                                android:fontFamily="@font/montserratmedium" />
+
+                            <TextView
+                                android:id="@+id/tvPaidAmount"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textAlignment="center"
+                                android:textColor="@color/status_completed"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/montserratmedium" />
+
+                            <TextView
+                                android:id="@+id/tvUnpaidAmount"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textAlignment="center"
+                                android:textColor="@color/status_cancelled"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/montserratmedium" />
                         </LinearLayout>
 
-                        <!-- Outstanding Balance -->
+                        <!-- Today's Sales Row -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
+                            android:orientation="horizontal"
                             android:gravity="center"
-                            android:orientation="vertical"
-                            android:padding="8dp">
+                            android:layout_marginTop="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/outstanding"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
+                                android:text="Today's Sales"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="14sp"
+                                android:fontFamily="@font/montserratmedium"
+                                android:layout_marginEnd="8dp" />
 
                             <TextView
-                                android:id="@+id/outstandingBalanceValue"
+                                android:id="@+id/tvTodaySales"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:ellipsize="end"
-                                android:fontFamily="@font/montserratbold"
-                                android:gravity="center"
-                                android:maxLines="1"
-                                android:text="₹0.00"
-                                android:textColor="@color/status_unpaid"
-                                android:textSize="14sp" />
+                                android:textColor="@color/my_light_primary"
+                                android:textSize="16sp"
+                                android:fontFamily="@font/montserratmedium" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Hidden Recent Invoices section - kept for compatibility but not shown -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recentInvoicesRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/emptyRecentInvoicesState"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:visibility="gone" />
-
-
-            <!-- Hidden Low Stock section - kept for compatibility but not shown -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/lowStockRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:visibility="gone" />
-
-            <LinearLayout
-                android:id="@+id/emptyLowStockState"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:visibility="gone" />
-
-            <!-- Business Insights Card -->
+            <!-- Business Summary Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -391,338 +361,116 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- Header -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
                         android:fontFamily="@font/librebaskervilleregular"
-                        android:text="@string/business_insights"
+                        android:text="Sales Insights"
                         android:textColor="@color/my_light_primary"
                         android:textSize="18sp" />
 
-                    <!-- Popular Categories Section -->
+                    <!-- Peak Sales Day -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:orientation="vertical">
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
 
                         <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Peak Sales Day"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
+
+                        <TextView
+                            android:id="@+id/tvPeakSalesDay"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:text="@string/popular_categories"
-                            android:textColor="@color/my_light_secondary"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/noCategoryDataText"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:fontFamily="@font/montserratregular"
-                            android:text="@string/no_category_data_available_for_this_period"
-                            android:textColor="@color/my_light_secondary"
-                            android:textSize="12sp"
-                            android:visibility="gone" />
-
-                        <LinearLayout
-                            android:id="@+id/category1Layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="4dp"
-                            android:orientation="vertical"
-                            android:visibility="gone"
-                            tools:visibility="visible">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/category1Name"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_on_surface"
-                                    android:textSize="12sp"
-                                    tools:text="Necklaces" />
-
-                                <TextView
-                                    android:id="@+id/category1Percentage"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_primary"
-                                    android:textSize="12sp"
-                                    tools:text="45%" />
-                            </LinearLayout>
-
-                            <com.google.android.material.progressindicator.LinearProgressIndicator
-                                android:id="@+id/category1Progress"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                app:trackCornerRadius="2dp"
-                                app:trackThickness="4dp" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/category2Layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginBottom="4dp"
-                            android:orientation="vertical"
-                            android:visibility="gone"
-                            tools:visibility="visible">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/category2Name"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_on_surface"
-                                    android:textSize="12sp"
-                                    tools:text="Rings" />
-
-                                <TextView
-                                    android:id="@+id/category2Percentage"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_primary"
-                                    android:textSize="12sp"
-                                    tools:text="30%" />
-                            </LinearLayout>
-
-                            <com.google.android.material.progressindicator.LinearProgressIndicator
-                                android:id="@+id/category2Progress"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                app:trackCornerRadius="2dp"
-                                app:trackThickness="4dp" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:id="@+id/category3Layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone"
-                            tools:visibility="visible">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/category3Name"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_on_surface"
-                                    android:textSize="12sp"
-                                    tools:text="Bangles" />
-
-                                <TextView
-                                    android:id="@+id/category3Percentage"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textColor="@color/my_light_primary"
-                                    android:textSize="12sp"
-                                    tools:text="25%" />
-                            </LinearLayout>
-
-                            <com.google.android.material.progressindicator.LinearProgressIndicator
-                                android:id="@+id/category3Progress"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                app:trackCornerRadius="2dp"
-                                app:trackThickness="4dp" />
-                        </LinearLayout>
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
                     </LinearLayout>
-                    <!-- Peak Business Days Chart -->
+
+                    <!-- Peak Sales Time -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:orientation="vertical">
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
 
                         <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Peak Sales Time"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
+
+                        <TextView
+                            android:id="@+id/tvPeakSalesTime"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:text="@string/peak_business_days"
-                            android:textColor="@color/my_light_secondary"
-                            android:textSize="14sp" />
-
-                        <com.github.mikephil.charting.charts.BarChart
-                            android:id="@+id/peakDaysChart"
-                            android:layout_width="match_parent"
-                            android:layout_height="120dp" />
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
                     </LinearLayout>
 
-                    <!-- Customer and Sales Metrics Grid -->
-                    <GridLayout
+                    <!-- Monthly Trend -->
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:columnCount="2"
-                        android:rowCount="2">
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="12dp">
 
-                        <!-- Total Customers -->
-                        <LinearLayout
+                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_margin="8dp"
-                            android:orientation="vertical">
+                            android:layout_weight="1"
+                            android:text="Monthly Trend"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/total_customers"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
+                        <TextView
+                            android:id="@+id/tvMonthlyTrend"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
+                    </LinearLayout>
 
-                            <TextView
-                                android:id="@+id/totalCustomersValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratbold"
-                                android:textColor="@color/my_light_primary"
-                                android:textSize="16sp"
-                                tools:text="150" />
-                        </LinearLayout>
+                    <!-- Seasonal Peak -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
 
-                        <!-- New Customers -->
-                        <LinearLayout
+                        <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_margin="8dp"
-                            android:orientation="vertical">
+                            android:layout_weight="1"
+                            android:text="Seasonal Peak"
+                            android:textColor="@color/my_light_on_surface"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
 
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/new_customers"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/newCustomersValue"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratbold"
-                                    android:textColor="@color/my_light_primary"
-                                    android:textSize="16sp"
-                                    tools:text="12" />
-
-                                <TextView
-                                    android:id="@+id/newCustomersChange"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="4dp"
-                                    android:fontFamily="@font/montserratmedium"
-                                    android:textSize="12sp"
-                                    tools:text="+20%"
-                                    tools:textColor="@color/status_paid" />
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- Sales Growth -->
-                        <LinearLayout
-                            android:layout_width="0dp"
+                        <TextView
+                            android:id="@+id/tvSeasonalPeak"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_margin="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/sales_growth"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:id="@+id/salesGrowthValue"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:fontFamily="@font/montserratbold"
-                                    android:textSize="16sp"
-                                    tools:text="+15%"
-                                    tools:textColor="@color/status_paid" />
-
-                                <ImageView
-                                    android:id="@+id/salesGrowthIndicator"
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginStart="4dp"
-                                    tools:src="@drawable/si__arrow_upward_fill" />
-                            </LinearLayout>
-                        </LinearLayout>
-
-                        <!-- Average Purchase Interval -->
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_columnWeight="1"
-                            android:layout_margin="8dp"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratsemibold"
-                                android:text="@string/avg_purchase_interval"
-                                android:textColor="@color/my_light_secondary"
-                                android:textSize="12sp" />
-
-                            <TextView
-                                android:id="@+id/avgPurchaseIntervalValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="@font/montserratbold"
-                                android:textColor="@color/my_light_primary"
-                                android:textSize="16sp"
-                                tools:text="45 days" />
-                        </LinearLayout>
-
-                    </GridLayout>
+                            android:textColor="@color/my_light_primary"
+                            android:textSize="14sp"
+                            android:fontFamily="@font/montserratmedium" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
         </LinearLayout>
 
     </LinearLayout>

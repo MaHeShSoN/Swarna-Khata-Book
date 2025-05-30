@@ -6,4 +6,5 @@
     <dimen name="card_selected_elevation">4dp</dimen>
     <dimen name="card_default_elevation">1dp</dimen>
     <dimen name="divider_height">1dp</dimen>
+    <dimen name="margin_small">2dp</dimen>
 </resources>

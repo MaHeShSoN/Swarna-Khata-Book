@@ -1,12 +1,14 @@
 package com.jewelrypos.swarnakhatabook.Repository
 
-
 import android.content.Context
 import android.util.Log
+import androidx.paging.PagingSource
+import androidx.paging.PagingState
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.DataClasses.RecycledItem
@@ -26,14 +28,9 @@ class InventoryRepository(
     private val context: Context
 ) {
 
-    // Add these properties to InventoryRepository class
-    private val pageSize = 10
-    private var lastDocumentSnapshot: DocumentSnapshot? = null
-    private var isLastPage = false
-
-
     companion object {
-        private const val TAG = "InventoryRepository"
+        internal const val TAG = "InventoryRepository"
+        const val PAGE_SIZE = 20 // Define page size for PagingSource
     }
 
     // Get current active shop ID from SessionManager
@@ -69,62 +66,21 @@ class InventoryRepository(
         Result.failure(e)
     }
 
-    suspend fun fetchJewelleryItemsPaginated(
-        loadNextPage: Boolean = false,
-        source: Source = Source.DEFAULT
-    ): Result<List<JewelleryItem>> {
-        try {
-            // Reset pagination if not loading next page
-            if (!loadNextPage) {
-                lastDocumentSnapshot = null
-                isLastPage = false
-            }
-
-            // Return empty list if we've reached the last page
-            if (isLastPage) {
-                return Result.success(emptyList())
-            }
-
-            // Build query with pagination
-            var query = firestore.collection("shopData")
-                .document(getCurrentShopId())
-                .collection("inventory")
-                .limit(pageSize.toLong())
-
-            // Add startAfter for pagination if needed
-            if (loadNextPage && lastDocumentSnapshot != null) {
-                query = query.startAfter(lastDocumentSnapshot!!)
-            }
-
-            // Execute query
-            val snapshot = query.get(source).await()
-
-            // Update pagination state
-            if (snapshot.documents.size < pageSize) {
-                isLastPage = true
-            }
-
-            // Save the last document for next page
-            if (snapshot.documents.isNotEmpty()) {
-                lastDocumentSnapshot = snapshot.documents.last()
-            }
-
-            val items = snapshot.toObjects(JewelleryItem::class.java)
-            return Result.success(items)
-        } catch (e: Exception) {
-            // If using cache and got an error, try from server
-            if (source == Source.CACHE) {
-                return fetchJewelleryItemsPaginated(loadNextPage, Source.SERVER)
-            }
-            return Result.failure(e)
-        }
+    // New method to provide the PagingSource
+    fun getInventoryPagingSource(
+        searchQuery: String,
+        activeFilters: Set<String>, // Filters are passed as uppercase strings from ViewModel
+        source: Source = Source.DEFAULT // Allow specifying data source
+    ): InventoryPagingSource {
+        return InventoryPagingSource(firestore, getCurrentShopId(), searchQuery, activeFilters, source)
     }
+
 
 
     suspend fun updateJewelleryItem(item: JewelleryItem): Result<Unit> {
         return try {
             val shopId = getCurrentShopId()
-            
+
             // Use shopData collection path
             firestore.collection("shopData")
                 .document(shopId)
@@ -132,7 +88,7 @@ class InventoryRepository(
                 .document(item.id)
                 .set(item)
                 .await()
-            
+
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("InventoryRepository", "Error updating jewelry item", e)
@@ -279,90 +235,6 @@ class InventoryRepository(
         }
     }
 
-    /**
-     * Get all inventory items with pagination
-     * @param pageSize Number of items per page
-     * @param lastDocument Last document snapshot for pagination
-     * @param source Data source (CACHE or SERVER)
-     * @return Result containing the list of items and the last document for pagination
-     */
-    suspend fun getAllInventoryItemsPaginated(
-        pageSize: Int = 20,
-        lastDocument: DocumentSnapshot? = null,
-        source: Source = Source.DEFAULT
-    ): Result<Pair<List<JewelleryItem>, DocumentSnapshot?>> {
-        return try {
-            val shopId = getCurrentShopId()
-
-            // Build the query with pagination
-            var query = firestore.collection("shopData")
-                .document(shopId)
-                .collection("inventory")
-                .limit(pageSize.toLong())
-
-            // Add startAfter for pagination if we have a last document
-            if (lastDocument != null) {
-                query = query.startAfter(lastDocument)
-            }
-
-            // Execute query
-            val snapshot = query.get(source).await()
-
-            // Convert documents to objects
-            val items = snapshot.toObjects(JewelleryItem::class.java)
-            
-            // Get the last document for next page
-            val lastDoc = if (snapshot.documents.isNotEmpty()) {
-                snapshot.documents.last()
-            } else {
-                null
-            }
-
-            Result.success(Pair(items, lastDoc))
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading paginated inventory items", e)
-            
-            // If using cache and got an error, try from server
-            if (source == Source.CACHE) {
-                return getAllInventoryItemsPaginated(pageSize, lastDocument, Source.SERVER)
-            }
-            
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Get all inventory items (deprecated - use getAllInventoryItemsPaginated instead)
-     * @deprecated Use getAllInventoryItemsPaginated for better memory management
-     */
-    @Deprecated("Use getAllInventoryItemsPaginated instead to avoid memory issues with large datasets")
-    suspend fun getAllInventoryItems(source: Source = Source.DEFAULT): Result<List<JewelleryItem>> {
-        return try {
-            val shopId = getCurrentShopId()
-            val allItems = mutableListOf<JewelleryItem>()
-            var lastDocument: DocumentSnapshot? = null
-            val pageSize = 20
-
-            do {
-                val result = getAllInventoryItemsPaginated(pageSize, lastDocument, source)
-                result.fold(
-                    onSuccess = { (items, lastDoc) ->
-                        allItems.addAll(items)
-                        lastDocument = lastDoc
-                    },
-                    onFailure = { error ->
-                        return Result.failure(error)
-                    }
-                )
-            } while (lastDocument != null)
-
-            Log.d(TAG, "Loaded all ${allItems.size} inventory items")
-            Result.success(allItems)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading all inventory items", e)
-            Result.failure(e)
-        }
-    }
 
     /**
      * Get the total count of inventory items
@@ -531,6 +403,47 @@ class InventoryRepository(
         // For quantity-based items, we subtract the quantity from stock
         return updateInventoryStock(itemId, -quantity.toDouble())
     }
+
+    // Add this method to provide items for the dropdown in ItemSelectionBottomSheet
+    // This is a separate, non-paginated fetch for the specific dropdown use case.
+    suspend fun getInventoryItemsForDropdown(): Result<List<JewelleryItem>> {
+        return try {
+            val shopId = getCurrentShopId()
+
+            val snapshot = firestore.collection("shopData")
+                .document(shopId)
+                .collection("inventory")
+                // Optionally add sorting here if needed for the dropdown
+                .get(Source.CACHE) // Try cache first for speed
+                .await()
+
+            val items = snapshot.toObjects(JewelleryItem::class.java)
+            Log.d(TAG, "Loaded ${items.size} inventory items for dropdown (from cache)")
+            Result.success(items)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error loading inventory items for dropdown from cache: ${e.message}", e)
+            // If cache failed, try from server
+            try {
+                val shopId = getCurrentShopId()
+
+                val snapshot = firestore.collection("shopData")
+                    .document(shopId)
+                    .collection("inventory")
+                    // Optionally add sorting here if needed for the dropdown
+                    .get(Source.SERVER) // Try server
+                    .await()
+
+                val items = snapshot.toObjects(JewelleryItem::class.java)
+                Log.d(TAG, "Loaded ${items.size} inventory items for dropdown (from server)")
+                Result.success(items)
+            } catch (serverError: Exception) {
+                Log.e(TAG, "Error loading inventory items for dropdown from server: ${serverError.message}", serverError)
+                Result.failure(serverError) // Return server error
+            }
+        }
+    }
+
+
 
     // Custom exceptions
     class UserNotAuthenticatedException(message: String) : Exception(message)

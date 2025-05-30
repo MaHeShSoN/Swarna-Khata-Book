@@ -204,7 +204,7 @@
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/selectCustomerButton"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="wrap_content"
@@ -368,7 +368,7 @@
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="14sp" />
 
-                    <Button
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/selectAddItemForFirstTimeButton"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="wrap_content"

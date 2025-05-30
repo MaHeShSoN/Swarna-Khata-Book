@@ -13,6 +13,8 @@ data class Customer(
     val firstName: String = "",
     @PropertyName("lastName")
     val lastName: String = "",
+    @PropertyName("fullNameSearchable")
+    val fullNameSearchable: String = "",
     @PropertyName("phoneNumber")
     val phoneNumber: String = "",
     @PropertyName("email")
@@ -32,7 +34,7 @@ data class Customer(
     val previousAddresses: List<String> = emptyList(), // New field to store previous addresses
     // Financial information
     @PropertyName("balanceType")
-    val balanceType: String = "Credit", // Credit or Debit
+    val balanceType: String = "Jama", // JAMA or BAKI
     @PropertyName("openingBalance")
     val openingBalance: Double = 0.0,
     @PropertyName("currentBalance")

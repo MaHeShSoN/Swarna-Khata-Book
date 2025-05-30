@@ -14,8 +14,8 @@ android {
         applicationId = "com.jewelrypos.swarnakhatabook"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21
-        versionName = "1.21"
+        versionCode = 23
+        versionName = "1.23"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -160,4 +160,9 @@ dependencies {
     // Choose one image cropper library, not both
 //     implementation("com.github.CanHub:Android-Image-Cropper:4.5.0") // Check for latest version
     implementation("com.vanniktech:android-image-cropper:4.6.0")
+    implementation ("com.firebaseui:firebase-ui-firestore:8.0.2")
+
+    // Paging 3
+    implementation("androidx.paging:paging-runtime-ktx:3.2.1")
+    implementation("androidx.paging:paging-common-ktx:3.2.1")
 }

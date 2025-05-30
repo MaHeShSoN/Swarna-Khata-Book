@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:chipSpacingHorizontal="8dp"
-                app:singleSelection="false">
+                app:singleSelection="true">
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipGold"
@@ -231,7 +231,7 @@
             android:fontFamily="@font/montserratregular"
             android:gravity="center"
             android:text="@string/no_jewelry_match_search"
-            android:textColor="@color/my_light_on_background"
+            android:textColor="@color/my_light_on_surface"
             android:textSize="14sp" />
 
         <LinearLayout

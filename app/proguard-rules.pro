@@ -59,26 +59,120 @@
 -keep class com.shockwave.** { *; }
 -keep class com.tom_roush.pdfbox.** { *; }
 
-# Rules for all model classes
-# Keep all model classes that are serialized/deserialized with Gson
+# Keep all model classes that are serialized/deserialized with Firestore
+-keep class com.jewelrypos.swarnakhatabook.model.** { *; }
 -keepclassmembers class com.jewelrypos.swarnakhatabook.model.** { *; }
 
 # Keep Firestore data classes and their serialization
 -keep class com.jewelrypos.swarnakhatabook.DataClasses.** { *; }
 -keepclassmembers class com.jewelrypos.swarnakhatabook.DataClasses.** { *; }
--keepattributes Signature
--keepattributes *Annotation*
--keepattributes EnclosingMethod
--keepattributes InnerClasses
 
 # Keep Firestore custom classes
 -keep class com.jewelrypos.swarnakhatabook.Enums.** { *; }
 -keepclassmembers class com.jewelrypos.swarnakhatabook.Enums.** { *; }
 
+# Keep Repository classes
+-keep class com.jewelrypos.swarnakhatabook.Repository.** { *; }
+-keepclassmembers class com.jewelrypos.swarnakhatabook.Repository.** { *; }
+
+# Keep ViewModel classes
+-keep class com.jewelrypos.swarnakhatabook.ViewModle.** { *; }
+-keepclassmembers class com.jewelrypos.swarnakhatabook.ViewModle.** { *; }
+
+# Keep ViewModelFactory classes
+-keep class com.jewelrypos.swarnakhatabook.Factorys.** { *; }
+-keepclassmembers class com.jewelrypos.swarnakhatabook.Factorys.** { *; }
+
 # Keep Firestore PropertyName annotations
 -keepclassmembers class * {
     @com.google.firebase.firestore.PropertyName <fields>;
 }
+
+# Keep serialization-related classes
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses
+
+# Keep Kotlin serialization
+-keepattributes RuntimeVisibleAnnotations,AnnotationDefault
+-keep class kotlinx.serialization.** { *; }
+-keepclassmembers class kotlinx.serialization.** { *; }
+
+# Keep collections that might be serialized
+-keep class java.util.** { *; }
+-keep class kotlin.collections.** { *; }
+-keep class kotlin.sequences.** { *; }
+
+# Keep LiveData and other Android Architecture Components
+-keep class androidx.lifecycle.** { *; }
+-keepclassmembers class androidx.lifecycle.** { *; }
+
+# Keep Coroutines
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+}
+-keepclassmembers class kotlin.coroutines.** { *; }
+
+# Keep Navigation Component
+-keepnames class androidx.navigation.fragment.NavHostFragment
+-keepnames class * extends android.os.Parcelable
+-keepnames class * extends java.io.Serializable
+
+# Keep Material Design Components
+-keep class com.google.android.material.** { *; }
+-dontwarn com.google.android.material.**
+-dontnote com.google.android.material.**
+
+# Keep AndroidX Components
+-keep class androidx.** { *; }
+-keep interface androidx.** { *; }
+-dontwarn androidx.**
+
+# Keep Kotlin-specific classes
+-keep class kotlin.** { *; }
+-keep class kotlin.Metadata { *; }
+-dontwarn kotlin.**
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+-keepclassmembers class kotlin.Metadata {
+    public <methods>;
+}
+
+# Keep Parcelable implementations
+-keep class * implements android.os.Parcelable {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# Keep Serializable implementations
+-keepclassmembers class * implements java.io.Serializable {
+    static final long serialVersionUID;
+    private static final java.io.ObjectStreamField[] serialPersistentFields;
+    private void writeObject(java.io.ObjectOutputStream);
+    private void readObject(java.io.ObjectInputStream);
+    java.lang.Object writeReplace();
+    java.lang.Object readResolve();
+}
+
+# Keep KotlinPoet
+-keep class com.squareup.kotlinpoet.** { *; }
+-keepclassmembers class com.squareup.kotlinpoet.** { *; }
+-dontwarn com.squareup.kotlinpoet.**
+
+# Keep Java Annotation Processing
+-keep class javax.lang.model.** { *; }
+-keep class javax.lang.model.element.** { *; }
+-keep class javax.lang.model.type.** { *; }
+-keep class javax.lang.model.util.** { *; }
+-dontwarn javax.lang.model.**
+-dontwarn javax.lang.model.element.**
+-dontwarn javax.lang.model.type.**
+-dontwarn javax.lang.model.util.**
+
+# Keep Java Annotation API
+-keep class javax.annotation.** { *; }
+-dontwarn javax.annotation.**
 
 # Enable R8 full mode
 -allowaccessmodification

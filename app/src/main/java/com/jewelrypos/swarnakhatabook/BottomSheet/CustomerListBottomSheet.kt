@@ -13,6 +13,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -25,6 +26,12 @@ import com.jewelrypos.swarnakhatabook.R
 import com.jewelrypos.swarnakhatabook.Repository.CustomerRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.CustomerViewModel
 import com.jewelrypos.swarnakhatabook.databinding.BottomsheetCustomerSelectionBinding
+import androidx.lifecycle.lifecycleScope // Add this import
+import kotlinx.coroutines.flow.collectLatest // Add this import
+import androidx.paging.LoadState // Add this import
+import androidx.paging.CombinedLoadStates // Add this import
+import kotlinx.coroutines.launch
+
 
 class CustomerListBottomSheet : BottomSheetDialogFragment() {
 
@@ -35,13 +42,12 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
     private lateinit var adapter: CustomerAdapter
 
     private val customerViewModel: CustomerViewModel by viewModels {
-        // Create the repository and pass it to the factory
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = CustomerRepository(firestore, auth,requireContext())
         val connectivityManager =
             requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        CustomerViewModelFactory(repository, connectivityManager)
+        CustomerViewModelFactory(repository, connectivityManager,requireContext()) // Use requireContext() for context
     }
 
     fun setOnCustomerSelectedListener(listener: (Customer) -> Unit) {
@@ -86,24 +92,26 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
     }
 
 
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d("CustomerListBottomSheet", "View created")
 
         (view.parent as View).setBackgroundColor(Color.TRANSPARENT)
 
-        setupRecyclerView()
+        setupRecyclerView() // Modified for Paging 3
         setupSearchView()
         setupNewCustomerButton()
-        setupObservers()
+        setupObservers() // Modified for Paging 3 LoadState
 
         binding.searchView.requestFocus()
 
     }
 
     private fun setupRecyclerView() {
-        adapter = CustomerAdapter(emptyList(), object : CustomerAdapter.OnCustomerClickListener {
+        // Instantiate PagingDataAdapter correctly
+        adapter = CustomerAdapter(object : CustomerAdapter.OnCustomerClickListener {
             override fun onCustomerClick(customer: Customer) {
+                Log.d("CustomerListBottomSheet", "Customer selected: ${customer.firstName} ${customer.lastName} (ID: ${customer.id})")
                 onCustomerSelectedListener?.invoke(customer)
                 dismiss()
             }
@@ -112,29 +120,31 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         binding.recyclerViewCustomers.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@CustomerListBottomSheet.adapter
+
+            // Remove manual scroll listener, Paging 3 handles pagination automatically
+            // addOnScrollListener(object : RecyclerView.OnScrollListener() { ... })
         }
     }
 
     private fun setupSearchView() {
-        // Remove the search icon from the left side
         binding.searchView.setIconifiedByDefault(false)
 
-        // Get the search icon and hide it
         val searchIcon = binding.searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_mag_icon)
         searchIcon?.visibility = View.GONE
 
-        // Remove any left margin on the search text field to use the full width
         val searchPlate = binding.searchView.findViewById<View>(androidx.appcompat.R.id.search_src_text)
         val params = searchPlate.layoutParams as ViewGroup.MarginLayoutParams
         params.leftMargin = 0
 
         binding.searchView.setOnQueryTextListener(object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
+                Log.d("CustomerListBottomSheet", "Search submitted with query: $query")
                 customerViewModel.searchCustomers(query ?: "")
                 return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
+                Log.d("CustomerListBottomSheet", "Search text changed: $newText")
                 customerViewModel.searchCustomers(newText ?: "")
                 return true
             }
@@ -147,31 +157,52 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun setupObservers() {
-        customerViewModel.customers.observe(viewLifecycleOwner) { customers ->
-            adapter.updateList(customers)
-            Log.d("Debuging",customers.size.toString() + " is the size of cusotmers")
-            updateEmptyState(customers.isEmpty())
+        // Collect PagingData from ViewModel
+        viewLifecycleOwner.lifecycleScope.launch {
+            customerViewModel.pagedCustomers.collectLatest { pagingData ->
+                Log.d("CustomerListBottomSheet", "New PagingData received, submitting to adapter.")
+                adapter.submitData(pagingData)
+            }
         }
 
-        customerViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        // Observe LoadStates for UI changes (loading, error, empty)
+        viewLifecycleOwner.lifecycleScope.launch {
+            adapter.loadStateFlow.collectLatest { loadStates ->
+                val refreshState = loadStates.refresh // Represents the initial load or refresh operation
+
+                binding.progressBar.visibility = if (refreshState is LoadState.Loading) View.VISIBLE else View.GONE
+
+                // Error state for initial load or refresh
+                if (refreshState is LoadState.Error) {
+                    Log.e("CustomerListBottomSheet", "Paging refresh error: ${refreshState.error.localizedMessage}")
+                    binding.errorText.text = "Error: ${refreshState.error.localizedMessage}"
+                    binding.errorText.visibility = View.VISIBLE
+                } else {
+                    binding.errorText.visibility = View.GONE
+                }
+
+                updateUIState(loadStates) // Use new unified UI state method
+            }
         }
 
+        // Observe ViewModel's action error messages (e.g., from addCustomer)
         customerViewModel.errorMessage.observe(viewLifecycleOwner) { errorMessage ->
             if (!errorMessage.isNullOrEmpty()) {
-                // Show error message
-                Log.d("Debuging",errorMessage.toString())
-
-                binding.errorText.text = errorMessage
-                binding.errorText.visibility = View.VISIBLE
-            } else {
-                binding.errorText.visibility = View.GONE
+                Log.e("CustomerListBottomSheet", "Action error message received: $errorMessage")
+                // You might want a different UI for action errors vs. list loading errors
+                // For simplicity, showing in errorText for now.
+                // binding.errorText.text = errorMessage
+                // binding.errorText.visibility = View.VISIBLE
             }
         }
     }
 
-    private fun updateEmptyState(isEmpty: Boolean) {
-        if (isEmpty) {
+    // Modified to handle CombinedLoadStates from Paging 3
+    private fun updateUIState(loadStates: CombinedLoadStates) {
+        val refreshState = loadStates.refresh
+        val isListEmpty = refreshState is LoadState.NotLoading && adapter.itemCount == 0
+
+        if (isListEmpty) {
             binding.emptyStateLayout.visibility = View.VISIBLE
             binding.recyclerViewCustomers.visibility = View.GONE
         } else {
@@ -180,44 +211,30 @@ class CustomerListBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
-//    private fun showCustomerCreationBottomSheet() {
-//        val bottomSheet = CustomerBottomSheetFragment.newInstance()
-//        bottomSheet.setCustomerOperationListener(object : CustomerBottomSheetFragment.CustomerOperationListener {
-//            override fun onCustomerAdded(customer: Customer) {
-//                customerViewModel.addCustomer(customer)
-//                // Optional: Automatically select the newly created customer
-//                onCustomerSelectedListener?.invoke(customer)
-//                dismiss()
-//            }
-//
-//            override fun onCustomerUpdated(customer: Customer) {
-//                // Not needed for customer creation
-//            }
-//        })
-//        bottomSheet.show(parentFragmentManager, CustomerBottomSheetFragment.TAG)
-//    }
-
     private fun showCustomerCreationBottomSheet() {
+        Log.d("CustomerListBottomSheet", "Showing customer creation bottom sheet")
         val bottomSheet = CustomerBottomSheetFragment.newInstance()
-
         bottomSheet.setCalledFromInvoiceCreation(true)
 
         bottomSheet.setCustomerOperationListener(object : CustomerBottomSheetFragment.CustomerOperationListener {
             override fun onCustomerAdded(customer: Customer) {
+                Log.d("CustomerListBottomSheet", "New customer added: ${customer.firstName} ${customer.lastName} (ID: ${customer.id})")
                 customerViewModel.addCustomer(customer).observe(viewLifecycleOwner) { result ->
                     result.onSuccess { newCustomer ->
-                        // Customer added successfully, newCustomer now contains the ID
+                        Log.d("CustomerListBottomSheet", "Customer added successfully with ID: ${newCustomer.id}")
                         onCustomerSelectedListener?.invoke(newCustomer)
+                        // If this bottom sheet should refresh its list immediately after a successful add,
+                        // you would call adapter.refresh() here. However, typically for selection
+                        // bottom sheets, they are dismissed after selection/creation.
                         dismiss()
                     }.onFailure { e ->
-                        Log.e(TAG, "Error adding customer: ${e.message}")
-                        // Handle error, perhaps show a toast
+                        Log.e("CustomerListBottomSheet", "Error adding customer: ${e.message}", e)
                     }
                 }
             }
 
             override fun onCustomerUpdated(customer: Customer) {
-                // Not needed for customer creation
+                // Not needed for customer creation context in this bottom sheet
             }
         })
         bottomSheet.show(parentFragmentManager, CustomerBottomSheetFragment.TAG)

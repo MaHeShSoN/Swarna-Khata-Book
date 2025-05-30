@@ -18,7 +18,7 @@ class MetalItemViewModelFactory(private val application: Application) : ViewMode
             val auth = FirebaseAuth.getInstance()
             val repository = MetalItemRepository(firestore, auth)
             @Suppress("UNCHECKED_CAST")
-            return MetalItemViewModel(application, repository) as T
+            return MetalItemViewModel(application,repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

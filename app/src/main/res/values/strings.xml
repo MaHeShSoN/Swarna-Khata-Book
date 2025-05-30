@@ -784,5 +784,11 @@
     <string name="image_uploaded_but_failed_to_update_item">Image uploaded but failed to update item URL.</string>
     <string name="failed_to_upload_image">Failed to upload image.</string>
     <string name="failed_to_load_image">Failed To Load Image</string>
-
+    <string name="balance_type_cannot_be_changed_after_creation">Balance type and opening balance cannot be changed after creation</string>
+    <string name="baki_amount">Baki: ₹%s</string>
+    <string name="jama_amount">Jama: ₹%s</string>
+    <string name="settled_amount">Settled: ₹%s</string>
+    <string name="business_summary">Business Summary</string>
+    <string name="total_customers_label">Total Customers:</string>
+    <string name="today_sales_label">Today\'s Sales:</string>
 </resources>

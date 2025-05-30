@@ -12,12 +12,14 @@ class SharedPrefsManager(context: Context) {
         private const val KEY_LAST_MAKING_CHARGES = "last_making_charges"
         private const val KEY_LAST_GOLD_RATE_ON = "last_gold_rate_on"
         private const val KEY_LAST_MAKING_CHARGES_TYPE = "last_making_charges_type"
+        private const val KEY_LAST_PURITY = "last_purity"
 
         // Default values
         private const val DEFAULT_GOLD_RATE = 9200.0
         private const val DEFAULT_MAKING_CHARGES = 500.0
         private const val DEFAULT_GOLD_RATE_ON = "Net Weight"
         private const val DEFAULT_MAKING_CHARGES_TYPE = "PER GRAM"
+        private const val DEFAULT_PURITY = 91.6
     }
 
     fun saveLastGoldRate(rate: Double) {
@@ -66,11 +68,27 @@ class SharedPrefsManager(context: Context) {
         return sharedPreferences.getString(KEY_LAST_MAKING_CHARGES_TYPE, DEFAULT_MAKING_CHARGES_TYPE) ?: DEFAULT_MAKING_CHARGES_TYPE
     }
 
+    fun saveLastPurity(purity: Double) {
+        sharedPreferences.edit().putFloat(KEY_LAST_PURITY, purity.toFloat()).apply()
+    }
+
+    fun getLastPurity(): Double {
+        val savedPurity = sharedPreferences.getFloat(KEY_LAST_PURITY, -1f)
+        return if (savedPurity == -1f) {
+            // If no value is saved, save and return default value
+            saveLastPurity(DEFAULT_PURITY)
+            DEFAULT_PURITY
+        } else {
+            savedPurity.toDouble()
+        }
+    }
+
     // Method to reset all values to defaults
     fun resetToDefaults() {
         saveLastGoldRate(DEFAULT_GOLD_RATE)
         saveLastMakingCharges(DEFAULT_MAKING_CHARGES)
         saveLastGoldRateOn(DEFAULT_GOLD_RATE_ON)
         saveLastMakingChargesType(DEFAULT_MAKING_CHARGES_TYPE)
+        saveLastPurity(DEFAULT_PURITY)
     }
 } 

@@ -1,7 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.os.Bundle
-import android.util.Log // Import Log
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +18,10 @@ import com.jewelrypos.swarnakhatabook.databinding.FragmentCustomerStatementBindi
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
-import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerListBottomSheet // Import the BottomSheet
+import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerListBottomSheet
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 
 class CustomerStatementFragment : Fragment() {
 
@@ -28,7 +31,10 @@ class CustomerStatementFragment : Fragment() {
     private lateinit var viewModel: ReportViewModel
     private lateinit var adapter: CustomerStatementAdapter
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
-    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) // Line 31 (Corrected)
+    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    
+    // Track active coroutines
+    private val activeJobs = mutableListOf<Job>()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -54,14 +60,22 @@ class CustomerStatementFragment : Fragment() {
     private fun setupUI() {
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            if (!viewModel.isLoading.value!!) {
+                requireActivity().onBackPressed()
+            } else {
+                Toast.makeText(requireContext(), "Please wait while data is loading", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Setup export button
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_export_pdf -> {
-                    exportReportToPdf()
+                    if (!viewModel.isLoading.value!!) {
+                        exportReportToPdf()
+                    } else {
+                        Toast.makeText(requireContext(), "Please wait while data is loading", Toast.LENGTH_SHORT).show()
+                    }
                     true
                 }
                 else -> false
@@ -86,17 +100,30 @@ class CustomerStatementFragment : Fragment() {
 
         // Setup customer selection button
         binding.selectCustomerButton.setOnClickListener {
-            showCustomerSelectionBottomSheet() // Changed to use BottomSheet
+            if (!viewModel.isLoading.value!!) {
+                showCustomerSelectionBottomSheet()
+            } else {
+                Toast.makeText(requireContext(), "Please wait while data is loading", Toast.LENGTH_SHORT).show()
+            }
         }
-        // Setup change customer button (if needed)
+        
+        // Setup change customer button
         binding.changeCustomerButton.setOnClickListener {
-            showCustomerSelectionBottomSheet() // Changed to use BottomSheet
+            if (!viewModel.isLoading.value!!) {
+                showCustomerSelectionBottomSheet()
+            } else {
+                Toast.makeText(requireContext(), "Please wait while data is loading", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
     private fun setupObservers() {
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // Disable/enable UI elements based on loading state
+            binding.selectCustomerButton.isEnabled = !isLoading
+            binding.changeCustomerButton.isEnabled = !isLoading
+            binding.topAppBar.menu.findItem(R.id.action_export_pdf)?.isEnabled = !isLoading
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
@@ -106,12 +133,20 @@ class CustomerStatementFragment : Fragment() {
             }
         }
 
-        // No need to observe customers here for the dropdown anymore
-
         viewModel.selectedCustomer.observe(viewLifecycleOwner) { customer ->
             updateSelectedCustomerUI(customer)
             // Load statement only if a customer is actually selected
-            customer?.let { viewModel.loadCustomerStatement(it) }
+            customer?.let { 
+                val job = viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        viewModel.loadCustomerStatement(it)
+                    } catch (e: Exception) {
+                        Log.e("CustomerStatement", "Error loading statement: ${e.message}")
+                        Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                activeJobs.add(job)
+            }
         }
 
         viewModel.customerTransactions.observe(viewLifecycleOwner) { transactions ->
@@ -141,7 +176,15 @@ class CustomerStatementFragment : Fragment() {
                 }
                 // If date range changes and customer is selected, reload statement
                 viewModel.selectedCustomer.value?.let { customer ->
-                    viewModel.loadCustomerStatement(customer)
+                    val job = viewLifecycleOwner.lifecycleScope.launch {
+                        try {
+                            viewModel.loadCustomerStatement(customer)
+                        } catch (e: Exception) {
+                            Log.e("CustomerStatement", "Error loading statement: ${e.message}")
+                            Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    activeJobs.add(job)
                 }
             }
         }
@@ -155,25 +198,28 @@ class CustomerStatementFragment : Fragment() {
                 }
                 // If date range changes and customer is selected, reload statement
                 viewModel.selectedCustomer.value?.let { customer ->
-                    viewModel.loadCustomerStatement(customer)
+                    val job = viewLifecycleOwner.lifecycleScope.launch {
+                        try {
+                            viewModel.loadCustomerStatement(customer)
+                        } catch (e: Exception) {
+                            Log.e("CustomerStatement", "Error loading statement: ${e.message}")
+                            Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    activeJobs.add(job)
                 }
             }
         }
     }
 
-    // **MODIFIED FUNCTION**
     private fun showCustomerSelectionBottomSheet() {
         val customerListBottomSheet = CustomerListBottomSheet.newInstance()
         customerListBottomSheet.setOnCustomerSelectedListener { selectedCustomer ->
-            // This lambda is called when a customer is selected in the bottom sheet
             Log.d("CustomerStatement", "Customer selected: ${selectedCustomer.firstName}")
             viewModel.selectCustomer(selectedCustomer)
-            // Bottom sheet dismisses itself after selection (handled within CustomerListBottomSheet)
         }
-        // Use parentFragmentManager as this is a fragment showing another fragment (bottom sheet)
         customerListBottomSheet.show(parentFragmentManager, CustomerListBottomSheet.TAG)
     }
-
 
     private fun updateSelectedCustomerUI(customer: Customer?) {
         if (customer == null) {
@@ -183,12 +229,10 @@ class CustomerStatementFragment : Fragment() {
             return
         }
 
-        // Show customer details and statement
         binding.noCustomerSelectedLayout.visibility = View.GONE
         binding.customerDetailsLayout.visibility = View.VISIBLE
         binding.statementLayout.visibility = View.VISIBLE
 
-        // Update customer details
         binding.customerNameText.text = "${customer.firstName} ${customer.lastName}"
         binding.customerTypeText.text = customer.customerType
         binding.customerPhoneText.text = customer.phoneNumber
@@ -205,7 +249,6 @@ class CustomerStatementFragment : Fragment() {
             Toast.makeText(requireContext(), "Please select a customer first", Toast.LENGTH_SHORT).show()
             return
         }
-
 
         try {
             val startDate = viewModel.startDate.value?.let { dateFormat.format(it) } ?: ""
@@ -233,6 +276,9 @@ class CustomerStatementFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Cancel all running coroutines
+        activeJobs.forEach { it.cancel() }
+        activeJobs.clear()
         _binding = null
     }
 }

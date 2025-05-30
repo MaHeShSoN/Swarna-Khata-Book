@@ -1,7 +1,7 @@
 package com.jewelrypos.swarnakhatabook.DataClasses
 
 data class Invoice(
-    val id: String = "",
+    var id: String = "",
     val invoiceNumber: String = "",
     val customerId: String = "",
     val customerName: String = "",
@@ -13,5 +13,6 @@ data class Invoice(
     val payments: List<Payment> = listOf(),
     val totalAmount: Double = 0.0,
     val paidAmount: Double = 0.0,
-    val notes: String = ""
+    val notes: String = "",
+    val paymentStatus: String = "UNPAID"  // Add this field with default value
 )

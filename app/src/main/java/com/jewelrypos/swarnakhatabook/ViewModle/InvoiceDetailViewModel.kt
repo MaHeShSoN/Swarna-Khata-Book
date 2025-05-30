@@ -375,42 +375,32 @@ class InvoiceDetailViewModel(application: Application) : AndroidViewModel(applic
 
             customerResult.fold(
                 onSuccess = { customer ->
-                    // Calculate the balance change: the key fix is to compare unpaid amounts
-                    val oldUnpaidAmount = oldInvoice.totalAmount - oldInvoice.paidAmount
-                    val newUnpaidAmount = newInvoice.totalAmount - newInvoice.paidAmount
-                    val balanceChange = newUnpaidAmount - oldUnpaidAmount
+                    // Calculate the balance change based on the difference in paid amounts
+                    val oldPaidAmount = oldInvoice.paidAmount
+                    val newPaidAmount = newInvoice.paidAmount
+                    val paymentDifference = newPaidAmount - oldPaidAmount
 
-                    // Log detailed balance calculation
-                    Log.d("InvoiceDetailViewModel", "Balance calculation: " +
-                            "oldTotal=${oldInvoice.totalAmount}, oldPaid=${oldInvoice.paidAmount}, oldUnpaid=$oldUnpaidAmount, " +
-                            "newTotal=${newInvoice.totalAmount}, newPaid=${newInvoice.paidAmount}, newUnpaid=$newUnpaidAmount, " +
-                            "change=$balanceChange")
-
-                    // Only update if there's an actual change
-                    if (balanceChange != 0.0) {
-                        // Apply balance change based on customer type
-                        val finalBalanceChange = if (customer.balanceType.uppercase() == "DEBIT") {
-                            -balanceChange  // Inverse for debit customers
-                        } else {
-                            balanceChange   // Normal for credit customers
-                        }
-
-                        // Calculate new balance
-                        val newBalance = customer.currentBalance + finalBalanceChange
-
-                        // Update customer with new balance
-                        val updatedCustomer = customer.copy(currentBalance = newBalance)
-                        customerRepository.updateCustomer(updatedCustomer)
-
-                        Log.d(
-                            "InvoiceDetailViewModel", "Customer balance updated: " +
-                                    "Customer=${customer.firstName} ${customer.lastName}, " +
-                                    "Old=${customer.currentBalance}, New=$newBalance, " +
-                                    "Change=$finalBalanceChange, Type=${customer.balanceType}"
-                        )
+                    // For debit customers, payments reduce the balance
+                    // For credit customers, payments increase the balance
+                    val finalBalanceChange = if (customer.balanceType.uppercase() == "DEBIT") {
+                        -paymentDifference  // Payments reduce debit balance
                     } else {
-                        Log.d("InvoiceDetailViewModel", "No balance change needed: change=$balanceChange")
+                        paymentDifference   // Payments increase credit balance
                     }
+
+                    // Calculate new balance
+                    val newBalance = customer.currentBalance + finalBalanceChange
+
+                    // Update customer with new balance
+                    val updatedCustomer = customer.copy(currentBalance = newBalance)
+                    customerRepository.updateCustomer(updatedCustomer)
+
+                    Log.d(
+                        "InvoiceDetailViewModel", "Customer balance updated: " +
+                                "Customer=${customer.firstName} ${customer.lastName}, " +
+                                "Old=${customer.currentBalance}, New=$newBalance, " +
+                                "Change=$finalBalanceChange, Type=${customer.balanceType}"
+                    )
                 },
                 onFailure = { error ->
                     Log.e("InvoiceDetailViewModel", "Failed to update customer balance", error)

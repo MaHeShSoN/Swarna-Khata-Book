@@ -65,6 +65,7 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.launch
 import android.graphics.Typeface
+import android.widget.EditText
 import android.widget.TextView
 import kotlinx.coroutines.Job
 
@@ -830,8 +831,31 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         
         // Initialize total weight field if it exists
         binding.totalWeightInputLayout?.editText?.setText("0.0")
+
+        // Setup auto-select for numeric fields
+        setupAutoSelectForNumericFields()
     }
 
+    private fun setupAutoSelectForNumericFields() {
+        // List of all numeric EditText fields
+        val numericFields = listOf(
+            binding.grossWeightEditText,
+            binding.netWeightEditText,
+            binding.wastageEditText,
+            binding.purityEditText,
+            binding.stockEditText,
+            binding.totalWeightInputLayout?.editText
+        ).filterNotNull()
+
+        // Apply auto-select to each field
+        numericFields.forEach { editText ->
+            editText.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) {
+                    (view as EditText).setSelection(0, view.text.length)
+                }
+            }
+        }
+    }
 
     fun validateAndShowErrors(): Boolean {
         val (isValid, errorMessage) = validateJewelryItemForm()
