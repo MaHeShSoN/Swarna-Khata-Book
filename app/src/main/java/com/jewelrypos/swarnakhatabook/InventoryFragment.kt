@@ -14,6 +14,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
+import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
@@ -54,7 +55,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     // Get the shared shop switcher view model
     private val shopSwitcherViewModel: ShopSwitcherViewModel by activityViewModels()
 
-    private val inventoryViewModel: InventoryViewModel by viewModels {
+    private val inventoryViewModel: InventoryViewModel by navGraphViewModels(R.id.inner_nav_graph) {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = InventoryRepository(firestore, auth, requireContext())
@@ -65,6 +66,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     private lateinit var adapter: JewelleryAdapter
     private var isSearchActive = false // Track search state (still useful for UI state)
 
+    private var currentShopId: String? = null
     // Define filter type constants matching ViewModel
     companion object {
         // Use constants from ViewModel directly
@@ -97,22 +99,48 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         setupSwipeRefresh()
         setupEmptyStateButtons()
 
+        currentShopId = shopSwitcherViewModel.activeShop.value?.shopId // Initialize with current value
+        Log.d("InventoryFragment", "onViewCreated - Initial currentShopId: $currentShopId")
+
+
         // Observe shop changes
         observeShopChanges()
 
         return binding.root
     }
 
+    // In InventoryFragment.kt
     private fun observeShopChanges() {
-        // Observe shop changes from the shop switcher view model
         shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
-            shop?.let {
-                Log.d("InventoryFragment", "Shop changed to: ${shop.shopName}")
-                // Refresh data and clear filters when shop changes
-                inventoryViewModel.refreshDataAndClearFilters()
+            val newShopId = shop?.shopId // Assuming your Shop object has a unique 'shopId'
+
+            Log.d("InventoryFragment", "Shop change event. New shop ID: $newShopId, Current shop ID: $currentShopId")
+
+            if (newShopId != currentShopId) {
+                Log.d("InventoryFragment", "Actual shop ID changed from $currentShopId to $newShopId. Refreshing data and clearing filters.")
+                currentShopId = newShopId // Update current shop ID
+
+                // Only refresh if there's a valid new shop or if it explicitly becomes null from a non-null state
+                if (newShopId != null || (newShopId == null && currentShopId != null) ) {
+                    inventoryViewModel.refreshDataAndClearFilters()
+                }
+
+            } else {
+                Log.d("InventoryFragment", "Shop ID $newShopId is the same as current, or both null. No refresh triggered by shop change observer.")
             }
         }
     }
+
+//    private fun observeShopChanges() {
+//        // Observe shop changes from the shop switcher view model
+//        shopSwitcherViewModel.activeShop.observe(viewLifecycleOwner) { shop ->
+//            shop?.let {
+//                Log.d("InventoryFragment", "Shop changed to: ${shop.shopName}")
+//                // Refresh data and clear filters when shop changes
+//                inventoryViewModel.refreshDataAndClearFilters()
+//            }
+//        }
+//    }
 
     private fun setupEventBusObservers() {
         // Observe inventory update events
@@ -196,7 +224,8 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                             Log.e("InventoryFragment", "Paging refresh error: $errorMessage", refreshState.error)
 
                             // Optionally show empty state or a specific error view if list is empty and error occurs
-                            if (isListEmpty) {
+                            val isListEmptyAfterError = adapter.itemCount == 0 // Check item count after error
+                             if (isListEmptyAfterError) {
                                  // Decide which empty state to show based on search/filters
                                  showEmptyState(inventoryViewModel.searchQuery.value, inventoryViewModel.activeFilters.value) // Use public flow value
                              }
@@ -205,28 +234,35 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                             currentBinding.progressBar.visibility = View.GONE
                             currentBinding.swipeRefreshLayout.isRefreshing = false // Stop refreshing
 
-                            Log.d("CustomerFragment", "LoadState NotLoading, checking item count: ${adapter.itemCount}")
+                            val isListEmptyAfterLoad = adapter.itemCount == 0 // Check item count AFTER NotLoading state
 
-                             // Update UI state based on whether the list is empty and filters/search are active
-                             showEmptyState(inventoryViewModel.searchQuery.value, inventoryViewModel.activeFilters.value) // Use public flow value
+                            Log.d("InventoryFragment", "LoadState: NotLoading. Is list empty: $isListEmptyAfterLoad (Adapter count: ${adapter.itemCount})")
 
+                            // Update UI state based on whether the list is empty and filters/search are active
+                            showEmptyState(inventoryViewModel.searchQuery.value, inventoryViewModel.activeFilters.value)
 
-                            // Restore state if not already restored and state exists
-                            if (!isLayoutStateRestored && inventoryViewModel.layoutManagerState != null && !isListEmpty) {
-                                currentBinding.recyclerViewInventory.post {
-                                     Log.d("InventoryFragment", "Posting layout manager state restoration.")
-                                     // Ensure binding is still valid and state hasn't been restored in another post
-                                    if (_binding != null && !isLayoutStateRestored && inventoryViewModel.layoutManagerState != null) {
-                                        Log.d("InventoryFragment", "Restoring layout manager state inside post block.")
-                                        _binding?.recyclerViewInventory?.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
-                                        isLayoutStateRestored = true // Set flag after attempting restoration
-                                        Log.d("InventoryFragment", "Set isLayoutStateRestored to true after posting restoration.")
-                                    } else {
-                                        Log.d("InventoryFragment", "Skipping state restoration inside post block (inner conditions not met).")
+                            if (!isListEmptyAfterLoad) {
+                                // List is NOT empty after loading, proceed with potential state restoration
+                                if (!isLayoutStateRestored && inventoryViewModel.layoutManagerState != null) {
+                                    currentBinding.recyclerViewInventory.post {
+                                         Log.d("InventoryFragment", "Posting layout manager state restoration.")
+                                        // Ensure binding is still valid and state hasn't been restored in another post
+                                        if (_binding != null && !isLayoutStateRestored && inventoryViewModel.layoutManagerState != null) {
+                                            Log.d("InventoryFragment", "Restoring layout manager state inside post block.")
+                                            _binding?.recyclerViewInventory?.layoutManager?.onRestoreInstanceState(inventoryViewModel.layoutManagerState)
+                                            isLayoutStateRestored = true // Set flag after attempting restoration
+                                            Log.d("InventoryFragment", "Set isLayoutStateRestored to true after posting restoration.")
+                                        } else {
+                                            Log.d("InventoryFragment", "Skipping state restoration inside post block (inner conditions not met).")
+                                        }
                                     }
+                                } else {
+                                     Log.d("InventoryFragment", "Skipping immediate state restoration check (outer conditions not met: isLayoutStateRestored=${isLayoutStateRestored}, layoutManagerState=${inventoryViewModel.layoutManagerState != null}). List is not empty.")
                                 }
                             } else {
-                                Log.d("InventoryFragment", "Skipping immediate state restoration check (outer conditions not met: isLayoutStateRestored=${isLayoutStateRestored}, layoutManagerState=${inventoryViewModel.layoutManagerState != null}, isListEmpty=${isListEmpty}).")
+                                // List IS empty after loading. Clear any potentially saved state
+                                // as it's not relevant for an empty list resulting from the data load.
+                                Log.d("InventoryFragment", "List is empty after loading, showing empty state.")
                             }
                         }
                     }
@@ -372,27 +408,31 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
 
+// In InventoryFragment.kt
+
     private fun syncChipStates(activeFilters: Set<String>) {
+        // Get the binding safely. If it's null (e.g., view is destroyed), do nothing.
+        val currentBinding = _binding ?: return
+
         // --- Temporarily detach listeners to prevent feedback loops ---
-        binding.filterChipGroup.setOnCheckedStateChangeListener(null)
-         binding.chipLowStock.setOnCheckedChangeListener(null) // Detach Low Stock listener
+        currentBinding.filterChipGroup.setOnCheckedStateChangeListener(null)
+        currentBinding.chipLowStock.setOnCheckedChangeListener(null) // Detach Low Stock listener
 
         // --- Set checked states based on ViewModel's active filters ---
-        binding.chipGold.isChecked = activeFilters.contains(FILTER_GOLD)
-        binding.chipSilver.isChecked = activeFilters.contains(FILTER_SILVER)
-        binding.chipOther.isChecked = activeFilters.contains(FILTER_OTHER)
-        binding.chipLowStock.isChecked = activeFilters.contains(FILTER_LOW_STOCK)
+        currentBinding.chipGold.isChecked = activeFilters.contains(FILTER_GOLD)
+        currentBinding.chipSilver.isChecked = activeFilters.contains(FILTER_SILVER)
+        currentBinding.chipOther.isChecked = activeFilters.contains(FILTER_OTHER)
+        currentBinding.chipLowStock.isChecked = activeFilters.contains(FILTER_LOW_STOCK)
 
         // --- Re-attach listeners ---
-        binding.filterChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+        currentBinding.filterChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             handleMetalTypeChipChange(checkedIds)
         }
-         binding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
-             handleLowStockChipChange(isChecked)
-         }
+        currentBinding.chipLowStock.setOnCheckedChangeListener { _, isChecked ->
+            handleLowStockChipChange(isChecked)
+        }
         Log.d("InventoryFragment", "Synced chip states with filters: $activeFilters")
     }
-
 
     private fun setupSwipeRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener {
@@ -644,20 +684,24 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     override fun onDestroyView() {
-        // Save the RecyclerView scroll position
+        // Save the RecyclerView scroll position if the list is not empty
         if (_binding?.recyclerViewInventory?.adapter?.itemCount ?: 0 > 0) {
         binding.recyclerViewInventory.layoutManager?.let { lm ->
             inventoryViewModel.layoutManagerState = lm.onSaveInstanceState()
                  Log.d("InventoryFragment", "Saved layout manager state in onDestroyView (list not empty). State: ${inventoryViewModel.layoutManagerState}")
              }
         } else {
-             // If the list is empty, clear the saved state as it's no longer valid
-             if (inventoryViewModel.layoutManagerState != null) {
-                  Log.d("InventoryFragment", "List is empty in onDestroyView, clearing saved state.")
-                  inventoryViewModel.layoutManagerState = null
-             } else {
-                  Log.d("InventoryFragment", "List is empty in onDestroyView, and ViewModel state is null. Nothing to clear.")
-             }
+             // If the list is empty when the view is destroyed, the saved state (if any) is not valid for this empty list state, so clear it.
+             Log.d("InventoryFragment", "List is empty in onDestroyView, clearing saved state.")
+            if (inventoryViewModel.layoutManagerState != null) {
+                // If a state was previously saved, keep it. It might be needed if the list repopulates later.
+                Log.d("InventoryFragment", "List is empty in onDestroyView, but ViewModel state is NOT null. Keeping previously saved state.")
+                // Do nothing here to keep inventoryViewModel.layoutManagerState
+            } else {
+                // List is empty and no state was previously saved.
+                Log.d("InventoryFragment", "List is empty in onDestroyView, and ViewModel state is null. No state to save or clear further.")
+                inventoryViewModel.layoutManagerState = null // Or simply do nothing, as it's already null
+            }
         }
 
         super.onDestroyView()
