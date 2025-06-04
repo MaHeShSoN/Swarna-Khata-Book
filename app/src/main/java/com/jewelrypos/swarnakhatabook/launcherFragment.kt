@@ -64,7 +64,7 @@ class launcherFragment : Fragment() {
 
         // Initialize SharedPreferences
         sharedPreferences = SecurePreferences.getInstance(requireContext())
-        
+
         // Initialize SessionManager
         SessionManager.initialize(requireContext())
 
@@ -82,34 +82,18 @@ class launcherFragment : Fragment() {
         val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
-                
-                // Use the centralized subscription check method
-                when (val status = subscriptionManager.checkSubscriptionStatus()) {
-                    is UserSubscriptionManager.SubscriptionStatus.ActiveSubscription -> {
-                        // User has paid subscription, proceed normally
-                        checkPinAndProceed()
-                    }
-                    is UserSubscriptionManager.SubscriptionStatus.ActiveTrial -> {
-                        // User in trial period, proceed normally
-                        checkPinAndProceed()
-                    }
-                    is UserSubscriptionManager.SubscriptionStatus.GracePeriod -> {
-                        // In grace period - show notification if not already shown
-                        if (!subscriptionManager.hasGracePeriodBeenNotified()) {
-                            binding.loadingIndicator.visibility = View.GONE
-                            showGracePeriodDialog(status.daysRemaining)
-                            subscriptionManager.markGracePeriodNotified()
-                        } else {
-                            // Already notified about grace period, proceed with normal flow
-                            checkPinAndProceed()
-                        }
-                    }
-                    is UserSubscriptionManager.SubscriptionStatus.Expired -> {
-                        // Trial expired and not in grace period, show expired dialog
-                        binding.loadingIndicator.visibility = View.GONE
-                        showTrialExpiredDialog()
-                    }
+
+                // Check if trial has expired for non-premium users
+                if (!subscriptionManager.isPremiumUser() && subscriptionManager.hasTrialExpired()) {
+                    // Hide loading indicator before showing dialog
+                    binding.loadingIndicator.visibility = View.GONE
+                    showTrialExpiredDialog()
+                } else {
+                    // Trial still valid or user is premium
+                    checkPinAndProceed()
                 }
+
+                // Use the centralized subscription check method
             } catch (e: Exception) {
                 Log.e("LauncherFragment", "Error checking subscription: ${e.message}", e)
                 // If there's an error, proceed with normal flow to avoid blocking users
@@ -144,7 +128,7 @@ class launcherFragment : Fragment() {
     private fun logoutUser() {
         // Clear active shop session
         SessionManager.clearSession(requireContext())
-        
+
         // Sign out from Firebase
         FirebaseAuth.getInstance().signOut()
 
@@ -161,12 +145,12 @@ class launcherFragment : Fragment() {
     private fun clearAppSpecificData() {
         try {
             val context = requireContext()
-            
+
             // Clear local databases
             context.deleteDatabase("jewelry_app_database.db")
             context.deleteDatabase("jewelry_pos_cache.db")
             context.deleteDatabase("metal_item_database.db")
-            
+
             // Clear Firebase cache
             try {
                 File(context.cacheDir, "firebase_firestore.db").delete()
@@ -174,7 +158,7 @@ class launcherFragment : Fragment() {
             } catch (e: Exception) {
                 Log.e("LauncherFragment", "Error clearing Firebase cache: ${e.message}")
             }
-            
+
         } catch (e: Exception) {
             Log.e("LauncherFragment", "Error clearing app data: ${e.message}")
         }
@@ -194,16 +178,16 @@ class launcherFragment : Fragment() {
             startNormalFlow()
         }
     }
-    
+
     private fun startNormalFlow() {
         // Keep loading indicator visible while waiting for navigation events
         binding.loadingIndicator.visibility = View.VISIBLE
-        
+
         // Observe navigation events
         viewModel.navigationEvent.observe(viewLifecycleOwner) { event ->
             // Hide loading indicator before navigation
             binding.loadingIndicator.visibility = View.GONE
-            
+
             // Navigate immediately without delay
             when (event) {
                 is SplashViewModel.NavigationEvent.NavigateToDashboard -> {
@@ -320,12 +304,12 @@ class launcherFragment : Fragment() {
             .setCancelable(false)
             .show()
     }
-    
+
     override fun onDestroyView() {
         // Cancel all coroutine jobs to prevent memory leaks
         coroutineJobs.forEach { it.cancel() }
         coroutineJobs.clear()
-        
+
         super.onDestroyView()
         _binding = null
     }

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.BuildConfig
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.DataClasses.SubscriptionFeatures
 import com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan
@@ -14,6 +13,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.google.firebase.firestore.Source // Import Source
 
 /**
  * Manages user subscription status and trial period
@@ -25,9 +25,13 @@ class UserSubscriptionManager(private val context: Context) {
     private val KEY_FIRST_USE_DATE = "first_use_date"
     private val KEY_TRIAL_DAYS = "trial_days"
     private val KEY_IS_TRIAL_ACTIVE = "is_trial_active"
-    private val KEY_SUBSCRIPTION_PLAN = "subscription_plan"
+    private val KEY_SUBSCRIPTION_PLAN = "subscription_plan" // Key for caching the plan name
     private val KEY_MONTHLY_INVOICE_COUNT = "monthly_invoice_count"
     private val KEY_INVOICE_COUNT_RESET_DATE = "invoice_count_reset_date"
+    private val KEY_LAST_FETCH_TIME = "last_fetch_time" // Key to store last fetch timestamp
+    private val CACHE_DURATION_MILLIS =
+        TimeUnit.MINUTES.toMillis(5) // Cache duration (e.g., 5 minutes)
+
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
@@ -45,11 +49,11 @@ class UserSubscriptionManager(private val context: Context) {
             val editor = sharedPreferences.edit()
             editor.putLong(KEY_FIRST_USE_DATE, currentTime)
             editor.putBoolean(KEY_IS_TRIAL_ACTIVE, true)
-            editor.putInt(KEY_TRIAL_DAYS, 10) // Changed from 15 to 10 days for trial to match UI messaging
+            editor.putInt(KEY_TRIAL_DAYS, 15) // Default to 15 days for trial
             editor.apply()
-            
+
             Log.d(TAG, "First use date recorded: ${formatDate(currentTime)}")
-            Log.d(TAG, "Trial started with 10 days duration")
+            Log.d(TAG, "Trial started with 15 days duration")
         }
     }
 
@@ -69,10 +73,10 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Gets the configured trial period in days (default 10)
+     * Gets the configured trial period in days (default 15)
      */
     fun getTrialPeriod(): Int {
-        return sharedPreferences.getInt(KEY_TRIAL_DAYS, 10) // Changed default from 15 to 10 days
+        return sharedPreferences.getInt(KEY_TRIAL_DAYS, 15) // Default 15 days
     }
 
     /**
@@ -84,23 +88,39 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Retrieve the current subscription plan from Firestore
+     * Retrieve the current subscription plan, prioritizing cache and falling back to Firestore
      */
     suspend fun getCurrentSubscriptionPlan(): SubscriptionPlan {
-        // First check if we have an active subscription 
+        // First check if we have a cached plan and if it's still valid
+        val cachedPlanName = sharedPreferences.getString(KEY_SUBSCRIPTION_PLAN, null)
+        val lastFetchTime = sharedPreferences.getLong(KEY_LAST_FETCH_TIME, 0)
+        val currentTime = System.currentTimeMillis()
+
+        if (cachedPlanName != null && (currentTime - lastFetchTime) < CACHE_DURATION_MILLIS) {
+            // Cache is valid, return cached plan
+            try {
+                val cachedPlan = SubscriptionPlan.valueOf(cachedPlanName)
+                Log.d(TAG, "Returning cached subscription plan: $cachedPlan")
+                return cachedPlan
+            } catch (e: IllegalArgumentException) {
+                // Handle case where cached plan name is invalid (shouldn't happen with proper saving)
+                Log.e(TAG, "Invalid cached subscription plan name: $cachedPlanName")
+            }
+        }
+
+        // If cache is invalid or not present, fetch from Firestore
         val user = auth.currentUser ?: return SubscriptionPlan.NONE
         val userId = user.phoneNumber?.replace("+", "") ?: return SubscriptionPlan.NONE
 
-        try {
+        return try {
             val document = firestore.collection("users")
                 .document(userId)
                 .get()
                 .await()
 
             if (document.exists()) {
-                // Check if any subscription is active
                 val planName = document.getString("subscriptionPlan") ?: ""
-                return try {
+                val plan = try {
                     if (planName.isNotEmpty()) {
                         SubscriptionPlan.valueOf(planName)
                     } else {
@@ -110,16 +130,31 @@ class UserSubscriptionManager(private val context: Context) {
                     Log.e(TAG, "Error parsing subscription plan: ${e.message}")
                     SubscriptionPlan.NONE
                 }
+
+                // Cache the fetched plan and fetch time
+                sharedPreferences.edit()
+                    .putString(KEY_SUBSCRIPTION_PLAN, plan.name)
+                    .putLong(KEY_LAST_FETCH_TIME, System.currentTimeMillis())
+                    .apply()
+
+                Log.d(TAG, "Fetched and cached subscription plan: $plan")
+                plan
+            } else {
+                // No document means no subscription
+                sharedPreferences.edit()
+                    .putString(KEY_SUBSCRIPTION_PLAN, SubscriptionPlan.NONE.name)
+                    .putLong(KEY_LAST_FETCH_TIME, System.currentTimeMillis())
+                    .apply()
+                SubscriptionPlan.NONE
             }
-            return SubscriptionPlan.NONE
         } catch (e: Exception) {
-            Log.e(TAG, "Error checking subscription plan: ${e.message}")
-            return SubscriptionPlan.NONE
+            Log.e(TAG, "Error checking subscription plan from Firestore: ${e.message}")
+            SubscriptionPlan.NONE
         }
     }
 
     /**
-     * Updates the subscription plan in Firestore
+     * Updates the subscription plan in Firestore and clears cache
      */
     suspend fun updateSubscriptionPlan(plan: SubscriptionPlan): Boolean {
         val user = auth.currentUser ?: return false
@@ -142,6 +177,13 @@ class UserSubscriptionManager(private val context: Context) {
                 sharedPreferences.edit().putBoolean(KEY_IS_TRIAL_ACTIVE, false).apply()
             }
 
+            // Clear cached subscription plan so next check fetches fresh data
+            sharedPreferences.edit()
+                .remove(KEY_SUBSCRIPTION_PLAN)
+                .remove(KEY_LAST_FETCH_TIME)
+                .apply()
+
+
             Log.d(TAG, "Subscription plan updated to: $plan")
             true
         } catch (e: Exception) {
@@ -157,6 +199,11 @@ class UserSubscriptionManager(private val context: Context) {
     suspend fun isPremiumUser(): Boolean {
         val plan = getCurrentSubscriptionPlan()
         return plan != SubscriptionPlan.NONE
+    }
+
+    suspend fun hasMinimumPlan(minimumPlan: SubscriptionPlan): Boolean {
+        val currentPlan = getCurrentSubscriptionPlan()
+        return currentPlan.ordinal >= minimumPlan.ordinal
     }
 
     /**
@@ -187,8 +234,8 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Get the current authenticated user's ID
-     * Returns user's phone number (without + prefix) or empty string if not authenticated
+     * Get the current authenticated user\'s ID
+     * Returns user\'s phone number (without + prefix) or empty string if not authenticated
      */
     fun getCurrentUserId(): String {
         val user = auth.currentUser ?: return ""
@@ -218,16 +265,8 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Resets the trial period (for testing only)
-     * Only works in debug builds for security
-     */
+     * Resets the trial period (for testing only)\n     */
     fun resetTrial() {
-        // Only allow trial reset in debug builds
-        if (!BuildConfig.DEBUG) {
-            Log.w(TAG, "Trial reset attempted in release build - operation denied")
-            return
-        }
-        
         val editor = sharedPreferences.edit()
         editor.remove(KEY_FIRST_USE_DATE)
         editor.putBoolean(KEY_IS_TRIAL_ACTIVE, true)
@@ -242,7 +281,7 @@ class UserSubscriptionManager(private val context: Context) {
         val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm:ss", Locale.getDefault())
         return sdf.format(Date(millis))
     }
-    
+
     /**
      * Get the active subscription features based on the current plan and trial status
      */
@@ -251,12 +290,12 @@ class UserSubscriptionManager(private val context: Context) {
         if (isTrialActive()) {
             return SubscriptionFeatures.forPlan(SubscriptionPlan.STANDARD)
         }
-        
+
         // Otherwise, return features based on the current plan
         val currentPlan = getCurrentSubscriptionPlan()
         return SubscriptionFeatures.forPlan(currentPlan)
     }
-    
+
     /**
      * Check if the specified feature is available for the current subscription
      */
@@ -264,7 +303,7 @@ class UserSubscriptionManager(private val context: Context) {
         val features = getActiveSubscriptionFeatures()
         return featureCheck(features)
     }
-    
+
     /**
      * Track the number of invoices created in the current month (for Basic plan limits)
      */
@@ -272,7 +311,7 @@ class UserSubscriptionManager(private val context: Context) {
         // Check if we need to reset the counter for a new month
         val lastResetDate = sharedPreferences.getLong(KEY_INVOICE_COUNT_RESET_DATE, 0)
         val currentTime = System.currentTimeMillis()
-        
+
         // If the last reset was in a different month, reset the counter
         if (!isSameMonth(lastResetDate, currentTime)) {
             sharedPreferences.edit()
@@ -281,20 +320,20 @@ class UserSubscriptionManager(private val context: Context) {
                 .apply()
             return
         }
-        
+
         // Otherwise, increment the counter
         val currentCount = sharedPreferences.getInt(KEY_MONTHLY_INVOICE_COUNT, 0)
         sharedPreferences.edit().putInt(KEY_MONTHLY_INVOICE_COUNT, currentCount + 1).apply()
     }
-    
+
     /**
-     * Get the current month's invoice count
+     * Get the current month\'s invoice count
      */
     fun getMonthlyInvoiceCount(): Int {
         // Check if we need to reset for a new month
         val lastResetDate = sharedPreferences.getLong(KEY_INVOICE_COUNT_RESET_DATE, 0)
         val currentTime = System.currentTimeMillis()
-        
+
         // If different month, reset counter and return 0
         if (!isSameMonth(lastResetDate, currentTime)) {
             sharedPreferences.edit()
@@ -303,10 +342,10 @@ class UserSubscriptionManager(private val context: Context) {
                 .apply()
             return 0
         }
-        
+
         return sharedPreferences.getInt(KEY_MONTHLY_INVOICE_COUNT, 0)
     }
-    
+
     /**
      * Check if two timestamps are in the same month
      */
@@ -315,18 +354,18 @@ class UserSubscriptionManager(private val context: Context) {
         val cal2 = Calendar.getInstance()
         cal1.timeInMillis = time1
         cal2.timeInMillis = time2
-        
-        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) && 
+
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
                 cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH)
     }
-    
+
     /**
      * Get the end date of the current trial as a timestamp
      */
     fun getTrialEndDate(): Long? {
         val firstUseDate = getFirstUseDate() ?: return null
         val trialPeriodDays = getTrialPeriod()
-        
+
         // Calculate end date by adding trial days to first use date
         return firstUseDate + TimeUnit.DAYS.toMillis(trialPeriodDays.toLong())
     }
@@ -342,7 +381,7 @@ class UserSubscriptionManager(private val context: Context) {
             sharedPreferences.edit()
                 .remove(KEY_SUBSCRIPTION_PLAN)
                 .apply()
-                
+
             // Get updated plan from Firestore
             val user = auth.currentUser ?: return SubscriptionPlan.NONE
             val userId = user.phoneNumber?.replace("+", "") ?: return SubscriptionPlan.NONE
@@ -364,12 +403,16 @@ class UserSubscriptionManager(private val context: Context) {
                     Log.e(TAG, "Error parsing subscription plan: ${e.message}")
                     SubscriptionPlan.NONE
                 }
-                
+
                 // Cache the updated plan locally
                 sharedPreferences.edit()
                     .putString(KEY_SUBSCRIPTION_PLAN, plan.name)
+                    .putLong(
+                        KEY_LAST_FETCH_TIME,
+                        System.currentTimeMillis()
+                    ) // Update last fetch time
                     .apply()
-                    
+
                 Log.d(TAG, "Subscription refreshed: $plan")
                 return plan
             }
@@ -377,127 +420,6 @@ class UserSubscriptionManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing subscription: ${e.message}")
             return SubscriptionPlan.NONE
-        }
-    }
-
-    /**
-     * Constants for grace period configuration
-     */
-    companion object {
-        const val GRACE_PERIOD_DAYS = 2 // 2-day grace period after trial expiration
-        private const val KEY_GRACE_PERIOD_NOTIFIED = "grace_period_notified"
-    }
-
-    /**
-     * Checks if the user is within the grace period after trial expiration
-     * Returns true if the user should be granted access due to grace period
-     */
-    suspend fun isInGracePeriod(): Boolean {
-        // If trial is active or user is premium, no need for grace period
-        if (isTrialActive() || getCurrentSubscriptionPlan() != SubscriptionPlan.NONE) {
-            return false
-        }
-
-        val firstUseDate = getFirstUseDate() ?: return false
-        val trialPeriodDays = getTrialPeriod()
-        
-        // Calculate when the trial expired/will expire
-        val trialExpirationDate = firstUseDate + TimeUnit.DAYS.toMillis(trialPeriodDays.toLong())
-        val currentTime = System.currentTimeMillis()
-        
-        // Check if within grace period after trial expiration
-        val gracePeriodEnd = trialExpirationDate + TimeUnit.DAYS.toMillis(GRACE_PERIOD_DAYS.toLong())
-        return currentTime <= gracePeriodEnd && currentTime >= trialExpirationDate
-    }
-
-    /**
-     * Marks that the user has been notified about the grace period
-     */
-    fun markGracePeriodNotified() {
-        sharedPreferences.edit().putBoolean(KEY_GRACE_PERIOD_NOTIFIED, true).apply()
-    }
-
-    /**
-     * Checks if the user has already been notified about the grace period
-     */
-    fun hasGracePeriodBeenNotified(): Boolean {
-        return sharedPreferences.getBoolean(KEY_GRACE_PERIOD_NOTIFIED, false)
-    }
-
-    /**
-     * Resets the grace period notification status (called at the start of a new grace period)
-     */
-    fun resetGracePeriodNotification() {
-        sharedPreferences.edit().putBoolean(KEY_GRACE_PERIOD_NOTIFIED, false).apply()
-    }
-
-    /**
-     * Gets the number of days remaining in the grace period
-     * Returns 0 if not in grace period or if grace period has expired
-     */
-    suspend fun getGracePeriodDaysRemaining(): Int {
-        if (!isInGracePeriod()) {
-            return 0
-        }
-        
-        val firstUseDate = getFirstUseDate() ?: return 0
-        val trialPeriodDays = getTrialPeriod()
-        
-        // Calculate when the trial expired/will expire
-        val trialExpirationDate = firstUseDate + TimeUnit.DAYS.toMillis(trialPeriodDays.toLong())
-        val gracePeriodEnd = trialExpirationDate + TimeUnit.DAYS.toMillis(GRACE_PERIOD_DAYS.toLong())
-        val currentTime = System.currentTimeMillis()
-        
-        val remainingMillis = gracePeriodEnd - currentTime
-        return (TimeUnit.MILLISECONDS.toDays(remainingMillis) + 1).toInt() // +1 to round up
-    }
-
-    /**
-     * Result class for subscription status check
-     */
-    sealed class SubscriptionStatus {
-        /** User has an active paid subscription */
-        object ActiveSubscription : SubscriptionStatus()
-        
-        /** User is in active trial period */
-        data class ActiveTrial(val daysRemaining: Int) : SubscriptionStatus()
-        
-        /** User's trial has expired but they're in grace period */
-        data class GracePeriod(val daysRemaining: Int) : SubscriptionStatus()
-        
-        /** User's trial has expired and they need to subscribe */
-        object Expired : SubscriptionStatus() 
-    }
-    
-    /**
-     * Centralized method to check subscription status
-     * Should be used consistently throughout the app for subscription checks
-     */
-    suspend fun checkSubscriptionStatus(): SubscriptionStatus {
-        try {
-            // First check if user has active paid plan
-            val currentPlan = getCurrentSubscriptionPlan()
-            if (currentPlan != SubscriptionPlan.NONE) {
-                return SubscriptionStatus.ActiveSubscription
-            }
-            
-            // Check if trial is active
-            if (isTrialActive()) {
-                return SubscriptionStatus.ActiveTrial(getDaysRemaining())
-            }
-            
-            // Check if in grace period
-            if (isInGracePeriod()) {
-                return SubscriptionStatus.GracePeriod(getGracePeriodDaysRemaining())
-            }
-            
-            // Otherwise, subscription has expired
-            return SubscriptionStatus.Expired
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking subscription status: ${e.message}", e)
-            // Default to expired if there's an error to ensure security
-            return SubscriptionStatus.Expired
         }
     }
 }

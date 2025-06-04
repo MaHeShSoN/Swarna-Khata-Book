@@ -38,6 +38,10 @@ import kotlin.collections.ArrayList
 
 class SalesReportFragment : Fragment() {
 
+    companion object {
+        private const val TAG = "SalesReportFragment"
+    }
+
     private var _binding: FragmentSalesReportBinding? = null
     private val binding get() = _binding!!
 
@@ -54,29 +58,44 @@ class SalesReportFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d(TAG, "onCreateView: Creating view")
         _binding = FragmentSalesReportBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "onViewCreated: Starting setup")
+        val startTime = System.currentTimeMillis()
 
         setupViewModel()
+        Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupUI()
+        Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupCharts()
+        Log.d(TAG, "onViewCreated: Charts setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupObservers()
+        Log.d(TAG, "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms")
+
+        Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
 
         // Initial load might be triggered by ViewModel init or date setting
         // viewModel.loadSalesReport() // Ensure data is loaded if not done automatically
     }
 
     private fun setupViewModel() {
+        Log.d(TAG, "setupViewModel: Initializing ReportViewModel")
         val factory = ReportViewModelFactory(requireActivity().application)
         // Scope to Activity to share date range with ReportsFragment and CustomerStatementFragment
         viewModel = ViewModelProvider(requireActivity(), factory)[ReportViewModel::class.java]
+        Log.d(TAG, "setupViewModel: ReportViewModel initialized successfully")
     }
 
     private fun setupUI() {
+        Log.d(TAG, "setupUI: Setting up UI components")
         // Toolbar
         binding.topAppBar.setNavigationOnClickListener { findNavController().navigateUp() }
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
@@ -113,6 +132,7 @@ class SalesReportFragment : Fragment() {
     }
 
     private fun setupCharts() {
+        Log.d(TAG, "setupCharts: Initializing charts")
         // Common Pie Chart Setup
         fun setupPieChart(chart: com.github.mikephil.charting.charts.PieChart) {
             chart.apply {
@@ -173,7 +193,39 @@ class SalesReportFragment : Fragment() {
 
 
     private fun setupObservers() {
+        Log.d(TAG, "setupObservers: Setting up LiveData observers")
+        
+        viewModel.salesReportData.observe(viewLifecycleOwner) { data ->
+            val startTime = System.currentTimeMillis()
+            if (data != null) {
+                Log.d(TAG, "Received sales report data: totalSales=${data.totalSales}, invoiceCount=${data.invoiceCount}")
+                updateSummaryUI(data)
+                updateSalesByCategoryChart(data)
+                updateSalesByDateChart(data)
+                Log.d(TAG, "Sales report data processed in ${System.currentTimeMillis() - startTime}ms")
+            }
+        }
+
+        viewModel.topSellingItems.observe(viewLifecycleOwner) { items ->
+            val startTime = System.currentTimeMillis()
+            if (items != null) {
+                Log.d(TAG, "Received ${items.size} top selling items")
+                topItemsAdapter.submitList(items)
+                Log.d(TAG, "Top selling items processed in ${System.currentTimeMillis() - startTime}ms")
+            }
+        }
+
+        viewModel.topCustomers.observe(viewLifecycleOwner) { customers ->
+            val startTime = System.currentTimeMillis()
+            if (customers != null) {
+                Log.d(TAG, "Received ${customers.size} top customers")
+                topCustomersAdapter.submitList(customers)
+                Log.d(TAG, "Top customers processed in ${System.currentTimeMillis() - startTime}ms")
+            }
+        }
+
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            Log.d(TAG, "Loading state changed: $isLoading")
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             // Disable interaction while loading?
             binding.dateRangeCard.isEnabled = !isLoading
@@ -181,6 +233,7 @@ class SalesReportFragment : Fragment() {
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
             if (!message.isNullOrEmpty()) {
+                Log.e(TAG, "Error occurred: $message")
                 binding.errorTextView.text = message
                 binding.errorTextView.visibility = View.VISIBLE
                 // Hide other content on error
@@ -190,7 +243,7 @@ class SalesReportFragment : Fragment() {
 //                binding.salesCustomerTypeCard.visibility = View.GONE
                 binding.topItemsCard.visibility = View.GONE
                 binding.topCustomersCard.visibility = View.GONE
-
+                viewModel.clearErrorMessage()
             } else {
                 binding.errorTextView.visibility = View.GONE
                 // Make sure content is visible again if error is cleared
@@ -198,78 +251,26 @@ class SalesReportFragment : Fragment() {
             }
         }
 
-        viewModel.salesReportData.observe(viewLifecycleOwner) { data ->
-            // Only show cards if there's no error and data is not null
-            if (viewModel.errorMessage.value.isNullOrEmpty() && data != null) {
-                binding.summaryCard.visibility = View.VISIBLE
-                binding.salesTrendCard.visibility = View.VISIBLE
-                binding.salesCategoryCard.visibility = View.VISIBLE
-//                binding.salesCustomerTypeCard.visibility = View.VISIBLE
-                updateSummaryUI(data)
-                updateSalesByCategoryChart(data)
-//                updateSalesByCustomerTypeChart(data)
-                updateSalesByDateChart(data) // Update Bar chart
-            } else if (viewModel.errorMessage.value.isNullOrEmpty()) {
-                // Handle case where data is null but no error (e.g., no data found)
-                binding.summaryCard.visibility = View.GONE // Hide sections if no data
-                binding.salesTrendCard.visibility = View.GONE
-                binding.salesCategoryCard.visibility = View.GONE
-//                binding.salesCustomerTypeCard.visibility = View.GONE
-                // Show a general "No Data" message? Or rely on list-specific messages.
-            }
-        }
-
-        // Observer for Top Selling Items
-        viewModel.topSellingItems.observe(viewLifecycleOwner) { items ->
-            if (viewModel.errorMessage.value.isNullOrEmpty()) { // Check for errors first
-                if (items.isNullOrEmpty()) {
-                    binding.topItemsCard.visibility = View.VISIBLE // Show card
-                    binding.topItemsRecyclerView.visibility = View.GONE
-                    binding.noTopItemsTextView.visibility = View.VISIBLE // Show "no data" text
-                } else {
-                    binding.topItemsCard.visibility = View.VISIBLE // Show card
-                    binding.topItemsRecyclerView.visibility = View.VISIBLE
-                    binding.noTopItemsTextView.visibility = View.GONE
-                    topItemsAdapter.submitList(items)
-                }
-            } else {
-                binding.topItemsCard.visibility = View.GONE // Hide on error
-            }
-        }
-
-        // Observer for Top Customers
-        viewModel.topCustomers.observe(viewLifecycleOwner) { customers ->
-            if (viewModel.errorMessage.value.isNullOrEmpty()) { // Check for errors first
-                if (customers.isNullOrEmpty()) {
-                    binding.topCustomersCard.visibility = View.VISIBLE // Show card
-                    binding.topCustomersRecyclerView.visibility = View.GONE
-                    binding.noTopCustomersTextView.visibility = View.VISIBLE // Show "no data" text
-                } else {
-                    binding.topCustomersCard.visibility = View.VISIBLE // Show card
-                    binding.topCustomersRecyclerView.visibility = View.VISIBLE
-                    binding.noTopCustomersTextView.visibility = View.GONE
-                    topCustomersAdapter.submitList(customers)
-                }
-            } else {
-                binding.topCustomersCard.visibility = View.GONE // Hide on error
-            }
-        }
-
-
         // Observe date changes to update display text
         viewModel.startDate.observe(viewLifecycleOwner) { updateDateRangeText() }
         viewModel.endDate.observe(viewLifecycleOwner) { updateDateRangeText() }
     }
 
     private fun updateSummaryUI(data: SalesReportData) {
+        val startTime = System.currentTimeMillis()
+        Log.d(TAG, "updateSummaryUI: Starting summary update")
+        
         binding.totalSalesValue.text = currencyFormatter.format(data.totalSales)
         binding.totalPaidValue.text = currencyFormatter.format(data.paidAmount)
         binding.totalUnpaidValue.text = currencyFormatter.format(data.unpaidAmount)
-        binding.collectionRateValue.text = percentFormatter.format(data.collectionRate) // Format needs 0-1
+        binding.collectionRateValue.text = percentFormatter.format(data.collectionRate)
         binding.invoiceCountValue.text = data.invoiceCount.toString()
+        
+        Log.d(TAG, "updateSummaryUI: Completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
     private fun updateSalesByCategoryChart(data: SalesReportData) {
+        Log.d(TAG, "updateSalesByCategoryChart: Updating category chart")
         val entries = ArrayList<PieEntry>()
         data.salesByCategory.forEach {
             // Only add entries with significant value to avoid clutter
@@ -279,6 +280,7 @@ class SalesReportFragment : Fragment() {
         }
 
         if (entries.isEmpty()){
+            Log.d(TAG, "No category data available for chart")
             binding.salesByCategoryChart.clear()
             binding.salesByCategoryChart.setNoDataText(getString(R.string.no_category_data_available))
             binding.salesByCategoryChart.invalidate()
@@ -526,6 +528,7 @@ class SalesReportFragment : Fragment() {
 
 
     override fun onDestroyView() {
+        Log.d(TAG, "onDestroyView: Cleaning up resources")
         super.onDestroyView()
         // Avoid memory leaks with charts
         binding.salesByCategoryChart.clear()

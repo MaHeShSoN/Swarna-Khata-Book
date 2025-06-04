@@ -77,6 +77,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
     }
 
     private var isLayoutStateRestored = false // Flag for state restoration
+    private var scrollToTopAfterAdd = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -107,6 +108,40 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         observeShopChanges()
 
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        isLayoutStateRestored = false
+        scrollToTopAfterAdd = false
+        Log.d("InventoryFragment", "onViewCreated: Resetting flags.")
+
+//        setupToolbar()
+        
+        // Restore search view state if there's an active search
+        val currentSearchQuery = inventoryViewModel.searchQuery.value
+        if (currentSearchQuery.isNotEmpty()) {
+            val searchItem = binding.topAppBar.menu.findItem(R.id.action_search)
+            searchItem.expandActionView()
+            val searchView = searchItem.actionView as androidx.appcompat.widget.SearchView
+            searchView.setQuery(currentSearchQuery, false)
+            isSearchActive = true
+        }
+
+//        setupRecyclerView()
+        setupSearchView()
+        setupFilterChips() // Setup chip listeners
+        setupObservers() // Setup observers for PagingData and LoadState
+        setupEventBusObservers()
+        setupSwipeRefresh()
+        setupEmptyStateButtons()
+
+        currentShopId = shopSwitcherViewModel.activeShop.value?.shopId // Initialize with current value
+        Log.d("InventoryFragment", "onViewCreated - Initial currentShopId: $currentShopId")
+
+        // Observe shop changes
+        observeShopChanges()
     }
 
     // In InventoryFragment.kt
@@ -547,7 +582,7 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
                                     // Set to null target for cache-only loading (no view attached)
                                     .target(null)
                                     // Use data as memory cache key for cache consistency
-                                    .memoryCacheKey(item.imageUrl)
+//                                    .memoryCacheKey(item.imageUrl)
                                     // Ensure we're using memory cache
                                     .memoryCachePolicy(CachePolicy.ENABLED)
                                     .build()

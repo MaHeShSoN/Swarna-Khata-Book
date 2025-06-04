@@ -43,6 +43,7 @@ class SalesViewModel(
     private val _pagedInvoices = MutableStateFlow<PagingData<Invoice>>(PagingData.empty())
     val pagedInvoices: StateFlow<PagingData<Invoice>> = _pagedInvoices.asStateFlow()
 
+
     // Paged data for invoices
     val allInvoices: Flow<PagingData<Invoice>> = SessionManager.activeShopIdLiveData
         .asFlow()
@@ -113,7 +114,7 @@ class SalesViewModel(
     init {
         // Initialize dashboard data
         _dashboardData.value = DashboardData(0.0, 0.0, 0.0, 0.0, emptyMap())
-        
+
         // Observe shop changes to refresh dashboard data
         SessionManager.activeShopIdLiveData.observeForever { shopId ->
             if (shopId != null) {
@@ -805,16 +806,16 @@ class SalesViewModel(
             try {
                 val shopId = SessionManager.activeShopIdLiveData.value ?: return@launch
                 Log.d("SalesViewModel", "Refreshing dashboard data for shop: $shopId")
-                
+
                 // Get all invoices for the shop
                 val invoices = repository.getAllInvoicesListForShop()
                 Log.d("SalesViewModel", "Fetched ${invoices.size} invoices for dashboard")
-                
+
                 // Calculate total amounts
                 val totalAmount = invoices.sumOf { it.totalAmount }
                 val paidAmount = invoices.sumOf { it.paidAmount }
                 val unpaidAmount = totalAmount - paidAmount
-                
+
                 // Calculate today's sales
                 val today = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
@@ -822,19 +823,19 @@ class SalesViewModel(
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
-                
+
                 val todaySales = invoices
                     .filter { it.invoiceDate >= today }
                     .sumOf { it.totalAmount }
-                
+
                 // Group sales by date
                 val salesByDate = invoices
-                    .groupBy { 
+                    .groupBy {
                         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             .format(Date(it.invoiceDate))
                     }
                     .mapValues { entry -> entry.value.sumOf { it.totalAmount } }
-                
+
                 Log.d("SalesViewModel", """
                     Calculated dashboard data:
                     - Total Amount: $totalAmount
@@ -843,7 +844,7 @@ class SalesViewModel(
                     - Today's Sales: $todaySales
                     - Sales by Date entries: ${salesByDate.size}
                 """.trimIndent())
-                
+
                 // Update dashboard data
                 _dashboardData.value = DashboardData(
                     totalAmount = totalAmount,

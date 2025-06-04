@@ -32,8 +32,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.widget.TextView
 import androidx.lifecycle.lifecycleScope
+import com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan
 
 class ReportsFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "ReportsFragment"
+    }
 
     private var _binding: FragmentReportsBinding? = null
     private val binding get() = _binding!!
@@ -51,45 +56,56 @@ class ReportsFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d(TAG, "onCreateView: Creating view")
         _binding = FragmentReportsBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "onViewCreated: Starting setup")
+        val startTime = System.currentTimeMillis()
 
         setupViewModel()
-        setupUI()
-        setupObservers()
+        Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
         
-        // Check premium status and show info message
+        setupUI()
+        Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
+        setupObservers()
+        Log.d(TAG, "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         checkPremiumStatus()
+        Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
     }
     
     private fun checkPremiumStatus() {
-        PremiumFeatureHelper.isPremiumUser(this) { isPremium ->
-            if (!isPremium) {
-                // Show a non-blocking message that report generation requires premium
+        Log.d(TAG, "checkPremiumStatus: Checking premium status")
+        PremiumFeatureHelper.checkPremiumAccess(
+            fragment = this,
+            featureName = "Business Reports",
+            minimumPlan = SubscriptionPlan.STANDARD, // Specify minimum plan for Reports
+            premiumAction = { binding.premiumBanner.visibility = View.GONE },
+            nonPremiumAction = {
+                binding.premiumBanner.visibility = View.VISIBLE
+                // Show a non-blocking message that report generation requires Standard plan
                 Toast.makeText(
                     requireContext(),
-                    "Premium subscription required to generate reports",
+                    "Standard or Premium subscription required to generate reports",
                     Toast.LENGTH_LONG
                 ).show()
-                
-                // Show premium banner if it exists
-                binding.premiumBanner.visibility = View.VISIBLE
-            } else {
-                binding.premiumBanner.visibility = View.GONE
             }
-        }
+        )
     }
 
     private fun setupViewModel() {
+        Log.d(TAG, "setupViewModel: Initializing ViewModel")
         val factory = ReportViewModelFactory(requireActivity().application)
         viewModel = ViewModelProvider(this, factory)[ReportViewModel::class.java]
     }
 
     private fun setupUI() {
+        Log.d(TAG, "setupUI: Setting up UI components")
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
             requireActivity().onBackPressed()
@@ -104,14 +120,17 @@ class ReportsFragment : Fragment() {
         )
 
         binding.dateRangeCard.setOnClickListener {
+            Log.d(TAG, "Date range card clicked")
             showDateRangePicker()
         }
 
         // Setup report types recycler view
         reportAdapter = ReportTypeAdapter { reportType ->
-            // Prevent multiple rapid clicks
+            Log.d(TAG, "Report type selected: ${reportType.id}")
             if (!isNavigating) {
                 navigateToReportDetail(reportType)
+            } else {
+                Log.d(TAG, "Navigation already in progress, ignoring click")
             }
         }
 
@@ -158,6 +177,7 @@ class ReportsFragment : Fragment() {
     }
 
     private fun setupObservers() {
+        Log.d(TAG, "setupObservers: Setting up LiveData observers")
         // Observe date range changes
         viewModel.startDate.observe(viewLifecycleOwner) { startDate ->
             viewModel.endDate.value?.let { endDate ->
@@ -173,12 +193,14 @@ class ReportsFragment : Fragment() {
 
         // Observe loading state
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            Log.d(TAG, "Loading state changed: $isLoading")
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
 
         // Observe error messages
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
             if (!message.isNullOrEmpty()) {
+                Log.e(TAG, "Error occurred: $message")
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 viewModel.clearErrorMessage()
             }
@@ -195,6 +217,7 @@ class ReportsFragment : Fragment() {
     }
 
     private fun showDateRangePicker() {
+        Log.d(TAG, "showDateRangePicker: Opening date picker")
         val dateRangePicker = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText("Select Date Range")
             .setSelection(
@@ -206,10 +229,10 @@ class ReportsFragment : Fragment() {
             .build()
 
         dateRangePicker.addOnPositiveButtonClickListener { selection ->
+            Log.d(TAG, "Date range selected: ${selection.first} to ${selection.second}")
             val startDate = Date(selection.first)
             val endDate = Date(selection.second)
 
-            // Add day end time to end date (23:59:59)
             val calendar = Calendar.getInstance()
             calendar.time = endDate
             calendar.set(Calendar.HOUR_OF_DAY, 23)
@@ -223,32 +246,43 @@ class ReportsFragment : Fragment() {
     }
 
     private fun navigateToReportDetail(reportType: ReportType) {
+        Log.d(TAG, "navigateToReportDetail: Starting navigation to ${reportType.id}")
         isNavigating = true
         
-        // Add a small delay to prevent rapid double-clicks
         val job = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val reportAction = {
-                    when (reportType.id) {
-                        "sales_report" -> navigateToSalesReport()
-                        "inventory_valuation" -> navigateToInventoryReport()
-                        "customer_statement" -> navigateToCustomerStatementReport()
-                        "gst_report" -> navigateToGstReport()
-                        "low_stock" -> navigateToLowStockReport()
-                    }
+                val startTime = System.currentTimeMillis()
+                Log.d(TAG, "navigateToReportDetail: Premium check starting")
+
+                when (reportType.id) {
+                    "sales_report" -> navigateToSalesReport()
+                    "inventory_valuation" -> navigateToInventoryReport()
+                    "customer_statement" -> navigateToCustomerStatementReport()
+                    "gst_report" -> navigateToGstReport()
+                    "low_stock" -> navigateToLowStockReport()
                 }
-                
-                // Use the helper to check premium status
+
                 PremiumFeatureHelper.checkPremiumAccess(
                     fragment = this@ReportsFragment,
                     featureName = "Business Reports",
-                    premiumAction = reportAction
+                    minimumPlan = SubscriptionPlan.STANDARD, // Specify minimum plan for Reports
+                    premiumAction = { binding.premiumBanner.visibility = View.GONE },
+                    nonPremiumAction = {
+                        binding.premiumBanner.visibility = View.VISIBLE
+                        // Show a non-blocking message that report generation requires Standard plan
+                        Toast.makeText(
+                            requireContext(),
+                            "Standard or Premium subscription required to generate reports",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 )
                 
-                // Allow new navigation after a short delay
-                delay(100)
+                val endTime = System.currentTimeMillis()
+                Log.d(TAG, "navigateToReportDetail: Navigation completed in ${endTime - startTime}ms")
+                
             } catch (e: Exception) {
-                Log.e("ReportsFragment", "Navigation error: ${e.message}")
+                Log.e(TAG, "Navigation error: ${e.message}", e)
             } finally {
                 isNavigating = false
             }
@@ -257,26 +291,32 @@ class ReportsFragment : Fragment() {
     }
 
     private fun navigateToSalesReport() {
+        Log.d(TAG, "navigateToSalesReport: Navigating to sales report")
         findNavController().navigate(R.id.action_reportsFragment_to_salesReportFragment)
     }
 
     private fun navigateToInventoryReport() {
+        Log.d(TAG, "navigateToInventoryReport: Navigating to inventory report")
         findNavController().navigate(R.id.action_reportsFragment_to_inventoryReportFragment)
     }
 
     private fun navigateToCustomerStatementReport() {
+        Log.d(TAG, "navigateToCustomerStatementReport: Navigating to customer statement report")
         findNavController().navigate(R.id.action_reportsFragment_to_customerStatementFragment)
     }
 
     private fun navigateToGstReport() {
+        Log.d(TAG, "navigateToGstReport: Navigating to GST report")
         findNavController().navigate(R.id.action_reportsFragment_to_gstReportFragment)
     }
 
     private fun navigateToLowStockReport() {
+        Log.d(TAG, "navigateToLowStockReport: Navigating to low stock report")
         findNavController().navigate(R.id.action_reportsFragment_to_lowStockReportFragment)
     }
 
     override fun onDestroyView() {
+        Log.d(TAG, "onDestroyView: Cleaning up resources")
         super.onDestroyView()
         // Cancel all running coroutines
         activeJobs.forEach { it.cancel() }

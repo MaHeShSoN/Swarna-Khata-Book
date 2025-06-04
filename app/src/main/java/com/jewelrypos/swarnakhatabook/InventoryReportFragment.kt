@@ -1,6 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +18,10 @@ import java.text.DecimalFormat
 
 class InventoryReportFragment : Fragment() {
 
+    companion object {
+        private const val TAG = "InventoryReportFragment"
+    }
+
     private var _binding: FragmentInventoryReportBinding? = null
     private val binding get() = _binding!!
 
@@ -28,27 +33,39 @@ class InventoryReportFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d(TAG, "onCreateView: Creating view")
         _binding = FragmentInventoryReportBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "onViewCreated: Starting setup")
+        val startTime = System.currentTimeMillis()
 
         setupViewModel()
+        Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupUI()
+        Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupObservers()
+        Log.d(TAG, "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms")
 
-        // Generate the report
+        Log.d(TAG, "Generating initial inventory report")
         viewModel.generateInventoryReport()
+        Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
     private fun setupViewModel() {
+        Log.d(TAG, "setupViewModel: Initializing ReportViewModel")
         val factory = ReportViewModelFactory(requireActivity().application)
         viewModel = ViewModelProvider(requireActivity(), factory)[ReportViewModel::class.java]
+        Log.d(TAG, "setupViewModel: ReportViewModel initialized successfully")
     }
 
     private fun setupUI() {
+        Log.d(TAG, "setupUI: Setting up UI components")
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
             requireActivity().onBackPressed()
@@ -85,37 +102,36 @@ class InventoryReportFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.contentLayout.visibility = if (isLoading) View.GONE else View.VISIBLE
-        }
-
-        viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
-            if (!message.isNullOrEmpty()) {
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                viewModel.clearErrorMessage()
-            }
-        }
-
+        Log.d(TAG, "setupObservers: Setting up LiveData observers")
+        
         viewModel.inventoryItems.observe(viewLifecycleOwner) { items ->
+            val startTime = System.currentTimeMillis()
             if (items != null) {
+                Log.d(TAG, "Received ${items.size} inventory items")
                 adapter.submitList(items)
                 updateTotalValue()
+                Log.d(TAG, "Inventory items processed in ${System.currentTimeMillis() - startTime}ms")
             }
         }
 
         viewModel.totalInventoryValue.observe(viewLifecycleOwner) { totalValue ->
+            val startTime = System.currentTimeMillis()
+            Log.d(TAG, "Total inventory value updated: $totalValue")
             binding.totalValueOriginal.text = "₹${currencyFormatter.format(totalValue)}"
+            Log.d(TAG, "Total value update processed in ${System.currentTimeMillis() - startTime}ms")
         }
     }
 
     private fun updateTotalValue() {
-        // Calculate filtered total
+        val startTime = System.currentTimeMillis()
         val filteredTotal = adapter.getFilteredItems().sumOf { it.totalStockValue }
+        Log.d(TAG, "Updating filtered total value: $filteredTotal")
         binding.totalValueFiltered.text = "₹${currencyFormatter.format(filteredTotal)}"
+        Log.d(TAG, "Total value update completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
     private fun exportReportToPdf() {
+        Log.d(TAG, "Starting PDF export")
         val items = adapter.getFilteredItems()
         val totalValue = items.sumOf { it.totalStockValue }
 
@@ -124,16 +140,20 @@ class InventoryReportFragment : Fragment() {
             val success = pdfExporter.exportInventoryReport(items, totalValue)
 
             if (success) {
+                Log.d(TAG, "PDF export completed successfully")
                 Toast.makeText(requireContext(), "Report exported successfully", Toast.LENGTH_SHORT).show()
             } else {
+                Log.e(TAG, "PDF export failed")
                 Toast.makeText(requireContext(), "Error exporting report", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Error during PDF export", e)
             Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onDestroyView() {
+        Log.d(TAG, "onDestroyView: Cleaning up resources")
         super.onDestroyView()
         _binding = null
     }

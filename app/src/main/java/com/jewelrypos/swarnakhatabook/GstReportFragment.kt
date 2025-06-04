@@ -48,15 +48,22 @@ class GstReportFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Log.d(TAG, "onViewCreated: Setting up fragment")
+        Log.d(TAG, "onViewCreated: Starting setup")
+        val startTime = System.currentTimeMillis()
 
         setupViewModel()
+        Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupUI()
+        Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
+        
         setupObservers()
+        Log.d(TAG, "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms")
 
         // Generate the report
-        Log.d(TAG, "onViewCreated: Generating initial GST report")
+        Log.d(TAG, "onViewCreated: Starting initial GST report generation")
         viewModel.generateGstReport()
+        Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
     private fun setupViewModel() {
@@ -115,8 +122,7 @@ class GstReportFragment : Fragment() {
         Log.d(TAG, "setupObservers: Setting up LiveData observers")
         
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            if (!isAdded) return@observe
-            Log.d(TAG, "setupObservers: Loading state changed: $isLoading")
+            Log.d(TAG, "Loading state changed: $isLoading")
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.contentLayout.visibility = if (isLoading) View.GONE else View.VISIBLE
         }
@@ -133,11 +139,12 @@ class GstReportFragment : Fragment() {
         }
 
         viewModel.gstReportItems.observe(viewLifecycleOwner) { items ->
-            if (!isAdded) return@observe
+            val startTime = System.currentTimeMillis()
             if (items != null) {
-                Log.d(TAG, "setupObservers: Received ${items.size} GST report items")
+                Log.d(TAG, "Received ${items.size} GST report items")
                 adapter.submitList(items)
                 updateSummary(items)
+                Log.d(TAG, "GST report items processed in ${System.currentTimeMillis() - startTime}ms")
             }
         }
 
@@ -170,8 +177,8 @@ class GstReportFragment : Fragment() {
     }
 
     private fun updateSummary(items: List<com.jewelrypos.swarnakhatabook.DataClasses.GstReportItem>) {
-        if (!isAdded) return
-        Log.d(TAG, "updateSummary: Updating summary for ${items.size} items")
+        val startTime = System.currentTimeMillis()
+        Log.d(TAG, "updateSummary: Starting summary update for ${items.size} items")
         
         val totalTaxableAmount = items.sumOf { it.taxableAmount }
         val totalCgst = items.sumOf { it.cgst }
@@ -191,7 +198,7 @@ class GstReportFragment : Fragment() {
         binding.sgstValue.text = "₹${currencyFormatter.format(totalSgst)}"
         binding.totalTaxValue.text = "₹${currencyFormatter.format(totalTax)}"
         
-        Log.d(TAG, "updateSummary: Summary updated successfully")
+        Log.d(TAG, "updateSummary: Completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
     private fun exportReportToPdf() {

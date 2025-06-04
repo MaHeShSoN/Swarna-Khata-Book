@@ -1,26 +1,43 @@
 package com.jewelrypos.swarnakhatabook.DataClasses
 
+import com.google.firebase.firestore.PropertyName
 import com.jewelrypos.swarnakhatabook.Enums.SubscriptionPlan
 
 /**
  * Defines the features and limits for each subscription plan
  */
 data class SubscriptionFeatures(
+    @PropertyName("maxShopProfiles")
     val maxShopProfiles: Int,
+    @PropertyName("maxCustomerEntries")
     val maxCustomerEntries: Int,
+    @PropertyName("maxInventoryItems")
     val maxInventoryItems: Int,
+    @PropertyName("maxMonthlyInvoices")
     val maxMonthlyInvoices: Int,
+    @PropertyName("hasAdvancedReports")
     val hasAdvancedReports: Boolean,
+    @PropertyName("hasMultipleInvoiceTemplates")
     val hasMultipleInvoiceTemplates: Boolean,
+    @PropertyName("hasInvoiceCustomization")
     val hasInvoiceCustomization: Boolean,
+    @PropertyName("hasFullInvoiceCustomization")
     val hasFullInvoiceCustomization: Boolean,
+    @PropertyName("hasPinSecurity")
     val hasPinSecurity: Boolean,
+    @PropertyName("hasLowStockNotifications")
     val hasLowStockNotifications: Boolean,
+    @PropertyName("hasDataExport")
     val hasDataExport: Boolean,
+    @PropertyName("hasRecyclingBin")
     val hasRecyclingBin: Boolean,
+    @PropertyName("hasMultiUserAccess")
     val hasMultiUserAccess: Boolean,
+    @PropertyName("hasAdvancedNotifications")
     val hasAdvancedNotifications: Boolean,
+    @PropertyName("hasDataBackupRestore")
     val hasDataBackupRestore: Boolean,
+    @PropertyName("hasPrioritySupport")
     val hasPrioritySupport: Boolean
 ) {
     companion object {

@@ -22,7 +22,7 @@ class InvoicePagingSource(
     override suspend fun load(params: LoadParams<QuerySnapshot>): LoadResult<QuerySnapshot, Invoice> {
         return try {
             val currentPage = params.key ?: query.limit(params.loadSize.toLong()).get().await()
-            
+
             val lastDocumentSnapshot = currentPage.documents.lastOrNull()
             val nextPage = if (lastDocumentSnapshot == null) {
                 null
@@ -52,4 +52,4 @@ class InvoicePagingSource(
             LoadResult.Error(e)
         }
     }
-} 
+}

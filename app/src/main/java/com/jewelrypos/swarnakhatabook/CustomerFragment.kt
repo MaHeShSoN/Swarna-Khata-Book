@@ -55,6 +55,7 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
 
     private var scrollToTopAfterAdd = false
     private var isLayoutStateRestored = false
+    private var isSearchActive = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -70,6 +71,18 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         isLayoutStateRestored = false
         scrollToTopAfterAdd = false
         Log.d("CustomerFragment", "onViewCreated: Resetting flags.")
+
+//        setupToolbar()
+        
+        // Restore search view state if there's an active search
+        val currentSearchQuery = customerViewModel.searchQuery.value
+        if (currentSearchQuery.isNotEmpty()) {
+            val searchItem = binding.topAppBar.menu.findItem(R.id.action_search)
+            searchItem.expandActionView()
+            val searchView = searchItem.actionView as androidx.appcompat.widget.SearchView
+            searchView.setQuery(currentSearchQuery, false)
+            isSearchActive = true
+        }
 
         binding.addCustomerFab.setOnClickListener {
             AnimationUtils.pulse(it)

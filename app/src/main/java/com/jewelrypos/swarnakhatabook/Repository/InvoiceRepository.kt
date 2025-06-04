@@ -24,6 +24,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import java.util.Locale
 
 // Define custom exceptions if not already defined elsewhere
 class UserNotAuthenticatedException(message: String) : Exception(message)
@@ -66,10 +67,102 @@ class InvoiceRepository(
 
 
     /**
+     * Generates searchable keywords from an invoice's data.
+     * These keywords are used for efficient searching in Firestore.
+     */
+    private fun generateKeywordsForInvoice(invoice: Invoice): List<String> {
+        Log.d(TAG, "Generating keywords for invoice: ${invoice.invoiceNumber}")
+        val keywords = mutableSetOf<String>()
+
+        // Helper function to generate prefixes for a given word
+        fun addPrefixes(word: String) {
+            val lowerWord = word.lowercase(Locale.ROOT)
+            if (lowerWord.length > 1) {
+                for (i in 1..lowerWord.length) {
+                    keywords.add(lowerWord.substring(0, i))
+                }
+            } else if (lowerWord.isNotEmpty()) {
+                keywords.add(lowerWord)
+            }
+        }
+
+        // 1. Invoice Number
+        invoice.invoiceNumber.trim().takeIf { it.isNotEmpty() }?.let { invNum ->
+            Log.d(TAG, "Adding keywords for invoice number: $invNum")
+            addPrefixes(invNum)
+        }
+
+        // 2. Customer Name
+        invoice.customerName.trim().takeIf { it.isNotEmpty() }?.let { name ->
+            Log.d(TAG, "Adding keywords for customer name: $name")
+            keywords.add(name.lowercase(Locale.ROOT))
+            name.split(" ").forEach { part ->
+                if (part.trim().isNotEmpty()) {
+                    addPrefixes(part.trim())
+                }
+            }
+        }
+
+        // 3. Customer Phone
+        invoice.customerPhone.trim().takeIf { it.isNotEmpty() }?.let { phone ->
+            Log.d(TAG, "Adding keywords for customer phone: $phone")
+            val numbersOnly = phone.replace(Regex("\\s+|-"), "")
+            addPrefixes(phone)
+            if (phone != numbersOnly) {
+                addPrefixes(numbersOnly)
+            }
+        }
+
+        // 4. Customer Address
+        invoice.customerAddress.trim().takeIf { it.isNotEmpty() }?.let { address ->
+            Log.d(TAG, "Adding keywords for customer address: $address")
+            keywords.add(address.lowercase(Locale.ROOT))
+            address.split(" ", ",").forEach { part ->
+                val trimmedPart = part.trim()
+                if (trimmedPart.length > 2) {
+                    addPrefixes(trimmedPart)
+                } else if (trimmedPart.isNotEmpty()) {
+                    keywords.add(trimmedPart.lowercase(Locale.ROOT))
+                }
+            }
+        }
+
+        // 5. Notes
+        invoice.notes.trim().takeIf { it.isNotEmpty() }?.let { notes ->
+            Log.d(TAG, "Adding keywords for notes: $notes")
+            keywords.add(notes.lowercase(Locale.ROOT))
+            notes.split(" ").forEach { word ->
+                val trimmedWord = word.trim()
+                if (trimmedWord.length > 2) {
+                    addPrefixes(trimmedWord)
+                } else if (trimmedWord.isNotEmpty()) {
+                    keywords.add(trimmedWord.lowercase(Locale.ROOT))
+                }
+            }
+        }
+
+        // 6. Item names and details
+        invoice.items.forEach { item ->
+            item.itemDetails.displayName.trim().takeIf { it.isNotEmpty() }?.let { itemName ->
+                Log.d(TAG, "Adding keywords for item: $itemName")
+                keywords.add(itemName.lowercase(Locale.ROOT))
+                itemName.split(" ").forEach { part ->
+                    if (part.trim().isNotEmpty()) {
+                        addPrefixes(part.trim())
+                    }
+                }
+            }
+        }
+
+        Log.d(TAG, "Generated ${keywords.size} keywords for invoice ${invoice.invoiceNumber}")
+        return keywords.toList()
+    }
+    /**
      * Saves or updates an invoice, ensuring Firestore operations run on the IO dispatcher.
      * Also updates customer balance and inventory stock accordingly.
      */
     suspend fun saveInvoice(invoice: Invoice): Result<Unit> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Starting to save invoice: ${invoice.invoiceNumber}")
         try {
             // Calculate payment status based on amounts
             val paymentStatus = when {
@@ -77,20 +170,30 @@ class InvoiceRepository(
                 invoice.paidAmount > 0 -> "PARTIAL"
                 else -> "UNPAID"
             }
+            Log.d(TAG, "Calculated payment status: $paymentStatus (Paid: ${invoice.paidAmount}, Total: ${invoice.totalAmount})")
 
-            // Prepare invoice with ID and payment status
+            // Generate keywords for search
+            val keywords = generateKeywordsForInvoice(invoice)
+
+            // Prepare invoice with ID, payment status, and keywords
             val invoiceWithId = if (invoice.id.isEmpty()) {
                 invoice.copy(
                     id = invoice.invoiceNumber,
-                    paymentStatus = paymentStatus
+                    paymentStatus = paymentStatus,
+                    keywords = keywords
                 )
             } else {
-                invoice.copy(paymentStatus = paymentStatus)
+                invoice.copy(
+                    paymentStatus = paymentStatus,
+                    keywords = keywords
+                )
             }
+            Log.d(TAG, "Prepared invoice with ID: ${invoiceWithId.id}")
 
             // Get existing invoice (if any) for comparison
             val existingInvoice = if (invoiceWithId.id.isNotEmpty()) {
                 try {
+                    Log.d(TAG, "Checking for existing invoice: ${invoiceWithId.id}")
                     getShopCollection("invoices")
                         .document(invoiceWithId.id)
                         .get()
@@ -108,29 +211,32 @@ class InvoiceRepository(
             val unpaidAmountBefore = existingInvoice?.let { it.totalAmount - it.paidAmount } ?: 0.0
             val unpaidAmountAfter = invoiceWithId.totalAmount - invoiceWithId.paidAmount
             val balanceChange = unpaidAmountAfter - unpaidAmountBefore
+            Log.d(TAG, "Balance change calculation: Before=$unpaidAmountBefore, After=$unpaidAmountAfter, Change=$balanceChange")
 
             // Save/Update the invoice document
+            Log.d(TAG, "Saving invoice document to Firestore")
             getShopCollection("invoices")
                 .document(invoiceWithId.id)
                 .set(invoiceWithId)
                 .await()
-            Log.d(
-                TAG,
-                "Invoice document saved/updated: ${invoiceWithId.id} with status: $paymentStatus"
-            )
+            Log.d(TAG, "Invoice document saved successfully")
 
             // Update customer balance if needed
             if (balanceChange != 0.0 && invoiceWithId.customerId.isNotEmpty()) {
+                Log.d(TAG, "Updating customer balance for customer: ${invoiceWithId.customerId}")
                 updateCustomerBalanceForSave(invoiceWithId.customerId, balanceChange)
             }
 
             // Update inventory stock
             if (existingInvoice == null) {
+                Log.d(TAG, "Processing inventory for new invoice")
                 updateInventoryStockForNewInvoice(invoiceWithId)
             } else {
+                Log.d(TAG, "Processing inventory changes for updated invoice")
                 handleInventoryStockChanges(existingInvoice, invoiceWithId)
             }
 
+            Log.d(TAG, "Invoice save completed successfully")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error saving invoice ${invoice.invoiceNumber}", e)
@@ -575,45 +681,39 @@ class InvoiceRepository(
      * Also reverts customer balance and inventory stock changes.
      */
     suspend fun deleteInvoice(invoiceNumber: String): Result<Unit> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Starting to delete invoice: $invoiceNumber")
         try {
-            Log.d(TAG, "Attempting to delete invoice: $invoiceNumber")
-
             // 1. Get the invoice to be deleted
             val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
             val invoiceDoc = invoiceRef.get().await()
             val invoice = invoiceDoc.toObject<Invoice>()
-                ?: return@withContext Result.failure(Exception("Invoice $invoiceNumber not found")) // Exit early if not found
+                ?: return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
+
+            Log.d(TAG, "Found invoice to delete: ${invoice.invoiceNumber}")
 
             // 2. Get customer details for type checking
-            val customerDoc =
-                getShopCollection("customers").document(invoice.customerId).get().await()
+            val customerDoc = getShopCollection("customers").document(invoice.customerId).get().await()
             val customer = customerDoc.toObject<Customer>()
             val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
-            Log.d(
-                TAG,
-                "Deleting invoice $invoiceNumber, Customer Type: ${customer?.customerType ?: "Unknown"}"
-            )
+            Log.d(TAG, "Customer type for deletion: ${customer?.customerType ?: "Unknown"} (Wholesaler: $isWholesaler)")
 
-
-            // 3. Revert inventory changes based on the deleted invoice items
-            // This call is already within withContext(Dispatchers.IO)
+            // 3. Revert inventory changes
+            Log.d(TAG, "Reverting inventory changes")
             updateInventoryOnDeletion(invoice, isWholesaler)
 
-            // 4. Revert customer balance change (if customer exists)
+            // 4. Revert customer balance change
             if (invoice.customerId.isNotEmpty() && customer != null) {
-                // This call is already within withContext(Dispatchers.IO)
+                Log.d(TAG, "Reverting customer balance changes")
                 updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
             } else {
-                Log.w(
-                    TAG,
-                    "Customer not found or ID missing for balance reversion on delete: ${invoice.customerId}"
-                )
+                Log.w(TAG, "Customer not found or ID missing for balance reversion: ${invoice.customerId}")
             }
 
             // 5. Delete the actual invoice document
+            Log.d(TAG, "Deleting invoice document from Firestore")
             invoiceRef.delete().await()
 
-            Log.d(TAG, "Successfully deleted invoice: $invoiceNumber")
+            Log.d(TAG, "Invoice deletion completed successfully")
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "Error deleting invoice $invoiceNumber", e)
@@ -824,7 +924,7 @@ class InvoiceRepository(
                     finalRevertedBalanceType = "Baki"
                 }
             }
-            
+
             if (abs(finalRevertedBalanceValue) < 0.001) {
                 finalRevertedBalanceValue = 0.0
                 // Consistent settled type handling as in save
@@ -855,62 +955,63 @@ class InvoiceRepository(
      * Moves an invoice to the recycling bin instead of permanently deleting it.
      * This replaces the original deleteInvoice method.
      */
-    suspend fun moveInvoiceToRecycleBin(invoiceNumber: String): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            try {
-                Log.d(TAG, "Moving invoice to recycling bin: $invoiceNumber")
+    suspend fun moveInvoiceToRecycleBin(invoiceNumber: String): Result<Unit> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Starting to move invoice to recycling bin: $invoiceNumber")
+        try {
+            // First, get the invoice to be "deleted"
+            val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
+            val invoiceDoc = invoiceRef.get().await()
 
-                // First, get the invoice to be "deleted"
-                val invoiceRef = getShopCollection("invoices").document(invoiceNumber)
-                val invoiceDoc = invoiceRef.get().await()
-
-                if (!invoiceDoc.exists()) {
-                    return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
-                }
-
-                val invoice = invoiceDoc.toObject<Invoice>()
-                    ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
-
-                // Create a RecycledItemsRepository to handle the recycling bin operation
-                val recycledItemsRepository = RecycledItemsRepository(firestore, auth, context)
-
-                // Move to recycling bin
-                val recycleResult = recycledItemsRepository.moveInvoiceToRecycleBin(invoice)
-
-                // If successful, proceed with all the usual reversion of inventory and customer balance changes
-                if (recycleResult.isSuccess) {
-                    // Get customer details for type checking
-                    val customerDoc =
-                        getShopCollection("customers").document(invoice.customerId).get().await()
-                    val customer = customerDoc.toObject<Customer>()
-                    val isWholesaler =
-                        customer?.customerType.equals("Wholesaler", ignoreCase = true)
-
-                    // Revert inventory changes
-                    updateInventoryOnDeletion(invoice, isWholesaler)
-
-                    // Revert customer balance change
-                    if (invoice.customerId.isNotEmpty() && customer != null) {
-                        updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
-                    }
-
-                    // Delete the invoice from active invoices
-                    invoiceRef.delete().await()
-
-                    Log.d(TAG, "Successfully moved invoice to recycling bin: $invoiceNumber")
-                    Result.success(Unit)
-                } else {
-                    // If recycling failed, propagate the error
-                    Result.failure(
-                        recycleResult.exceptionOrNull()
-                            ?: Exception("Unknown error recycling invoice")
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error moving invoice to recycling bin: ${e.message}", e)
-                Result.failure(e)
+            if (!invoiceDoc.exists()) {
+                Log.e(TAG, "Invoice $invoiceNumber not found for recycling")
+                return@withContext Result.failure(Exception("Invoice $invoiceNumber not found"))
             }
+
+            val invoice = invoiceDoc.toObject<Invoice>()
+                ?: return@withContext Result.failure(Exception("Failed to convert document to Invoice"))
+
+            Log.d(TAG, "Found invoice to recycle: ${invoice.invoiceNumber}")
+
+            // Create a RecycledItemsRepository to handle the recycling bin operation
+            val recycledItemsRepository = RecycledItemsRepository(firestore, auth, context)
+
+            // Move to recycling bin
+            Log.d(TAG, "Moving invoice to recycling bin")
+            val recycleResult = recycledItemsRepository.moveInvoiceToRecycleBin(invoice)
+
+            // If successful, proceed with all the usual reversion of inventory and customer balance changes
+            if (recycleResult.isSuccess) {
+                // Get customer details for type checking
+                val customerDoc = getShopCollection("customers").document(invoice.customerId).get().await()
+                val customer = customerDoc.toObject<Customer>()
+                val isWholesaler = customer?.customerType.equals("Wholesaler", ignoreCase = true)
+                Log.d(TAG, "Customer type for recycling: ${customer?.customerType ?: "Unknown"} (Wholesaler: $isWholesaler)")
+
+                // Revert inventory changes
+                Log.d(TAG, "Reverting inventory changes")
+                updateInventoryOnDeletion(invoice, isWholesaler)
+
+                // Revert customer balance change
+                if (invoice.customerId.isNotEmpty() && customer != null) {
+                    Log.d(TAG, "Reverting customer balance changes")
+                    updateCustomerBalanceOnDeletion(invoice, customer, isWholesaler)
+                }
+
+                // Delete the invoice from active invoices
+                Log.d(TAG, "Deleting invoice from active invoices")
+                invoiceRef.delete().await()
+
+                Log.d(TAG, "Invoice recycling completed successfully")
+                Result.success(Unit)
+            } else {
+                Log.e(TAG, "Failed to recycle invoice: ${recycleResult.exceptionOrNull()?.message}")
+                Result.failure(recycleResult.exceptionOrNull() ?: Exception("Unknown error recycling invoice"))
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error moving invoice to recycling bin: ${e.message}", e)
+            Result.failure(e)
         }
+    }
 
 
     /**
@@ -920,14 +1021,16 @@ class InvoiceRepository(
         loadNextPage: Boolean = false,
         source: Source = Source.DEFAULT
     ): Result<List<Invoice>> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching invoices paginated (loadNextPage: $loadNextPage, source: $source)")
+        
         // Reset pagination state if needed
         if (!loadNextPage) {
             lastDocumentSnapshot = null
             isLastPage = false
-            Log.d(TAG, "Pagination reset for fetching first page.")
+            Log.d(TAG, "Pagination reset for fetching first page")
         }
         if (isLastPage) {
-            Log.d(TAG, "Already on the last page, returning empty list.")
+            Log.d(TAG, "Already on the last page, returning empty list")
             return@withContext Result.success(emptyList())
         }
 
@@ -939,16 +1042,21 @@ class InvoiceRepository(
 
             // Add startAfter for pagination if needed
             if (loadNextPage && lastDocumentSnapshot != null) {
+                Log.d(TAG, "Starting after document: ${lastDocumentSnapshot?.id}")
                 query = query.startAfter(lastDocumentSnapshot)
             }
 
             // Get data with specified source
+            Log.d(TAG, "Executing Firestore query")
+            val queryStartTime = System.currentTimeMillis()
             val snapshot = query.get(source).await()
+            val queryEndTime = System.currentTimeMillis()
+            Log.d(TAG, "Firestore query executed in ${queryEndTime - queryStartTime}ms. Documents fetched: ${snapshot.documents.size}")
 
             // Update pagination state
             if (snapshot.documents.size < PAGE_SIZE) {
                 isLastPage = true
-                Log.d(TAG, "Reached last page with ${snapshot.documents.size} documents.")
+                Log.d(TAG, "Reached last page with ${snapshot.documents.size} documents")
             }
 
             // Save last document for next page query
@@ -958,6 +1066,7 @@ class InvoiceRepository(
             }
 
             // Convert to invoice objects
+            val conversionStartTime = System.currentTimeMillis()
             val invoices = snapshot.documents.mapNotNull { doc ->
                 try {
                     doc.toObject(Invoice::class.java)
@@ -966,8 +1075,10 @@ class InvoiceRepository(
                     null
                 }
             }
+            val conversionEndTime = System.currentTimeMillis()
+            Log.d(TAG, "Document conversion completed in ${conversionEndTime - conversionStartTime}ms")
 
-            Log.d(TAG, "Fetched ${invoices.size} invoices.")
+            Log.d(TAG, "Successfully fetched ${invoices.size} invoices")
             Result.success(invoices)
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching invoices: ${e.message}")
@@ -985,70 +1096,88 @@ class InvoiceRepository(
     /**
      * Gets a single invoice by its number (ID), running on the IO dispatcher.
      */
-    suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> =
-        withContext(Dispatchers.IO) {
-            if (invoiceNumber.isBlank()) {
-                return@withContext Result.failure(IllegalArgumentException("Invoice number cannot be blank"))
-            }
-            try {
-                val document = getShopCollection("invoices")
-                    .document(invoiceNumber)
-                    .get()
-                    .await()
-
-                if (document.exists()) {
-                    document.toObject<Invoice>()
-                        ?.let { Result.success(it) } // Successfully converted
-                        ?: Result.failure(Exception("Failed to convert document to Invoice object for $invoiceNumber"))
-                } else {
-                    Result.failure(Exception("Invoice $invoiceNumber not found"))
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error getting invoice by number $invoiceNumber", e)
-                Result.failure(e)
-            }
+    suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Getting invoice by number: $invoiceNumber")
+        if (invoiceNumber.isBlank()) {
+            Log.e(TAG, "Invoice number cannot be blank")
+            return@withContext Result.failure(IllegalArgumentException("Invoice number cannot be blank"))
         }
+        try {
+            Log.d(TAG, "Fetching invoice document from Firestore")
+            val document = getShopCollection("invoices")
+                .document(invoiceNumber)
+                .get()
+                .await()
 
-    suspend fun getInvoicesBetweenDates(startDate: Date, endDate: Date): List<Invoice> =
-        withContext(Dispatchers.IO) {
-            try {
-                // Get the time in milliseconds for comparison
-                val startTime = startDate.time
-                // Adjust end time to include the whole day if necessary (often needed for 'less than or equal to' logic)
-                // Example: Set end date to the very end of the selected day
-                val calendar = Calendar.getInstance()
-                calendar.time = endDate
-                calendar.set(Calendar.HOUR_OF_DAY, 23)
-                calendar.set(Calendar.MINUTE, 59)
-                calendar.set(Calendar.SECOND, 59)
-                calendar.set(Calendar.MILLISECOND, 999)
-                val endTime = calendar.timeInMillis
-
-                Log.d(
-                    TAG,
-                    "Fetching invoices between ${Date(startTime)} and ${Date(endTime)} (Long: $startTime to $endTime)"
-                )
-
-                // Updated to use shop collection
-                val snapshot = getShopCollection("invoices")
-                    .whereGreaterThanOrEqualTo("invoiceDate", startTime)
-                    .whereLessThanOrEqualTo("invoiceDate", endTime)
-                    .get()
-                    .await()
-
-                return@withContext snapshot.toObjects(Invoice::class.java)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error getting invoices between dates", e)
-                return@withContext emptyList<Invoice>()
+            if (document.exists()) {
+                Log.d(TAG, "Invoice found, converting to object")
+                document.toObject<Invoice>()
+                    ?.let { 
+                        Log.d(TAG, "Successfully retrieved invoice: $invoiceNumber")
+                        Result.success(it) 
+                    }
+                    ?: Result.failure(Exception("Failed to convert document to Invoice object for $invoiceNumber"))
+            } else {
+                Log.e(TAG, "Invoice not found: $invoiceNumber")
+                Result.failure(Exception("Invoice $invoiceNumber not found"))
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting invoice by number $invoiceNumber", e)
+            Result.failure(e)
         }
+    }
+
+    suspend fun getInvoicesBetweenDates(
+        startDate: Date,
+        endDate: Date,
+        customerId: String? = null
+    ): List<Invoice> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Getting invoices between dates: $startDate to $endDate" +
+                (if (customerId != null) " for customer ID: $customerId" else ""))
+        try {
+            // Get the time in milliseconds for comparison
+            val startTime = startDate.time
+            // Adjust end time to include the whole day
+            val calendar = Calendar.getInstance()
+            calendar.time = endDate
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endTime = calendar.timeInMillis
+
+            Log.d(TAG, "Adjusted time range: ${Date(startTime)} to ${Date(endTime)}")
+
+            // Updated to use shop collection
+            Log.d(TAG, "Executing Firestore query for date range")
+            var query = getShopCollection("invoices")
+                .whereGreaterThanOrEqualTo("invoiceDate", startTime)
+                .whereLessThanOrEqualTo("invoiceDate", endTime)
+
+            if (customerId != null) {
+                Log.d(TAG, "Adding customer ID filter to query: $customerId")
+                query = query.whereEqualTo("customerId", customerId)
+            }
+
+            val snapshot = query.get()
+                .await()
+
+            val invoices = snapshot.toObjects(Invoice::class.java)
+            Log.d(TAG, "Found ${invoices.size} invoices in date range" +
+                    (if (customerId != null) " for customer ID: $customerId" else ""))
+            return@withContext invoices
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting invoices between dates", e)
+            return@withContext emptyList<Invoice>()
+        }
+    }
 
 
-    // --- Helper Methods ---
 
     /**
      * Fetches invoices with pagination, ensuring Firestore operations run on the IO dispatcher.
      */
+
     suspend fun getInvoices(
         page: Int,
         pageSize: Int,
@@ -1060,43 +1189,46 @@ class InvoiceRepository(
             val userId = auth.currentUser?.uid ?: throw Exception("User not authenticated")
             val shopId = getCurrentShopId()
 
-            Log.d(TAG, "Fetching invoices - Page: $page, Size: $pageSize, ShopId: $shopId")
+            Log.d(TAG, "Fetching invoices - Page: $page, Size: $pageSize, ShopId: $shopId, Query: '$searchQuery'")
 
             // Start with base query
-            var query = getShopCollection("invoices")
+            var queryBuilder = getShopCollection("invoices")
                 .orderBy("invoiceDate", Query.Direction.DESCENDING)
 
             // Apply date filter
-            query = applyDateFilter(query, dateFilter)
+            queryBuilder = applyDateFilter(queryBuilder, dateFilter)
             Log.d(TAG, "Applied date filter: $dateFilter")
 
             // Apply status filter
-            query = applyStatusFilter(query, statusFilter)
+            queryBuilder = applyStatusFilter(queryBuilder, statusFilter)
             Log.d(TAG, "Applied status filter: $statusFilter")
 
+            val normalizedSearchQuery = searchQuery.trim().lowercase(Locale.ROOT)
+
             // Apply search query if present
-            if (searchQuery.isNotEmpty()) {
-                query = query.whereGreaterThanOrEqualTo("invoiceNumber", searchQuery)
-                    .whereLessThanOrEqualTo("invoiceNumber", searchQuery + '\uf8ff')
-                Log.d(TAG, "Applied search query: $searchQuery")
+            if (normalizedSearchQuery.isNotEmpty()) {
+                // Use the first word for Firestore query
+                val firstWord = normalizedSearchQuery.split(" ").first()
+                queryBuilder = queryBuilder.whereArrayContains("keywords", firstWord)
+                Log.d(TAG, "Applied Firestore search using first word: $firstWord")
             }
 
             // Apply pagination
-            query = query.limit(pageSize.toLong())
+            queryBuilder = queryBuilder.limit(pageSize.toLong())
 
             // If not first page, get the last document from previous page
             if (page > 0) {
                 // Get the last document from the previous page
-                val lastDocSnapshot = query.get().await().documents.lastOrNull()
+                val lastDocSnapshot = queryBuilder.get().await().documents.lastOrNull()
                 if (lastDocSnapshot != null) {
-                    query = query.startAfter(lastDocSnapshot)
+                    queryBuilder = queryBuilder.startAfter(lastDocSnapshot)
                     Log.d(TAG, "Starting after document: ${lastDocSnapshot.id}")
                 }
             }
 
             // Execute query
-            val snapshot = query.get().await()
-            val invoices = snapshot.documents.mapNotNull { doc ->
+            val snapshot = queryBuilder.get().await()
+            var invoices = snapshot.documents.mapNotNull { doc ->
                 try {
                     doc.toObject(Invoice::class.java)
                 } catch (e: Exception) {
@@ -1105,7 +1237,25 @@ class InvoiceRepository(
                 }
             }
 
-            Log.d(TAG, "Fetched ${invoices.size} invoices for page $page")
+            Log.d(TAG, "Fetched ${invoices.size} invoices from Firestore before client-side filtering")
+
+            // Apply additional client-side filtering for multi-word searches
+            if (normalizedSearchQuery.isNotEmpty() && invoices.isNotEmpty()) {
+                val searchWords = normalizedSearchQuery.split(" ").filter { it.isNotEmpty() }
+                if (searchWords.size > 1) {
+                    invoices = invoices.filter { invoice ->
+                        // Check if all search words are present in any of the invoice's keywords
+                        searchWords.all { word ->
+                            invoice.keywords.any { keyword ->
+                                keyword.contains(word)
+                            }
+                        }
+                    }
+                    Log.d(TAG, "Applied client-side filtering for multi-word search. Result count: ${invoices.size}")
+                }
+            }
+
+            Log.d(TAG, "Returning ${invoices.size} invoices for page $page after all filtering")
             return invoices
 
         } catch (e: Exception) {
@@ -1113,7 +1263,6 @@ class InvoiceRepository(
             throw Exception("Failed to fetch invoices: ${e.message}")
         }
     }
-
     private fun applyDateFilter(
         query: Query,
         dateFilter: com.jewelrypos.swarnakhatabook.Enums.DateFilterType

@@ -786,6 +786,7 @@ class ItemDetailFragment : Fragment() {
                             getString(R.string.image_upload_success),
                             Toast.LENGTH_SHORT
                         ).show()
+                        EventBus.postInvoiceUpdated()
                     } else {
                         Toast.makeText(
                             context,

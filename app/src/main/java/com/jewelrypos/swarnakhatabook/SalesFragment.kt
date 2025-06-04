@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Parcelable
 import android.text.InputType
 import android.util.Log
 import android.view.LayoutInflater
@@ -19,6 +20,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -47,7 +49,7 @@ class SalesFragment : Fragment() {
     private var _binding: FragmentSalesBinding? = null
     private val binding get() = _binding!!
 
-    private val salesViewModel: SalesViewModel by viewModels {
+    private val salesViewModel: SalesViewModel by navGraphViewModels(R.id.inner_nav_graph) {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         val repository = InvoiceRepository(firestore, auth, requireContext())
@@ -58,6 +60,9 @@ class SalesFragment : Fragment() {
 
     private lateinit var adapter: InvoiceAdapter
     private var isSearchActive = false
+    private var scrollToTopAfterAdd = false
+    private var isLayoutStateRestored = false
+    // Assume salesViewModel has: var layoutManagerState: Parcelable? = null
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -70,143 +75,156 @@ class SalesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        isLayoutStateRestored = false
+        scrollToTopAfterAdd = false
+        Log.d("SalesFragment", "onViewCreated: Resetting flags.")
+
         setupToolbar()
+        
+        // Restore search view state if there's an active search
+        val currentSearchQuery = salesViewModel.getCurrentSearchQuery()
+        if (currentSearchQuery.isNotEmpty()) {
+            val searchItem = binding.topAppBar.menu.findItem(R.id.action_search)
+            searchItem.expandActionView()
+            val searchView = searchItem.actionView as androidx.appcompat.widget.SearchView
+            searchView.setQuery(currentSearchQuery, false)
+            isSearchActive = true
+        }
+
         setupRecyclerView()
         setupObservers()
-        setUpClickListner()
+        setUpClickListner() // Original spelling
         setupDateFilterChips()
         setupStatusFilterChip()
-        setupEmptyStateButtons()
 
+        // Call this method to ensure chips reflect current filters when view is (re)created
+        syncFiltersWithViewModel()
+
+        setupEmptyStateButtons()
 
         binding.topAppBar.overflowIcon =
             ResourcesCompat.getDrawable(resources, R.drawable.entypo__dots_three_vertical, null)
 
         EventBus.invoiceAddedEvent.observe(viewLifecycleOwner) { added ->
             if (added) {
-                // Refresh the invoices list
                 salesViewModel.refreshInvoices()
+                scrollToTopAfterAdd = true
+                Log.d("SalesFragment", "Invoice added event received, set scrollToTopAfterAdd to true.")
+                // EventBus.resetInvoiceAddedEvent() // If applicable
             }
         }
 
         EventBus.invoiceDeletedEvent.observe(viewLifecycleOwner) { deleted ->
             if (deleted) {
-                // Refresh the invoices list
                 salesViewModel.refreshInvoices()
+                // EventBus.resetInvoiceDeletedEvent() // If applicable
             }
         }
 
         EventBus.invoiceUpdatedEvent.observe(viewLifecycleOwner) { updated ->
             if (updated) {
-                // Refresh the invoices list
                 salesViewModel.refreshInvoices()
+                // EventBus.resetInvoiceUpdatedEvent() // If applicable
             }
         }
-
-
     }
 
     private fun syncFiltersWithViewModel() {
-        // Update date filter chips
-        val chip = when (salesViewModel.getCurrentDateFilter()) {
-            DateFilterType.TODAY -> binding.chipToday
-            DateFilterType.YESTERDAY -> binding.chipYesterday
-            DateFilterType.THIS_WEEK -> binding.chipThisWeek
-            DateFilterType.THIS_MONTH -> binding.chipThisMonth
-            DateFilterType.ALL_TIME -> binding.chipAllTime
-            else -> binding.chipAllTime
-        }
-        chip.isChecked = true
+        _binding?.let { currentBinding ->
+            Log.d("SalesFragment", "Syncing filter chips with ViewModel state.")
+            val currentDateFilter = salesViewModel.getCurrentDateFilter()
+            currentBinding.chipToday.isChecked = currentDateFilter == DateFilterType.TODAY
+            currentBinding.chipYesterday.isChecked = currentDateFilter == DateFilterType.YESTERDAY
+            currentBinding.chipThisWeek.isChecked = currentDateFilter == DateFilterType.THIS_WEEK
+            currentBinding.chipThisMonth.isChecked = currentDateFilter == DateFilterType.THIS_MONTH
+            currentBinding.chipLastMonth.isChecked = currentDateFilter == DateFilterType.LAST_MONTH
+            currentBinding.chipThisQuarter.isChecked = currentDateFilter == DateFilterType.THIS_QUARTER
+            currentBinding.chipThisYear.isChecked = currentDateFilter == DateFilterType.THIS_YEAR
+            // Default to All Time if no specific filter or if it's explicitly ALL_TIME
+            currentBinding.chipAllTime.isChecked = currentDateFilter == DateFilterType.ALL_TIME || currentDateFilter == null
 
-        // Update status filter chip text
-        binding.chipStatus.text = when (salesViewModel.getCurrentStatusFilter()) {
-            PaymentStatusFilter.ALL -> "All Status"
-            PaymentStatusFilter.PAID -> "Paid"
-            PaymentStatusFilter.PARTIAL -> "Partial"
-            PaymentStatusFilter.UNPAID -> "Unpaid"
-            else -> "All Status"
+
+            val currentStatusFilter = salesViewModel.getCurrentStatusFilter()
+            currentBinding.chipStatus.text = when (currentStatusFilter) {
+                PaymentStatusFilter.ALL -> "All Status"
+                PaymentStatusFilter.PAID -> "Paid"
+                PaymentStatusFilter.PARTIAL -> "Partial"
+                PaymentStatusFilter.UNPAID -> "Unpaid"
+                else -> "All Status" // Default text
+            }
+            // If chipStatus is also checkable and should reflect a selected state visually,
+            // you might need to manage its isChecked property here too.
+            // For example:
+            // currentBinding.chipStatus.isChecked = currentStatusFilter != PaymentStatusFilter.ALL && currentStatusFilter != null
+            // However, its current behavior is to uncheck when clicked to show a popup.
         }
     }
 
     private fun setupStatusFilterChip() {
-        // When the status chip is clicked, show a popup menu
-
         binding.chipStatus.setOnClickListener {
+            // When the status chip is clicked, it visually unchecks itself to show the popup.
+            // This behavior might be intentional for this specific chip.
             binding.chipStatus.isChecked = false
             val popup = PopupMenu(requireContext(), binding.chipStatus)
             popup.menuInflater.inflate(R.menu.status_filter_menu, popup.menu)
 
             popup.setOnMenuItemClickListener { menuItem ->
-                when (menuItem.itemId) {
-                    R.id.status_all -> {
-                        binding.chipStatus.text = "All Status"
-                        salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.ALL)
-                        true
-                    }
-
-                    R.id.status_paid -> {
-                        binding.chipStatus.text = "Paid"
-                        salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.PAID)
-                        true
-                    }
-
-                    R.id.status_partial -> {
-                        binding.chipStatus.text = "Partial"
-                        salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.PARTIAL)
-                        true
-                    }
-
-                    R.id.status_unpaid -> {
-                        binding.chipStatus.text = "Unpaid"
-                        salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.UNPAID)
-                        true
-                    }
-
-                    else -> false
+                val newFilter = when (menuItem.itemId) {
+                    R.id.status_all -> PaymentStatusFilter.ALL
+                    R.id.status_paid -> PaymentStatusFilter.PAID
+                    R.id.status_partial -> PaymentStatusFilter.PARTIAL
+                    R.id.status_unpaid -> PaymentStatusFilter.UNPAID
+                    else -> null
                 }
+                newFilter?.let {
+                    salesViewModel.setPaymentStatusFilter(it)
+                    // After setting filter, update text immediately (syncFiltersWithViewModel will also be called if navigating back)
+                    binding.chipStatus.text = when (it) {
+                        PaymentStatusFilter.ALL -> "All Status"
+                        PaymentStatusFilter.PAID -> "Paid"
+                        PaymentStatusFilter.PARTIAL -> "Partial"
+                        PaymentStatusFilter.UNPAID -> "Unpaid"
+                    }
+                }
+                true
             }
-
             popup.show()
         }
     }
 
     private fun setupDateFilterChips() {
         // Set up click listeners for date filter chips
-        binding.chipAllTime.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.ALL_TIME) }
-        binding.chipToday.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.TODAY) }
-        binding.chipYesterday.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.YESTERDAY) }
-        binding.chipThisWeek.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_WEEK) }
-        binding.chipThisMonth.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_MONTH) }
-        binding.chipLastMonth.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.LAST_MONTH) }
-        binding.chipThisQuarter.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_QUARTER) }
-        binding.chipThisYear.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_YEAR) }
+        binding.chipAllTime.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.ALL_TIME); syncFiltersWithViewModel() }
+        binding.chipToday.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.TODAY); syncFiltersWithViewModel() }
+        binding.chipYesterday.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.YESTERDAY); syncFiltersWithViewModel() }
+        binding.chipThisWeek.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_WEEK); syncFiltersWithViewModel() }
+        binding.chipThisMonth.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_MONTH); syncFiltersWithViewModel() }
+        binding.chipLastMonth.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.LAST_MONTH); syncFiltersWithViewModel() }
+        binding.chipThisQuarter.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_QUARTER); syncFiltersWithViewModel() }
+        binding.chipThisYear.setOnClickListener { salesViewModel.setDateFilter(DateFilterType.THIS_YEAR); syncFiltersWithViewModel() }
     }
+
+    // ... (rest of your SalesFragment.kt code from the previous correct version) ...
+    // Make sure to include the previous implementations for state restoration and scroll to top.
+    // The following methods are stubs from your existing code and should be kept:
 
     private fun setupToolbar() {
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_search -> {
-                    // Setup search functionality
                     setupSearchView()
                     true
                 }
-
                 R.id.action_export_excel -> {
-                    // Handle Excel export
                     exportSalesReport()
                     true
                 }
-
                 else -> false
             }
         }
     }
 
-    /**
-     * Creates a comprehensive description of the currently applied filters
-     */
     private fun getFilterDescription(): String {
-        // Get date filter description
         val dateFilter = when (salesViewModel.getCurrentDateFilter()) {
             DateFilterType.TODAY -> "Today"
             DateFilterType.YESTERDAY -> "Yesterday"
@@ -218,8 +236,6 @@ class SalesFragment : Fragment() {
             DateFilterType.ALL_TIME -> "All Time"
             else -> "All Time"
         }
-
-        // Get payment status filter description
         val statusFilter = when (salesViewModel.getCurrentStatusFilter()) {
             PaymentStatusFilter.PAID -> "Paid Invoices"
             PaymentStatusFilter.PARTIAL -> "Partially Paid Invoices"
@@ -227,60 +243,41 @@ class SalesFragment : Fragment() {
             PaymentStatusFilter.ALL -> "All Payment Statuses"
             else -> "All Payment Statuses"
         }
-
-        // Add search query if present
         val searchQuery = salesViewModel.getCurrentSearchQuery()
         val searchDescription = if (searchQuery.isNotEmpty()) {
             " (Search: \"$searchQuery\")"
         } else {
             ""
         }
-
         return "$dateFilter, $statusFilter$searchDescription"
     }
 
     private fun exportSalesReport() {
-        // Check if we have data to export
         val currentInvoices = adapter.snapshot().items
         if (currentInvoices.isEmpty()) {
             Toast.makeText(requireContext(), "No sales data to export", Toast.LENGTH_SHORT).show()
             return
         }
-
-        // Show loading indicator
         binding.progressBar.visibility = View.VISIBLE
-
-        // Generate a comprehensive filter description
         val filterDescription = getFilterDescription()
-
-        // Perform export in background thread
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 Log.d("SalesFragment", "Generating enhanced sales report...")
-
-                // Use the enhanced export utility
                 val csvFileUri = EnhancedCsvExportUtil.exportSalesReport(
                     requireContext(),
                     currentInvoices,
                     filterDescription
                 )
-
-                // Switch back to main thread to update UI
                 withContext(Dispatchers.Main) {
                     binding.progressBar.visibility = View.GONE
-
                     if (csvFileUri != null) {
-                        // Show success message
                         Toast.makeText(
                             requireContext(),
                             "Comprehensive sales report created successfully",
                             Toast.LENGTH_SHORT
                         ).show()
-
-                        // Ask the user if they want to view the file
                         showReportShareOptions(csvFileUri)
                     } else {
-                        // Show error message
                         Toast.makeText(
                             requireContext(),
                             "Failed to generate sales report",
@@ -290,8 +287,6 @@ class SalesFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 Log.e("SalesFragment", "Error exporting enhanced report", e)
-
-                // Update UI on main thread
                 withContext(Dispatchers.Main) {
                     binding.progressBar.visibility = View.GONE
                     Toast.makeText(
@@ -304,56 +299,34 @@ class SalesFragment : Fragment() {
         }
     }
 
-    /**
-     * Shows options to view, share, or email the exported report
-     */
-    /**
-     * Shows a themed dialog with options to view, share, or email the exported report
-     */
     private fun showReportShareOptions(fileUri: Uri) {
-        // Create the themed dialog
         val themedDialog = ThemedM3Dialog(requireContext())
             .setTitle("Sales Report Ready")
             .setLayout(R.layout.dialog_report_options)
-
-        // Get reference to dialog view
         val dialogView = themedDialog.getDialogView()
-
-        // Set up button click listeners
         dialogView?.findViewById<MaterialCardView>(R.id.viewReportCard)?.setOnClickListener {
             openReportFile(fileUri)
             themedDialog.create().dismiss()
         }
-
         dialogView?.findViewById<MaterialCardView>(R.id.shareReportCard)?.setOnClickListener {
             shareReportFile(fileUri)
             themedDialog.create().dismiss()
         }
-
-
-        // Set up close button
         themedDialog.setNegativeButton("Cancel") { dialog ->
             dialog.dismiss()
         }
-
-        // Show the dialog
         themedDialog.show()
     }
 
-    /**
-     * Opens the report file with an appropriate app
-     */
     private fun openReportFile(fileUri: Uri) {
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(fileUri, "text/csv")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-
             if (intent.resolveActivity(requireContext().packageManager) != null) {
                 startActivity(intent)
             } else {
-                // Try with a more generic MIME type if no CSV handler is found
                 val textIntent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(fileUri, "text/plain")
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -370,9 +343,6 @@ class SalesFragment : Fragment() {
         }
     }
 
-    /**
-     * Shares the report file with other apps
-     */
     private fun shareReportFile(fileUri: Uri) {
         try {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -387,13 +357,11 @@ class SalesFragment : Fragment() {
         }
     }
 
-
     private fun setupSearchView() {
         with(binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView) {
             queryHint = "Search invoice number, customer..."
             inputType = InputType.TYPE_TEXT_FLAG_CAP_WORDS
             isIconified = false
-
             setOnQueryTextListener(object :
                 androidx.appcompat.widget.SearchView.OnQueryTextListener {
                 override fun onQueryTextSubmit(query: String?): Boolean {
@@ -401,9 +369,9 @@ class SalesFragment : Fragment() {
                         isSearchActive = true
                         salesViewModel.searchInvoices(it)
                     }
+                    clearFocus()
                     return true
                 }
-
                 override fun onQueryTextChange(newText: String?): Boolean {
                     newText?.let {
                         isSearchActive = it.isNotEmpty()
@@ -412,20 +380,40 @@ class SalesFragment : Fragment() {
                     return true
                 }
             })
-
             setOnCloseListener {
                 isSearchActive = false
                 salesViewModel.searchInvoices("")
+                // Reset filters when search is closed
+                salesViewModel.setDateFilter(DateFilterType.ALL_TIME)
+                salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.ALL)
+                syncFiltersWithViewModel() // Update UI to reflect filter reset
                 clearFocus()
                 true
             }
         }
     }
 
+    private fun setupSwipeRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            isLayoutStateRestored = false
+            Log.d("SalesFragment", "Swipe refresh: isLayoutStateRestored set to false.")
+            salesViewModel.refreshInvoices(resetFilters = true)
+            syncFiltersWithViewModel()
+
+            if (isSearchActive) {
+                val searchView =
+                    binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
+                searchView.setQuery("", false)
+                searchView.clearFocus()
+                searchView.isIconified = true
+                searchView.onActionViewCollapsed()
+                isSearchActive = false
+            }
+        }
+    }
+
     private fun setupRecyclerView() {
         adapter = InvoiceAdapter()
-
-        // Set click listener for adapter
         adapter.onItemClickListener = { invoice ->
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
             val action =
@@ -438,14 +426,9 @@ class SalesFragment : Fragment() {
         binding.recyclerViewSales.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@SalesFragment.adapter
-
-            // Add RecyclerView animations
             AnimationUtils.animateRecyclerView(this)
-
-
         }
 
-        // Collect paged data
         viewLifecycleOwner.lifecycleScope.launch {
             salesViewModel.pagedInvoices.collectLatest { pagingData ->
                 if (isAdded && _binding != null) {
@@ -454,30 +437,65 @@ class SalesFragment : Fragment() {
             }
         }
 
-        // Observe adapter loading state
         viewLifecycleOwner.lifecycleScope.launch {
             adapter.loadStateFlow.collectLatest { loadStates ->
                 if (!isAdded || _binding == null) return@collectLatest
 
-                // Update UI based on load states
                 binding.progressBar.visibility =
-                    if (loadStates.refresh is LoadState.Loading) View.VISIBLE else View.GONE
+                    if (loadStates.refresh is LoadState.Loading && !binding.swipeRefreshLayout.isRefreshing) View.VISIBLE else View.GONE
 
-                // Handle errors
                 val error = when {
                     loadStates.refresh is LoadState.Error -> loadStates.refresh as LoadState.Error
                     loadStates.append is LoadState.Error -> loadStates.append as LoadState.Error
                     loadStates.prepend is LoadState.Error -> loadStates.prepend as LoadState.Error
                     else -> null
                 }
-
                 error?.let {
                     Log.e("SalesFragment", "Error loading data: ${it.error}")
                     Toast.makeText(requireContext(), it.error.localizedMessage, Toast.LENGTH_LONG)
                         .show()
                 }
 
-                // Update empty state visibility
+                val refreshState = loadStates.refresh
+                if (refreshState is LoadState.NotLoading) {
+                    Log.d("SalesFragment", "LoadState NotLoading, checking item count: ${adapter.itemCount}")
+                    _binding?.let { currentBinding ->
+                        if (adapter.itemCount > 0) {
+                            currentBinding.recyclerViewSales.visibility = View.VISIBLE
+                            currentBinding.emptyStateLayout.visibility = View.GONE
+                            currentBinding.emptySearchLayout.visibility = View.GONE
+
+                            if (!isLayoutStateRestored && salesViewModel.layoutManagerState != null) {
+                                currentBinding.recyclerViewSales.post {
+                                    Log.d("SalesFragment", "Posting layout manager state restoration.")
+                                    if (_binding != null && !isLayoutStateRestored && salesViewModel.layoutManagerState != null) {
+                                        _binding?.recyclerViewSales?.layoutManager?.onRestoreInstanceState(salesViewModel.layoutManagerState)
+                                        isLayoutStateRestored = true
+                                        Log.d("SalesFragment", "Set isLayoutStateRestored to true after posting restoration.")
+                                    } else {
+                                        Log.d("SalesFragment", "Skipping state restoration inside post block (inner conditions not met).")
+                                    }
+                                }
+                            } else {
+                                Log.d("SalesFragment", "Skipping immediate state restoration check (outer conditions not met: isLayoutStateRestored=${isLayoutStateRestored}, layoutManagerState=${salesViewModel.layoutManagerState != null}).")
+                            }
+
+                            if (scrollToTopAfterAdd) {
+                                currentBinding.recyclerViewSales.post {
+                                    Log.d("SalesFragment", "Posting scroll to top after invoice add.")
+                                    if (_binding != null && scrollToTopAfterAdd && adapter.itemCount > 0) {
+                                        _binding?.recyclerViewSales?.smoothScrollToPosition(0)
+                                        Log.d("SalesFragment", "Smooth scrolling to position 0 after invoice add.")
+                                        scrollToTopAfterAdd = false
+                                        Log.d("SalesFragment", "Reset scrollToTopAfterAdd flag.")
+                                    } else {
+                                        Log.d("SalesFragment", "Skipping scroll to top after add (conditions not met).")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
                 updateUIState(isEmpty)
             }
@@ -486,7 +504,6 @@ class SalesFragment : Fragment() {
 
     private fun setupObservers() {
         salesViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            // Only show progress bar if not already refreshing via swipe
             if (!binding.swipeRefreshLayout.isRefreshing) {
                 binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             }
@@ -501,12 +518,9 @@ class SalesFragment : Fragment() {
             }
         }
 
-        // Observe paged data to handle refresh state
         viewLifecycleOwner.lifecycleScope.launch {
-            salesViewModel.pagedInvoices.collectLatest { pagingData ->
+            salesViewModel.pagedInvoices.collectLatest {
                 if (isAdded && _binding != null) {
-                    adapter.submitData(pagingData)
-                    // Stop refresh animation after data is loaded
                     binding.swipeRefreshLayout.isRefreshing = false
                 }
             }
@@ -515,60 +529,48 @@ class SalesFragment : Fragment() {
 
     private fun setUpClickListner() {
         binding.addSaleFab.setOnClickListener {
-            // Navigate to the InvoiceCreationFragment
             val parentNavController = requireActivity().findNavController(R.id.nav_host_fragment)
             parentNavController.navigate(R.id.action_mainScreenFragment_to_invoiceCreationFragment)
         }
 
         binding.swipeRefreshLayout.setOnRefreshListener {
-            // Reset filters when manually refreshing
+            isLayoutStateRestored = false
+            Log.d("SalesFragment", "Swipe refresh: isLayoutStateRestored set to false.")
             salesViewModel.refreshInvoices(resetFilters = true)
+            syncFiltersWithViewModel()
 
-            // Also reset UI state
-            binding.chipAllTime.isChecked = true
-            binding.chipStatus.text = "All Status"
-
-            // Clear search if active
             if (isSearchActive) {
                 val searchView =
                     binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
                 searchView.setQuery("", false)
                 searchView.clearFocus()
+                searchView.isIconified = true
+                searchView.onActionViewCollapsed()
                 isSearchActive = false
             }
         }
 
-        // Clear search button in empty search state
         binding.clearFilterButton.setOnClickListener {
-            // Clear search
             val searchView =
                 binding.topAppBar.menu.findItem(R.id.action_search).actionView as androidx.appcompat.widget.SearchView
             searchView.setQuery("", false)
             searchView.clearFocus()
+            searchView.isIconified = true
+            searchView.onActionViewCollapsed()
             isSearchActive = false
-
-            // Reset date filter
-            binding.chipAllTime.isChecked = true
-
-            // Reset status filter
-            binding.chipStatus.text = "All Status"
-
-            // Apply filters
             salesViewModel.setDateFilter(DateFilterType.ALL_TIME)
             salesViewModel.setPaymentStatusFilter(PaymentStatusFilter.ALL)
             salesViewModel.searchInvoices("")
+            syncFiltersWithViewModel() // Sync chips after clearing filters
         }
     }
 
     private fun setupEmptyStateButtons() {
-        // Button within the main empty state (no invoices at all)
         binding.addNewInvoiceEmptyButton.setOnClickListener {
-            navigateToCreateInvoice() // Navigate using helper
+            navigateToCreateInvoice()
         }
-
-        // Button within the empty search state
         binding.addNewItemButton.setOnClickListener {
-            navigateToCreateInvoice() // Navigate using helper
+            navigateToCreateInvoice()
         }
     }
 
@@ -578,31 +580,41 @@ class SalesFragment : Fragment() {
     }
 
     private fun updateUIState(isEmpty: Boolean) {
-        if (isEmpty && isSearchActive) {
-            // No search results
-            binding.emptySearchLayout.visibility = View.VISIBLE
-            binding.emptyStateLayout.visibility = View.GONE
-            binding.recyclerViewSales.visibility = View.GONE
-        } else if (isEmpty) {
-            // No invoices at all
-            binding.emptyStateLayout.visibility = View.VISIBLE
-            binding.emptySearchLayout.visibility = View.GONE
-            binding.recyclerViewSales.visibility = View.GONE
-        } else {
-            // Show recycler view with results
-            binding.recyclerViewSales.visibility = View.VISIBLE
-            binding.emptyStateLayout.visibility = View.GONE
-            binding.emptySearchLayout.visibility = View.GONE
+        _binding?.let { currentBinding ->
+            if (isEmpty && isSearchActive) {
+                currentBinding.emptySearchLayout.visibility = View.VISIBLE
+                currentBinding.emptyStateLayout.visibility = View.GONE
+                currentBinding.recyclerViewSales.visibility = View.GONE
+            } else if (isEmpty) {
+                currentBinding.emptyStateLayout.visibility = View.VISIBLE
+                currentBinding.emptySearchLayout.visibility = View.GONE
+                currentBinding.recyclerViewSales.visibility = View.GONE
+            } else {
+                currentBinding.recyclerViewSales.visibility = View.VISIBLE
+                currentBinding.emptyStateLayout.visibility = View.GONE
+                currentBinding.emptySearchLayout.visibility = View.GONE
+            }
         }
     }
 
-    private fun refreshInvoices() {
-        binding.swipeRefreshLayout.isRefreshing = true
-        salesViewModel.refreshInvoices()
-    }
-
     override fun onDestroyView() {
+        _binding?.recyclerViewSales?.let { rv ->
+            if (rv.adapter?.itemCount ?: 0 > 0) {
+                rv.layoutManager?.let { lm ->
+                    salesViewModel.layoutManagerState = lm.onSaveInstanceState()
+                    Log.d("SalesFragment", "Saved layout manager state in onDestroyView. State: ${salesViewModel.layoutManagerState}")
+                }
+            } else {
+                if (salesViewModel.layoutManagerState == null) {
+                    Log.d("SalesFragment", "List is empty in onDestroyView, and ViewModel state is null. Clearing saved state.")
+                    salesViewModel.layoutManagerState = null
+                } else {
+                    Log.d("SalesFragment", "List is empty in onDestroyView, but ViewModel state is NOT null. Keeping previously saved state.")
+                }
+            }
+        }
         super.onDestroyView()
         _binding = null
+        Log.d("SalesFragment", "onDestroyView: binding set to null.")
     }
 }
