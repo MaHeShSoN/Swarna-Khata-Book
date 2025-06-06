@@ -67,9 +67,9 @@ class BillingManager(private val context: Context) {
         const val BASE_PLAN_BASIC_MONTHLY = "basic-monthly-plan"
         const val BASE_PLAN_STANDARD_MONTHLY = "standard-monthly-plan"
         const val BASE_PLAN_PREMIUM_MONTHLY = "premium-monthly-plan"
-        const val BASE_PLAN_BASIC_YEARLY = "basic-yearly-plan" 
-        const val BASE_PLAN_STANDARD_YEARLY = "standard-yearly-plan"
-        const val BASE_PLAN_PREMIUM_YEARLY = "premium-yearly-plan"
+        const val BASE_PLAN_BASIC_YEARLY = "basic-yearly-plan-v2"
+        const val BASE_PLAN_STANDARD_YEARLY = "standard-yearly-plan-v2"
+        const val BASE_PLAN_PREMIUM_YEARLY = "premium-yearly-plan-v2"
     }
     
     // Map subscription product IDs to subscription plans

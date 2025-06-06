@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.InventoryValueAdapter
 import com.jewelrypos.swarnakhatabook.Factorys.ReportViewModelFactory
@@ -68,7 +69,7 @@ class InventoryReportFragment : Fragment() {
         Log.d(TAG, "setupUI: Setting up UI components")
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            findNavController().navigateUp()
         }
 
         // Setup export button
@@ -110,7 +111,12 @@ class InventoryReportFragment : Fragment() {
                 Log.d(TAG, "Received ${items.size} inventory items")
                 adapter.submitList(items)
                 updateTotalValue()
+                // Ensure visibility is correctly set when items arrive
+                binding.inventoryRecyclerView.visibility = View.VISIBLE
                 Log.d(TAG, "Inventory items processed in ${System.currentTimeMillis() - startTime}ms")
+            } else {
+                // If items become null (e.g., on error)
+                binding.inventoryRecyclerView.visibility = View.GONE
             }
         }
 
@@ -119,6 +125,33 @@ class InventoryReportFragment : Fragment() {
             Log.d(TAG, "Total inventory value updated: $totalValue")
             binding.totalValueOriginal.text = "₹${currencyFormatter.format(totalValue)}"
             Log.d(TAG, "Total value update processed in ${System.currentTimeMillis() - startTime}ms")
+        }
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            Log.d(TAG, "Loading state changed: $isLoading")
+            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            // Also control visibility of other elements based on loading state
+            if (isLoading) {
+                binding.inventoryRecyclerView.visibility = View.GONE
+            } else {
+                // When loading stops, the inventoryItems observer should handle visibility
+                // based on whether data was successfully loaded.
+                // However, we can add a fallback to show/hide the RecyclerView.
+                if (viewModel.inventoryItems.value.isNullOrEmpty()) {
+                    binding.inventoryRecyclerView.visibility = View.GONE
+                } else {
+                    binding.inventoryRecyclerView.visibility = View.VISIBLE
+                }
+            }
+        }
+
+        viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
+            if (!message.isNullOrEmpty()) {
+                Log.e(TAG, "setupObservers: Error occurred: $message")
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                binding.inventoryRecyclerView.visibility = View.GONE // Hide list on error
+                viewModel.clearErrorMessage()
+            }
         }
     }
 

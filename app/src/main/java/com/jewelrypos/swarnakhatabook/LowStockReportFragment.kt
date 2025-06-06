@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.jewelrypos.swarnakhatabook.Adapters.LowStockAdapter
 import com.jewelrypos.swarnakhatabook.Factorys.ReportViewModelFactory
@@ -63,7 +64,7 @@ class LowStockReportFragment : Fragment() {
         Log.d(TAG, "setupUI: Setting up UI components")
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            findNavController().navigateUp()
         }
 
         // Setup export button

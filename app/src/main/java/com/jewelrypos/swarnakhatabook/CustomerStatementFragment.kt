@@ -1,5 +1,7 @@
 package com.jewelrypos.swarnakhatabook
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -22,6 +24,9 @@ import com.jewelrypos.swarnakhatabook.BottomSheet.CustomerListBottomSheet
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
+import androidx.navigation.fragment.findNavController
+import kotlin.math.absoluteValue
 
 class CustomerStatementFragment : Fragment() {
 
@@ -35,8 +40,8 @@ class CustomerStatementFragment : Fragment() {
     private lateinit var viewModel: ReportViewModel
     private lateinit var adapter: CustomerStatementAdapter
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
-    private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    
+    // private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) // Removed: No longer needed for date range display
+
     // Track active coroutines
     private val activeJobs = mutableListOf<Job>()
 
@@ -56,10 +61,10 @@ class CustomerStatementFragment : Fragment() {
 
         setupViewModel()
         Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
-        
+
         setupUI()
         Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
-        
+
         setupObservers()
         Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
     }
@@ -97,17 +102,22 @@ class CustomerStatementFragment : Fragment() {
             }
         }
 
-        // Display date range
-        viewModel.startDate.value?.let { startDate ->
-            viewModel.endDate.value?.let { endDate ->
-                val startDateStr = dateFormat.format(startDate)
-                val endDateStr = dateFormat.format(endDate)
-                binding.dateRangeText.text = "$startDateStr to $endDateStr"
-            }
-        }
+        // Display date range - REMOVED
+        // viewModel.startDate.value?.let { startDate ->
+        //     viewModel.endDate.value?.let { endDate ->
+        //         val startDateStr = dateFormat.format(startDate)
+        //         val endDateStr = dateFormat.format(endDate)
+        //         binding.dateRangeText.text = "$startDateStr to $endDateStr"
+        //     }
+        // }
 
-        // Setup RecyclerView
-        adapter = CustomerStatementAdapter()
+        // Setup RecyclerView with click listener
+        adapter = CustomerStatementAdapter(object : CustomerStatementAdapter.OnInvoiceClickListener {
+            override fun onInvoiceClick(invoiceId: String) {
+                // Handle invoice click - navigate to invoice details
+                navigateToInvoiceDetails(invoiceId)
+            }
+        })
         binding.transactionsRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@CustomerStatementFragment.adapter
@@ -122,7 +132,7 @@ class CustomerStatementFragment : Fragment() {
                 Toast.makeText(requireContext(), "Please wait while data is loading", Toast.LENGTH_SHORT).show()
             }
         }
-        
+
         // Setup change customer button
         binding.changeCustomerButton.setOnClickListener {
             if (!viewModel.isLoading.value!!) {
@@ -135,7 +145,7 @@ class CustomerStatementFragment : Fragment() {
 
     private fun setupObservers() {
         Log.d(TAG, "setupObservers: Setting up LiveData observers")
-        
+
         viewModel.customerTransactions.observe(viewLifecycleOwner) { transactions ->
             val startTime = System.currentTimeMillis()
             if (transactions != null) {
@@ -159,14 +169,29 @@ class CustomerStatementFragment : Fragment() {
         viewModel.openingBalance.observe(viewLifecycleOwner) { balance ->
             val startTime = System.currentTimeMillis()
             Log.d(TAG, "Opening balance updated: $balance")
-            binding.openingBalanceValue.text = "₹${currencyFormatter.format(balance)}"
+            val formattedBalance = currencyFormatter.format(balance.toDouble().absoluteValue)
+            val balanceDisplay = "₹$formattedBalance"
+            binding.openingBalanceValue.text = balanceDisplay
             Log.d(TAG, "Opening balance update processed in ${System.currentTimeMillis() - startTime}ms")
         }
 
         viewModel.closingBalance.observe(viewLifecycleOwner) { balance ->
             val startTime = System.currentTimeMillis()
             Log.d(TAG, "Closing balance updated: $balance")
-            binding.closingBalanceValue.text = "₹${currencyFormatter.format(balance)}"
+            val customer = viewModel.selectedCustomer.value // Get the selected customer
+            val formattedBalance = currencyFormatter.format(balance.toDouble().absoluteValue)
+
+            val balanceDisplay = if (customer != null) {
+                when (customer.balanceType) {
+                    "Baki" -> requireContext().getString(R.string.baki_amount, currencyFormatter.format(customer.currentBalance))
+                    "Jama" -> requireContext().getString(R.string.jama_amount, currencyFormatter.format(customer.currentBalance))
+                    else -> requireContext().getString(R.string.settled_amount, "0.00") // Assuming 0 balance is settled
+                }
+            } else {
+                // Fallback if customer is not selected or null
+                "Settled ₹0.00"
+            }
+            binding.closingBalanceValue.text = balanceDisplay
             Log.d(TAG, "Closing balance update processed in ${System.currentTimeMillis() - startTime}ms")
         }
 
@@ -187,50 +212,50 @@ class CustomerStatementFragment : Fragment() {
             }
         }
 
-        // Also observe date range changes
-        viewModel.startDate.observe(viewLifecycleOwner) { startDate ->
-            startDate?.let {
-                val startDateStr = dateFormat.format(it)
-                viewModel.endDate.value?.let { endDate ->
-                    val endDateStr = dateFormat.format(endDate)
-                    binding.dateRangeText.text = "$startDateStr to $endDateStr"
-                }
-                // If date range changes and customer is selected, reload statement
-                viewModel.selectedCustomer.value?.let { customer ->
-                    val job = viewLifecycleOwner.lifecycleScope.launch {
-                        try {
-                            viewModel.loadCustomerStatement(customer)
-                        } catch (e: Exception) {
-                            Log.e("CustomerStatement", "Error loading statement: ${e.message}")
-                            Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    activeJobs.add(job)
-                }
-            }
-        }
+        // Also observe date range changes - REMOVED
+        // viewModel.startDate.observe(viewLifecycleOwner) { startDate ->
+        //     startDate?.let {
+        //         val startDateStr = dateFormat.format(it)
+        //         viewModel.endDate.value?.let { endDate ->
+        //             val endDateStr = dateFormat.format(endDate)
+        //             binding.dateRangeText.text = "$startDateStr to $endDateStr"
+        //         }
+        //         // If date range changes and customer is selected, reload statement
+        //         viewModel.selectedCustomer.value?.let { customer ->
+        //             val job = viewLifecycleOwner.lifecycleScope.launch {
+        //                 try {
+        //                     viewModel.loadCustomerStatement(customer)
+        //                 } catch (e: Exception) {
+        //                     Log.e("CustomerStatement", "Error loading statement: ${e.message}")
+        //                     Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
+        //                 }
+        //             }
+        //             activeJobs.add(job)
+        //         }
+        //     }
+        // }
 
-        viewModel.endDate.observe(viewLifecycleOwner) { endDate ->
-            endDate?.let {
-                val endDateStr = dateFormat.format(it)
-                viewModel.startDate.value?.let { startDate ->
-                    val startDateStr = dateFormat.format(startDate)
-                    binding.dateRangeText.text = "$startDateStr to $endDateStr"
-                }
-                // If date range changes and customer is selected, reload statement
-                viewModel.selectedCustomer.value?.let { customer ->
-                    val job = viewLifecycleOwner.lifecycleScope.launch {
-                        try {
-                            viewModel.loadCustomerStatement(customer)
-                        } catch (e: Exception) {
-                            Log.e("CustomerStatement", "Error loading statement: ${e.message}")
-                            Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    activeJobs.add(job)
-                }
-            }
-        }
+        // viewModel.endDate.observe(viewLifecycleOwner) { endDate ->
+        //     endDate?.let {
+        //         val endDateStr = dateFormat.format(it)
+        //         viewModel.startDate.value?.let { startDate ->
+        //             val startDateStr = dateFormat.format(startDate)
+        //             binding.dateRangeText.text = "$startDateStr to $endDateStr"
+        //         }
+        //         // If date range changes and customer is selected, reload statement
+        //         viewModel.selectedCustomer.value?.let { customer ->
+        //             val job = viewLifecycleOwner.lifecycleScope.launch {
+        //                 try {
+        //                     viewModel.loadCustomerStatement(customer)
+        //                 } catch (e: Exception) {
+        //                     Log.e("CustomerStatement", "Error loading statement: ${e.message}")
+        //                     Toast.makeText(requireContext(), "Error loading statement: ${e.message}", Toast.LENGTH_SHORT).show()
+        //                 }
+        //             }
+        //             activeJobs.add(job)
+        //         }
+        //     }
+        // }
     }
 
     private fun showCustomerSelectionBottomSheet() {
@@ -245,7 +270,7 @@ class CustomerStatementFragment : Fragment() {
     private fun updateSelectedCustomerUI(customer: Customer?) {
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "updateSelectedCustomerUI: Starting update")
-        
+
         if (customer == null) {
             binding.noCustomerSelectedLayout.visibility = View.VISIBLE
             binding.customerDetailsLayout.visibility = View.GONE
@@ -261,7 +286,7 @@ class CustomerStatementFragment : Fragment() {
         binding.customerTypeText.text = customer.customerType
         binding.customerPhoneText.text = customer.phoneNumber
         binding.customerAddressText.text = "${customer.streetAddress}, ${customer.city}, ${customer.state} ${customer.postalCode}"
-        
+
         Log.d(TAG, "updateSelectedCustomerUI: Completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
@@ -289,14 +314,14 @@ class CustomerStatementFragment : Fragment() {
         }
 
         try {
-            val startDate = viewModel.startDate.value?.let { dateFormat.format(it) } ?: ""
-            val endDate = viewModel.endDate.value?.let { dateFormat.format(it) } ?: ""
+            // val startDate = viewModel.startDate.value?.let { dateFormat.format(it) } ?: "" // Removed
+            // val endDate = viewModel.endDate.value?.let { dateFormat.format(it) } ?: "" // Removed
 
             val pdfExporter = PDFExportUtility(requireContext())
             val success = pdfExporter.exportCustomerStatement(
                 customer,
-                startDate,
-                endDate,
+                "", // Pass empty string or null for startDate if not used by PDF exporter
+                "", // Pass empty string or null for endDate if not used by PDF exporter
                 openingBalance,
                 closingBalance,
                 transactions
@@ -312,6 +337,37 @@ class CustomerStatementFragment : Fragment() {
         } catch (e: Exception) {
             Log.e(TAG, "Error during PDF export", e)
             Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun navigateToInvoiceDetails(invoiceId: String) {
+        try {
+                // Construct the deep link URI
+                val uri = Uri.parse("android-app://com.jewelrypos.swarnakhatabook/invoice_detail/$invoiceId")
+
+                // Create an Intent to navigate using the deep link URI
+                val intent = Intent(Intent.ACTION_VIEW, uri)
+
+                // Explicitly set the package to your application's package name.
+                intent.setPackage(requireContext().packageName)
+
+                // Add flags to ensure the correct Activity is brought to the foreground and back stack is managed
+//                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+                // ADD THIS LINE: Add an extra to indicate the navigation source
+                intent.putExtra("from_reports_activity", true)
+
+                // Start the Activity that handles this deep link (e.g., MainActivity)
+                startActivity(intent)
+
+
+            } catch (e: Exception) {
+            Log.e(TAG, "Error navigating to invoice details", e)
+            Toast.makeText(
+                requireContext(),
+                "Error opening invoice details  ${e.message} ",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 

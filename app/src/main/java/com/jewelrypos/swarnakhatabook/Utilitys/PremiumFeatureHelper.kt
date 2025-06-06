@@ -44,44 +44,58 @@ class PremiumFeatureHelper {
             premiumAction: () -> Unit,
             nonPremiumAction: (() -> Unit)? = null
         ) {
+            Log.d(TAG, "checkPremiumAccess: Starting premium check for feature: $featureName")
+            val startTime = System.currentTimeMillis()
+            
             val context = fragment.requireContext()
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
+            Log.d(TAG, "checkPremiumAccess: Using subscriptionManager: $subscriptionManager")
 
             fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val hasAccess = withContext(Dispatchers.IO) {
-                    if (minimumPlan != null) {
-                        // If a minimum plan is specified, check against it
-                        subscriptionManager.hasMinimumPlan(minimumPlan)
-                    } else {
-                        // If no minimum plan is specified, check if it's any paid plan (backward compatibility)
-                        subscriptionManager.isPremiumUser()
-                    }
-                }
-
-                if (hasAccess) {
-                    // User has access to the feature, execute the premium action
-                    premiumAction()
-                } else {
-                    // User doesn't have access to the feature
-                    if (showToast) {
-                        val message = if (minimumPlan != null) {
-                            "A ${minimumPlan.name} or higher subscription is required for $featureName"
+                try {
+                    Log.d(TAG, "checkPremiumAccess: Checking access with minimumPlan: $minimumPlan")
+                    val hasAccess = withContext(Dispatchers.IO) {
+                        if (minimumPlan != null) {
+                            // If a minimum plan is specified, check against it
+                            subscriptionManager.hasMinimumPlan(minimumPlan)
                         } else {
-                            "Premium subscription required for $featureName"
+                            // If no minimum plan is specified, check if it's any paid plan (backward compatibility)
+                            subscriptionManager.isPremiumUser()
                         }
-                        Toast.makeText(
-                            context,
-                            message,
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
+                    Log.d(TAG, "checkPremiumAccess: Access check result: $hasAccess")
 
-                    // Execute non-premium action if provided, otherwise show upgrade dialog
-                    if (nonPremiumAction != null) {
-                        nonPremiumAction()
+                    if (hasAccess) {
+                        // User has access to the feature, execute the premium action
+                        Log.d(TAG, "checkPremiumAccess: User has access, executing premium action")
+                        premiumAction()
                     } else {
-                        showPremiumFeatureDialog(context, featureName)
+                        // User doesn't have access to the feature
+                        Log.d(TAG, "checkPremiumAccess: User does not have access")
+                        if (showToast) {
+                            val message = if (minimumPlan != null) {
+                                "A ${minimumPlan.name} or higher subscription is required for $featureName"
+                            } else {
+                                "Premium subscription required for $featureName"
+                            }
+                            Log.d(TAG, "checkPremiumAccess: Showing toast message: $message")
+                            Toast.makeText(
+                                context,
+                                message,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        
+                        // Execute non-premium action if provided
+                        nonPremiumAction?.let {
+                            Log.d(TAG, "checkPremiumAccess: Executing non-premium action")
+                            it()
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.e(TAG, "checkPremiumAccess: Error checking premium access", e)
+                } finally {
+                    Log.d(TAG, "checkPremiumAccess: Completed in ${System.currentTimeMillis() - startTime}ms")
                 }
             }
         }
@@ -91,17 +105,27 @@ class PremiumFeatureHelper {
          * Useful for UI initialization that needs to know plan status
          */
         fun hasMinimumPlan(fragment: Fragment, minimumPlan: SubscriptionPlan, callback: (Boolean) -> Unit) {
+            Log.d(TAG, "hasMinimumPlan: Starting minimum plan check for: $minimumPlan")
+            val startTime = System.currentTimeMillis()
+            
             val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
+            Log.d(TAG, "hasMinimumPlan: Using subscriptionManager: $subscriptionManager")
 
             fragment.viewLifecycleOwner.lifecycleScope.launch {
-                val hasAccess = withContext(Dispatchers.IO) {
-                    subscriptionManager.hasMinimumPlan(minimumPlan)
+                try {
+                    val hasAccess = withContext(Dispatchers.IO) {
+                        subscriptionManager.hasMinimumPlan(minimumPlan)
+                    }
+                    Log.d(TAG, "hasMinimumPlan: Check result: $hasAccess")
+                    callback(hasAccess)
+                } catch (e: Exception) {
+                    Log.e(TAG, "hasMinimumPlan: Error checking minimum plan", e)
+                    callback(false)
+                } finally {
+                    Log.d(TAG, "hasMinimumPlan: Completed in ${System.currentTimeMillis() - startTime}ms")
                 }
-                callback(hasAccess)
             }
         }
-
-
 
         /**
          * Shows the premium feature upgrade dialog
@@ -110,30 +134,29 @@ class PremiumFeatureHelper {
             Log.d(TAG, "showPremiumFeatureDialog: Showing dialog for feature: $featureName")
             val startTime = System.currentTimeMillis()
 
-            ThemedM3Dialog(context).setTitle("✨ Unlock Premium ✨")
-                .setLayout(R.layout.dialog_confirmation)
-                .apply {
-                    findViewById<TextView>(R.id.confirmationMessage)?.text =
-                        context.getString(
-                            R.string.unlock_powerful_features_like_by_upgrading_to_premium_enhance_your_business_management_today,
-                            featureName
-                        )
-                }.setPositiveButton(context.getString(R.string.upgrade_now)) { dialog, _ ->
-                    Log.d(TAG, "showPremiumFeatureDialog: User clicked upgrade for: $featureName")
-                    context.startActivity(Intent(context, UpgradeActivity::class.java))
-                    dialog.dismiss()
-                }.setNegativeButton(context.getString(R.string.maybe_later)) { dialog ->
-                    Log.d(
-                        TAG,
-                        "showPremiumFeatureDialog: User clicked maybe later for: $featureName"
-                    )
-                    dialog.dismiss()
-                }.show()
+            try {
+                ThemedM3Dialog(context).setTitle("✨ Unlock Premium ✨")
+                    .setLayout(R.layout.dialog_confirmation)
+                    .apply {
+                        findViewById<TextView>(R.id.confirmationMessage)?.text =
+                            context.getString(
+                                R.string.unlock_powerful_features_like_by_upgrading_to_premium_enhance_your_business_management_today,
+                                featureName
+                            )
+                        Log.d(TAG, "showPremiumFeatureDialog: Dialog message set for feature: $featureName")
+                    }.setPositiveButton(context.getString(R.string.upgrade_now)) { dialog, _ ->
+                        Log.d(TAG, "showPremiumFeatureDialog: User clicked upgrade for: $featureName")
+                        context.startActivity(Intent(context, UpgradeActivity::class.java))
+                        dialog.dismiss()
+                    }.setNegativeButton(context.getString(R.string.maybe_later)) { dialog ->
+                        Log.d(TAG, "showPremiumFeatureDialog: User clicked maybe later for: $featureName")
+                        dialog.dismiss()
+                    }.show()
 
-            Log.d(
-                TAG,
-                "showPremiumFeatureDialog: Dialog shown in ${System.currentTimeMillis() - startTime}ms"
-            )
+                Log.d(TAG, "showPremiumFeatureDialog: Dialog shown successfully in ${System.currentTimeMillis() - startTime}ms")
+            } catch (e: Exception) {
+                Log.e(TAG, "showPremiumFeatureDialog: Error showing dialog", e)
+            }
         }
 
         /**
@@ -144,18 +167,18 @@ class PremiumFeatureHelper {
         fun isPremiumUser(fragment: Fragment, callback: (Boolean) -> Unit): Job {
             Log.d(TAG, "isPremiumUser: Starting premium check")
             val startTime = System.currentTimeMillis()
+            
             return fragment.viewLifecycleOwner.lifecycleScope.launch {
                 try {
+                    Log.d(TAG, "isPremiumUser: Checking premium status")
                     val isPremium = isPremiumUserSync()
+                    Log.d(TAG, "isPremiumUser: Premium status: $isPremium")
                     callback(isPremium)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error checking premium status: ${e.message}", e)
+                    Log.e(TAG, "isPremiumUser: Error checking premium status", e)
                     callback(false)
                 } finally {
-                    Log.d(
-                        TAG,
-                        "isPremiumUser: Total execution time: ${System.currentTimeMillis() - startTime}ms"
-                    )
+                    Log.d(TAG, "isPremiumUser: Completed in ${System.currentTimeMillis() - startTime}ms")
                 }
             }
         }
@@ -163,17 +186,18 @@ class PremiumFeatureHelper {
         suspend fun isPremiumUserSync(): Boolean {
             Log.d(TAG, "isPremiumUserSync: Starting synchronous premium check")
             val startTime = System.currentTimeMillis()
+            
             return try {
                 val subscriptionManager = SwarnaKhataBook.getUserSubscriptionManager()
                 Log.d(TAG, "isPremiumUserSync: Using subscriptionManager: $subscriptionManager")
+                
                 val isPremium = subscriptionManager.isPremiumUser()
-                Log.d(
-                    TAG,
-                    "isPremiumUserSync: Premium check completed in ${System.currentTimeMillis() - startTime}ms. Result: $isPremium"
-                )
+                Log.d(TAG, "isPremiumUserSync: Premium check result: $isPremium")
+                
+                Log.d(TAG, "isPremiumUserSync: Completed in ${System.currentTimeMillis() - startTime}ms")
                 isPremium
             } catch (e: Exception) {
-                Log.e(TAG, "Error checking premium status: ${e.message}", e)
+                Log.e(TAG, "isPremiumUserSync: Error checking premium status", e)
                 false
             }
         }

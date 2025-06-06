@@ -19,11 +19,6 @@ import com.jewelrypos.swarnakhatabook.R
 import java.text.DecimalFormat
 
 
-
-
-
-
-
 // Change constructor, extend PagingDataAdapter
 class CustomerAdapter(
     private val itemClickListener: OnCustomerClickListener? = null
@@ -59,7 +54,7 @@ class CustomerAdapter(
             holder.customerName.text = "${customer.firstName} ${customer.lastName}"
             holder.customerType.text = customer.customerType
 
-            val balanceText = when (customer.balanceType) { // Or derive from currentBalance if balanceType is not reliable
+            val balanceText = when (customer.balanceType) {
                 "Baki" -> holder.itemView.context.getString(R.string.baki_amount, formatter.format(customer.currentBalance))
                 "Jama" -> holder.itemView.context.getString(R.string.jama_amount, formatter.format(customer.currentBalance))
                 else -> holder.itemView.context.getString(R.string.settled_amount, "0.00") // Assuming 0 balance is settled

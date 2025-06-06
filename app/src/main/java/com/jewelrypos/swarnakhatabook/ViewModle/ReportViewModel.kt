@@ -152,13 +152,13 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         Log.d(TAG, "Default date range set: $startDate to $endDate")
 
         // Load customers for selection
-        loadCustomers()
-        
+//        loadCustomers()
+//
         // Initialize reports
-        viewModelScope.launch {
-            loadSalesReport()
-            generateGstReport()
-        }
+//        viewModelScope.launch {
+//            loadSalesReport()
+//            generateGstReport()
+//        }
         
         isInitialized = true
         Log.d(TAG, "ReportViewModel initialization completed")
@@ -542,82 +542,95 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
         _isLoading.value = true
         viewModelScope.launch {
+            val totalStartTime = System.currentTimeMillis() // Add this for overall timing
             try {
                 Log.d(TAG, "generateInventoryReport: Fetching inventory items")
+                val fetchStartTime = System.currentTimeMillis() // Add this for timing
                 // Get all inventory items for this shop
                 val result = inventoryRepository.getInventoryItemsForDropdown()
+                Log.d(TAG, "generateInventoryReport: Inventory items fetched in ${System.currentTimeMillis() - fetchStartTime}ms")
 
                 result.fold(
                     onSuccess = { items ->
                         Log.d(TAG, "generateInventoryReport: Successfully loaded ${items.size} inventory items")
-                        processInventoryForReport(items)
+                        val processStartTime = System.currentTimeMillis() // Add this for timing
+                        // Process items and get results
+                        val (inventoryItems, totalValue) = processInventoryForReport(items) // Call as suspend function
+                        Log.d(TAG, "generateInventoryReport: Inventory items processed in ${System.currentTimeMillis() - processStartTime}ms")
+
+                        withContext(Dispatchers.Main) {
+                            _inventoryItems.value = inventoryItems
+                            _totalInventoryValue.value = totalValue
+                            _errorMessage.value = null // Clear any previous error
+                        }
+                        Log.d(TAG, "generateInventoryReport: Report generation completed successfully")
                     },
                     onFailure = { error ->
                         Log.e(TAG, "generateInventoryReport: Failed to load inventory", error)
-                        _errorMessage.value = "Failed to load inventory: ${error.message}"
-                        _isLoading.value = false
+                        withContext(Dispatchers.Main) {
+                            _errorMessage.value = "Failed to load inventory: ${error.message}"
+                            _inventoryItems.value = emptyList() // Clear items on error
+                            _totalInventoryValue.value = 0.0 // Reset total value on error
+                        }
                     }
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "generateInventoryReport: Error generating inventory report", e)
-                _errorMessage.value = "Error generating inventory report: ${e.message}"
-                _isLoading.value = false
+                withContext(Dispatchers.Main) {
+                    _errorMessage.value = "Error generating inventory report: ${e.message}"
+                    _inventoryItems.value = emptyList() // Clear items on error
+                    _totalInventoryValue.value = 0.0 // Reset total value on error
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    // *** ADDED THIS LOG TO DIAGNOSE PROGRESS BAR ISSUE ***
+                    Log.d(TAG, "generateInventoryReport: Setting isLoading to false in finally block.")
+                    _isLoading.value = false // Ensure isLoading is set to false in finally
+                    Log.d(TAG, "generateInventoryReport: Total execution time: ${System.currentTimeMillis() - totalStartTime}ms")
+                }
             }
         }
     }
 
-    private fun processInventoryForReport(items: List<JewelleryItem>) {
+    private suspend fun processInventoryForReport(items: List<JewelleryItem>): Pair<List<InventoryValueItem>, Double> {
         Log.d(TAG, "processInventoryForReport: Processing ${items.size} inventory items")
-        viewModelScope.launch(Dispatchers.Default) {
-            try {
-                val inventoryItems = items.map { item ->
-                    // Calculate item value based on its properties
-                    val metalValue = calculateMetalValue(item)
-                    val makingValue = calculateMakingValue(item)
-                    val diamondValue = item.diamondPrice
+        return withContext(Dispatchers.Default) {
+            val inventoryItems = items.map { item ->
+                // Calculate item value based on its properties
+                val metalValue = calculateMetalValue(item)
+                val makingValue = calculateMakingValue(item)
+                val diamondValue = item.diamondPrice
 
-                    val totalItemValue = metalValue + makingValue + diamondValue
-                    val totalStockValue = totalItemValue * item.stock
+                val totalItemValue = metalValue + makingValue + diamondValue
+                val totalStockValue = totalItemValue * item.stock
 
-                    Log.d(TAG, """
-                        processInventoryForReport: Item ${item.displayName}
-                        - Metal Value: $metalValue
-                        - Making Value: $makingValue
-                        - Diamond Value: $diamondValue
-                        - Total Item Value: $totalItemValue
-                        - Total Stock Value: $totalStockValue
-                    """.trimIndent())
+                Log.d(TAG, """
+                    processInventoryForReport: Item ${item.displayName}
+                    - Metal Value: $metalValue
+                    - Making Value: $makingValue
+                    - Diamond Value: $diamondValue
+                    - Total Item Value: $totalItemValue
+                    - Total Stock Value: $totalStockValue
+                """.trimIndent())
 
-                    InventoryValueItem(
-                        id = item.id,
-                        name = item.displayName,
-                        itemType = item.itemType,
-                        stock = item.stock,
-                        stockUnit = item.stockUnit,
-                        metalValue = metalValue,
-                        makingValue = makingValue,
-                        diamondValue = diamondValue,
-                        totalItemValue = totalItemValue,
-                        totalStockValue = totalStockValue
-                    )
-                }.sortedBy { it.name }
+                InventoryValueItem(
+                    id = item.id,
+                    name = item.displayName,
+                    itemType = item.itemType,
+                    stock = item.stock,
+                    stockUnit = item.stockUnit,
+                    metalValue = metalValue,
+                    makingValue = makingValue,
+                    diamondValue = diamondValue,
+                    totalItemValue = totalItemValue,
+                    totalStockValue = totalStockValue
+                )
+            }.sortedBy { it.name }
 
-                val totalValue = inventoryItems.sumOf { it.totalStockValue }
-                Log.d(TAG, "processInventoryForReport: Total inventory value: $totalValue")
+            val totalValue = inventoryItems.sumOf { it.totalStockValue }
+            Log.d(TAG, "processInventoryForReport: Total inventory value: $totalValue")
 
-                withContext(Dispatchers.Main) {
-                    _inventoryItems.value = inventoryItems
-                    _totalInventoryValue.value = totalValue
-                    _isLoading.value = false
-                    Log.d(TAG, "processInventoryForReport: Report generation completed successfully")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "processInventoryForReport: Error processing inventory data", e)
-                withContext(Dispatchers.Main) {
-                    _errorMessage.value = "Error processing inventory data: ${e.message}"
-                    _isLoading.value = false
-                }
-            }
+            Pair(inventoryItems, totalValue) // Return the processed data
         }
     }
 
@@ -667,7 +680,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             Log.d(TAG, "generateGstReport: Starting GST report generation")
-            
+
             if (activeShopId.isNullOrEmpty()) {
                 Log.e(TAG, "generateGstReport: No active shop selected")
                 _errorMessage.value = "No active shop selected"
@@ -676,89 +689,49 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
 
             isGstReportLoading = true
             _isLoading.value = true
-            
+
             currentReportJob = viewModelScope.launch {
                 val totalStartTime = System.currentTimeMillis()
                 try {
-                    val startTimestamp = startDate.value?.time ?: 0
-                    val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
-                    Log.d(TAG, "generateGstReport: Date range: ${Date(startTimestamp)} to ${Date(endTimestamp)}")
+                    val startTimestamp = startDate.value ?: Date(0) // Use default if null
+                    val endTimestamp = endDate.value ?: Date(System.currentTimeMillis()) // Use current time if null
+                    Log.d(TAG, "generateGstReport: Date range for query: $startTimestamp to $endTimestamp")
 
                     val fetchStartTime = System.currentTimeMillis()
-                    val allInvoices = withContext(Dispatchers.IO) {
-                        Log.d(TAG, "generateGstReport: Starting invoice fetch")
-                        val allInvoicesList = mutableListOf<Invoice>()
-                        var hasMoreInvoices = true
-                        var loadNextPage = false
-                        var pageCount = 0
-                        var lastFetchTime = System.currentTimeMillis()
+                    // --- REPLACED OLD INVOICE FETCHING LOGIC WITH NEW EFFICIENT CALL ---
+                    val result = invoiceRepository.getTaxableInvoicesBetweenDates(startTimestamp, endTimestamp)
+                    Log.d(TAG, "generateGstReport: Invoice fetch completed in ${System.currentTimeMillis() - fetchStartTime}ms")
 
-                        while (hasMoreInvoices) {
-                            if (!isActive) {
-                                Log.d(TAG, "generateGstReport: Report generation cancelled")
-                                return@withContext emptyList()
-                            }
-
-                            pageCount++
-                            val pageStartTime = System.currentTimeMillis()
-                            Log.d(TAG, "generateGstReport: Fetching page $pageCount")
-                            
-                            val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastFetchTime > 10000) {
-                                Log.e(TAG, "generateGstReport: Fetch timeout on page $pageCount")
-                                throw Exception("Invoice fetch timeout")
-                            }
-                            
-                            val result = invoiceRepository.fetchInvoicesPaginated(loadNextPage)
-                            lastFetchTime = System.currentTimeMillis()
-
-                            result.fold(
-                                onSuccess = { invoices ->
-                                    if (invoices.isEmpty()) {
-                                        Log.d(TAG, "generateGstReport: No more invoices to fetch")
-                                        hasMoreInvoices = false
-                                    } else {
-                                        Log.d(TAG, "generateGstReport: Fetched ${invoices.size} invoices in page $pageCount (${System.currentTimeMillis() - pageStartTime}ms)")
-                                        allInvoicesList.addAll(invoices)
-                                        loadNextPage = true
-                                    }
-                                },
-                                onFailure = { error ->
-                                    Log.e(TAG, "generateGstReport: Error fetching invoices", error)
-                                    hasMoreInvoices = false
-                                    throw error
+                    result.fold(
+                        onSuccess = { allInvoices ->
+                            if (allInvoices.isEmpty()) {
+                                Log.d(TAG, "generateGstReport: No taxable invoices found in date range")
+                                withContext(Dispatchers.Main) {
+                                    _gstReportItems.value = emptyList()
+                                    _isLoading.value = false
+                                    _errorMessage.value = "No GST data found for the selected period"
                                 }
-                            )
+                                return@launch
+                            }
+
+                            Log.d(TAG, "generateGstReport: Processing ${allInvoices.size} invoices for GST report")
+                            processInvoicesForGstReport(allInvoices) // Pass the already filtered invoices
+                        },
+                        onFailure = { error ->
+                            Log.e(TAG, "generateGstReport: Failed to fetch taxable invoices", error)
+                            withContext(Dispatchers.Main) {
+                                _errorMessage.value = "Failed to generate GST report: ${error.message}"
+                                _isLoading.value = false
+                                _gstReportItems.value = emptyList()
+                            }
                         }
-
-                        Log.d(TAG, "generateGstReport: Total invoices fetched: ${allInvoicesList.size} in ${System.currentTimeMillis() - fetchStartTime}ms")
-
-                        val filteredInvoices = allInvoicesList.filter { invoice ->
-                            invoice.invoiceDate in startTimestamp..endTimestamp
-                        }
-                        
-                        Log.d(TAG, "generateGstReport: Filtered to ${filteredInvoices.size} invoices in date range")
-                        filteredInvoices
-                    }
-
-                    if (allInvoices.isEmpty()) {
-                        Log.d(TAG, "generateGstReport: No invoices found in date range")
-                        withContext(Dispatchers.Main) {
-                            _gstReportItems.value = emptyList()
-                            _isLoading.value = false
-                            _errorMessage.value = "No invoices found for the selected period"
-                        }
-                        return@launch
-                    }
-
-                    Log.d(TAG, "generateGstReport: Processing ${allInvoices.size} invoices for GST report")
-                    processInvoicesForGstReport(allInvoices)
+                    )
 
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) {
                         Log.d(TAG, "generateGstReport: Report generation cancelled")
                     } else {
-                        Log.e(TAG, "generateGstReport: Failed to generate GST report", e)
+                        Log.e(TAG, "generateGstReport: Failed to generate GST report (general catch)", e)
                         withContext(Dispatchers.Main) {
                             _errorMessage.value = "Failed to generate GST report: ${e.message}"
                             _isLoading.value = false
@@ -768,6 +741,8 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 } finally {
                     isGstReportLoading = false
                     currentReportJob = null
+                    // _isLoading.value is set in the success/failure blocks, so we don't need to force it here again.
+                    // This ensures isLoading is accurately reflecting if processing is still ongoing via processInvoicesForGstReport
                     Log.d(TAG, "generateGstReport: Total execution time: ${System.currentTimeMillis() - totalStartTime}ms")
                 }
             }
@@ -779,7 +754,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 val taxRateGroups = mutableMapOf<Double, MutableList<Pair<Double, Double>>>()
-                
+
                 invoices.forEach { invoice ->
                     if (!isActive) {
                         Log.d(TAG, "processInvoicesForGstReport: Processing cancelled")
@@ -790,28 +765,42 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                     invoice.items.forEach { invoiceItem ->
                         val item = invoiceItem.itemDetails
                         val quantity = invoiceItem.quantity
-                        val itemPrice = invoiceItem.price
-                        val taxRate = item.taxRate
-                        val totalAmount = itemPrice * quantity
-                        val taxableAmount = totalAmount
-                        val taxAmount = totalAmount - taxableAmount
+                        val itemPrice = invoiceItem.price // This is either net or gross price
+                        val taxRate = item.taxRate // This is the percentage, e.g., 5.0, 12.0
+
+                        // --- CRUCIAL FIX / ADJUSTMENT FOR TAX CALCULATION ---
+                        val totalLineAmount = itemPrice * quantity // Total value for this line item
+
+                        val calculatedTaxableAmount: Double
+                        val calculatedTaxAmount: Double
+
+                        // Assuming itemPrice is the NET price (price before tax)
+                        // If itemPrice is GROSS price (price including tax), the calculation below needs adjustment
+                        if (taxRate > 0.0) {
+                            calculatedTaxableAmount = totalLineAmount
+                            calculatedTaxAmount = totalLineAmount * (taxRate / 100.0)
+                        } else {
+                            calculatedTaxableAmount = totalLineAmount
+                            calculatedTaxAmount = 0.0
+                        }
 
                         Log.d(TAG, """
                             Processing item ${item.displayName}:
                             - Tax Rate: $taxRate%
                             - Quantity: $quantity
-                            - Total Amount: $totalAmount
-                            - Taxable Amount: $taxableAmount
-                            - Tax Amount: $taxAmount
+                            - Item Price: $itemPrice
+                            - Total Line Amount (Price*Qty): $totalLineAmount
+                            - Calculated Taxable Amount: $calculatedTaxableAmount
+                            - Calculated Tax Amount: $calculatedTaxAmount
                         """.trimIndent())
 
                         val taxRateList = taxRateGroups.getOrPut(taxRate) { mutableListOf() }
-                        taxRateList.add(Pair(taxableAmount, taxAmount))
+                        taxRateList.add(Pair(calculatedTaxableAmount, calculatedTaxAmount))
                     }
                 }
 
                 Log.d(TAG, "Found ${taxRateGroups.size} different tax rates")
-                
+
                 // Convert to report items
                 val gstItems = taxRateGroups.map { (taxRate, amounts) ->
                     val totalTaxableAmount = amounts.sumOf { it.first }
@@ -965,58 +954,45 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         _isLoading.value = true
         viewModelScope.launch {
             try {
-                val startTimestamp = startDate.value?.time ?: 0
-                val endTimestamp = endDate.value?.time ?: System.currentTimeMillis()
-                Log.d(TAG, "loadCustomerStatement: Date range: ${Date(startTimestamp)} to ${Date(endTimestamp)}")
-
                 // Calculate opening balance
                 Log.d(TAG, "loadCustomerStatement: Calculating opening balance")
-                val openingBalance = calculateOpeningBalance(customer, startTimestamp)
+                val openingBalance = calculateOpeningBalance(customer)
                 _openingBalance.value = openingBalance
                 Log.d(TAG, "loadCustomerStatement: Opening balance: $openingBalance")
 
-                // Get all invoices for this customer in this shop
+                // Get all invoices for this customer directly from the server
                 val customerInvoices = withContext(Dispatchers.IO) {
-                    Log.d(TAG, "loadCustomerStatement: Fetching customer invoices")
-                    // Get all invoices
-                    val allInvoicesList = mutableListOf<Invoice>()
+                    Log.d(TAG, "loadCustomerStatement: Fetching customer-specific invoices")
+                    val allCustomerInvoicesList = mutableListOf<Invoice>()
                     var hasMoreInvoices = true
-                    var loadNextPage = false
-                    var pageCount = 0
+                    var loadNextPage = false // Start with loading the first page
 
                     while (hasMoreInvoices) {
-                        pageCount++
-                        Log.d(TAG, "loadCustomerStatement: Fetching page $pageCount")
+                        Log.d(TAG, "loadCustomerStatement: Fetching customer invoices - page. Customer ID: ${customer.id}")
                         
-                        val result = invoiceRepository.fetchInvoicesPaginated(loadNextPage)
+                        // Use the new dedicated function to fetch invoices for the specific customer
+                        val result = invoiceRepository.fetchInvoicesForCustomerPaginated(customer.id, loadNextPage)
 
                         result.fold(
                             onSuccess = { invoices ->
                                 if (invoices.isEmpty()) {
-                                    Log.d(TAG, "loadCustomerStatement: No more invoices to fetch")
+                                    Log.d(TAG, "loadCustomerStatement: No more invoices to fetch for customer ${customer.id}")
                                     hasMoreInvoices = false
                                 } else {
-                                    // Add only invoices for this customer
-                                    val customerInvoices = invoices.filter { it.customerId == customer.id }
-                                    Log.d(TAG, "loadCustomerStatement: Found ${customerInvoices.size} invoices for customer in page $pageCount")
-                                    allInvoicesList.addAll(customerInvoices)
-                                    loadNextPage = true
+                                    Log.d(TAG, "loadCustomerStatement: Fetched ${invoices.size} invoices for customer ${customer.id}")
+                                    allCustomerInvoicesList.addAll(invoices)
+                                    loadNextPage = true // Set to true to fetch the next page in the subsequent iteration
                                 }
                             },
                             onFailure = { error ->
-                                Log.e(TAG, "loadCustomerStatement: Error fetching invoices", error)
+                                Log.e(TAG, "loadCustomerStatement: Error fetching customer invoices", error)
                                 hasMoreInvoices = false
                                 throw error
                             }
                         )
                     }
-
-                    // Filter by date range
-                    val filteredInvoices = allInvoicesList.filter { invoice ->
-                        invoice.invoiceDate in startTimestamp..endTimestamp
-                    }
-                    Log.d(TAG, "loadCustomerStatement: Filtered to ${filteredInvoices.size} invoices in date range")
-                    filteredInvoices
+                    Log.d(TAG, "loadCustomerStatement: Total ${allCustomerInvoicesList.size} invoices fetched for customer ${customer.id}")
+                    allCustomerInvoicesList
                 }
 
                 // Sort all transactions by date
@@ -1066,7 +1042,7 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private suspend fun calculateOpeningBalance(customer: Customer, startDate: Long): Double {
+    private suspend fun calculateOpeningBalance(customer: Customer): Double {
         Log.d(TAG, "calculateOpeningBalance: Calculating for customer ${customer.firstName} (ID: ${customer.id})")
         // For simplicity, we'll use the opening balance from the customer record
         // In a real implementation, you would calculate this based on transactions before startDate

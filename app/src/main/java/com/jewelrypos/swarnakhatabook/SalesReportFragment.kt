@@ -97,7 +97,10 @@ class SalesReportFragment : Fragment() {
     private fun setupUI() {
         Log.d(TAG, "setupUI: Setting up UI components")
         // Toolbar
-        binding.topAppBar.setNavigationOnClickListener { findNavController().navigateUp() }
+        binding.topAppBar.setNavigationOnClickListener {
+            // Use findNavController().navigateUp() to navigate within the nav_reports graph
+            findNavController().navigateUp()
+        }
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
 

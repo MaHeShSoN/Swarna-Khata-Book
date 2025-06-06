@@ -41,11 +41,25 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="android-app"
+                    android:host="com.jewelrypos.swarnakhatabook"
+                    android:pathPrefix="/invoice_detail" />
+            </intent-filter>
         </activity>
 
         <activity
             android:name=".UpgradeActivity"
             android:exported="false" >
+        </activity>
+
+        <activity
+            android:name=".ReportsActivity"
+            android:exported="false">
         </activity>
 
         <provider

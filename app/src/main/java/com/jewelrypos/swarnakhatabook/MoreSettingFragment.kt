@@ -221,7 +221,7 @@ class MoreSettingFragment : Fragment() {
             }
 
             "reports" -> {
-                mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsFragment)
+                mainNavController.navigate(R.id.action_mainScreenFragment_to_reportsActivity)
             }
 
             "recycling_bin" -> {

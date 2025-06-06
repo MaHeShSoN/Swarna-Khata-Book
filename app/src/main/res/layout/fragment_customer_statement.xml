@@ -43,45 +43,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Date Range Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginVertical="8dp"
-                app:cardBackgroundColor="@color/my_light_surface"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="3dp"
-                app:strokeColor="@color/my_light_outline"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Date Range"
-                        android:fontFamily="@font/librebaskervilleregular"
-                        android:textColor="@color/my_light_on_surface"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:id="@+id/dateRangeText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:drawableStart="@drawable/material_symbols__date_range_rounded"
-                        android:drawablePadding="8dp"
-                        android:fontFamily="@font/montserratregular"
-                        android:textColor="@color/my_light_on_background"
-                        android:textSize="14sp"
-                        tools:text="01 Mar 2023 to 31 Mar 2023" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
             <!-- No Customer Selected Layout -->
             <LinearLayout
@@ -315,7 +276,7 @@
                                 android:layout_height="wrap_content"
                                 android:fontFamily="@font/librebaskervillebold"
                                 android:textColor="@color/my_light_primary"
-                                android:textSize="20sp"
+                                android:textSize="16sp"
                                 tools:text="₹12,500.00" />
                         </LinearLayout>
 
@@ -364,7 +325,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="2"
-                        android:text="Debit"
+                        android:text="Baki"
                         android:fontFamily="@font/montserratmedium"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="10sp"
@@ -374,7 +335,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="2"
-                        android:text="Credit"
+                        android:text="Jama"
                         android:fontFamily="@font/montserratmedium"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="10sp"

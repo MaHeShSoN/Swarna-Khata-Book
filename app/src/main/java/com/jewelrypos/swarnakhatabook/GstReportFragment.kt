@@ -21,6 +21,11 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.google.android.material.datepicker.MaterialDatePicker
+import androidx.core.util.Pair
+import java.util.Date
+import java.util.Calendar
+import java.util.TimeZone
 
 class GstReportFragment : Fragment() {
 
@@ -79,9 +84,7 @@ class GstReportFragment : Fragment() {
         // Setup toolbar
         binding.topAppBar.setNavigationOnClickListener {
             Log.d(TAG, "setupUI: Navigation back button clicked")
-            if (isAdded) {
                 findNavController().navigateUp()
-            }
         }
 
         // Setup export button
@@ -98,15 +101,13 @@ class GstReportFragment : Fragment() {
             }
         }
 
-        // Display date range
-        viewModel.startDate.value?.let { startDate ->
-            viewModel.endDate.value?.let { endDate ->
-                val startDateStr = dateFormat.format(startDate)
-                val endDateStr = dateFormat.format(endDate)
-                Log.d(TAG, "setupUI: Setting date range: $startDateStr to $endDateStr")
-                binding.dateRangeText.text = "$startDateStr to $endDateStr"
-            }
+        // Setup date range card click listener
+        binding.dateRangeCard.setOnClickListener {
+            showDateRangePicker()
         }
+
+        // Initial Date Display
+        updateDateRangeText()
 
         // Setup RecyclerView
         Log.d(TAG, "setupUI: Setting up RecyclerView")
@@ -125,6 +126,7 @@ class GstReportFragment : Fragment() {
             Log.d(TAG, "Loading state changed: $isLoading")
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.contentLayout.visibility = if (isLoading) View.GONE else View.VISIBLE
+            binding.dateRangeCard.isEnabled = !isLoading
         }
 
         viewModel.errorMessage.observe(viewLifecycleOwner) { message ->
@@ -151,26 +153,14 @@ class GstReportFragment : Fragment() {
         viewModel.startDate.observe(viewLifecycleOwner) { startDate ->
             if (!isAdded) return@observe
             startDate?.let {
-                val startDateStr = dateFormat.format(it)
-                Log.d(TAG, "setupObservers: Start date changed to: $startDateStr")
-                viewModel.endDate.value?.let { endDate ->
-                    val endDateStr = dateFormat.format(endDate)
-                    binding.dateRangeText.text = "$startDateStr to $endDateStr"
-                }
-                viewModel.generateGstReport()
+                updateDateRangeText()
             }
         }
 
         viewModel.endDate.observe(viewLifecycleOwner) { endDate ->
             if (!isAdded) return@observe
             endDate?.let {
-                val endDateStr = dateFormat.format(it)
-                Log.d(TAG, "setupObservers: End date changed to: $endDateStr")
-                viewModel.startDate.value?.let { startDate ->
-                    val startDateStr = dateFormat.format(startDate)
-                    binding.dateRangeText.text = "$startDateStr to $endDateStr"
-                }
-                viewModel.generateGstReport()
+                updateDateRangeText()
             }
         }
         Log.d(TAG, "setupObservers: All observers set up successfully")
@@ -199,6 +189,46 @@ class GstReportFragment : Fragment() {
         binding.totalTaxValue.text = "₹${currencyFormatter.format(totalTax)}"
         
         Log.d(TAG, "updateSummary: Completed in ${System.currentTimeMillis() - startTime}ms")
+    }
+
+    private fun showDateRangePicker() {
+        val builder = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText(R.string.select_date_range_title)
+
+        // Set initial selection based on ViewModel
+        val start = viewModel.startDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
+        val end = viewModel.endDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
+        builder.setSelection(Pair(start, end))
+
+        val datePicker = builder.build()
+        datePicker.addOnPositiveButtonClickListener { selection ->
+            val startDate = Date(selection.first)
+            // Ensure end date includes the whole day
+            val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+            calendar.timeInMillis = selection.second
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val endDate = calendar.time
+
+            Log.d(TAG, "Date Range Selected: $startDate to $endDate")
+            viewModel.setDateRange(startDate, endDate)
+        }
+
+        datePicker.show(parentFragmentManager, datePicker.toString())
+    }
+
+    private fun updateDateRangeText() {
+        val startDate = viewModel.startDate.value
+        val endDate = viewModel.endDate.value
+        if (startDate != null && endDate != null) {
+            val startDateStr = dateFormat.format(startDate)
+            val endDateStr = dateFormat.format(endDate)
+            binding.dateRangeText.text = "$startDateStr to $endDateStr"
+        } else {
+            binding.dateRangeText.text = getString(R.string.select_a_date_range)
+        }
     }
 
     private fun exportReportToPdf() {

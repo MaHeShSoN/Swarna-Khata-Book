@@ -31,15 +31,15 @@
         tools:layout="@layout/fragment_shop_selection">
         <argument
             android:name="fromLogin"
-            app:argType="boolean"
-            android:defaultValue="false" />
+            android:defaultValue="false"
+            app:argType="boolean" />
         <action
             android:id="@+id/action_shopSelectionFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment"
-            app:popUpTo="@id/shopSelectionFragment"
-            app:popUpToInclusive="true"
             app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popUpTo="@id/shopSelectionFragment"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_shopSelectionFragment_to_createShopFragment"
             app:destination="@id/createShopFragment"
@@ -55,10 +55,10 @@
         <action
             android:id="@+id/action_createShopFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment"
-            app:popUpTo="@id/shopSelectionFragment"
-            app:popUpToInclusive="true"
             app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popUpTo="@id/shopSelectionFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -96,10 +96,10 @@
         <action
             android:id="@+id/action_otpVarificationFragment_to_mainScreenFragment"
             app:destination="@id/mainScreenFragment"
-            app:popUpTo="@id/getDetailsFragment"
-            app:popUpToInclusive="true"
             app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popUpTo="@id/getDetailsFragment"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_otpVarificationFragment_to_createShopFragment"
             app:destination="@id/createShopFragment"
@@ -108,10 +108,10 @@
         <action
             android:id="@+id/action_otpVarificationFragment_to_shopSelectionFragment"
             app:destination="@id/shopSelectionFragment"
-            app:popUpTo="@id/getDetailsFragment"
-            app:popUpToInclusive="true"
             app:enterAnim="@anim/nav_default_enter_anim"
-            app:exitAnim="@anim/nav_default_exit_anim" />
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:popUpTo="@id/getDetailsFragment"
+            app:popUpToInclusive="true" />
     </fragment>
     <fragment
         android:id="@+id/mainScreenFragment"
@@ -204,8 +204,8 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
         <action
-            android:id="@+id/action_mainScreenFragment_to_reportsFragment"
-            app:destination="@id/reportsFragment"
+            android:id="@+id/action_mainScreenFragment_to_reportsActivity"
+            app:destination="@id/reportsActivity"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
@@ -252,6 +252,10 @@
         android:id="@+id/invoiceDetailFragment"
         android:name="com.jewelrypos.swarnakhatabook.InvoiceDetailFragment"
         android:label="InvoiceDetailFragment">
+        <deepLink
+            android:id="@+id/invoiceDetailDeepLink"
+            android:autoVerify="true"
+            app:uri="android-app://com.jewelrypos.swarnakhatabook/invoice_detail/{invoiceId}" />
         <argument
             android:name="invoiceId"
             app:argType="string" />
@@ -344,7 +348,7 @@
         android:id="@+id/accountSettingsFragment"
         android:name="com.jewelrypos.swarnakhatabook.AccountSettingsFragment"
         android:label="fragment_account_settings"
-        tools:layout="@layout/fragment_account_settings" >
+        tools:layout="@layout/fragment_account_settings">
         <action
             android:id="@+id/action_accountSettingsFragment_to_shopSelectionFragment"
             app:destination="@id/shopSelectionFragment" />
@@ -382,52 +386,14 @@
         android:name="com.jewelrypos.swarnakhatabook.UpdateSettingsFragment"
         android:label="fragment_update_settings"
         tools:layout="@layout/fragment_update_settings" />
-    <fragment
-        android:id="@+id/reportsFragment"
-        android:name="com.jewelrypos.swarnakhatabook.ReportsFragment"
-        android:label="fragment_reports"
-        tools:layout="@layout/fragment_reports">
-        <action
-            android:id="@+id/action_reportsFragment_to_salesReportFragment"
-            app:destination="@id/salesReportFragment" />
-        <action
-            android:id="@+id/action_reportsFragment_to_lowStockReportFragment"
-            app:destination="@id/lowStockReportFragment" />
-        <action
-            android:id="@+id/action_reportsFragment_to_gstReportFragment"
-            app:destination="@id/gstReportFragment" />
-        <action
-            android:id="@+id/action_reportsFragment_to_inventoryReportFragment"
-            app:destination="@id/inventoryReportFragment" />
-        <action
-            android:id="@+id/action_reportsFragment_to_customerStatementFragment"
-            app:destination="@id/customerStatementFragment" />
-    </fragment>
-    <fragment
-        android:id="@+id/salesReportFragment"
-        android:name="com.jewelrypos.swarnakhatabook.SalesReportFragment"
-        android:label="fragment_sales_report"
-        tools:layout="@layout/fragment_sales_report" />
-    <fragment
-        android:id="@+id/inventoryReportFragment"
-        android:name="com.jewelrypos.swarnakhatabook.InventoryReportFragment"
-        android:label="fragment_inventory_report"
-        tools:layout="@layout/fragment_inventory_report" />
-    <fragment
-        android:id="@+id/gstReportFragment"
-        android:name="com.jewelrypos.swarnakhatabook.GstReportFragment"
-        android:label="fragment_gst_report"
-        tools:layout="@layout/fragment_gst_report" />
-    <fragment
-        android:id="@+id/lowStockReportFragment"
-        android:name="com.jewelrypos.swarnakhatabook.LowStockReportFragment"
-        android:label="fragment_low_stock_report"
-        tools:layout="@layout/fragment_low_stock_report" />
-    <fragment
-        android:id="@+id/customerStatementFragment"
-        android:name="com.jewelrypos.swarnakhatabook.CustomerStatementFragment"
-        android:label="fragment_customer_statement"
-        tools:layout="@layout/fragment_customer_statement" />
+    <activity
+        android:id="@+id/reportsActivity"
+        android:name="com.jewelrypos.swarnakhatabook.ReportsActivity"
+        android:label="Reports"
+        tools:layout="@layout/activity_reports">
+
+
+    </activity>
     <fragment
         android:id="@+id/recyclingBinFragment"
         android:name="com.jewelrypos.swarnakhatabook.RecyclingBinFragment"
@@ -437,7 +403,7 @@
         android:id="@+id/invoiceSummeryFragmnet"
         android:name="com.jewelrypos.swarnakhatabook.InvoiceSummeryFragmnet"
         android:label="fragment_invoice_summery_fragmnet"
-        tools:layout="@layout/fragment_invoice_summery_fragmnet" >
+        tools:layout="@layout/fragment_invoice_summery_fragmnet">
         <argument
             android:name="invoiceId"
             app:argType="string" />

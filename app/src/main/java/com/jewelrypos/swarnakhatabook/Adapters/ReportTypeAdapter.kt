@@ -15,6 +15,14 @@ class ReportTypeAdapter(
     private val onItemClick: (ReportType) -> Unit
 ) : ListAdapter<ReportType, ReportTypeAdapter.ReportTypeViewHolder>(ReportTypeDiffCallback) {
 
+    var isUserPremium: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ReportTypeViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_report_type, parent, false)
@@ -25,8 +33,16 @@ class ReportTypeAdapter(
         val reportType = getItem(position)
         holder.bind(reportType)
 
-        holder.itemView.setOnClickListener {
-            onItemClick(reportType)
+        if (isUserPremium) {
+            holder.itemView.setOnClickListener {
+                onItemClick(reportType)
+            }
+            holder.itemView.isClickable = true
+            holder.itemView.alpha = 1.0f
+        } else {
+            holder.itemView.setOnClickListener(null)
+            holder.itemView.isClickable = false
+            holder.itemView.alpha = 0.5f
         }
     }
 

@@ -47,6 +47,10 @@ class InvoiceRepository(
     private var lastDocumentSnapshot: DocumentSnapshot? = null
     private var isLastPage = false
 
+    // New pagination state for customer specific invoices
+    private var lastCustomerInvoiceDocumentSnapshot: DocumentSnapshot? = null
+    private var isLastCustomerInvoicePage = false
+
     // Get current active shop ID from SessionManager
     internal fun getCurrentShopId(): String {
         return SessionManager.getActiveShopId(context)
@@ -172,20 +176,26 @@ class InvoiceRepository(
             }
             Log.d(TAG, "Calculated payment status: $paymentStatus (Paid: ${invoice.paidAmount}, Total: ${invoice.totalAmount})")
 
+            // Determine if any item in the invoice is taxable
+            val hasTaxableItems = invoice.items.any { it.itemDetails.taxRate > 0.0 }
+            Log.d(TAG, "Invoice has taxable items: $hasTaxableItems")
+
             // Generate keywords for search
             val keywords = generateKeywordsForInvoice(invoice)
 
-            // Prepare invoice with ID, payment status, and keywords
+            // Prepare invoice with ID, payment status, keywords, and hasTaxableItems
             val invoiceWithId = if (invoice.id.isEmpty()) {
                 invoice.copy(
                     id = invoice.invoiceNumber,
                     paymentStatus = paymentStatus,
-                    keywords = keywords
+                    keywords = keywords,
+                    hasTaxableItems = hasTaxableItems
                 )
             } else {
                 invoice.copy(
                     paymentStatus = paymentStatus,
-                    keywords = keywords
+                    keywords = keywords,
+                    hasTaxableItems = hasTaxableItems
                 )
             }
             Log.d(TAG, "Prepared invoice with ID: ${invoiceWithId.id}")
@@ -1094,6 +1104,92 @@ class InvoiceRepository(
     }
 
     /**
+     * Fetches invoices for a specific customer with pagination, ensuring Firestore operations run on the IO dispatcher.
+     */
+    suspend fun fetchInvoicesForCustomerPaginated(
+        customerId: String,
+        loadNextPage: Boolean = false,
+        source: Source = Source.DEFAULT
+    ): Result<List<Invoice>> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching invoices for customer $customerId paginated (loadNextPage: $loadNextPage, source: $source)")
+
+        if (customerId.isBlank()) {
+            Log.e(TAG, "Customer ID cannot be blank for fetching customer invoices.")
+            return@withContext Result.failure(IllegalArgumentException("Customer ID cannot be blank"))
+        }
+        
+        // Reset pagination state if needed for this specific customer query
+        if (!loadNextPage) {
+            lastCustomerInvoiceDocumentSnapshot = null
+            isLastCustomerInvoicePage = false
+            Log.d(TAG, "Pagination reset for fetching first page for customer $customerId")
+        }
+        if (isLastCustomerInvoicePage) {
+            Log.d(TAG, "Already on the last page for customer $customerId, returning empty list")
+            return@withContext Result.success(emptyList())
+        }
+
+        try {
+            // Build query with customer ID and pagination
+            var query = getShopCollection("invoices")
+                .whereEqualTo("customerId", customerId) // Filter by customerId
+                .orderBy("invoiceDate", Query.Direction.DESCENDING)
+                .limit(PAGE_SIZE.toLong())
+
+            // Add startAfter for pagination if needed
+            if (loadNextPage && lastCustomerInvoiceDocumentSnapshot != null) {
+                Log.d(TAG, "Starting after document: ${lastCustomerInvoiceDocumentSnapshot?.id} for customer $customerId")
+                query = query.startAfter(lastCustomerInvoiceDocumentSnapshot)
+            }
+
+            // Get data with specified source
+            Log.d(TAG, "Executing Firestore query for customer $customerId")
+            val queryStartTime = System.currentTimeMillis()
+            val snapshot = query.get(source).await()
+            val queryEndTime = System.currentTimeMillis()
+            Log.d(TAG, "Firestore query for customer $customerId executed in ${queryEndTime - queryStartTime}ms. Documents fetched: ${snapshot.documents.size}")
+
+            // Update pagination state for customer invoices
+            if (snapshot.documents.size < PAGE_SIZE) {
+                isLastCustomerInvoicePage = true
+                Log.d(TAG, "Reached last page for customer $customerId with ${snapshot.documents.size} documents")
+            }
+
+            // Save last document for next page query
+            if (snapshot.documents.isNotEmpty()) {
+                lastCustomerInvoiceDocumentSnapshot = snapshot.documents.last()
+                Log.d(TAG, "Last document ID for pagination for customer $customerId: ${lastCustomerInvoiceDocumentSnapshot?.id}")
+            }
+
+            // Convert to invoice objects
+            val conversionStartTime = System.currentTimeMillis()
+            val invoices = snapshot.documents.mapNotNull { doc ->
+                try {
+                    doc.toObject(Invoice::class.java)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error converting document to Invoice for customer $customerId: ${e.message}")
+                    null
+                }
+            }
+            val conversionEndTime = System.currentTimeMillis()
+            Log.d(TAG, "Document conversion for customer $customerId completed in ${conversionEndTime - conversionStartTime}ms")
+
+            Log.d(TAG, "Successfully fetched ${invoices.size} invoices for customer $customerId")
+            Result.success(invoices)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching invoices for customer $customerId: ${e.message}")
+
+            // Try from server if cache source fails
+            if (source == Source.CACHE) {
+                Log.d(TAG, "Retrying fetch from server for customer $customerId")
+                return@withContext fetchInvoicesForCustomerPaginated(customerId, loadNextPage, Source.SERVER)
+            }
+
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Gets a single invoice by its number (ID), running on the IO dispatcher.
      */
     suspend fun getInvoiceByNumber(invoiceNumber: String): Result<Invoice> = withContext(Dispatchers.IO) {
@@ -1457,6 +1553,80 @@ class InvoiceRepository(
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching invoices for sales insights: ${e.message}")
             emptyList()
+        }
+    }
+
+    suspend fun getTaxableInvoicesBetweenDates(
+        startDate: Date,
+        endDate: Date
+    ): Result<List<Invoice>> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching taxable invoices between dates: $startDate to $endDate")
+        try {
+            val shopId = getCurrentShopId() // Ensure shopId is valid
+
+            // Adjust end date to include the whole day (as in getInvoicesBetweenDates)
+            val calendar = Calendar.getInstance()
+            calendar.time = endDate
+            calendar.set(Calendar.HOUR_OF_DAY, 23)
+            calendar.set(Calendar.MINUTE, 59)
+            calendar.set(Calendar.SECOND, 59)
+            calendar.set(Calendar.MILLISECOND, 999)
+            val adjustedEndTime = calendar.timeInMillis
+
+            val startTimestamp = startDate.time
+            Log.d(TAG, "Adjusted time range for query: ${Date(startTimestamp)} to ${Date(adjustedEndTime)}")
+
+            // --- Build the Firestore Query ---
+            // This query will filter by date range AND the new hasTaxableItems field.
+            var query = getShopCollection("invoices")
+                .whereGreaterThanOrEqualTo("invoiceDate", startTimestamp)
+                .whereLessThanOrEqualTo("invoiceDate", adjustedEndTime)
+                .whereEqualTo("hasTaxableItems", true) // Crucial filter for GST report
+                .orderBy("invoiceDate", Query.Direction.ASCENDING) // Order is important for consistent results and potential future pagination
+
+            val allTaxableInvoices = mutableListOf<Invoice>()
+            var lastDocSnapshot: DocumentSnapshot? = null
+            var hasMore = true
+
+            // Implement internal pagination to fetch all results if the query returns many documents
+            while (hasMore) {
+                var currentQuery = query
+                if (lastDocSnapshot != null) {
+                    currentQuery = currentQuery.startAfter(lastDocSnapshot)
+                    Log.d(TAG, "Continuing query after document: ${lastDocSnapshot.id}")
+                }
+                
+                val snapshot = currentQuery.limit(PAGE_SIZE.toLong()).get().await()
+                
+                if (snapshot.documents.isEmpty()) {
+                    hasMore = false
+                    Log.d(TAG, "No more documents found for the query.")
+                } else {
+                    val pageInvoices = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            doc.toObject(Invoice::class.java)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error converting document to Invoice: ${e.message}")
+                            null
+                        }
+                    }
+                    allTaxableInvoices.addAll(pageInvoices)
+                    lastDocSnapshot = snapshot.documents.last()
+                    Log.d(TAG, "Fetched ${pageInvoices.size} invoices. Total so far: ${allTaxableInvoices.size}")
+
+                    if (snapshot.documents.size < PAGE_SIZE) {
+                        hasMore = false
+                        Log.d(TAG, "Fetched last page for this query.")
+                    }
+                }
+            }
+
+            Log.d(TAG, "Successfully fetched total of ${allTaxableInvoices.size} taxable invoices for GST report.")
+            Result.success(allTaxableInvoices)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching taxable invoices between dates: ${e.message}", e)
+            Result.failure(e)
         }
     }
 }

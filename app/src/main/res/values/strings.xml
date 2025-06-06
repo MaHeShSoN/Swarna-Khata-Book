@@ -791,4 +791,6 @@
     <string name="business_summary">Business Summary</string>
     <string name="total_customers_label">Total Customers:</string>
     <string name="today_sales_label">Today\'s Sales:</string>
+    <string name="baki">Baki</string>
+    <string name="jama">Jama</string>
 </resources>

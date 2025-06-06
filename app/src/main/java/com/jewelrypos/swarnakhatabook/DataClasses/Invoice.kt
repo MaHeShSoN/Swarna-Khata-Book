@@ -19,6 +19,8 @@ data class Invoice(
     val invoiceDate: Long = System.currentTimeMillis(),
     @PropertyName("dueDate")
     val dueDate: Long? = null,
+    @PropertyName("hasTaxableItems")
+    val hasTaxableItems: Boolean = false,
     @PropertyName("items")
     val items: List<InvoiceItem> = listOf(),
     @PropertyName("payments")

@@ -1987,7 +1987,7 @@ class InvoiceDetailFragment : Fragment() {
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             if (isEditingNotes) {
-                // If editing notes, ask to save changes
+                // ... (existing notes editing logic) ...
                 AlertDialog.Builder(requireContext())
                     .setTitle("Save Notes")
                     .setMessage("Do you want to save your changes to the notes?")
@@ -2004,12 +2004,18 @@ class InvoiceDetailFragment : Fragment() {
                     .setNeutralButton("Cancel", null)
                     .show()
             } else {
-                // Normal back behavior
-                findNavController().navigateUp()
+                // ADD THIS LOGIC: Check if launched from ReportsActivity via deep link
+                val fromReportsActivity = activity?.intent?.getBooleanExtra("from_reports_activity", false) ?: false
+                if (fromReportsActivity) {
+                    // If it came from ReportsActivity, finish MainActivity to go back to ReportsActivity
+                    requireActivity().finish()
+                } else {
+                    // Normal back behavior within MainActivity's graph
+                    findNavController().navigateUp()
+                }
             }
         }
     }
-
 
     private fun updateExtraChargesDisplay(invoice: Invoice) {
         // Clear existing extra charges
