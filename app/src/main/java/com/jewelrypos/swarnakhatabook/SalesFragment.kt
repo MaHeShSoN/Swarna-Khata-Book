@@ -43,6 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.paging.LoadState
 import kotlinx.coroutines.flow.collectLatest
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.Animation
 
 class SalesFragment : Fragment() {
 
@@ -426,7 +428,64 @@ class SalesFragment : Fragment() {
         binding.recyclerViewSales.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@SalesFragment.adapter
-            AnimationUtils.animateRecyclerView(this)
+
+            // Add scroll listener for FAB animation
+            addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                private var isFabVisible = true
+                private var lastScrollY = 0
+                private val scrollThreshold = 5 // Minimum scroll amount to trigger animation
+
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    
+                    // Only trigger if scroll amount is significant
+                    if (Math.abs(dy) < scrollThreshold) return
+
+                    // Determine scroll direction with threshold
+                    val isScrollingDown = dy > scrollThreshold
+                    val isScrollingUp = dy < -scrollThreshold
+
+                    if (isScrollingDown && isFabVisible) {
+                        // Scrolling down
+                        hideFab()
+                    } else if (isScrollingUp && !isFabVisible) {
+                        // Scrolling up
+                        showFab()
+                    }
+
+                    lastScrollY = dy
+                }
+
+                private fun showFab() {
+                    if (!isFabVisible) {
+                        binding.addSaleFab.animate().cancel() // Cancel any ongoing animation
+                        binding.addSaleFab.show()
+                        binding.addSaleFab.animate()
+                            .translationY(0f)
+                            .alpha(1f)
+                            .setDuration(200)
+                            .setInterpolator(AccelerateDecelerateInterpolator())
+                            .start()
+                        isFabVisible = true
+                    }
+                }
+
+                private fun hideFab() {
+                    if (isFabVisible) {
+                        binding.addSaleFab.animate().cancel() // Cancel any ongoing animation
+                        binding.addSaleFab.animate()
+                            .translationY(binding.addSaleFab.height.toFloat() + (binding.addSaleFab.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin)
+                            .alpha(0f)
+                            .setDuration(200)
+                            .setInterpolator(AccelerateDecelerateInterpolator())
+                            .withEndAction {
+                                binding.addSaleFab.hide()
+                            }
+                            .start()
+                        isFabVisible = false
+                    }
+                }
+            })
         }
 
         viewLifecycleOwner.lifecycleScope.launch {

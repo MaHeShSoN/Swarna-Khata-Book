@@ -144,19 +144,6 @@ class ReportsFragment : Fragment() {
             findNavController().navigateUp()
         }
 
-        // Setup date range selector
-        val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        binding.dateRangeText.text = getString(
-            R.string.date_range_format,
-            dateFormat.format(viewModel.startDate.value!!),
-            dateFormat.format(viewModel.endDate.value!!)
-        )
-        Log.d(TAG, "setupUI: Date range text set to: ${binding.dateRangeText.text}")
-
-        binding.dateRangeCard.setOnClickListener {
-            Log.d(TAG, "setupUI: Date range card clicked")
-            showDateRangePicker()
-        }
 
         // Setup report types recycler view
         // The adapter's isUserPremium flag controls whether `onItemClick` is triggered.
@@ -181,8 +168,8 @@ class ReportsFragment : Fragment() {
         val reportTypes = listOf(
             ReportType(
                 id = "sales_report",
-                title = "Sales Report",
-                description = "View sales summary by product type, customer type, and time period",
+                title = getString(R.string.sales_report),
+                description = getString(R.string.sales_report_description),
                 iconResId = R.drawable.hugeicons__chart_up
             ),
 //            ReportType(
@@ -193,20 +180,20 @@ class ReportsFragment : Fragment() {
 //            ),
             ReportType(
                 id = "customer_statement",
-                title = "Customer Account Statement",
-                description = "Detailed transaction history for individual customers",
+                title = getString(R.string.customer_account_statement),
+                description = getString(R.string.customer_statement_description),
                 iconResId = R.drawable.f7__doc_person
             ),
             ReportType(
                 id = "gst_report",
-                title = "GST Report",
-                description = "Summary of GST collected for tax filing",
+                title = getString(R.string.gst_report),
+                description = getString(R.string.gst_report_description),
                 iconResId = R.drawable.hugeicons__taxes
             ),
             ReportType(
                 id = "low_stock",
-                title = "Low Stock Report",
-                description = "Items below reorder threshold that need attention",
+                title = getString(R.string.low_stock_report),
+                description = getString(R.string.low_stock_description),
                 iconResId = R.drawable.lets_icons__box_light
             )
         )
@@ -217,18 +204,28 @@ class ReportsFragment : Fragment() {
 
     private fun setupObservers() {
         Log.d(TAG, "setupObservers: Setting up LiveData observers")
-        // Observe date range changes
-        viewModel.startDate.observe(viewLifecycleOwner) { startDate ->
-            Log.d(TAG, "setupObservers: Start date changed to: $startDate")
-            viewModel.endDate.value?.let { endDate ->
-                updateDateRangeDisplay(startDate, endDate)
-            }
-        }
-
-        viewModel.endDate.observe(viewLifecycleOwner) { endDate ->
-            Log.d(TAG, "setupObservers: End date changed to: $endDate")
-            viewModel.startDate.value?.let { startDate ->
-                updateDateRangeDisplay(startDate, endDate)
+        
+        // Observe selected chip
+        viewModel.selectedChipId.observe(viewLifecycleOwner) { chipId ->
+            chipId?.let {
+                Log.d(TAG, "setupObservers: Selected chip changed to: $chipId")
+                // If we're coming back from a report fragment, we might want to navigate to the same report
+                // with the selected chip's date range
+                if (isNavigating) {
+                    // Get the current destination
+                    val currentDestination = findNavController().currentDestination?.id
+                    when (currentDestination) {
+                        R.id.salesReportFragment -> {
+                            // Already on sales report, just update the date range
+                            viewModel.loadSalesReport()
+                        }
+                        R.id.gstReportFragment -> {
+                            // Already on GST report, just update the date range
+                            viewModel.generateGstReport()
+                        }
+                        // Add other report types as needed
+                    }
+                }
             }
         }
 
@@ -249,49 +246,8 @@ class ReportsFragment : Fragment() {
         Log.d(TAG, "setupObservers: All observers setup completed")
     }
 
-    private fun updateDateRangeDisplay(startDate: Date, endDate: Date) {
-        Log.d(TAG, "updateDateRangeDisplay: Updating date range display")
-        val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        binding.dateRangeText.text = getString(
-            R.string.date_range_format,
-            dateFormat.format(startDate),
-            dateFormat.format(endDate)
-        )
-        Log.d(TAG, "updateDateRangeDisplay: Date range updated to: ${binding.dateRangeText.text}")
-    }
 
-    private fun showDateRangePicker() {
-        Log.d(TAG, "showDateRangePicker: Opening date picker")
-        val dateRangePicker = MaterialDatePicker.Builder.dateRangePicker()
-            .setTitleText("Select Date Range")
-            .setSelection(
-                androidx.core.util.Pair(
-                    viewModel.startDate.value!!.time,
-                    viewModel.endDate.value!!.time
-                )
-            )
-            .build()
 
-        dateRangePicker.addOnPositiveButtonClickListener { selection ->
-            Log.d(
-                TAG,
-                "showDateRangePicker: Date range selected: ${selection.first} to ${selection.second}"
-            )
-            val startDate = Date(selection.first)
-            val endDate = Date(selection.second)
-
-            val calendar = Calendar.getInstance()
-            calendar.time = endDate
-            calendar.set(Calendar.HOUR_OF_DAY, 23)
-            calendar.set(Calendar.MINUTE, 59)
-            calendar.set(Calendar.SECOND, 59)
-
-            viewModel.setDateRange(startDate, calendar.time)
-            Log.d(TAG, "showDateRangePicker: Date range updated in ViewModel")
-        }
-
-        dateRangePicker.show(parentFragmentManager, "DATE_PICKER")
-    }
 
     private fun navigateToReportDetail(reportType: ReportType) {
         Log.d(TAG, "navigateToReportDetail: Navigating to ${reportType.id}")

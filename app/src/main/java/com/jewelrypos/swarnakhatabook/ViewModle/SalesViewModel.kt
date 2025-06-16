@@ -697,50 +697,45 @@ class SalesViewModel(
      */
     fun loadCustomerInvoices(customerId: String) {
         if (customerId.isBlank()) {
-            _customerInvoices.value = emptyList() // Clear if ID is blank
+            _customerInvoices.value = emptyList()
             return
         }
-        // Consider showing loading specific to this operation if needed
-        // _isCustomerInvoiceLoading.value = true
-        viewModelScope.launch {
-            // **Inefficient Approach:** Fetches all and filters client-side.
-            // **TODO:** Replace with a repository call like:
-            // repository.fetchInvoicesForCustomerPaginated(customerId, false).fold(...)
-            val allInvoicesCopy = _allInvoices.toList() // Use already fetched data if available
-            val filtered = withContext(Dispatchers.Default) {
-                allInvoicesCopy.filter { it.customerId == customerId }
-            }
-            _customerInvoices.value = filtered
-//             _isCustomerInvoiceLoading.value = false
-            Log.d(
-                "SalesViewModel",
-                "Loaded ${filtered.size} invoices for customer $customerId (client-side filter)"
-            )
 
-            // --- OR --- (If you must fetch specifically, but inefficiently)
-            _isLoading.value = true // Use main loading indicator for now
-            repository.fetchInvoicesPaginated(loadNextPage = false).fold( // Fetches ALL again
-                onSuccess = { allInvoices ->
-                    val filtered = withContext(Dispatchers.Default) {
-                        allInvoices.filter { it.customerId == customerId }
-                    }
-                    _customerInvoices.value = filtered
-                    _isLoading.value = false
-                    Log.d(
-                        "SalesViewModel",
-                        "Fetched and filtered ${filtered.size} invoices for customer $customerId"
-                    )
-                },
-                onFailure = { error ->
-                    _errorMessage.value = error.message ?: "Failed to load customer invoices"
-                    _isLoading.value = false
-                    Log.e(
-                        "SalesViewModel",
-                        "Error loading customer invoices for $customerId",
-                        error
+        _isLoading.value = true
+        viewModelScope.launch {
+            try {
+                val allCustomerInvoices = mutableListOf<Invoice>()
+                var loadNextPage = false
+                var hasMoreInvoices = true
+
+                while (hasMoreInvoices) {
+                    val result = repository.fetchInvoicesForCustomerPaginated(customerId, loadNextPage)
+                    
+                    result.fold(
+                        onSuccess = { invoices ->
+                            if (invoices.isEmpty()) {
+                                hasMoreInvoices = false
+                            } else {
+                                allCustomerInvoices.addAll(invoices)
+                                loadNextPage = true
+                            }
+                        },
+                        onFailure = { error ->
+                            _errorMessage.value = error.message ?: "Failed to load customer invoices"
+                            Log.e("SalesViewModel", "Error loading customer invoices for $customerId", error)
+                            hasMoreInvoices = false
+                        }
                     )
                 }
-            )
+
+                _customerInvoices.value = allCustomerInvoices
+                Log.d("SalesViewModel", "Loaded total of ${allCustomerInvoices.size} invoices for customer $customerId")
+            } catch (e: Exception) {
+                _errorMessage.value = "Error loading customer invoices: ${e.message}"
+                Log.e("SalesViewModel", "Exception loading customer invoices", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 

@@ -115,6 +115,11 @@ class PaymentEntryBottomSheet : BottomSheetDialogFragment() {
         binding.amountPaidText.text = "₹${String.format("%.2f", amountPaid)}"
         binding.balanceDueText.text = "₹${String.format("%.2f", invoiceTotal - amountPaid)}"
 
+        // Add click listener to select amount text when clicked
+        binding.amountEditText.setOnClickListener {
+            binding.amountEditText.selectAll()
+        }
+
         setupPaymentAmountSuggestions()
         setupPaymentMethodSelection()
         setupButtons()

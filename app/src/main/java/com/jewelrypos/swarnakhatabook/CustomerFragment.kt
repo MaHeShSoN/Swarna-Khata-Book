@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -332,6 +333,48 @@ class CustomerFragment : Fragment(), CustomerBottomSheetFragment.CustomerOperati
         adapter = CustomerAdapter(this)
         binding.recyclerViewCustomers.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewCustomers.adapter = adapter
+
+        // Add scroll listener for FAB animation
+        binding.recyclerViewCustomers.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private var isFabVisible = true
+
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy > 0 && isFabVisible) {
+                    // Scrolling down
+                    hideFab()
+                } else if (dy < 0 && !isFabVisible) {
+                    // Scrolling up
+                    showFab()
+                }
+            }
+
+            private fun showFab() {
+                binding.addCustomerFab.animate().cancel() // Cancel any ongoing animation
+                binding.addCustomerFab.show()
+                binding.addCustomerFab.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
+                isFabVisible = true
+            }
+
+            private fun hideFab() {
+                binding.addCustomerFab.animate().cancel() // Cancel any ongoing animation
+                binding.addCustomerFab.animate()
+                    .translationY(binding.addCustomerFab.height.toFloat() + (binding.addCustomerFab.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin)
+                    .alpha(0f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .withEndAction {
+                        binding.addCustomerFab.hide()
+                    }
+                    .start()
+                isFabVisible = false
+            }
+        })
     }
 
     private fun addCustomerButton() {

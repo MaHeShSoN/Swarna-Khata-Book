@@ -17,9 +17,9 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
+            app:menu="@menu/report_menu"
             app:navigationIcon="@drawable/famicons__arrow_back"
             app:title="GST Report"
-            app:menu="@menu/report_menu"
             app:titleTextAppearance="@style/ToolbarTitle"
             app:titleTextColor="@color/white" />
     </com.google.android.material.appbar.AppBarLayout>
@@ -45,9 +45,9 @@
 
             <!-- Date Range Card -->
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/dateRangeCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/dateRangeCard"
                 android:layout_marginVertical="8dp"
                 app:cardBackgroundColor="@color/my_light_surface"
                 app:cardCornerRadius="16dp"
@@ -64,8 +64,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/date_range"
                         android:fontFamily="@font/librebaskervilleregular"
+                        android:text="@string/date_range"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="18sp" />
 
@@ -83,6 +83,73 @@
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- Date Filter Chips -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/dateFilterChipGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="4dp"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipThisWeek"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/this_week" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipThisMonth"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/this_month" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipLastMonth"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/last_month" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipThisQuarter"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/this_quarter" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipThisYear"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/this_year" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipLastYear"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/last_year" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipCustom"
+                        style="@style/Widget.App.Chip.Filter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/custom" />
+
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
 
             <!-- GST Summary Card -->
             <com.google.android.material.card.MaterialCardView
@@ -104,8 +171,8 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/gst_summary"
                         android:fontFamily="@font/librebaskervilleregular"
+                        android:text="@string/gst_summary"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="18sp" />
 
@@ -113,15 +180,15 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="16dp">
+                        android:layout_marginTop="16dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/taxable_amount"
                             android:fontFamily="@font/montserratregular"
+                            android:text="@string/taxable_amount"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -139,15 +206,15 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/cgst"
                             android:fontFamily="@font/montserratregular"
+                            android:text="@string/cgst"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -165,15 +232,15 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/sgst"
                             android:fontFamily="@font/montserratregular"
+                            android:text="@string/sgst"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -187,45 +254,19 @@
                             tools:text="₹6,250.00" />
                     </LinearLayout>
 
-                    <!-- IGST Row -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/igst"
-                            android:fontFamily="@font/montserratregular"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp" />
-
-                        <TextView
-                            android:id="@+id/igstValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="@font/montserratsemibold"
-                            android:textColor="@color/my_light_on_surface"
-                            android:textSize="14sp"
-                            tools:text="₹0.00" />
-                    </LinearLayout>
-
                     <!-- Total Tax Row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/total_tax"
                             android:fontFamily="@font/montserratsemibold"
+                            android:text="@string/total_tax"
                             android:textColor="@color/my_light_on_surface"
                             android:textSize="14sp" />
 
@@ -246,71 +287,75 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/gst_details_by_rate"
+                android:layout_marginVertical="8dp"
                 android:fontFamily="@font/librebaskervilleregular"
+                android:text="@string/gst_details_by_rate"
                 android:textColor="@color/my_light_on_surface"
-                android:textSize="18sp"
-                android:layout_marginVertical="8dp" />
+                android:textSize="18sp" />
 
             <!-- GST Table Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@color/my_light_primary_container"
                 android:orientation="horizontal"
-                android:paddingVertical="8dp"
-                android:background="@color/my_light_primary_container">
+                android:paddingVertical="8dp">
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:fontFamily="@font/montserratmedium"
                     android:text="@string/rate"
-                    android:fontFamily="@font/montserratmedium"
+                    android:textAlignment="center"
+                    android:textAllCaps="true"
                     android:textColor="@color/my_light_on_surface"
-                    android:textSize="10sp"
-                    android:textAllCaps="true" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="2"
+                    android:fontFamily="@font/montserratmedium"
                     android:text="@string/taxable_amount"
-                    android:fontFamily="@font/montserratmedium"
+                    android:textAlignment="center"
+                    android:textAllCaps="true"
                     android:textColor="@color/my_light_on_surface"
-                    android:textSize="10sp"
-                    android:textAllCaps="true" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.5"
+                    android:fontFamily="@font/montserratmedium"
                     android:text="@string/cgst"
-                    android:fontFamily="@font/montserratmedium"
+                    android:textAlignment="center"
+                    android:textAllCaps="true"
                     android:textColor="@color/my_light_on_surface"
-                    android:textSize="10sp"
-                    android:textAllCaps="true" />
+                    android:textSize="10sp" />
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1.5"
-                    android:text="@string/sgst"
                     android:fontFamily="@font/montserratmedium"
+                    android:text="@string/sgst"
+                    android:textAlignment="center"
+                    android:textAllCaps="true"
                     android:textColor="@color/my_light_on_surface"
-                    android:textSize="10sp"
-                    android:textAllCaps="true" />
+                    android:textSize="10sp" />
 
 
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="2"
-                    android:text="@string/total"
-                    android:textAlignment="textEnd"
                     android:fontFamily="@font/montserratmedium"
+                    android:text="@string/total"
+                    android:textAlignment="center"
+                    android:textAllCaps="true"
                     android:textColor="@color/my_light_on_surface"
-                    android:textSize="10sp"
-                    android:textAllCaps="true" />
+                    android:textSize="10sp" />
             </LinearLayout>
 
             <!-- GST Details List -->

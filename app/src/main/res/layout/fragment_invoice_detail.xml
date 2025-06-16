@@ -18,7 +18,6 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/my_light_primary"
-            app:menu="@menu/invoice_detail_menu"
             app:navigationIcon="@drawable/famicons__arrow_back"
             app:popupTheme="@style/CustomPopupMenu"
             app:title="Invoice Details"
@@ -658,45 +657,6 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-            <!-- Action Buttons -->
-            <LinearLayout
-                android:id="@+id/actionButtonsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:orientation="horizontal"
-                app:layout_constraintTop_toBottomOf="@id/notesCard">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/printButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="@string/print"
-                    android:textColor="@color/my_light_outline"
-                    app:icon="@drawable/material_symbols_light__print"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/my_light_outline"
-                    app:strokeColor="@color/my_light_outline" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/shareButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/my_light_primary"
-                    android:fontFamily="@font/montserratregular"
-                    android:text="@string/share"
-                    android:textColor="@color/white"
-                    app:icon="@drawable/material_symbols__share"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/white" />
-            </LinearLayout>
-
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

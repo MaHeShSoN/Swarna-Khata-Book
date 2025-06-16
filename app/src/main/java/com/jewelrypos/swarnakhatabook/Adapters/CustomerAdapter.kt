@@ -29,7 +29,6 @@ class CustomerAdapter(
         val customerName: TextView = itemView.findViewById(R.id.customerName)
         val customerType: TextView = itemView.findViewById(R.id.customerType)
         val customerBalance: TextView = itemView.findViewById(R.id.customerBalance)
-        // Add any other views accessed here
     }
 
     interface OnCustomerClickListener {
@@ -78,7 +77,7 @@ class CustomerAdapter(
             }
             // Animation: PagingDataAdapter might recycle views differently.
             // Test if this animation still works as expected or if it needs adjustment.
-            setAnimation(holder.itemView, position)
+//            setAnimation(holder.itemView, position)
         }
     }
 
@@ -97,13 +96,7 @@ class CustomerAdapter(
 
     private var lastPosition = -1 // Keep for animation if needed
 
-    private fun setAnimation(view: View, position: Int) {
-        if (position > lastPosition) {
-            val animation = AnimationUtils.loadAnimation(view.context, R.anim.animation_item_enter)
-            view.startAnimation(animation)
-            lastPosition = position
-        }
-    }
+
 
     // getPositionForCustomer will not work reliably with PagingDataAdapter as items can be null or not yet loaded.
     // If you need to find an item, you might need to iterate through snapshots or query the PagingSource differently.

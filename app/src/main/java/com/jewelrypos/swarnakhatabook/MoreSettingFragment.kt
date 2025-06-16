@@ -18,6 +18,9 @@ import com.jewelrypos.swarnakhatabook.Factorys.SettingsViewModelFactory
 import com.jewelrypos.swarnakhatabook.ViewModle.SettingsViewModel
 import com.jewelrypos.swarnakhatabook.databinding.FragmentMoreSettingBinding
 import com.jewelrypos.swarnakhatabook.Utilitys.SecurePreferences
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import java.util.Locale
 
 class MoreSettingFragment : Fragment() {
     private var _binding: FragmentMoreSettingBinding? = null
@@ -28,6 +31,9 @@ class MoreSettingFragment : Fragment() {
 
     // Cache ColorStateLists and other resources for reuse
     private lateinit var colorCache: SettingsColorCache
+
+    // Key for saving scroll position
+    private val KEY_SCROLL_POSITION = "scroll_position"
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -51,6 +57,23 @@ class MoreSettingFragment : Fragment() {
 
         // Set up observers for the ViewModel data
         setupObservers()
+
+        // Restore scroll position if available
+        savedInstanceState?.let {
+            val scrollPosition = it.getInt(KEY_SCROLL_POSITION, 0)
+            // Use post to ensure the layout has been measured and drawn before scrolling
+            binding.scrollView.post {
+                binding.scrollView.scrollTo(0, scrollPosition)
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Save the current scroll position
+        _binding?.let {
+            outState.putInt(KEY_SCROLL_POSITION, it.scrollView.scrollY)
+        }
     }
 
     private fun setupObservers() {
@@ -275,14 +298,11 @@ class MoreSettingFragment : Fragment() {
         val preferences = SecurePreferences.getInstance(requireContext())
         preferences.edit().putString("selected_language", lang).apply()
 
-        val locale = java.util.Locale(lang)
-        java.util.Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        requireActivity().baseContext.resources.updateConfiguration(
-            config, requireActivity().baseContext.resources.displayMetrics
-        )
+        // Apply the new locale using AppCompatDelegate
+        val localeList = LocaleListCompat.forLanguageTags(lang)
+        AppCompatDelegate.setApplicationLocales(localeList)
 
+        // Recreate the activity to apply the language change immediately
         requireActivity().recreate()
     }
 

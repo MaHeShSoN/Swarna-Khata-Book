@@ -188,6 +188,7 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/amountEditText"
                         android:layout_width="match_parent"
+                        android:selectAllOnFocus="true"
                         android:layout_height="wrap_content"
                         android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal" />

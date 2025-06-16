@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
 import android.widget.Filter
 import android.widget.Filterable
@@ -30,10 +31,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.jewelrypos.swarnakhatabook.Adapters.ExtraChargeAdapter
 import com.jewelrypos.swarnakhatabook.DataClasses.ExtraCharge
+import com.jewelrypos.swarnakhatabook.DataClasses.ExtraChargeName
 import com.jewelrypos.swarnakhatabook.DataClasses.JewelleryItem
 import com.jewelrypos.swarnakhatabook.Enums.InventoryType
 import com.jewelrypos.swarnakhatabook.Factorys.InventoryViewModelFactory
 import com.jewelrypos.swarnakhatabook.R
+import com.jewelrypos.swarnakhatabook.Repository.ExtraChargeNameRepository
 
 import com.jewelrypos.swarnakhatabook.Repository.InventoryRepository
 import com.jewelrypos.swarnakhatabook.Utilitys.SharedPrefsManager
@@ -75,7 +78,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         metalRateOn = "Net Weight",
         taxRate = 0.0,
         totalTax = 0.0,
-        listOfExtraCharges = emptyList()
+        listOfExtraCharges = emptyList(),
+        stoneWeight = 0.0
     )
     private lateinit var chargeAdapter: ExtraChargeAdapter
 
@@ -101,6 +105,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     // Add SharedPrefsManager
     private lateinit var sharedPrefsManager: SharedPrefsManager
 
+    // Add repository
+    private lateinit var extraChargeNameRepository: ExtraChargeNameRepository
+    private var chargeNames: List<ExtraChargeName> = emptyList()
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -110,10 +118,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
         // Update title if in edit mode
         if (editMode) {
-            binding.titleTextView.text = "Edit Jewellery Item"
-            binding.saveAddButton.text = "Update"
+            binding.titleTextView.text = getString(R.string.edit_jewellery_item)
+            binding.saveAddButton.text = getString(R.string.update)
             binding.saveAddButton.visibility = View.GONE
-            binding.saveCloseButton.text = "Update & Close"
+            binding.saveCloseButton.text = getString(R.string.update_and_close)
         }
 
         return binding.root
@@ -127,6 +135,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
 
         // Initialize repository directly
         initializeRepository()
+        initializeExtraChargeNameRepository()
 
         // If we're in edit mode, populate the form with the item data
         if (editMode && itemToEdit != null) {
@@ -148,6 +157,12 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val firestore = FirebaseFirestore.getInstance()
         val auth = FirebaseAuth.getInstance()
         inventoryRepository = InventoryRepository(firestore, auth, requireContext())
+    }
+
+    private fun initializeExtraChargeNameRepository() {
+        val firestore = FirebaseFirestore.getInstance()
+        val auth = FirebaseAuth.getInstance()
+        extraChargeNameRepository = ExtraChargeNameRepository(firestore, auth, requireContext())
     }
 
     // Load all inventory items for the dropdown
@@ -173,7 +188,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,
-                                    "Failed to load inventory items: ${exception.message}",
+                                    getString(R.string.failed_to_load_inventory, exception.message),
                                     Toast.LENGTH_SHORT
                                 ).show()
                                 binding.progressBar.visibility = View.GONE
@@ -183,7 +198,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.error_loading, e.message), Toast.LENGTH_SHORT).show()
                     binding.progressBar.visibility = View.GONE
                 }
             }
@@ -229,6 +244,19 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 behavior.skipCollapsed = true
                 behavior.isDraggable = true
+                
+                // Add keyboard handling
+                behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+                    override fun onStateChanged(bottomSheet: View, newState: Int) {
+                        if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
+                            behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                        }
+                    }
+
+                    override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                        // Handle slide if needed
+                    }
+                })
             }
         }
 
@@ -496,7 +524,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     private fun fillFieldsFromSelectedItem(item: JewelleryItem) {
         // Fill all available fields
         binding.grossWeightEditText.setText(item.grossWeight.toString())
-        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.stoneWeightEditText.setText(item.stoneWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.wastageTypeDropdown.setText(item.wastageType ?: "Percentage", false)
         binding.purityEditText.setText(item.purity)
@@ -561,7 +589,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Fill in the fields
         binding.itemNameDropdown.setText(item.displayName)
         binding.grossWeightEditText.setText(item.grossWeight.toString())
-        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.stoneWeightEditText.setText(item.stoneWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.wastageTypeDropdown.setText(item.wastageType ?: "Percentage", false)
         binding.purityEditText.setText(item.purity)
@@ -571,45 +599,36 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.goldRateOnEditText.setText(item.metalRateOn ?: "Net Weight", false)
         binding.diamondPrizeEditText.setText(item.diamondPrice.toString() ?: "0.0")
 
-
         if (item.taxRate > 0) {
             binding.taxApplicableCheckbox.isChecked = true
             binding.taxRateEditText.setText(item.taxRate.toString())
-            // Make the tax rate field visible if it's controlled by the checkbox
             binding.taxRateInputLayout.visibility = View.VISIBLE
         } else {
             binding.taxApplicableCheckbox.isChecked = false
             binding.taxRateEditText.setText("0.0")
-            // Hide the tax rate field if applicable
             binding.taxRateInputLayout.visibility = View.GONE
         }
 
-        setUpInitalRecyclerView()
+        // Initialize RecyclerView if not already initialized
+        if (!::chargeAdapter.isInitialized) {
+            setUpInitalRecyclerView()
+        }
 
-
-
+        // Clear existing charges and add new ones
+        chargeAdapter.updateCharges(emptyList())
+        
         if (item.listOfExtraCharges.isNotEmpty()) {
-            // Clear any existing charges first (important!)
-            chargeAdapter.updateCharges(emptyList())
-
-            // Add all extra charges to the adapter one by one
+            android.util.Log.d("ItemSelection", "Populating ${item.listOfExtraCharges.size} extra charges")
             item.listOfExtraCharges.forEach { charge ->
-                android.util.Log.d(
-                    "ItemSelection",
-                    "Adding charge: ${charge.name} = ${charge.amount}"
-                )
+                android.util.Log.d("ItemSelection", "Adding charge: ${charge.name} = ${charge.amount}")
                 chargeAdapter.addCharge(charge)
             }
         } else {
-            // Clear any existing charges if the item has none
-            chargeAdapter.updateCharges(emptyList())
             android.util.Log.d("ItemSelection", "No extra charges to display")
         }
 
-
         // Update calculated fields
         updateCalculatedFields()
-
         updateChargesVisibility()
     }
 
@@ -656,7 +675,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     fun validateJewelryItemForm(): Pair<Boolean, String> {
         // Get references to all form fields
         val grossWeight = binding.grossWeightEditText.text.toString().trim()
-        val netWeight = binding.netWeightEditText.text.toString().trim()
+        val stoneWeight = binding.stoneWeightEditText.text.toString().trim()
         val wastage = binding.wastageEditText.text.toString().trim()
         val purity = binding.purityEditText.text.toString().trim()
         val makingCharges = binding.mackingChargesEditText.text.toString().trim()
@@ -698,27 +717,42 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        // Net Weight - should be less than gross weight if provided
-        if (netWeight.isNotEmpty()) {
+        // Stone Weight validation
+        if (stoneWeight.isNotEmpty()) {
             try {
-                val netWeightValue = netWeight.toDouble()
+                val stoneWeightValue = stoneWeight.toDouble()
                 val grossWeightValue = grossWeight.toDouble()
 
-                if (netWeightValue <= 0) {
-                    binding.netWeightInputLayout.error = "Net weight must be greater than zero"
-                    return Pair(false, "Net weight must be greater than zero")
-                } else if (netWeightValue > grossWeightValue) {
-                    binding.netWeightInputLayout.error = "Net weight cannot exceed gross weight"
-                    binding.netWeightEditText.requestFocus()
-                    return Pair(false, "Net weight cannot exceed gross weight")
+                if (stoneWeightValue < 0) {
+                    binding.stoneWeightInputLayout.error = "Stone weight cannot be negative"
+                    binding.stoneWeightEditText.requestFocus()
+                    return Pair(false, "Stone weight cannot be negative")
+                } else if (stoneWeightValue > grossWeightValue) {
+                    binding.stoneWeightInputLayout.error = "Stone weight cannot exceed gross weight"
+                    binding.stoneWeightEditText.requestFocus()
+                    return Pair(false, "Stone weight cannot exceed gross weight")
                 } else {
-                    binding.netWeightInputLayout.error = null
+                    binding.stoneWeightInputLayout.error = null
                 }
             } catch (e: NumberFormatException) {
-                binding.netWeightInputLayout.error = "Invalid net weight"
-                binding.netWeightEditText.requestFocus()
-                return Pair(false, "Invalid net weight")
+                binding.stoneWeightInputLayout.error = "Invalid stone weight"
+                binding.stoneWeightEditText.requestFocus()
+                return Pair(false, "Invalid stone weight")
             }
+        } else {
+            binding.stoneWeightInputLayout.error = null
+        }
+
+        // Net Weight validation - now primarily based on the calculated value
+        // The previous net weight validation logic can largely be removed or simplified
+        // as it's now a derived field. We only need to ensure grossWeight >= stoneWeight
+        // which is handled by stoneWeight validation.
+        val calculatedNetWeight = (grossWeight.toDoubleOrNull() ?: 0.0) - (stoneWeight.toDoubleOrNull() ?: 0.0)
+        if (calculatedNetWeight < 0) {
+            binding.netWeightInputLayout.error = "Calculated net weight cannot be negative. Check Gross and Stone weights."
+            return Pair(false, "Calculated net weight cannot be negative. Check Gross and Stone weights.")
+        } else {
+            binding.netWeightInputLayout.error = null
         }
 
         // Purity validation
@@ -865,7 +899,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
     internal fun calculateMakingCharges(): Double {
         val makingCharges = binding.mackingChargesEditText.text.toString().toDoubleOrNull() ?: 0.0
         val makingChargesType = binding.mackingChargesTypeEditText.text.toString()
-        val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val netWeight = (binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0) -
+                (binding.stoneWeightEditText.text.toString().toDoubleOrNull() ?: 0.0)
 
         return when (makingChargesType.uppercase()) {
             "PER GRAM" -> makingCharges * netWeight
@@ -891,7 +926,8 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         val goldRate = binding.goldRateEditText.text.toString().toDoubleOrNull() ?: 0.0
         val goldRateOn = binding.goldRateOnEditText.text.toString()
         val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
-        val netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val netWeight = (binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0) -
+                (binding.stoneWeightEditText.text.toString().toDoubleOrNull() ?: 0.0)
         val wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0
         val wastageType = binding.wastageTypeDropdown.text.toString()
         val purity = binding.purityEditText.text.toString().toDoubleOrNull() ?: 0.0
@@ -972,6 +1008,11 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
      * Updates all calculated fields in the UI
      */
     private fun updateCalculatedFields() {
+        val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val stoneWeight = binding.stoneWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+        val netWeight = grossWeight - stoneWeight
+        binding.netWeightEditText.setText(String.format("%.2f", netWeight))
+
         val makingCharges = calculateMakingCharges()
         val goldValue = calculateGoldValue()
         val totalCharges = calculateTotalCharges()
@@ -1003,6 +1044,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             category = "",
             grossWeight = 0.0,
             netWeight = 0.0,
+            stoneWeight = 0.0,
             wastage = 0.0,
             wastageType = "",
             purity = "",
@@ -1023,9 +1065,10 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.diamondPrizeEditText.setText("0.0")
         binding.goldRateEditText.setText(sharedPrefsManager.getLastGoldRate().toString())
         binding.wastageEditText.setText("0.0")
-        binding.purityEditText.setText(sharedPrefsManager.getLastPurity().toString())
-        binding.netWeightEditText.setText("0.0")
+        // Format purity to exactly 2 decimal places when displaying
+        binding.purityEditText.setText(String.format("%.2f", sharedPrefsManager.getLastPurity()))
         binding.grossWeightEditText.setText("0.0")
+        binding.stoneWeightEditText.setText("0.0")
         binding.mackingChargesEditText.setText(sharedPrefsManager.getLastMakingCharges().toString())
 
         // Pre-select dropdown values with last used values
@@ -1054,7 +1097,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // List of all numeric EditText fields
         val numericFields = listOf(
             binding.grossWeightEditText,
-            binding.netWeightEditText,
+            binding.stoneWeightEditText,
             binding.wastageEditText,
             binding.purityEditText,
             binding.mackingChargesEditText,
@@ -1120,7 +1163,9 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
                     binding.purityEditText.text.hashCode() -> {
                         binding.purityEditText.text.toString().toDoubleOrNull()
                             ?.let { purity ->
-                                sharedPrefsManager.saveLastPurity(purity)
+                                // Format to exactly 2 decimal places before saving
+                                val formattedPurity = String.format("%.2f", purity).toDouble()
+                                sharedPrefsManager.saveLastPurity(formattedPurity)
                             }
                     }
                 }
@@ -1131,7 +1176,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         binding.goldRateEditText.addTextChangedListener(textWatcher)
         binding.goldRateOnEditText.addTextChangedListener(textWatcher)
         binding.grossWeightEditText.addTextChangedListener(textWatcher)
-        binding.netWeightEditText.addTextChangedListener(textWatcher)
+        binding.stoneWeightEditText.addTextChangedListener(textWatcher)
         binding.wastageEditText.addTextChangedListener(textWatcher)
         binding.mackingChargesEditText.addTextChangedListener(textWatcher)
         binding.mackingChargesTypeEditText.addTextChangedListener(textWatcher)
@@ -1192,6 +1237,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Clear existing UI field values
         binding.itemNameDropdown.setText("")
         binding.grossWeightEditText.text?.clear()
+        binding.stoneWeightEditText.text?.clear()
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
         binding.purityEditText.setText("")
@@ -1204,6 +1250,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
         // Reset any error states
         binding.grossWeightInputLayout.error = null
         binding.netWeightInputLayout.error = null
+        binding.stoneWeightInputLayout.error = null
         binding.wastageInputLayout.error = null
         binding.purityInputLayout.error = null
         binding.mackingChargesInputLayout.error = null
@@ -1296,8 +1343,38 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             .setTitle("Add New Charge")
             .setLayout(R.layout.dialog_add_extra_charge)
 
+        // Load charge names for dropdown
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = extraChargeNameRepository.getAllChargeNames()
+                withContext(Dispatchers.Main) {
+                    result.fold(
+                        onSuccess = { names ->
+                            chargeNames = names
+                            setupChargeNameDropdown(dialog)
+                        },
+                        onFailure = { exception ->
+                            Toast.makeText(
+                                requireContext(),
+                                "Failed to load charge names: ${exception.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Error loading charge names: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
         dialog.setPositiveButton("Add") { _, dialogView ->
-            val nameEditText = dialog.findViewById<TextInputEditText>(R.id.chargeNameEditText)
+            val nameEditText = dialog.findViewById<AutoCompleteTextView>(R.id.chargeNameEditText)
             val amountEditText = dialog.findViewById<TextInputEditText>(R.id.chargeAmountEditText)
 
             val name = nameEditText?.text.toString().trim()
@@ -1306,7 +1383,40 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             if (name.isNotEmpty() && amountStr.isNotEmpty()) {
                 try {
                     val amount = amountStr.toDouble()
-                    addCharge(name, amount)
+                    
+                    // Save new charge name if it doesn't exist
+                    CoroutineScope(Dispatchers.IO).launch {
+                        try {
+                            val result = extraChargeNameRepository.saveChargeName(name)
+                            withContext(Dispatchers.Main) {
+                                result.fold(
+                                    onSuccess = {
+                                        addCharge(name, amount)
+                                    },
+                                    onFailure = { exception ->
+                                        if (exception.message?.contains("already exists") == true) {
+                                            // If name exists, just add the charge
+                                            addCharge(name, amount)
+                                        } else {
+                                            Toast.makeText(
+                                                requireContext(),
+                                                "Failed to save charge name: ${exception.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                )
+                            }
+                        } catch (e: Exception) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Error saving charge name: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
                 } catch (e: NumberFormatException) {
                     Toast.makeText(
                         requireContext(),
@@ -1320,8 +1430,23 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
-        dialog.setNegativeButton("Cancel", null)
+
+        
+        // Show dialog with proper window flags
         dialog.show()
+    }
+
+    private fun setupChargeNameDropdown(dialog: ThemedM3Dialog) {
+        val nameEditText = dialog.findViewById<AutoCompleteTextView>(R.id.chargeNameEditText)
+        nameEditText?.let { autoComplete ->
+            val adapter = ArrayAdapter(
+                requireContext(),
+                R.layout.dropdown_item,
+                chargeNames.map { it.name }
+            )
+            autoComplete.setAdapter(adapter)
+            autoComplete.setDropDownBackgroundResource(R.color.cream_background)
+        }
     }
 
     private fun deleteCharge(charge: ExtraCharge) {
@@ -1428,6 +1553,7 @@ class ItemSelectionBottomSheet : BottomSheetDialogFragment() {
             itemType = metalType,
             category = category,
             grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+            stoneWeight = binding.stoneWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
             wastageType = binding.wastageTypeDropdown.text.toString(),

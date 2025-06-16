@@ -318,6 +318,41 @@
         <item name="android:windowBackground">@null</item>
     </style>
 
+    <!-- Material Calendar Theme -->
+    <style name="MaterialCalendarTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <item name="colorPrimary">@color/my_light_primary</item>
+        <item name="colorPrimaryVariant">@color/my_light_secondary</item>
+        <item name="colorOnPrimary">@color/my_light_on_primary</item>
+        <item name="colorSurface">@color/my_light_surface</item>
+        <item name="colorOnSurface">@color/my_light_on_surface</item>
+        <item name="materialCalendarHeaderTitle">@style/MaterialCalendar.HeaderTitle</item>
+        <item name="materialCalendarHeaderToggleButton">@style/MaterialCalendar.HeaderToggleButton</item>
+        <item name="materialCalendarHeaderLayout">@style/MaterialCalendar.HeaderLayout</item>
+        <item name="materialCalendarDay">@style/MaterialCalendar.Day</item>
+    </style>
+
+    <style name="MaterialCalendar.HeaderTitle" parent="Widget.MaterialComponents.MaterialCalendar.Item">
+        <item name="android:textColor">@color/my_light_on_surface</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="MaterialCalendar.HeaderToggleButton" parent="Widget.MaterialComponents.MaterialCalendar.Item">
+        <item name="android:tint">@color/my_light_primary</item>
+    </style>
+
+    <style name="MaterialCalendar.HeaderLayout" parent="Widget.MaterialComponents.MaterialCalendar.Item">
+        <item name="android:background">@color/my_light_surface</item>
+    </style>
+
+    <style name="MaterialCalendar.Day" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/my_light_on_surface</item>
+        <item name="rippleColor">@color/my_light_primary</item>
+    </style>
+
+    <style name="MaterialCalendar.SelectedDay" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="backgroundTint">@color/my_light_primary</item>
+        <item name="android:textColor">@color/my_light_on_primary</item>
+    </style>
 
 
 
@@ -325,6 +360,22 @@
 
 
 
+    <style name="CustomDatePickerTheme" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <item name="colorPrimary">@color/my_light_primary</item>
+        <item name="colorOnPrimary">@color/my_light_on_primary</item>
+        <item name="colorSurface">@color/my_light_surface</item>
+        <item name="colorOnSurface">@color/my_light_on_surface</item>
+        <item name="buttonBarPositiveButtonStyle">@style/CustomPositiveButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CustomNegativeButton</item>
+    </style>
+
+    <style name="CustomPositiveButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/my_light_primary</item>
+    </style>
+
+    <style name="CustomNegativeButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/my_light_secondary</item>
+    </style>
 
 
 

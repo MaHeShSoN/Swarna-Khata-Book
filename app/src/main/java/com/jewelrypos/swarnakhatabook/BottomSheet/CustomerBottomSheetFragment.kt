@@ -102,7 +102,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
 
         // Toggle visibility of business fields based on customer type
         binding.customerTypeDropdown.addTextChangedListener {
-            val isBusinessCustomer = it.toString() == "Wholesaler"
+            val isBusinessCustomer = it.toString() == getString(R.string.wholesaler)
             binding.businessInfoCard.isVisible = isBusinessCustomer
             binding.businessInfoCardText.isVisible = isBusinessCustomer
         }
@@ -142,7 +142,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         if (calledFromCustomerDetails) {
             // Hide the "Save and Add" button when called from invoice creation
             binding.saveAndAddButton.visibility = View.GONE
-            binding.saveAndCloseButton.setText("Update")
+            binding.saveAndCloseButton.setText(getString(R.string.update))
 
             // Optionally, adjust the layout to make the "Save and Close" button full width
             val layoutParams = binding.saveAndCloseButton.layoutParams as LinearLayout.LayoutParams
@@ -173,7 +173,7 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             else -> {
                 Toast.makeText(
                     context,
-                    "Contacts permissions denied. Cannot suggest or save contacts.",
+                    getString(R.string.contacts_permission_denied),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -210,12 +210,12 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             permissions.any { shouldShowRequestPermissionRationale(it) } -> {
                 // Show rationale dialog explaining why we need contacts permissions
                 AlertDialog.Builder(requireContext())
-                    .setTitle("Permission Needed")
-                    .setMessage("This app needs permission to read and save contacts to suggest customer names and numbers as you type, and to save new contacts you create.")
-                    .setPositiveButton("OK") { _, _ ->
+                    .setTitle(getString(R.string.permission_needed))
+                    .setMessage(getString(R.string.contacts_permission_rationale))
+                    .setPositiveButton(getString(R.string.ok)) { _, _ ->
                         requestContactsPermission.launch(permissions.toTypedArray())
                     }
-                    .setNegativeButton("Cancel", null)
+                    .setNegativeButton(getString(R.string.cancel), null)
                     .show()
             }
 
@@ -780,6 +780,13 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             // Save contact to phone contacts if not already saved
             saveContactToPhone(customer)
 
+            // Save address to Firestore
+            saveAddressToFirestore(
+                customer.streetAddress,
+                customer.city,
+                customer.state
+            )
+
             if (isEditMode) {
                 listener?.onCustomerUpdated(customer)
                 Toast.makeText(context, "Customer updated successfully", Toast.LENGTH_SHORT).show()
@@ -1230,14 +1237,22 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
         val db = FirebaseFirestore.getInstance()
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
+        // Convert query to lowercase for case-insensitive search
+        val lowercaseQuery = query.lowercase(Locale.getDefault())
+
         db.collection("users")
             .document(userId)
             .collection("addresses")
-            .whereGreaterThanOrEqualTo("fullAddress", query)
-            .whereLessThanOrEqualTo("fullAddress", query + '\uf8ff')
             .get()
             .addOnSuccessListener { documents ->
-                val addresses = documents.mapNotNull { it.getString("fullAddress") }
+                val addresses = documents.mapNotNull { doc ->
+                    val fullAddress = doc.getString("fullAddress")
+                    if (fullAddress?.lowercase(Locale.getDefault())?.contains(lowercaseQuery) == true) {
+                        fullAddress
+                    } else {
+                        null
+                    }
+                }
                 addressAdapter?.clear()
                 addressAdapter?.addAll(addresses)
                 addressAdapter?.notifyDataSetChanged()
@@ -1316,6 +1331,47 @@ class CustomerBottomSheetFragment : BottomSheetDialogFragment() {
             }
             .start()
         binding.relationshipInfoButton.text = getString(R.string.add_relationship_info)
+    }
+
+    private fun saveAddressToFirestore(streetAddress: String, city: String, state: String) {
+        val db = FirebaseFirestore.getInstance()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        // Create a full address string
+        val fullAddress = "$streetAddress, $city, $state"
+
+        // Check if this address already exists
+        db.collection("users")
+            .document(userId)
+            .collection("addresses")
+            .whereEqualTo("fullAddress", fullAddress)
+            .get()
+            .addOnSuccessListener { documents ->
+                if (documents.isEmpty) {
+                    // Address doesn't exist, save it
+                    val addressData = hashMapOf(
+                        "fullAddress" to fullAddress,
+                        "streetAddress" to streetAddress,
+                        "city" to city,
+                        "state" to state,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+
+                    db.collection("users")
+                        .document(userId)
+                        .collection("addresses")
+                        .add(addressData)
+                        .addOnSuccessListener {
+                            Log.d(TAG, "Address saved successfully")
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e(TAG, "Error saving address", e)
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Error checking existing address", e)
+            }
     }
 
     companion object {

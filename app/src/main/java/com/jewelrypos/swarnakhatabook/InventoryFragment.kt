@@ -8,6 +8,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -536,11 +537,47 @@ class InventoryFragment : Fragment(), ItemBottomSheetFragment.OnItemAddedListene
         adapter = JewelleryAdapter(this)
         recyclerView.adapter = adapter
 
-        // Add LoadStateAdapter for loading indicators at the top/bottom (optional but recommended)
-        // recyclerView.adapter = adapter.withLoadStateFooter(
-        //    loading = YourLoadingIndicatorAdapter()
-        // )
+        // Add scroll listener for FAB animation
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            private var isFabVisible = true
 
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dy > 0 && isFabVisible) {
+                    // Scrolling down
+                    hideFab()
+                } else if (dy < 0 && !isFabVisible) {
+                    // Scrolling up
+                    showFab()
+                }
+            }
+
+            private fun showFab() {
+                binding.addItemFab.animate().cancel() // Cancel any ongoing animation
+                binding.addItemFab.show()
+                binding.addItemFab.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .start()
+                isFabVisible = true
+            }
+
+            private fun hideFab() {
+                binding.addItemFab.animate().cancel() // Cancel any ongoing animation
+                binding.addItemFab.animate()
+                    .translationY(binding.addItemFab.height.toFloat() + (binding.addItemFab.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin)
+                    .alpha(0f)
+                    .setDuration(200)
+                    .setInterpolator(AccelerateDecelerateInterpolator())
+                    .withEndAction {
+                        binding.addItemFab.hide()
+                    }
+                    .start()
+                isFabVisible = false
+            }
+        })
 
         // Coil preloading logic - keep but adapt to use adapter.peek(position) or adapter.getItem(position)
         // No longer need manual loadNextPage checks here as Paging 3 handles it

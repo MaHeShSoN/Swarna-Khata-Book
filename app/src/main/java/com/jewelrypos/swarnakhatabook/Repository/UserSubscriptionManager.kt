@@ -32,6 +32,8 @@ class UserSubscriptionManager(private val context: Context) {
     private val CACHE_DURATION_MILLIS =
         TimeUnit.MINUTES.toMillis(5) // Cache duration (e.g., 5 minutes)
 
+    // New constant for the free access users collection
+    private val FREE_ACCESS_COLLECTION = "freeAccessUsers"
 
     private val auth = FirebaseAuth.getInstance()
     private val firestore = FirebaseFirestore.getInstance()
@@ -234,8 +236,8 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Get the current authenticated user\'s ID
-     * Returns user\'s phone number (without + prefix) or empty string if not authenticated
+     * Get the current authenticated user's ID
+     * Returns user's phone number (without + prefix) or empty string if not authenticated
      */
     fun getCurrentUserId(): String {
         val user = auth.currentUser ?: return ""
@@ -265,7 +267,8 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Resets the trial period (for testing only)\n     */
+     * Resets the trial period (for testing only)
+     */
     fun resetTrial() {
         val editor = sharedPreferences.edit()
         editor.remove(KEY_FIRST_USE_DATE)
@@ -327,7 +330,7 @@ class UserSubscriptionManager(private val context: Context) {
     }
 
     /**
-     * Get the current month\'s invoice count
+     * Get the current month's invoice count
      */
     fun getMonthlyInvoiceCount(): Int {
         // Check if we need to reset for a new month
@@ -388,7 +391,7 @@ class UserSubscriptionManager(private val context: Context) {
 
             val document = firestore.collection("users")
                 .document(userId)
-                .get(com.google.firebase.firestore.Source.SERVER) // Force server fetch
+                .get(Source.SERVER) // Force server fetch
                 .await()
 
             if (document.exists()) {
@@ -420,6 +423,30 @@ class UserSubscriptionManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error refreshing subscription: ${e.message}")
             return SubscriptionPlan.NONE
+        }
+    }
+
+    /**
+     * Checks if the current user is a designated free access user.
+     * This bypasses normal subscription and trial checks.
+     */
+    suspend fun isFreeAccessUser(): Boolean {
+        val userId = getCurrentUserId()
+        if (userId.isEmpty()) {
+            Log.d(TAG, "No user ID for free access check.")
+            return false
+        }
+
+        return try {
+            val document = firestore.collection(FREE_ACCESS_COLLECTION)
+                .document(userId)
+                .get(Source.SERVER) // Always fetch from server to ensure up-to-date status
+                .await()
+            Log.d(TAG, "Free access check for $userId: ${document.exists()}")
+            document.exists()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking free access user status for $userId: ${e.message}")
+            false
         }
     }
 }

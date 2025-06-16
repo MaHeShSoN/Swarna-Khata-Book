@@ -117,6 +117,12 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     private var isGeneratingReport = false
     private var currentReportJob: kotlinx.coroutines.Job? = null
 
+    private val _selectedChipId = MutableLiveData<Int?>(null)
+    val selectedChipId: LiveData<Int?> = _selectedChipId
+
+    private val _selectedChipIdGst = MutableLiveData<Int?>(null)
+    val selectedChipIdGst: LiveData<Int?> = _selectedChipIdGst
+
     init {
         Log.d(TAG, "Initializing ReportViewModel")
         if (isInitialized) {
@@ -139,8 +145,9 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         // Set end date to today at 23:59:59
         val endDate = calendar.time
 
-        // Set start date to first day of current month at 00:00:00
-        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        // Set start date to first day of current year at 00:00:00
+        calendar.set(Calendar.DAY_OF_YEAR, 1)
+        calendar.set(Calendar.MONTH, Calendar.JANUARY)
         calendar.set(Calendar.HOUR_OF_DAY, 0)
         calendar.set(Calendar.MINUTE, 0)
         calendar.set(Calendar.SECOND, 0)
@@ -164,11 +171,16 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
         Log.d(TAG, "ReportViewModel initialization completed")
     }
 
-    fun setDateRange(start: Date, end: Date) {
-        Log.d(TAG, "Setting new date range: $start to $end")
+    fun setDateRange(start: Date, end: Date, isGstReport: Boolean = false) {
+        Log.d(TAG, "Setting new date range: $start to $end for ${if (isGstReport) "GST" else "Sales"} report")
         _startDate.value = start
         _endDate.value = end
-        loadSalesReport()
+        
+        if (isGstReport) {
+            generateGstReport()
+        } else {
+            loadSalesReport()
+        }
     }
 
     fun selectCustomer(customer: Customer) {
@@ -695,7 +707,16 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
                 try {
                     val startTimestamp = startDate.value ?: Date(0) // Use default if null
                     val endTimestamp = endDate.value ?: Date(System.currentTimeMillis()) // Use current time if null
-                    Log.d(TAG, "generateGstReport: Date range for query: $startTimestamp to $endTimestamp")
+                    
+                    // Add detailed date logging
+                    val dateFormat = SimpleDateFormat("dd MMM yyyy HH:mm:ss", Locale.getDefault())
+                    Log.d(TAG, """
+                        generateGstReport: Date range for query:
+                        - Start: ${dateFormat.format(startTimestamp)}
+                        - End: ${dateFormat.format(endTimestamp)}
+                        - Start Timestamp: ${startTimestamp.time}
+                        - End Timestamp: ${endTimestamp.time}
+                    """.trimIndent())
 
                     val fetchStartTime = System.currentTimeMillis()
                     // --- REPLACED OLD INVOICE FETCHING LOGIC WITH NEW EFFICIENT CALL ---
@@ -1054,5 +1075,14 @@ class ReportViewModel(application: Application) : AndroidViewModel(application) 
     fun clearErrorMessage() {
         Log.d(TAG, "clearErrorMessage: Clearing error message")
         _errorMessage.value = null
+    }
+
+    fun setSelectedChip(chipId: Int?) {
+        Log.d(TAG, "setSelectedChip: Setting chip ID to: $chipId")
+        _selectedChipId.value = chipId
+    }
+    fun setSelectedChipGst(chipId: Int?) {
+        Log.d(TAG, "setSelectedChip: Setting chip ID to: $chipId")
+        _selectedChipIdGst.value = chipId
     }
 }

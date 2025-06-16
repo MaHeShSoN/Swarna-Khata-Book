@@ -22,6 +22,8 @@ class PdfSettings(
     var logoUri: String? = null,
     @PropertyName("watermarkUri")
     var watermarkUri: String? = null,
+    @PropertyName("showCustomerSignature") // Add this new property
+    var showCustomerSignature: Boolean = false, // Default to false
     @PropertyName("signatureUri")
     var signatureUri: String? = null,
     @PropertyName("termsAndConditions")

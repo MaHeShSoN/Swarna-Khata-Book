@@ -753,7 +753,38 @@
     <string name="quantity_required">मात्रा आवश्यक है</string>
     <string name="quantity_must_be_positive">मात्रा शून्य से अधिक होनी चाहिए</string>
     <string name="not_enough_stock_available">मात्रा उपलब्ध स्टॉक (%1$d) से अधिक है</string>
+    <string name="balance_type_cannot_be_changed_after_creation">बैलेंस प्रकार और प्रारंभिक बैलेंस निर्माण के बाद नहीं बदला जा सकता</string>
+    <string name="baki_amount">बकाया: ₹%s</string>
+    <string name="jama_amount">जमा: ₹%s</string>
+    <string name="settled_amount">चुकाया गया: ₹%s</string>
+    <string name="business_summary">व्यापार सारांश</string>
+    <string name="total_customers_label">कुल ग्राहक:</string>
+    <string name="today_sales_label">आज की बिक्री:</string>
+    <string name="baki">बकाया</string>
+    <string name="jama">जमा</string>
+    <string name="failed_to_load_inventory">इन्वेंट्री आइटम लोड करने में विफल: %1$s</string>
+    <string name="error_loading">त्रुटि: %1$s</string>
+    <string name="permission_needed">अनुमति की आवश्यकता है</string>
+    <string name="contacts_permission_rationale">इस ऐप को आपके टाइप करते समय ग्राहक के नाम और नंबर सुझाने के लिए, और आपके द्वारा बनाए गए नए संपर्कों को सहेजने के लिए संपर्कों को पढ़ने और सहेजने की अनुमति चाहिए।</string>
+    <string name="contacts_permission_denied">संपर्क अनुमतियां अस्वीकृत। संपर्क सुझाए या सहेजे नहीं जा सकते।</string>
+    <string name="wholesaler">थोक विक्रेता</string>
+    <string name="save_and_close">सहेजें और बंद करें</string>
 
+    <string name="track_inventory_by_counting_individual_items_or_units">अलग-अलग वस्तुओं या इकाइयों को गिनकर इन्वेंट्री ट्रैक करें</string>
+    <string name="quantity_based_stock">मात्रा-आधारित स्टॉक</string>
+    <string name="weight_based_stock">वजन-आधारित स्टॉक</string>
+    <string name="track_inventory_by_measuring_weight_or_mass">वजन या द्रव्यमान मापकर इन्वेंट्री को ट्रैक करें</string>
 
+    <string name="premium_subscription_required_message">रिपोर्ट बनाने के लिए प्रीमियम सदस्यता आवश्यक है। इस सुविधा का उपयोग करने के लिए अपग्रेड करें।</string>
+    <string name="select_date_range">दिनांक सीमा चुनें</string>
+    <string name="sales_report_description">उत्पाद प्रकार, ग्राहक प्रकार और समय अवधि के अनुसार बिक्री सारांश देखें</string>
+    <string name="customer_statement_description">व्यक्तिगत ग्राहकों के लिए विस्तृत लेनदेन इतिहास</string>
+    <string name="gst_report_description">कर दाखिल करने के लिए एकत्रित जीएसटी का सारांश</string>
+    <string name="low_stock_description">आइटम जो पुनः आदेश सीमा से नीचे हैं और जिन पर ध्यान देने की आवश्यकता है</string>
+    <string name="standard_or_premium_required">रिपोर्ट बनाने के लिए मानक या प्रीमियम सदस्यता आवश्यक है</string>
+    <string name="sales_r">बिक्री आर</string>
+    <string name="customer_account_statement">ग्राहक खाता विवरण</string>
+    <string name="stone_weight">पत्थर का वजन</string>
+    <string name="net_weight_auto_calculated">शुद्ध वजन (स्वतः गणना)</string>
 </resources>
 

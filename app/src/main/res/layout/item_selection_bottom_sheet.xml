@@ -208,6 +208,32 @@
                         android:textSize="16sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Stone Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/stoneWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/stone_weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/stoneWeightEditText"
+                        android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
+                        android:layout_height="wrap_content"
+                        android:selectAllOnFocus="true"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <!-- Net Weight -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/netWeightInputLayout"
@@ -215,7 +241,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="@string/net_weight"
+                    android:hint="@string/net_weight_auto_calculated"
                     app:boxBackgroundColor="@color/my_light_surface"
                     app:boxStrokeColor="@color/my_light_primary"
                     app:boxStrokeWidth="1dp"
@@ -227,11 +253,13 @@
                         android:id="@+id/netWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:selectAllOnFocus="true"
                         android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
+                        android:textSize="16sp"
+                        android:enabled="false"
+                        android:focusable="false"
+                        />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Purity -->

@@ -548,6 +548,31 @@
                                 android:inputType="text" />
                         </com.google.android.material.textfield.TextInputLayout>
 
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="@font/montserratmedium"
+                                android:text="@string/show_customer_signature"
+                                android:textColor="@color/my_light_on_surface"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/showCustomerSignatureSwitch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="false" />
+                        </LinearLayout>
+
+
                         <!-- Terms & Conditions -->
                         <TextView
                             android:layout_width="match_parent"

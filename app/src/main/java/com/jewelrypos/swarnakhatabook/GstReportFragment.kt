@@ -37,6 +37,7 @@ class GstReportFragment : Fragment() {
     private lateinit var viewModel: ReportViewModel
     private lateinit var adapter: GstReportAdapter
     private val currencyFormatter = DecimalFormat("#,##,##0.00")
+    private val integerFormatter = DecimalFormat("#,##,##0")
     private val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     
     // Track coroutine jobs to prevent memory leaks
@@ -69,6 +70,11 @@ class GstReportFragment : Fragment() {
         Log.d(TAG, "onViewCreated: Starting initial GST report generation")
         viewModel.generateGstReport()
         Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
+
+        viewModel.selectedChipId.value?.let { chipId ->
+            Log.d(TAG, "onViewCreated: Setting initial chip selection to: $chipId")
+            binding.dateFilterChipGroup.check(chipId)
+        }
     }
 
     private fun setupViewModel() {
@@ -106,6 +112,9 @@ class GstReportFragment : Fragment() {
             showDateRangePicker()
         }
 
+        // Setup date filter chips
+        setupDateFilterChips()
+
         // Initial Date Display
         updateDateRangeText()
 
@@ -117,6 +126,158 @@ class GstReportFragment : Fragment() {
             adapter = this@GstReportFragment.adapter
         }
         Log.d(TAG, "setupUI: UI setup completed")
+    }
+
+    private fun setupDateFilterChips() {
+        binding.dateFilterChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+            
+            val selectedChipId = checkedIds[0]
+            viewModel.setSelectedChipGst(selectedChipId)
+            val dateRange = when (selectedChipId) {
+                R.id.chipThisWeek -> getThisWeekDateRange()
+                R.id.chipThisMonth -> getThisMonthDateRange()
+                R.id.chipLastMonth -> getLastMonthDateRange()
+                R.id.chipThisQuarter -> getThisQuarterDateRange()
+                R.id.chipThisYear -> getThisYearDateRange()
+                R.id.chipLastYear -> getLastYearDateRange()
+                R.id.chipCustom -> {
+                    showDateRangePicker()
+                    return@setOnCheckedStateChangeListener
+                }
+                else -> return@setOnCheckedStateChangeListener
+            }
+            
+            viewModel.setDateRange(dateRange.first, dateRange.second, true)
+        }
+    }
+
+    private fun getThisWeekDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.add(Calendar.DAY_OF_WEEK, 6)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisMonthDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getLastMonthDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.add(Calendar.MONTH, -1)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisQuarterDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        val currentMonth = calendar.get(Calendar.MONTH)
+        val quarterStartMonth = (currentMonth / 3) * 3
+
+        calendar.set(Calendar.MONTH, quarterStartMonth)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.MONTH, quarterStartMonth + 2)
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisYearDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        
+        // Set to January 1st of current year
+        calendar.set(Calendar.MONTH, Calendar.JANUARY)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        // Set to December 31st of current year
+        calendar.set(Calendar.MONTH, Calendar.DECEMBER)
+        calendar.set(Calendar.DAY_OF_MONTH, 31)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getLastYearDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.add(Calendar.YEAR, -1)
+        calendar.set(Calendar.MONTH, Calendar.JANUARY)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.MONTH, Calendar.DECEMBER)
+        calendar.set(Calendar.DAY_OF_MONTH, 31)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
     }
 
     private fun setupObservers() {
@@ -183,10 +344,10 @@ class GstReportFragment : Fragment() {
             - Total Tax: $totalTax
         """.trimIndent())
 
-        binding.taxableAmountValue.text = "₹${currencyFormatter.format(totalTaxableAmount)}"
-        binding.cgstValue.text = "₹${currencyFormatter.format(totalCgst)}"
-        binding.sgstValue.text = "₹${currencyFormatter.format(totalSgst)}"
-        binding.totalTaxValue.text = "₹${currencyFormatter.format(totalTax)}"
+        binding.taxableAmountValue.text = "₹${integerFormatter.format(totalTaxableAmount)}"
+        binding.cgstValue.text = "₹${integerFormatter.format(totalCgst)}"
+        binding.sgstValue.text = "₹${integerFormatter.format(totalSgst)}"
+        binding.totalTaxValue.text = "₹${integerFormatter.format(totalTax)}"
         
         Log.d(TAG, "updateSummary: Completed in ${System.currentTimeMillis() - startTime}ms")
     }
@@ -194,6 +355,7 @@ class GstReportFragment : Fragment() {
     private fun showDateRangePicker() {
         val builder = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText(R.string.select_date_range_title)
+            .setTheme(R.style.CustomDatePickerTheme)
 
         // Set initial selection based on ViewModel
         val start = viewModel.startDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()

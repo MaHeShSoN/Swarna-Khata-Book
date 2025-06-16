@@ -232,14 +232,14 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/montserratsemibold"
-                                    android:text="Quantity-Based Stock"
+                                    android:text="@string/quantity_based_stock"
                                     android:textSize="14sp" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/montserratregular"
-                                    android:text="Track inventory by counting individual items or units"
+                                    android:text="@string/track_inventory_by_counting_individual_items_or_units"
                                     android:textColor="@color/my_light_on_surface_variant"
                                     android:textSize="12sp" />
                             </LinearLayout>
@@ -288,14 +288,14 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/montserratsemibold"
-                                    android:text="Weight-Based Stock"
+                                    android:text="@string/weight_based_stock"
                                     android:textSize="14sp" />
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:fontFamily="@font/montserratregular"
-                                    android:text="Track inventory by measuring weight or mass"
+                                    android:text="@string/track_inventory_by_measuring_weight_or_mass"
                                     android:textColor="@color/my_light_on_surface_variant"
                                     android:textSize="12sp" />
                             </LinearLayout>
@@ -470,9 +470,35 @@
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/grossWeightEditText"
                         android:layout_width="match_parent"
+                        android:fontFamily="@font/montserratregular"
                         android:layout_height="wrap_content"
                         android:selectAllOnFocus="true"
+                        android:inputType="numberDecimal"
+                        android:textColor="@color/my_light_on_surface"
+                        android:textSize="16sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Stone Weight -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/stoneWeightInputLayout"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:hint="@string/stone_weight"
+                    app:boxBackgroundColor="@color/my_light_surface"
+                    app:boxStrokeColor="@color/my_light_primary"
+                    app:boxStrokeWidth="1dp"
+                    app:endIconMode="clear_text"
+                    app:hintTextColor="@color/my_light_secondary"
+                    app:suffixText="g">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/stoneWeightEditText"
+                        android:layout_width="match_parent"
                         android:fontFamily="@font/montserratregular"
+                        android:layout_height="wrap_content"
+                        android:selectAllOnFocus="true"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
                         android:textSize="16sp" />
@@ -493,11 +519,13 @@
                         android:id="@+id/netWeightEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:selectAllOnFocus="true"
                         android:fontFamily="@font/montserratregular"
                         android:inputType="numberDecimal"
                         android:textColor="@color/my_light_on_surface"
-                        android:textSize="16sp" />
+                        android:textSize="16sp"
+                        android:enabled="false"
+                        android:focusable="false"
+                        />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Purity -->

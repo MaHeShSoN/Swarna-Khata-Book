@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import androidx.core.util.Pair
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -48,7 +49,8 @@ class SalesReportFragment : Fragment() {
     private lateinit var viewModel: ReportViewModel
     private val currencyFormatter = DecimalFormat("₹#,##,##0.00")
     private val percentFormatter = DecimalFormat("0.0'%'")
-    private val dateFormat = SimpleDateFormat("dd MMM yy", Locale.getDefault()) // Short format for charts/display
+    private val dateFormat =
+        SimpleDateFormat("dd MMM yy", Locale.getDefault()) // Short format for charts/display
 
     // New Adapters
     private lateinit var topItemsAdapter: TopItemsAdapter
@@ -69,21 +71,37 @@ class SalesReportFragment : Fragment() {
         val startTime = System.currentTimeMillis()
 
         setupViewModel()
-        Log.d(TAG, "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms")
-        
-        setupUI()
-        Log.d(TAG, "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms")
-        
-        setupCharts()
-        Log.d(TAG, "onViewCreated: Charts setup completed in ${System.currentTimeMillis() - startTime}ms")
-        
-        setupObservers()
-        Log.d(TAG, "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms")
+        Log.d(
+            TAG,
+            "onViewCreated: ViewModel setup completed in ${System.currentTimeMillis() - startTime}ms"
+        )
 
-        Log.d(TAG, "onViewCreated: Initial setup completed in ${System.currentTimeMillis() - startTime}ms")
+        setupUI()
+        Log.d(
+            TAG,
+            "onViewCreated: UI setup completed in ${System.currentTimeMillis() - startTime}ms"
+        )
+
+        setupCharts()
+        Log.d(
+            TAG,
+            "onViewCreated: Charts setup completed in ${System.currentTimeMillis() - startTime}ms"
+        )
+
+        setupObservers()
+        Log.d(
+            TAG,
+            "onViewCreated: Observers setup completed in ${System.currentTimeMillis() - startTime}ms"
+        )
+
+        // Set initial chip selection if there was a previously selected chip
+        viewModel.selectedChipId.value?.let { chipId ->
+            Log.d(TAG, "onViewCreated: Setting initial chip selection to: $chipId")
+            binding.dateFilterChipGroup.check(chipId)
+        }
 
         // Initial load might be triggered by ViewModel init or date setting
-        // viewModel.loadSalesReport() // Ensure data is loaded if not done automatically
+        viewModel.loadSalesReport() // Ensure data is loaded if not done automatically
     }
 
     private fun setupViewModel() {
@@ -98,19 +116,20 @@ class SalesReportFragment : Fragment() {
         Log.d(TAG, "setupUI: Setting up UI components")
         // Toolbar
         binding.topAppBar.setNavigationOnClickListener {
-            // Use findNavController().navigateUp() to navigate within the nav_reports graph
             findNavController().navigateUp()
         }
         binding.topAppBar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
-
                 R.id.action_export_pdf -> {
-                    exportReportToPdf() // Implement this function
+                    exportReportToPdf()
                     true
                 }
                 else -> false
             }
         }
+
+        // Setup Date Filter Chips
+        setupDateFilterChips()
 
         // Date Range Card Click Listener
         binding.dateRangeCard.setOnClickListener { showDateRangePicker() }
@@ -120,18 +139,175 @@ class SalesReportFragment : Fragment() {
         binding.topItemsRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = topItemsAdapter
-            // Optional: Add item decoration for dividers
         }
 
         topCustomersAdapter = TopCustomersAdapter()
         binding.topCustomersRecyclerView.apply {
             layoutManager = LinearLayoutManager(context)
             adapter = topCustomersAdapter
-            // Optional: Add item decoration for dividers
         }
 
         // Initial Date Display
         updateDateRangeText()
+    }
+
+    private fun setupDateFilterChips() {
+        binding.dateFilterChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+            
+            val selectedChipId = checkedIds[0]
+            // Set the selected chip ID in the ViewModel
+            viewModel.setSelectedChip(selectedChipId)
+            
+            val dateRange = when (selectedChipId) {
+                R.id.chipThisWeek -> getThisWeekDateRange()
+                R.id.chipThisMonth -> getThisMonthDateRange()
+                R.id.chipLastMonth -> getLastMonthDateRange()
+                R.id.chipThisQuarter -> getThisQuarterDateRange()
+                R.id.chipThisYear -> getThisYearDateRange()
+                R.id.chipLastYear -> getLastYearDateRange()
+                R.id.chipCustom -> {
+                    showDateRangePicker()
+                    return@setOnCheckedStateChangeListener
+                }
+                else -> return@setOnCheckedStateChangeListener
+            }
+            
+            viewModel.setDateRange(dateRange.first, dateRange.second, false)
+        }
+    }
+
+
+    private fun getThisWeekDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.set(Calendar.DAY_OF_WEEK, calendar.firstDayOfWeek)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.add(Calendar.DAY_OF_WEEK, 6)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisMonthDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        Log.d(TAG, "Month date range: ${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}")
+        return Pair(startDate, endDate)
+    }
+
+    private fun getLastMonthDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.add(Calendar.MONTH, -1)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisQuarterDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        val currentMonth = calendar.get(Calendar.MONTH)
+        // Calculate quarter start month (0-2, 3-5, 6-8, 9-11)
+        val quarterStartMonth = (currentMonth / 3) * 3
+
+        // Set to first day of quarter
+        calendar.set(Calendar.MONTH, quarterStartMonth)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        // Set to last day of quarter
+        calendar.set(Calendar.MONTH, quarterStartMonth + 2) // Add 2 months to get to end of quarter
+        calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        Log.d(TAG, "Quarter date range: ${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}")
+        return Pair(startDate, endDate)
+    }
+
+    private fun getThisYearDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        
+        // Set to January 1st of current year
+        calendar.set(Calendar.MONTH, Calendar.JANUARY)
+        calendar.set(Calendar.DAY_OF_MONTH, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        // Set to December 31st of current year
+        calendar.set(Calendar.MONTH, Calendar.DECEMBER)
+        calendar.set(Calendar.DAY_OF_MONTH, 31)
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        Log.d(TAG, "Year date range: ${dateFormat.format(startDate)} to ${dateFormat.format(endDate)}")
+        return Pair(startDate, endDate)
+    }
+
+    private fun getLastYearDateRange(): Pair<Date, Date> {
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+        calendar.add(Calendar.YEAR, -1)
+        calendar.set(Calendar.DAY_OF_YEAR, 1)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startDate = calendar.time
+
+        calendar.set(Calendar.DAY_OF_YEAR, calendar.getActualMaximum(Calendar.DAY_OF_YEAR))
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        val endDate = calendar.time
+
+        return Pair(startDate, endDate)
     }
 
     private fun setupCharts() {
@@ -197,15 +373,21 @@ class SalesReportFragment : Fragment() {
 
     private fun setupObservers() {
         Log.d(TAG, "setupObservers: Setting up LiveData observers")
-        
+
         viewModel.salesReportData.observe(viewLifecycleOwner) { data ->
             val startTime = System.currentTimeMillis()
             if (data != null) {
-                Log.d(TAG, "Received sales report data: totalSales=${data.totalSales}, invoiceCount=${data.invoiceCount}")
+                Log.d(
+                    TAG,
+                    "Received sales report data: totalSales=${data.totalSales}, invoiceCount=${data.invoiceCount}"
+                )
                 updateSummaryUI(data)
                 updateSalesByCategoryChart(data)
                 updateSalesByDateChart(data)
-                Log.d(TAG, "Sales report data processed in ${System.currentTimeMillis() - startTime}ms")
+                Log.d(
+                    TAG,
+                    "Sales report data processed in ${System.currentTimeMillis() - startTime}ms"
+                )
             }
         }
 
@@ -214,7 +396,10 @@ class SalesReportFragment : Fragment() {
             if (items != null) {
                 Log.d(TAG, "Received ${items.size} top selling items")
                 topItemsAdapter.submitList(items)
-                Log.d(TAG, "Top selling items processed in ${System.currentTimeMillis() - startTime}ms")
+                Log.d(
+                    TAG,
+                    "Top selling items processed in ${System.currentTimeMillis() - startTime}ms"
+                )
             }
         }
 
@@ -248,9 +433,18 @@ class SalesReportFragment : Fragment() {
                 binding.topCustomersCard.visibility = View.GONE
                 viewModel.clearErrorMessage()
             } else {
-                binding.errorTextView.visibility = View.GONE
                 // Make sure content is visible again if error is cleared
                 // Visibility handled by data observers below
+                Log.e(TAG, "Error occurred: $message")
+                binding.errorTextView.text = message
+                binding.errorTextView.visibility = View.GONE
+                // Hide other content on error
+                binding.summaryCard.visibility = View.VISIBLE
+                binding.salesTrendCard.visibility = View.VISIBLE
+                binding.salesCategoryCard.visibility = View.VISIBLE
+//                binding.salesCustomerTypeCard.visibility = View.VISIBLE
+                binding.topItemsCard.visibility = View.VISIBLE
+                binding.topCustomersCard.visibility = View.VISIBLE
             }
         }
 
@@ -262,13 +456,13 @@ class SalesReportFragment : Fragment() {
     private fun updateSummaryUI(data: SalesReportData) {
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "updateSummaryUI: Starting summary update")
-        
+
         binding.totalSalesValue.text = currencyFormatter.format(data.totalSales)
         binding.totalPaidValue.text = currencyFormatter.format(data.paidAmount)
         binding.totalUnpaidValue.text = currencyFormatter.format(data.unpaidAmount)
         binding.collectionRateValue.text = percentFormatter.format(data.collectionRate)
         binding.invoiceCountValue.text = data.invoiceCount.toString()
-        
+
         Log.d(TAG, "updateSummaryUI: Completed in ${System.currentTimeMillis() - startTime}ms")
     }
 
@@ -282,7 +476,7 @@ class SalesReportFragment : Fragment() {
             }
         }
 
-        if (entries.isEmpty()){
+        if (entries.isEmpty()) {
             Log.d(TAG, "No category data available for chart")
             binding.salesByCategoryChart.clear()
             binding.salesByCategoryChart.setNoDataText(getString(R.string.no_category_data_available))
@@ -367,7 +561,7 @@ class SalesReportFragment : Fragment() {
             dateLabels.add(dailySale.date.toString()) // Assuming dailySale.date is already the formatted string label
         }
 
-        if (entries.isEmpty()){
+        if (entries.isEmpty()) {
             binding.salesByDateChart.clear()
             binding.salesByDateChart.setNoDataText(getString(R.string.no_sales_trend_data_available))
             binding.salesByDateChart.invalidate()
@@ -402,13 +596,29 @@ class SalesReportFragment : Fragment() {
 
 
     private fun showDateRangePicker() {
+        // Select the custom chip when showing date picker
+        binding.dateFilterChipGroup.check(R.id.chipCustom)
+        // Set the selected chip ID in the ViewModel
+        viewModel.setSelectedChip(R.id.chipCustom)
+        
         val builder = MaterialDatePicker.Builder.dateRangePicker()
             .setTitleText(R.string.select_date_range_title)
+            .setTheme(R.style.CustomDatePickerTheme)
 
-        // Set initial selection based on ViewModel
-        val start = viewModel.startDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
+        // Set initial selection based on ViewModel or default to current year
+        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
         val end = viewModel.endDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
-        builder.setSelection(androidx.core.util.Pair(start, end))
+
+        // Set start date to first day of current year
+        calendar.set(Calendar.DAY_OF_YEAR, 1)
+        calendar.set(Calendar.MONTH, Calendar.JANUARY)
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val start = viewModel.startDate.value?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
+
+        builder.setSelection(Pair(start, end))
 
         val datePicker = builder.build()
         datePicker.addOnPositiveButtonClickListener { selection ->
@@ -423,7 +633,7 @@ class SalesReportFragment : Fragment() {
             val endDate = calendar.time
 
             Log.d("SalesReport", "Date Range Selected: $startDate to $endDate")
-            viewModel.setDateRange(startDate, endDate) // This will trigger data reload via observer
+            viewModel.setDateRange(startDate, endDate)
         }
 
         datePicker.show(parentFragmentManager, datePicker.toString())
@@ -438,7 +648,8 @@ class SalesReportFragment : Fragment() {
             val endDateStr = dateFormat.format(endDate)
             binding.dateRangeText.text = "$startDateStr to $endDateStr"
         } else {
-            binding.dateRangeText.text = getString(R.string.select_a_date_range) // Use string resource
+            binding.dateRangeText.text =
+                getString(R.string.select_a_date_range) // Use string resource
         }
     }
 
@@ -458,33 +669,42 @@ class SalesReportFragment : Fragment() {
 
         if (reportData == null) {
             // Use string resources for user-facing messages
-            Toast.makeText(currentContext, R.string.error_report_data_not_loaded, Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                currentContext,
+                R.string.error_report_data_not_loaded,
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         if (startDate == null || endDate == null) {
-            Toast.makeText(currentContext, R.string.error_date_range_not_set, Toast.LENGTH_SHORT).show()
+            Toast.makeText(currentContext, R.string.error_date_range_not_set, Toast.LENGTH_SHORT)
+                .show()
             return
         }
         // topItems and topCustomers can be empty, but check for null if LiveData allows it
         if (topItems == null || topCustomers == null) {
-            Toast.makeText(currentContext, R.string.error_list_data_not_loaded, Toast.LENGTH_SHORT).show()
+            Toast.makeText(currentContext, R.string.error_list_data_not_loaded, Toast.LENGTH_SHORT)
+                .show()
             return
         }
 
         // Show progress indicator (optional, but recommended)
         // binding.progressBarPdf.visibility = View.VISIBLE // Use a dedicated PDF progress bar if you add one
         binding.progressBar.visibility = View.VISIBLE // Reuse main progress bar
-        binding.topAppBar.menu.findItem(R.id.action_export_pdf)?.isEnabled = false // Disable button during export
+        binding.topAppBar.menu.findItem(R.id.action_export_pdf)?.isEnabled =
+            false // Disable button during export
 
         // Launch a coroutine for PDF generation (background thread)
         viewLifecycleOwner.lifecycleScope.launch {
             var success = false
             // Use string resources for messages
-            var message = currentContext.getString(R.string.error_exporting_report) // Default error message
+            var message =
+                currentContext.getString(R.string.error_exporting_report) // Default error message
             var generatedFileUri: Uri? = null // To store the URI if successful
 
             try {
-                val pdfExporter = PDFExportUtility(requireContext()) // Use requireContext() for non-null context
+                val pdfExporter =
+                    PDFExportUtility(requireContext()) // Use requireContext() for non-null context
                 // Call the method in PDFExportUtility (needs implementation from pdf_export_utility_sales_report immersive)
                 // This should run file IO on a background thread (handled by withContext in the utility method)
                 generatedFileUri = pdfExporter.exportSalesReport(
@@ -505,21 +725,23 @@ class SalesReportFragment : Fragment() {
             } catch (e: Exception) {
                 Log.e("SalesReportFragment", "Error during PDF export", e)
                 // Update message (will be shown in finally block)
-                message = "${currentContext.getString(R.string.error_exporting_report)}: ${e.localizedMessage}"
+                message =
+                    "${currentContext.getString(R.string.error_exporting_report)}: ${e.localizedMessage}"
 
             } finally {
                 // Switch back to main thread to update UI
                 withContext(Dispatchers.Main) {
                     // binding.progressBarPdf.visibility = View.GONE
                     binding.progressBar.visibility = View.GONE // Hide progress bar
-                    binding.topAppBar.menu.findItem(R.id.action_export_pdf)?.isEnabled = true // Re-enable button
+                    binding.topAppBar.menu.findItem(R.id.action_export_pdf)?.isEnabled =
+                        true // Re-enable button
                     Toast.makeText(currentContext, message, Toast.LENGTH_LONG).show()
 
                     // Optional: If successful, offer to share or open the PDF
                     if (success && generatedFileUri != null) {
                         // You can uncomment these lines if you implement sharePdf/openPdf in PDFExportUtility
-                         val pdfUtility = PDFExportUtility(requireContext())
-                         pdfUtility.sharePdf(generatedFileUri)
+                        val pdfUtility = PDFExportUtility(requireContext())
+                        pdfUtility.sharePdf(generatedFileUri)
                         // OR
                         // pdfUtility.openPdf(generatedFileUri)
                     }

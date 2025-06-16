@@ -4,7 +4,6 @@ import android.net.ConnectivityManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
-import com.jewelrypos.swarnakhatabook.Repository.PaymentsRepository
 import com.jewelrypos.swarnakhatabook.ViewModle.PaymentsViewModel
 
 class PaymentsViewModelFactory(

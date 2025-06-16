@@ -11,7 +11,6 @@ import com.google.firebase.firestore.Source
 import com.jewelrypos.swarnakhatabook.DataClasses.Invoice
 import com.jewelrypos.swarnakhatabook.DataClasses.Payment
 import com.jewelrypos.swarnakhatabook.Repository.InvoiceRepository
-import com.jewelrypos.swarnakhatabook.Repository.PaymentsRepository
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -62,30 +61,43 @@ class PaymentsViewModel(
             val source = if (isOnline()) Source.DEFAULT else Source.CACHE
 
             try {
-                // Use the repository method directly
-                val result = repository.fetchInvoicesPaginated(
-                    loadNextPage = false,
-                    source = source
-                )
+                var allInvoices = mutableListOf<Invoice>()
+                var loadNextPage = false
+                var hasMorePages = true
 
-                result.fold(
-                    onSuccess = { invoices ->
-                        _allInvoices.value = invoices
+                // Keep loading pages until we have all invoices
+                while (hasMorePages) {
+                    val result = repository.fetchInvoicesPaginated(
+                        loadNextPage = loadNextPage,
+                        source = source
+                    )
 
-                        // Extract payments with context
-                        val paymentsWithContext = extractPaymentsWithContext(invoices)
-                        _allPayments.value = paymentsWithContext
+                    result.fold(
+                        onSuccess = { invoices ->
+                            if (invoices.isEmpty()) {
+                                hasMorePages = false
+                            } else {
+                                allInvoices.addAll(invoices)
+                                loadNextPage = true
+                            }
+                        },
+                        onFailure = { error ->
+                            _errorMessage.value = error.message
+                            hasMorePages = false
+                        }
+                    )
+                }
 
-                        // Apply filters based on current period and search query
-                        applyAllFilters()
+                _allInvoices.value = allInvoices
 
-                        _isLoading.value = false
-                    },
-                    onFailure = { error ->
-                        _errorMessage.value = error.message
-                        _isLoading.value = false
-                    }
-                )
+                // Extract payments with context
+                val paymentsWithContext = extractPaymentsWithContext(allInvoices)
+                _allPayments.value = paymentsWithContext
+
+                // Apply filters based on current period and search query
+                applyAllFilters()
+
+                _isLoading.value = false
             } catch (e: Exception) {
                 _errorMessage.value = e.message
                 _isLoading.value = false

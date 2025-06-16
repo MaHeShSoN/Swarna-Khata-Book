@@ -1134,7 +1134,6 @@ class InvoiceRepository(
             var query = getShopCollection("invoices")
                 .whereEqualTo("customerId", customerId) // Filter by customerId
                 .orderBy("invoiceDate", Query.Direction.DESCENDING)
-                .limit(PAGE_SIZE.toLong())
 
             // Add startAfter for pagination if needed
             if (loadNextPage && lastCustomerInvoiceDocumentSnapshot != null) {

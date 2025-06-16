@@ -22,6 +22,9 @@ data class JewelleryItem(
     @PropertyName("netWeight")
     val netWeight: Double = 0.0,
     
+    @PropertyName("stoneWeight")
+    val stoneWeight: Double = 0.0,
+    
     @PropertyName("wastage")
     val wastage: Double = 0.0,
     

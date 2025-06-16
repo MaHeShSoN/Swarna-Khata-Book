@@ -66,17 +66,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyAppLocale(languageCode: String) {
-        val localeList = LocaleListCompat.forLanguageTags(languageCode)
-        AppCompatDelegate.setApplicationLocales(localeList)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply saved locale before super.onCreate
-        val preferences = SecurePreferences.getInstance(this)
-        preferences.getString("selected_language", null)?.let { languageCode ->
-            applyAppLocale(languageCode)
-        }
+        // The language application is now handled in SwarnaKhataBook.kt (Application class)
+        // val preferences = SecurePreferences.getInstance(this)
+        // preferences.getString("selected_language", null)?.let { languageCode ->
+        //     applyAppLocale(languageCode)
+        // }
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)

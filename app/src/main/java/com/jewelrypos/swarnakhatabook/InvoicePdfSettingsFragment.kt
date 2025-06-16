@@ -181,6 +181,9 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
 
         // Signature section
         setupSignatureSection()
+
+        // Customer Signature section
+        setupCustomerSignatureSection()
     }
     private fun setupLogoSection() {
         // Logo toggle switch
@@ -281,9 +284,12 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             // If watermark exists
             binding.uploadWatermarkButton.visibility = View.GONE
             binding.watermarkPreviewLayout.visibility = if (isEnabled) View.VISIBLE else View.GONE
+            binding.replaceWatermarkButton.isEnabled = isEnabled
+            binding.deleteWatermarkButton.isEnabled = isEnabled
         } else {
             // If no watermark exists
             binding.uploadWatermarkButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
+            binding.uploadWatermarkButton.isEnabled = isEnabled
             binding.watermarkPreviewLayout.visibility = View.GONE
         }
     }
@@ -338,6 +344,24 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             // If no signature exists
             binding.uploadSignatureButton.visibility = if (isEnabled) View.VISIBLE else View.GONE
             binding.signaturePreviewLayout.visibility = View.GONE
+        }
+    }
+
+    private fun setupCustomerSignatureSection() {
+        binding.showCustomerSignatureSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (!isLoadingSettings) {
+                pdfSettings?.showCustomerSignature = isChecked
+                hasUnsavedChanges = true
+                updatePdfPreview()
+            }
+
+            if (isChecked) {
+                binding.showCustomerSignatureSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary))
+                binding.showCustomerSignatureSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.my_light_primary_container))
+            } else {
+                binding.showCustomerSignatureSwitch.thumbTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray))
+                binding.showCustomerSignatureSwitch.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.material_gray_light))
+            }
         }
     }
 
@@ -475,6 +499,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                     binding.showWatermarkSwitch.isChecked = settings.showWatermark
                     binding.showQrCodeSwitch.isChecked = settings.showQrCode
                     binding.showSignatureSwitch.isChecked = settings.showSignature
+                    binding.showCustomerSignatureSwitch.isChecked = settings.showCustomerSignature
 
                     // Apply text settings
                     binding.termsEditText.setText(settings.termsAndConditions)
@@ -759,6 +784,7 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
                         binding.showWatermarkSwitch.isChecked = pdfSettings!!.showWatermark
                         binding.showQrCodeSwitch.isChecked = pdfSettings!!.showQrCode
                         binding.showSignatureSwitch.isChecked = pdfSettings!!.showSignature
+                        binding.showCustomerSignatureSwitch.isChecked = pdfSettings!!.showCustomerSignature
 
                         binding.termsEditText.setText(pdfSettings!!.termsAndConditions)
                         binding.upiIdEditText.setText(pdfSettings!!.upiId)
@@ -1024,19 +1050,6 @@ class InvoicePdfSettingsFragment : Fragment(), SignatureDialogFragment.OnSignatu
             binding.logoPreviewLayout.visibility =
                 if (isChecked && logoUri != null) View.VISIBLE else View.GONE
             pdfSettings?.showLogo = isChecked
-
-            // Only mark as unsaved if this is a user action, not initial loading
-            if (!isLoadingSettings) {
-                hasUnsavedChanges = true
-                updatePdfPreview()
-            }
-        }
-
-        binding.showWatermarkSwitch.setOnCheckedChangeListener { _, isChecked ->
-            binding.uploadWatermarkButton.isEnabled = isChecked
-            binding.watermarkPreviewLayout.visibility =
-                if (isChecked && watermarkUri != null) View.VISIBLE else View.GONE
-            pdfSettings?.showWatermark = isChecked
 
             // Only mark as unsaved if this is a user action, not initial loading
             if (!isLoadingSettings) {

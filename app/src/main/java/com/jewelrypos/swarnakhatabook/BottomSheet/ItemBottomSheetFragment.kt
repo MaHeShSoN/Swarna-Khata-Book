@@ -318,7 +318,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.displayNameEditText.setText(item.displayName)
         binding.categoryDropdown.setText(item.category)
         binding.grossWeightEditText.setText(item.grossWeight.toString())
-        binding.netWeightEditText.setText(item.netWeight.toString())
+        binding.stoneWeightEditText.setText(item.stoneWeight.toString())
         binding.wastageEditText.setText(item.wastage.toString())
         binding.wastageTypeDropdown.setText(item.wastageType)
         binding.purityEditText.setText(item.purity)
@@ -638,7 +638,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // Get references to all form fields
         val displayName = binding.displayNameEditText.text.toString().trim()
         val grossWeight = binding.grossWeightEditText.text.toString().trim()
-        val netWeight = binding.netWeightEditText.text.toString().trim()
+        val stoneWeight = binding.stoneWeightEditText.text.toString().trim()
         val wastage = binding.wastageEditText.text.toString().trim()
         val wastageType = binding.wastageTypeDropdown.text.toString().trim()
         val purity = binding.purityEditText.text.toString().trim()
@@ -715,29 +715,39 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
-        // Net Weight - should be less than gross weight if provided
-        if (netWeight.isNotEmpty()) {
+        // Stone Weight validation
+        if (stoneWeight.isNotEmpty()) {
             try {
-                val netWeightValue = netWeight.toDouble()
+                val stoneWeightValue = stoneWeight.toDouble()
                 val grossWeightValue = grossWeight.toDouble()
 
-                if (netWeightValue <= 0) {
-                    binding.netWeightInputLayout.error =
-                        getString(R.string.net_weight_must_be_greater_than_zero)
-                    return Pair(false, getString(R.string.net_weight_must_be_greater_than_zero))
-                } else if (netWeightValue > grossWeightValue) {
-                    binding.netWeightInputLayout.error =
-                        getString(R.string.net_weight_cannot_exceed_gross_weight)
-                    binding.netWeightEditText.requestFocus()
-                    return Pair(false, getString(R.string.net_weight_cannot_exceed_gross_weight))
+                if (stoneWeightValue < 0) {
+                    binding.stoneWeightInputLayout.error = "Stone weight cannot be negative"
+                    binding.stoneWeightEditText.requestFocus()
+                    return Pair(false, "Stone weight cannot be negative")
+                } else if (stoneWeightValue > grossWeightValue) {
+                    binding.stoneWeightInputLayout.error = "Stone weight cannot exceed gross weight"
+                    binding.stoneWeightEditText.requestFocus()
+                    return Pair(false, "Stone weight cannot exceed gross weight")
                 } else {
-                    binding.netWeightInputLayout.error = null
+                    binding.stoneWeightInputLayout.error = null
                 }
             } catch (e: NumberFormatException) {
-                binding.netWeightInputLayout.error = getString(R.string.invalid_net_weight)
-                binding.netWeightEditText.requestFocus()
-                return Pair(false, getString(R.string.invalid_net_weight))
+                binding.stoneWeightInputLayout.error = "Invalid stone weight"
+                binding.stoneWeightEditText.requestFocus()
+                return Pair(false, "Invalid stone weight")
             }
+        } else {
+            binding.stoneWeightInputLayout.error = null
+        }
+
+        // Net Weight validation - now automatically calculated
+        val calculatedNetWeight = (grossWeight.toDoubleOrNull() ?: 0.0) - (stoneWeight.toDoubleOrNull() ?: 0.0)
+        if (calculatedNetWeight < 0) {
+            binding.netWeightInputLayout.error = "Calculated net weight cannot be negative. Check Gross and Stone weights."
+            return Pair(false, "Calculated net weight cannot be negative. Check Gross and Stone weights.")
+        } else {
+            binding.netWeightInputLayout.error = null
         }
 
         // Purity validation
@@ -824,8 +834,9 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         binding.wastageEditText.setText("0.0")
         binding.wastageTypeDropdown.setText(getString(R.string.percentage), false)
         binding.purityEditText.setText("0.0")
-        binding.netWeightEditText.setText("0.0")
         binding.grossWeightEditText.setText("0.0")
+        binding.stoneWeightEditText.setText("0.0")
+        binding.netWeightEditText.setText("0.0")
         binding.stockEditText.setText("0.0")
         binding.stockChargesTypeEditText.setText(getString(R.string.piece),false) // Default stock unit value
         
@@ -840,7 +851,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // List of all numeric EditText fields
         val numericFields = listOf(
             binding.grossWeightEditText,
-            binding.netWeightEditText,
+            binding.stoneWeightEditText,
             binding.wastageEditText,
             binding.purityEditText,
             binding.stockEditText,
@@ -892,14 +903,20 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
                     )
                 )
             }
+
+            val grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+            val stoneWeight = binding.stoneWeightEditText.text.toString().toDoubleOrNull() ?: 0.0
+            val netWeight = grossWeight - stoneWeight
+
             // Now proceed to save the item as before
             val jewellryItem = JewelleryItem(
                 id = if (editMode && itemToEdit != null) itemToEdit!!.id else "",
                 displayName = binding.displayNameEditText.text.toString().trim(),
                 itemType = itemType,
                 category = binding.categoryDropdown.text.toString().trim(),
-                grossWeight = binding.grossWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
-                netWeight = binding.netWeightEditText.text.toString().toDoubleOrNull() ?: 0.0,
+                grossWeight = grossWeight,
+                netWeight = netWeight,
+                stoneWeight = stoneWeight,
                 wastage = binding.wastageEditText.text.toString().toDoubleOrNull() ?: 0.0,
                 wastageType = binding.wastageTypeDropdown.text.toString(),
                 purity = binding.purityEditText.text.toString(),
@@ -936,6 +953,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
     fun clearForm() {
         binding.displayNameEditText.text?.clear()
         binding.grossWeightEditText.text?.clear()
+        binding.stoneWeightEditText.text?.clear()
         binding.netWeightEditText.text?.clear()
         binding.wastageEditText.text?.clear()
         binding.wastageTypeDropdown.setText(getString(R.string.percentage), false)
@@ -955,6 +973,7 @@ open class ItemBottomSheetFragment : BottomSheetDialogFragment() {
         // Reset any error states
         binding.displayNameInputLayout.error = null
         binding.grossWeightInputLayout.error = null
+        binding.stoneWeightInputLayout.error = null
         binding.netWeightInputLayout.error = null
         binding.wastageInputLayout.error = null
         binding.wastageTypeInputLayout.error = null

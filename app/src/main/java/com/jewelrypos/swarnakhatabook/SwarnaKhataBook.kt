@@ -16,6 +16,8 @@ import com.squareup.picasso.Picasso
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import java.util.Locale
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 
 class SwarnaKhataBook : Application() {
 
@@ -67,14 +69,10 @@ class SwarnaKhataBook : Application() {
     private fun applySavedLanguage() {
         val preferences = SecurePreferences.getInstance(this)
         val savedLanguage = preferences.getString("selected_language", null)
-        
+
         if (savedLanguage != null) {
-            val locale = Locale(savedLanguage)
-            Locale.setDefault(locale)
-            val config = resources.configuration
-            config.setLocale(locale)
-            createConfigurationContext(config)
-            resources.updateConfiguration(config, resources.displayMetrics)
+            val localeList = LocaleListCompat.forLanguageTags(savedLanguage)
+            AppCompatDelegate.setApplicationLocales(localeList)
         }
     }
     

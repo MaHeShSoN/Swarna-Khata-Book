@@ -793,4 +793,32 @@
     <string name="today_sales_label">Today\'s Sales:</string>
     <string name="baki">Baki</string>
     <string name="jama">Jama</string>
+
+    <!-- BottomSheet Strings -->
+    <string name="failed_to_load_inventory">Failed to load inventory items: %1$s</string>
+    <string name="error_loading">Error: %1$s</string>
+    <string name="permission_needed">Permission Needed</string>
+    <string name="contacts_permission_rationale">This app needs permission to read and save contacts to suggest customer names and numbers as you type, and to save new contacts you create.</string>
+    <string name="contacts_permission_denied">Contacts permissions denied. Cannot suggest or save contacts.</string>
+    <string name="wholesaler">Wholesaler</string>
+    <string name="save_and_close">Save and Close</string>
+    <string name="track_inventory_by_counting_individual_items_or_units">Track inventory by counting individual items or units</string>
+    <string name="quantity_based_stock">Quantity-Based Stock</string>
+    <string name="weight_based_stock">Weight-Based Stock</string>
+    <string name="track_inventory_by_measuring_weight_or_mass">Track inventory by measuring weight or mass</string>
+
+    <string name="premium_subscription_required_message">Premium subscription required to generate reports. Upgrade to access this feature.</string>
+    <string name="select_date_range">Select Date Range</string>
+    <string name="sales_report_description">View sales summary by product type, customer type, and time period</string>
+    <string name="customer_statement_description">Detailed transaction history for individual customers</string>
+    <string name="gst_report_description">Summary of GST collected for tax filing</string>
+    <string name="low_stock_description">Items below reorder threshold that need attention</string>
+    <string name="standard_or_premium_required">Standard or Premium subscription required to generate reports</string>
+    <string name="sales_r">Sales R</string>
+    <string name="customer_account_statement">Customer Account Statement</string>
+    <string name="stone_weight">Stone Weight</string>
+    <string name="net_weight_auto_calculated">Net Weight (Auto-calculated)</string>
+    <string name="show_customer_signature">Show Customer Signature</string>
+    <string name="last_year">Last Year</string>
+    <string name="custom">Custom</string>
 </resources>

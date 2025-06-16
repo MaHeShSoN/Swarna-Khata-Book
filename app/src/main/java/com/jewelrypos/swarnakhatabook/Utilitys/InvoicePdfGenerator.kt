@@ -197,7 +197,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
         // Rectangle coordinates - positioned to the right of "TAX INVOICE" with space
         stream.addRect(
-            w - 110f, // Moved to the right
+            w - 128f, // Moved to the right
             h - 50f,  // Aligned with TAX INVOICE height
             textWidth1 + (padding * 2),
             textHeight + (padding * 2)
@@ -206,7 +206,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
         // Draw the text in gray
         stream.setNonStrokingColor(grayColor) // Gray text
-        drawText(stream, receiptText, w - 110f + padding, h - 45f, 8f, false)
+        drawText(stream, receiptText, w - 128f + padding, h - 45f, 8f, false)
 
         // ---------- CUSTOMER AND INVOICE DETAILS SECTION ----------
         // "BILL TO" section
@@ -657,11 +657,10 @@ class InvoicePdfGenerator(private val context: Context) {
         val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
 
 // Draw enclosing rectangle for footer
-        stream.setStrokingColor(secondaryColor)
-        stream.setLineWidth(0.5f)
-        stream.addRect(w/2 - 130f, 30f, 260f, 15f)
-//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
-        stream.stroke()
+//        stream.setStrokingColor(secondaryColor)
+//        stream.setLineWidth(0.5f)
+//        stream.addRect(w/2 - 130f, 30f, 260f, 15f)
+//        stream.stroke()
 
 // Draw logos and text
 // Scale the images to appropriate size for the PDF
@@ -688,25 +687,28 @@ class InvoicePdfGenerator(private val context: Context) {
         stream.endText()
 
         // Fix #3: Add signature implementation
+        // Add Customer Signature Block
+        if (settings.showCustomerSignature) { // Assuming a new setting `showCustomerSignature`
+            stream.setStrokingColor(AWTColor(0, 0, 0))
+            stream.setLineWidth(0.5f)
+            stream.addRect(w-280f, 90f, 120f, 30f) // Signature box on left
+            stream.stroke()
+
+            stream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(stream, "CUSTOMER SIGNATURE", w-270f, 80f, 9f, true) // Text for customer signature
+            drawText(stream, invoice.customerName, w - 270f, 70f, 8f, false)
+        }
 
         // Fix #3: Add signature implementation
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
                 // Draw uploaded signature image
                 try {
-                    // First draw a rectangle for signature (new code)
-                    stream.setStrokingColor(AWTColor(0, 0, 0))  // Black outline
-                    stream.setLineWidth(0.5f)  // Thin border
-                      stream.addRect(w - 150f, 90f, 120f, 30f)
-                  
-                    // Signature box
-                    stream.stroke()  // Draw the rectangle outline
-
                     // Then draw uploaded signature image inside the box
                     drawSignatureImage(document, w - 80f, 100f, settings.signatureUri!!, stream)
                     stream.setNonStrokingColor(AWTColor(0, 0, 0))
                     drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 9f, true)
-                    drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
+                    drawText(stream, details.shopName, w - 120f, 70f, 8f, false)
                 } catch (e: Exception) {
                     Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
                     // Fall back to text-only signature line with box
@@ -717,23 +719,29 @@ class InvoicePdfGenerator(private val context: Context) {
 
                     stream.setNonStrokingColor(AWTColor(0, 0, 0))
                     drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 10f, true)
-                    drawText(stream, details.shopName, w - 120f, 65f, 9f, false)
+                    drawText(stream, details.shopName, w - 120f, 70f, 9f, false)
                 }
             } else {
                 // Draw signature box with line
                 stream.setStrokingColor(AWTColor(0, 0, 0))
                 stream.setLineWidth(0.5f)
-                  stream.addRect(w - 150f, 90f, 120f, 30f)  // Signature box
+                stream.addRect(w - 150f, 90f, 120f, 30f)  // Signature box
                 stream.stroke()
 
                 stream.setNonStrokingColor(AWTColor(0, 0, 0))
                 drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 9f, true)
-                drawText(stream, details.shopName, w - 120f, 65f, 8f, false)
+                drawText(stream, details.shopName, w - 120f, 70f, 8f, false)
             }
         } else {
-            // Shop name at the bottom right even if signature is not shown
+            // Draw signature box with line
+            stream.setStrokingColor(AWTColor(0, 0, 0))
+            stream.setLineWidth(0.5f)
+            stream.addRect(w - 150f, 90f, 120f, 30f)  // Signature box
+            stream.stroke()
+
             stream.setNonStrokingColor(AWTColor(0, 0, 0))
-            drawText(stream, details.shopName, w - 120f, 65f, 10f, true)
+            drawText(stream, "AUTHORIZED SIGNATURE", w - 120f, 80f, 9f, true)
+            drawText(stream, details.shopName, w - 120f, 70f, 10f, true)
         }
     }
 
@@ -1749,15 +1757,36 @@ class InvoicePdfGenerator(private val context: Context) {
             drawText(stream, terms[i], 125f, 70f - (i * 15f), 9f, false)
         }
 
+        val customerSignatureLineY = 55f + (w-40f) / 2
         drawLine(
             stream,
-            160f + (w - 40f) / 2,
+            customerSignatureLineY,
             20f,
-            160f + (w - 40f) / 2,
+            customerSignatureLineY,
             105f,
             0.5f,
             AWTColor(0, 0, 0)
         )
+
+
+        // Add Customer Signature Block
+        if (settings.showCustomerSignature) { // Assuming a new setting `showCustomerSignature`
+            drawLine(
+                stream,
+                160f + (w - 40f) / 2,
+                20f,
+                160f + (w - 40f) / 2,
+                105f,
+                0.5f,
+                AWTColor(0, 0, 0)
+            )
+            stream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(stream, "CUSTOMER SIGNATURE", w-257f, 30f, 10f, true) // Text for customer signature
+        }
+
+
+
+
 
         // Draw signature line
         if (settings.showSignature) {
@@ -2182,24 +2211,28 @@ class InvoicePdfGenerator(private val context: Context) {
 
         contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
 
+        // Add Customer Signature Block
+        if (settings.showCustomerSignature) { // Assuming a new setting `showCustomerSignature`
+            contentStream.setStrokingColor(AWTColor(0, 0, 0))
+            contentStream.setLineWidth(0.5f)
+            contentStream.addRect(pageWidth-280f, 90f, 120f, 30f) // Signature box on left
+            contentStream.stroke()
+
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(contentStream, "CUSTOMER SIGNATURE", pageWidth-270f, 80f, 9f, true) // Text for customer signature
+            drawText(contentStream, invoice.customerName, pageWidth - 270f, 70f, 8f, false)
+        }
+
         // Draw signature at right bottom
-// Fix #3: Add signature implementation
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
                 // Draw uploaded signature image
                 try {
-                    // First draw a rectangle for signature (new code)
-                    contentStream.setStrokingColor(AWTColor(0, 0, 0))  // Black outline
-                    contentStream.setLineWidth(0.5f)  // Thin border
-                    contentStream.addRect(pageWidth - 150f, 90f, 120f, 30f)  // Signature box
-                      // Signature box
-                    contentStream.stroke()  // Draw the rectangle outline
-
                     // Then draw uploaded signature image inside the box
                     drawSignatureImage(document, pageWidth - 80f, 100f, settings.signatureUri!!, contentStream)
                     contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
                     drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 9f, true)
-                    drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 8f, false)
+                    drawText(contentStream, shop.shopName, pageWidth - 120f, 70f, 8f, false)
                 } catch (e: Exception) {
                     Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
                     // Fall back to text-only signature line with box
@@ -2210,7 +2243,7 @@ class InvoicePdfGenerator(private val context: Context) {
 
                     contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
                     drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 10f, true)
-                    drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 9f, false)
+                    drawText(contentStream, shop.shopName, pageWidth - 120f, 70f, 9f, false)
                 }
             } else {
                 // Draw signature box with line
@@ -2221,12 +2254,17 @@ class InvoicePdfGenerator(private val context: Context) {
 
                 contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
                 drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 9f, true)
-                drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 8f, false)
+                drawText(contentStream, shop.shopName, pageWidth - 120f, 70f, 8f, false)
             }
         } else {
+            contentStream.setStrokingColor(AWTColor(0, 0, 0))
+            contentStream.setLineWidth(0.5f)
+            contentStream.addRect(pageWidth - 150f, 90f, 120f, 30f)  // Signature box
+            contentStream.stroke()
             // Shop name at the bottom right even if signature is not shown
             contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
-            drawText(contentStream, shop.shopName, pageWidth - 120f, 65f, 10f, true)
+            drawText(contentStream, "AUTHORIZED SIGNATURE", pageWidth - 120f, 80f, 9f, true)
+            drawText(contentStream, shop.shopName, pageWidth - 120f, 70f, 10f, true)
         }
 
 
@@ -2250,11 +2288,6 @@ class InvoicePdfGenerator(private val context: Context) {
         val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
 
 // Draw enclosing rectangle for footer
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.setLineWidth(0.5f)
-        contentStream.addRect(pageWidth/2 - 130f, 30f, 260f, 15f)
-//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
-        contentStream.stroke()
 
 // Draw logos and text
 // Scale the images to appropriate size for the PDF
@@ -2977,13 +3010,27 @@ class InvoicePdfGenerator(private val context: Context) {
         pageWidth: Float,
         pageHeight: Float
     ) {
+
+        // Add Customer Signature Block
+        if (settings.showCustomerSignature) { // Assuming a new setting `showCustomerSignature`
+            contentStream.setNonStrokingColor(AWTColor(0, 0, 0))
+            drawText(contentStream, "CUSTOMER SIGNATURE", pageWidth-270f, 60f, 10f, true) // Text for customer signature
+        }
+
+
         // Draw signature section if enabled
         if (settings.showSignature) {
             if (settings.signatureUri != null) {
                 // Draw uploaded signature image
                 try {
-                    drawSignatureImage(
-                        document, pageWidth - 150f, 70f, settings.signatureUri!!, contentStream
+                    drawSignatureImage(document, pageWidth - 100f, 80f, settings.signatureUri!!, contentStream)
+                    drawText(
+                        contentStream,
+                        "Authorized Signature",
+                        pageWidth - 140f,
+                        60f,
+                        10f,
+                        true
                     )
                 } catch (e: Exception) {
                     Log.e("InvoicePdfGenerator", "Error drawing signature: ${e.message}")
@@ -2991,15 +3038,15 @@ class InvoicePdfGenerator(private val context: Context) {
                     drawText(
                         contentStream,
                         "Authorized Signature",
-                        pageWidth - 150f,
-                        50f,
+                        pageWidth - 140f,
+                        60f,
                         10f,
                         true
                     )
                 }
             } else {
                 // Draw signature line
-                drawText(contentStream, "Authorized Signature", pageWidth - 150f, 50f, 10f, true)
+                drawText(contentStream, "Authorized Signature", pageWidth - 140f, 60f, 10f, true)
             }
         }
 
@@ -3032,12 +3079,7 @@ class InvoicePdfGenerator(private val context: Context) {
         val playStoreLogoBytes = playStoreLogoStream.toByteArray()
         val playStoreLogo = PDImageXObject.createFromByteArray(document, playStoreLogoBytes, "playstore_logo")
 
-// Draw enclosing rectangle for footer
-        contentStream.setStrokingColor(secondaryColor)
-        contentStream.setLineWidth(0.5f)
-        contentStream.addRect(pageWidth/2 - 130f, 30f, 260f, 15f)
-//        contentStream.addRect( pageWidth / 2 - 105f, 30f, 260f, 15f)
-        contentStream.stroke()
+
 
 // Draw logos and text
 // Scale the images to appropriate size for the PDF

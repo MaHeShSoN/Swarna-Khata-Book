@@ -8,45 +8,35 @@
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/chargeNameInputLayout"
-        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Charge Name (e.g. Bead Work)"
-        app:boxBackgroundColor="@color/my_light_surface"
-        app:boxStrokeColor="@color/my_light_primary"
-        app:boxStrokeWidth="1dp"
-        app:endIconMode="clear_text"
-        app:hintTextColor="@color/my_light_secondary">
+        android:layout_marginBottom="16dp"
+        android:hint="Charge Name">
 
-        <com.google.android.material.textfield.TextInputEditText
+        <AutoCompleteTextView
             android:id="@+id/chargeNameEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text"
-            android:textColor="@color/my_light_on_surface"
-            android:textSize="16sp" />
+            android:maxLines="1" />
+
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/chargeAmountInputLayout"
-        style="@style/Widget.Material3.TextInputLayout.FilledBox"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="Amount"
-        app:boxBackgroundColor="@color/my_light_surface"
-        app:boxStrokeColor="@color/my_light_primary"
-        app:boxStrokeWidth="1dp"
-        app:endIconMode="clear_text"
-        app:hintTextColor="@color/my_light_secondary"
-        app:prefixText="₹">
+        android:hint="Amount">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/chargeAmountEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="numberDecimal"
-            android:textColor="@color/my_light_on_surface"
-            android:textSize="16sp" />
+            android:maxLines="1" />
+
     </com.google.android.material.textfield.TextInputLayout>
+
 </LinearLayout>

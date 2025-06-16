@@ -6,17 +6,17 @@ data class NotificationPreferences(
     @PropertyName("paymentDue")
     val paymentDue: Boolean = true,
     @PropertyName("paymentOverdue")
-    val paymentOverdue: Boolean = true,
+    val paymentOverdue: Boolean = false,
     @PropertyName("creditLimit")
-    val creditLimit: Boolean = true,
+    val creditLimit: Boolean = false,
     @PropertyName("lowStock")
-    val lowStock: Boolean = true,
+    val lowStock: Boolean = false,
     @PropertyName("businessInsights")
-    val businessInsights: Boolean = true,
+    val businessInsights: Boolean = false,
     @PropertyName("customerBirthday")
-    val customerBirthday: Boolean = true,
+    val customerBirthday: Boolean = false,
     @PropertyName("customerAnniversary")
-    val customerAnniversary: Boolean = true,
+    val customerAnniversary: Boolean = false,
     @PropertyName("appUpdates")
     val appUpdates: Boolean = true,
     @PropertyName("paymentDueReminderDays")

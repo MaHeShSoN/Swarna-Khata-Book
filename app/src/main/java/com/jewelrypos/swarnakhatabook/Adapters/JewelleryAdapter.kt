@@ -53,6 +53,10 @@ class JewelleryAdapter(private val itemClickListener: OnItemClickListener? = nul
     }
 
     override fun onBindViewHolder(holder: JewelleryViewHolder, position: Int) {
+        holder.jewelryTypeIndicator.setImageDrawable(null) // Clear any previous image
+        holder.jewelryTypeIndicator.background = null // Clear any previous background
+        holder.jewelryTypeInitial.visibility = View.GONE // Hide initial by default
+
         val currentItem = getItem(position)
 
         currentItem?.let { item ->
@@ -76,21 +80,11 @@ class JewelleryAdapter(private val itemClickListener: OnItemClickListener? = nul
                 }
             }
 
-            // Handle stock/weight display differently based on inventory type
-            when (item.inventoryType) {
-                InventoryType.IDENTICAL_BATCH -> {
-                    holder.stockValue.text = "${item.stock} ${item.stockUnit}"
-                }
-                InventoryType.BULK_STOCK -> {
-                    holder.stockValue.text = "Total: ${item.totalWeightGrams}g"
-                }
-            }
-
-
+            // ... existing code ...
 
             // Check if item has image URL, if so load it
             if (item.imageUrl.isNotEmpty()) {
-                // Hide the initial letter
+                // Hide the initial letter (already done at the start, but good to keep here for clarity)
                 holder.jewelryTypeInitial.visibility = View.GONE
 
                 // Load image with Coil
@@ -108,7 +102,7 @@ class JewelleryAdapter(private val itemClickListener: OnItemClickListener? = nul
                     // Use a simpler approach for error handling
                     listener(
                         onStart = {
-                            // Reset background at start of loading
+                            // Reset background at start of loading (already done at the start)
                             holder.jewelryTypeIndicator.background = null
                             holder.jewelryTypeInitial.visibility = View.GONE
                         },
@@ -135,8 +129,7 @@ class JewelleryAdapter(private val itemClickListener: OnItemClickListener? = nul
                 }
             } else {
                 // No image, show the standard circle with initial
-                holder.jewelryTypeIndicator.setImageDrawable(null) // <--- ADD THIS LINE
-                // Or, alternatively: holder.jewelryTypeIndicator.setImageResource(0)
+                holder.jewelryTypeIndicator.setImageDrawable(null) // This line is now redundant but harmless
 
                 when (item.itemType.lowercase()) {
                     "gold" -> holder.jewelryTypeIndicator.setBackgroundResource(R.drawable.circle_gold_background)
@@ -157,10 +150,10 @@ class JewelleryAdapter(private val itemClickListener: OnItemClickListener? = nul
 
 // DiffUtil Callback class for efficient updates
 class JewelleryDiffCallback : DiffUtil.ItemCallback<JewelleryItem>() {
-    
+
     override fun areItemsTheSame(oldItem: JewelleryItem, newItem: JewelleryItem) =
         oldItem.id == newItem.id
-    
+
     override fun areContentsTheSame(oldItem: JewelleryItem, newItem: JewelleryItem) =
         oldItem == newItem
 }

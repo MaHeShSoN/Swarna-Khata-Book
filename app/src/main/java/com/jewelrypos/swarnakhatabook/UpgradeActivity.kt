@@ -236,33 +236,54 @@ class UpgradeActivity : AppCompatActivity() {
      */
     private fun checkSubscriptionStatus() {
         lifecycleScope.launch {
-            // Check if user has an active subscription first
+            val isFreeAccess = subscriptionManager.isFreeAccessUser()
+
+            // Fetch currentPlan and isTrialActive within the coroutine scope
             val currentPlan = subscriptionManager.getCurrentSubscriptionPlan()
-            
-            // Only check trial status if there's no active subscription
             val isTrialActive = if (currentPlan.name == "NONE") {
                 subscriptionManager.isTrialActive()
             } else {
                 false // If there's an active subscription, trial should be considered inactive
             }
 
-            // Update UI based on current status
             runOnUiThread {
-                // Show trial banner only if trial is active AND there's no subscription
-                binding.trialBanner.visibility = if (isTrialActive) View.VISIBLE else View.GONE
+                if (isFreeAccess) {
+                    // Hide all subscription-related UI elements
+                    binding.subscriptionCardsContainer.visibility = View.GONE
+                    binding.billingPeriodToggleGroup.visibility = View.GONE
+                    binding.purchaseButton.visibility = View.GONE
+                    binding.selectedPlanDetailsGroup.visibility = View.GONE
+                    binding.trialBanner.visibility = View.GONE // Hide trial banner as well
 
-                // If trial is active, show days remaining
-                if (isTrialActive) {
-                    val daysRemaining = subscriptionManager.getDaysRemaining()
-                    binding.trialDaysRemaining.text = "$daysRemaining days remaining"
-                }
+                    // Show a message indicating free access
+                    binding.freeAccessMessage.visibility = View.VISIBLE
+                    binding.freeAccessMessage.text = "You have special free access to the app!"
 
-                // Highlight current plan if any
-                highlightCurrentPlan(currentPlan.name)
+                } else {
+                    // Show subscription-related UI elements if not a free access user
+                    binding.subscriptionCardsContainer.visibility = View.VISIBLE
+                    binding.billingPeriodToggleGroup.visibility = View.VISIBLE
+                    binding.purchaseButton.visibility = View.VISIBLE
+                    binding.selectedPlanDetailsGroup.visibility = View.VISIBLE
+                    binding.freeAccessMessage.visibility = View.GONE // Hide free access message
 
-                // Also update selected plan type to match current plan
-                if (currentPlan.name != "NONE") {
-                    updateSelectedPlanDetails(currentPlan.name)
+                    // Update UI based on the fetched status
+                    // Show trial banner only if trial is active AND there's no subscription
+                    binding.trialBanner.visibility = if (isTrialActive) View.VISIBLE else View.GONE
+
+                    // If trial is active, show days remaining
+                    if (isTrialActive) {
+                        val daysRemaining = subscriptionManager.getDaysRemaining()
+                        binding.trialDaysRemaining.text = "$daysRemaining days remaining"
+                    }
+
+                    // Highlight current plan if any
+                    highlightCurrentPlan(currentPlan.name)
+
+                    // Also update selected plan type to match current plan
+                    if (currentPlan.name != "NONE") {
+                        updateSelectedPlanDetails(currentPlan.name)
+                    }
                 }
             }
         }
